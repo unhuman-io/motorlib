@@ -185,7 +185,7 @@ void USB_OTG::send_data32(uint8_t endpoint, const uint32_t *data, uint8_t length
     }
 
     USBx_INEP(endpoint)->DIEPTSIZ = 0;  // TODO necessary?
-    USBx_INEP(endpoint)->DIEPTSIZ = length8 | ((length8/64 + 1) << USB_OTG_DIEPTSIZ_PKTCNT_Pos);
+    USBx_INEP(endpoint)->DIEPTSIZ = length8 | (((length8-1)/64 + 1) << USB_OTG_DIEPTSIZ_PKTCNT_Pos);
     USBx_INEP(endpoint)->DIEPCTL |= USB_OTG_DIEPCTL_EPENA | USB_OTG_DIEPCTL_CNAK ;
 
     for(int i=0; i<length32; i++) {

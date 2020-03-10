@@ -78,11 +78,11 @@ class USB_OTG {
             USBx_INEP(1)->DIEPCTL = 0;  
             USBx_INEP(2)->DIEPCTL = 0;  
 
-            USBx->GINTSTS &= USB_OTG_GINTSTS_USBRST;
+            USBx->GINTSTS = USB_OTG_GINTSTS_USBRST;
         }
 
         if (USBx->GINTSTS & USB_OTG_GINTSTS_USBSUSP) {
-            USBx->GINTSTS &= USB_OTG_GINTSTS_USBSUSP;
+            USBx->GINTSTS = USB_OTG_GINTSTS_USBSUSP;
         }
 
         if (USBx->GINTSTS & USB_OTG_GINTSTS_ENUMDNE)
@@ -102,7 +102,7 @@ class USB_OTG {
             USBx_OUTEP(0)->DOEPCTL |= ((64 & USB_OTG_DOEPCTL_MPSIZ ) | (0 << 18U) |\
                 (USB_OTG_DIEPCTL_SD0PID_SEVNFRM)| (USB_OTG_DOEPCTL_USBAEP));
         
-             USBx->GINTSTS &= USB_OTG_GINTSTS_ENUMDNE;
+             USBx->GINTSTS = USB_OTG_GINTSTS_ENUMDNE;
         }
 
     
