@@ -31,7 +31,6 @@ typedef struct {
 
 #define COGGING_TABLE_SIZE 8192  // must be multiple of 2
 typedef struct {
-    int32_t pwm_frequency;  // PWM frequency in Hz, default usually 100000
     float adc1_offset, adc2_offset, adc3_offset;    // initial guess at current sensor bias in counts - default 2048
     float adc1_gain, adc2_gain, adc3_gain;          // current sensor linear gain units A/count
     FOCParam foc_param;
@@ -54,7 +53,6 @@ typedef struct {
 
 enum MainControlMode {OPEN, DAMPED, CURRENT, POSITION, VELOCITY, CURRENT_TUNING, POSITION_TUNING, BOARD_RESET=255};
 typedef struct {
-    int32_t update_frequency;                       // main loop update frequency in Hz
     PIDParam controller_param;
     struct {
         float cpr;                                  // output encoder cpr \sa FastLoopParam.motor_encoder.cpr
