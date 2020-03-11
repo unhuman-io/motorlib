@@ -142,8 +142,6 @@ const uint8_t USB_CONFIGURATION_DESCRIPTOR[] =
 
 void USB_OTG::send_data32(uint8_t endpoint, const uint32_t *data, uint8_t length32, uint8_t length8) 
 {
-    uint32_t a = (uint32_t) USBx_BASE;
-    uint32_t b = a + USB_OTG_IN_ENDPOINT_BASE + ((endpoint) * USB_OTG_EP_REG_SIZE);
     if (!(USBx_INEP(endpoint)->DIEPCTL & USB_OTG_DIEPCTL_USBAEP)) {
         return;
     }

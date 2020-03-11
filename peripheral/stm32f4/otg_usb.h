@@ -23,13 +23,15 @@ class USB_OTG {
     void send_string(uint8_t endpoint, const char *str, uint8_t length);
 
     // receive up to length32 words from endpoint, return number of words read
-    int receive_data(uint8_t endpoint, uint8_t * const data, uint8_t length32) {
+    int receive_data(uint8_t endpoint, uint8_t * const data, uint8_t length8) {
         if (new_rx_data_[endpoint]) {
             new_rx_data_[endpoint] = false;
-            for (int i=0; i<length32; i++) {
+            asm("nop"); // addresses unknown bug
+            length8 = std::min(length8, count_rx_[endpoint]);
+            for (int i=0; i<length8; i++) {
                 data[i] = rx_data_[endpoint][i];
             }
-            return length32;
+            return length8;
         } else {
             return 0;
         }
@@ -116,7 +118,8 @@ class USB_OTG {
             uint8_t packet_status = (temp & USB_OTG_PKTSTS) >> USB_OTG_PKTSTS_Pos;
             
             if (packet_status == STS_DATA_UPDT) {
-                read_fifo(byte_count, rx_data_[ep_number]);
+                read_fifo(byte_count, (uint32_t *) rx_data_[ep_number]);
+                count_rx_[ep_number] = byte_count;
                 new_rx_data_[ep_number] = true;
             }
             if (packet_status == STS_SETUP_UPDT) {
@@ -180,7 +183,12 @@ class USB_OTG {
             if (in_ep_interrupt & (1 << 2)) {
                 USBx_INEP(2)->DIEPINT = 0xFFFF;
             }
+            if (in_ep_interrupt & (1 << 1)) {
+                USBx_INEP(1)->DIEPINT = 0xFFFF;
+            }
         }
+        // acknowledge all interrupts
+        //USBx->GINTSTS = 0xFFFFFFFF;
     }
 
     // This is the serial number used by the bootloader, 13 bytes with null terminator
@@ -195,7 +203,8 @@ private:
     uint8_t device_address_ = 0;
     uint8_t setup_data[64];
     uint16_t interface_ = 0;
-    uint32_t rx_data_[4][16] = {};
+    uint8_t rx_data_[4][64] = {};
     int sending_=0;
     bool new_rx_data_[4] = {};
+    uint8_t count_rx_[4] = {};
 };
