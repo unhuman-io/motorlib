@@ -37,6 +37,7 @@ class MainLoop {
       }
 
       float iq_des = 0;
+      float vq_des = 0;
       switch (mode_) {
         case CURRENT:
           iq_des = receive_data_.current_desired;
@@ -80,13 +81,14 @@ class MainLoop {
           fast_loop_.set_tuning_frequency(receive_data_.reserved);
           break;
         case VOLTAGE:
-          fast_loop_.set_vq_des(receive_data_.reserved);
+          vq_des = receive_data_.reserved;
           break;
         default:
           break;
       }
 
       fast_loop_.set_iq_des(iq_des);
+      fast_loop_.set_vq_des(vq_des);
       SendData send_data;
       send_data.iq = fast_loop_status_.foc_status.measured.i_q;
       send_data.host_timestamp_received = receive_data_.host_timestamp;
@@ -134,6 +136,7 @@ class MainLoop {
         case VOLTAGE:
           fast_loop_.voltage_mode();
           led_.set_color(LED::VIOLET);
+          break;
         case BOARD_RESET:
           NVIC_SystemReset();
           break;
