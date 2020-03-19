@@ -78,6 +78,10 @@ class MainLoop {
         case CURRENT_TUNING: 
           fast_loop_.set_tuning_amplitude(receive_data_.current_desired);
           fast_loop_.set_tuning_frequency(receive_data_.reserved);
+          break;
+        case VOLTAGE:
+          fast_loop_.set_vq_des(receive_data_.reserved);
+          break;
         default:
           break;
       }
@@ -127,6 +131,9 @@ class MainLoop {
           fast_loop_.current_mode();
           led_.set_color(LED::BLUE);
           break;
+        case VOLTAGE:
+          fast_loop_.voltage_mode();
+          led_.set_color(LED::VIOLET);
         case BOARD_RESET:
           NVIC_SystemReset();
           break;

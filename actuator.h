@@ -13,7 +13,7 @@ class Actuator {
       // zero current sensors in voltage mode to try to eliminate bias from pwm noise, could also do open mode
       fast_loop_.voltage_mode();
       uint32_t t_start = get_clock();
-      while ((get_clock() - t_start)/170e6 < 2) {
+      while ((get_clock() - t_start)/CPU_FREQUENCY_HZ < 2) {
          fast_loop_.zero_current_sensors();
       }
 
