@@ -1,7 +1,9 @@
 #include "otg_usb.h"
+#include "bootloader.h"
 
 #include <cstdio>
 #include "../../param.h"
+#include "../..//util.h"
 
 
 #define LOBYTE(x)  ((uint8_t)(x & 0x00FF))
@@ -329,8 +331,9 @@ void USB_OTG::handle_setup_packet(uint8_t *setup_data) {
             break;
         case 0x21:  // interface class request
             if ((setup_data[1] == 0) && (interface_ == 1)) { // dfu detach
-                go_to_bootloader = true;
                 send_data(0,0,0);
+                ms_delay(10);
+                reboot_to_bootloader();
             } else {
                 send_stall(0);
             }
