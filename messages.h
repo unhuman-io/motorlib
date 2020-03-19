@@ -51,7 +51,7 @@ typedef struct {
     float vbus_gain;                                // vbus sensor gain units V/count
 } FastLoopParam;
 
-enum MainControlMode {OPEN, DAMPED, CURRENT, POSITION, VELOCITY, CURRENT_TUNING, POSITION_TUNING, BOARD_RESET=255};
+enum MainControlMode {OPEN, DAMPED, CURRENT, POSITION, VELOCITY, CURRENT_TUNING, POSITION_TUNING, VOLTAGE, BOARD_RESET=255};
 typedef struct {
     PIDParam controller_param;
     struct {
@@ -77,7 +77,7 @@ typedef struct {
 } Param;
 
 typedef struct {
-    struct { float i_d, i_q; } desired;         // desired current in A, i_d typically 0, i_q creates torque
+    struct { float i_d, i_q, v_q; } desired;         // desired current in A, i_d typically 0, i_q creates torque, v_q in V is a feedforward
     struct { float i_a, i_b, i_c, motor_encoder; } measured;    // sensor currents in A, motor_encoder in rad referenced to electrical zero
 } FOCCommand;
 
