@@ -9,5 +9,6 @@ static inline uint8_t get_cpi_count() { return DWT->CPICNT; }
 static inline uint8_t get_lsu_count() { return DWT->LSUCNT; }
 
 void ms_delay(uint16_t ms);
+void ns_delay(uint16_t ns);
 
 #endif
