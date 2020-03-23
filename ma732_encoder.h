@@ -20,7 +20,7 @@ class MA732Encoder final : public SPIEncoder {
         return count_;
     }
     virtual int32_t get_value()  const __attribute__((section (".ccmram"))) { return count_; }
-    void init() {
+    bool init() {
         // filter frequency 1500 Hz
         MA732reg filter;
         filter.bits.command = 0b100;
@@ -30,8 +30,9 @@ class MA732Encoder final : public SPIEncoder {
         ms_delay(20); // 20 ms delay for idle time to register readout 
         uint8_t value = send_and_read(0) >> 8;
         if (value != filter.bits.value) {
-            while(1); // an error
+            return false;
         }
+        return true;
     }
  private:
     uint16_t last_data_ = 0;
