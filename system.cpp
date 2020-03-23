@@ -1,7 +1,3 @@
-void system_init() {
-    SystemConfig::init();
-}
-
 void system_run() {
     SystemConfig::run();
 }
