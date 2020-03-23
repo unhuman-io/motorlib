@@ -109,6 +109,7 @@ class FastLoop {
       set_id_des(id);
       iq_des_gain_ = 0;
       pwm_.voltage_mode();
+      foc_->current_mode();
       mode_ = PHASE_LOCK_MODE;
     }
     void current_mode() {
