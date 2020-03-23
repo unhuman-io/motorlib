@@ -1,5 +1,5 @@
 #include "spi_encoder.h"
-#include "../../gpio.h"
+#include "../gpio.h"
 #include "../util.h"
 
 void SPIEncoder::trigger() {
@@ -22,7 +22,7 @@ int32_t SPIEncoder::read() {
     // some devices need a time delay between chip select and clock, 25 ns ma732, 200 ns AEAT-8800
     ns_delay(end_cs_delay_ns_);
     gpio_cs_.set();
-    return data_
+    return data_;
 }
 
 uint16_t SPIEncoder::send_and_read(uint16_t value) {

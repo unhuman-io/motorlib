@@ -1,6 +1,6 @@
 #pragma once
 
-#include "../../encoder.h"
+#include "../encoder.h"
 #include "../st_device.h"
 
 
