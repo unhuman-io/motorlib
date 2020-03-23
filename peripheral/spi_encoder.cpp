@@ -25,6 +25,10 @@ int32_t SPIEncoder::read() {
     return data_;
 }
 
+int32_t SPIEncoder::get_value()  const { 
+    return data_;
+}
+
 uint16_t SPIEncoder::send_and_read(uint16_t value) {
     // same as above trigger and read
     gpio_cs_.clear();

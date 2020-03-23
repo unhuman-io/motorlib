@@ -27,7 +27,7 @@ class MA732Encoder final : public SPIEncoder {
         filter.bits.address = 0xE;
         filter.bits.value = 85;
         send_and_read(filter.word);
-        ns_delay(750); // 750 ns delay for idle time to register readout 
+        ms_delay(20); // 20 ms delay for idle time to register readout 
         uint8_t value = send_and_read(0) >> 8;
         if (value != filter.bits.value) {
             while(1); // an error

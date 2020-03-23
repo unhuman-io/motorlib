@@ -11,7 +11,7 @@ class SPIEncoder : public Encoder {
     SPIEncoder(SPI_TypeDef &regs, GPIO &gpio_cs) : Encoder(), regs_(regs), gpio_cs_(gpio_cs) {} 
     //void init() {}
     virtual int32_t read()  __attribute__((section (".ccmram")));
-    virtual int32_t get_value()  const __attribute__((section (".ccmram"))) { return data_; }
+    virtual int32_t get_value()  const __attribute__((section (".ccmram")));
     virtual void trigger()  __attribute__((section (".ccmram")));
     virtual bool index_received() { return true; }
     
