@@ -3,7 +3,8 @@
 #ifdef __cplusplus
 #include "parameter_api.h"
 #include "param.h"
-#include <cstring>
+#include <queue>
+#include <string>
 
 extern uint32_t t_exec_fastloop;
 extern uint32_t t_exec_mainloop;
@@ -15,11 +16,12 @@ class System {
  public:
     static void init() {
         actuator_.set_param(param()->fast_loop_param, param()->main_loop_param);
+        log("finished system init");
     }
     static void run() {
         actuator_.start();
 
-        send_string("finished startup");
+        log("finished startup");
 
         ParameterAPI api;
         uint32_t cpu_frequency = CPU_FREQUENCY_HZ;
@@ -33,8 +35,9 @@ class System {
         while(1) {
             char *s = System::get_string();
             if (s != NULL) {
-                System::send_string(api.parse_string(s).c_str());
+                System::log(api.parse_string(s));
             }
+            send_log();
             actuator_.maintenance();
         }
     }
@@ -47,9 +50,16 @@ class System {
     static void usb_interrupt() {
         usb_.interrupt();
     }
-    static void send_string(const char * str) {
-        if (!usb_.tx_active(1)) {
-            usb_.send_data(1, (const uint8_t *) str, std::strlen(str)+1, false);
+    static void log(std::string str) {
+        if (log_queue_.size() < 10) {
+            log_queue_.push(str);
+        }
+    }
+    static void send_log() {
+        if (!usb_.tx_active(1) && !log_queue_.empty()) {
+            std::string str = log_queue_.front();
+            log_queue_.pop();
+            usb_.send_data(1, (const uint8_t *) str.c_str(), str.size()+1, false);
         }
     }
     static char *get_string() {
@@ -65,6 +75,7 @@ class System {
 // private:
     static Communication usb_;
     static Actuator actuator_;
+    static std::queue<std::string> log_queue_;
 };
 
 extern "C" {
