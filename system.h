@@ -32,6 +32,10 @@ class System {
         api.add_api_variable("t_exec_mainloop", new APIUint32(&t_exec_mainloop));
         api.add_api_variable("t_period_fastloop", new APIUint32(&t_period_fastloop));
         api.add_api_variable("t_period_mainloop", new APIUint32(&t_period_mainloop));
+        api.add_api_variable("vbus", new APIFloat(&actuator_.main_loop_.fast_loop_status_.vbus));
+        api.add_api_variable("va", new APIFloat(&actuator_.main_loop_.fast_loop_status_.foc_status.command.v_a));
+        api.add_api_variable("vb", new APIFloat(&actuator_.main_loop_.fast_loop_status_.foc_status.command.v_b));
+        api.add_api_variable("vc", new APIFloat(&actuator_.main_loop_.fast_loop_status_.foc_status.command.v_c));
         while(1) {
             char *s = System::get_string();
             if (s != NULL) {
