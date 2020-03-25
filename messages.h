@@ -51,7 +51,7 @@ typedef struct {
     float vbus_gain;                                // vbus sensor gain units V/count
 } FastLoopParam;
 
-enum MainControlMode {OPEN, DAMPED, CURRENT, POSITION, VELOCITY, CURRENT_TUNING, POSITION_TUNING, VOLTAGE, BOARD_RESET=255};
+enum MainControlMode {OPEN, DAMPED, CURRENT, POSITION, VELOCITY, CURRENT_TUNING, POSITION_TUNING, VOLTAGE, PHASE_LOCK, BOARD_RESET=255};
 typedef struct {
     PIDParam controller_param;
     struct {

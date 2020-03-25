@@ -137,6 +137,9 @@ class MainLoop {
           fast_loop_.voltage_mode();
           led_.set_color(LED::VIOLET);
           break;
+        case PHASE_LOCK:
+          fast_loop_.phase_lock_mode(param()->startup_param.phase_lock_current);
+          led_.set_color(LED::YELLOW);
         case BOARD_RESET:
           NVIC_SystemReset();
           break;
