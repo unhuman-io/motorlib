@@ -18,6 +18,7 @@ class Actuator {
       }
 
       if (param()->startup_param.do_phase_lock) {
+         fast_loop_.maintenance();
          fast_loop_.phase_lock_mode(param()->startup_param.phase_lock_current);
          ms_delay(1000*param()->startup_param.phase_lock_duration);
       }
