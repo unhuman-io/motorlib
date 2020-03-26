@@ -23,14 +23,23 @@ class MA732Encoder final : public SPIEncoder {
     bool init() {
         // filter frequency 1500 Hz
         MA732reg filter;
-        filter.bits.command = 0b100;
+        uint8_t desired_filter = 85;
+        filter.bits.command = 0b010; // read register
         filter.bits.address = 0xE;
-        filter.bits.value = 85;
+        filter.bits.value = 0;
         send_and_read(filter.word);
-        ms_delay(20); // 20 ms delay for idle time to register readout 
+        ns_delay(750); // read register delay
         uint8_t value = send_and_read(0) >> 8;
-        if (value != filter.bits.value) {
-            return false;
+        if (desired_filter != value) {
+            // uncomment below to write the register
+            // filter.bits.command = 0b100; // write register
+            // filter.bits.value = desired_filter;
+            send_and_read(filter.word);
+            ms_delay(20); // 20 ms delay for idle time to register readout 
+            value = send_and_read(0) >> 8;
+            if (value != desired_filter) {
+                return false;
+            }
         }
         return true;
     }
