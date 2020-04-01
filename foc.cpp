@@ -56,8 +56,8 @@ FOCStatus * const FOC::step(const FOCCommand &command) {
     float i_d_measured_filtered = id_filter_->update(i_d_measured);
     float i_q_measured_filtered = iq_filter_->update(i_q_measured);
 
-    float v_d_desired = controller_gain_ * pi_id_->step(status_.desired.i_d, i_d_measured_filtered);
-    float v_q_desired = controller_gain_ * pi_iq_->step(status_.desired.i_q, i_q_measured_filtered) + command.desired.v_q;
+    float v_d_desired = pi_id_->step(status_.desired.i_d, i_d_measured_filtered);
+    float v_q_desired = pi_iq_->step(status_.desired.i_q, i_q_measured_filtered) + command.desired.v_q;
 
     float v_alpha_desired = cos_t * v_d_desired + sin_t * v_q_desired;
     float v_beta_desired = -sin_t * v_d_desired + cos_t * v_q_desired;
@@ -78,9 +78,21 @@ FOCStatus * const FOC::step(const FOCCommand &command) {
 }
 
 void FOC::set_param(const FOCParam &param) {
+    param_ = param;
     pi_id_->set_param(param.pi_d);
     pi_iq_->set_param(param.pi_q);
     num_poles_ = param.num_poles;
     id_filter_->set_frequency(param.current_filter_frequency_hz);
     iq_filter_->set_frequency(param.current_filter_frequency_hz);
+}
+
+void FOC::voltage_mode() { 
+    PIParam zero_pi = {};
+    pi_id_->set_param(zero_pi); 
+    pi_iq_->set_param(zero_pi); 
+}
+
+void FOC::current_mode() {
+    pi_id_->set_param(param_.pi_d);
+    pi_iq_->set_param(param_.pi_q);
 }

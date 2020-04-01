@@ -132,10 +132,12 @@ class FastLoop {
     }
     void brake_mode() {
       pwm_.brake_mode();
+      foc_->voltage_mode();
       mode_ = BRAKE_MODE;
     }
     void open_mode() {
       pwm_.open_mode();
+      foc_->voltage_mode();
       mode_ = OPEN_MODE;
     }
     void set_param(const FastLoopParam &fast_loop_param) {

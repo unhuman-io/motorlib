@@ -14,8 +14,8 @@ public:
     FOCStatus * const step(const FOCCommand &command)  __attribute__((section (".ccmram")));
     void set_param(const FOCParam &param);
     void get_status(FOCStatus *status) const { *status = status_; }
-    void voltage_mode() { controller_gain_ = 0; }
-    void current_mode() { controller_gain_ = 1; }
+    void voltage_mode();
+    void current_mode();
 
 private:
     uint16_t num_poles_ = 7;
@@ -24,7 +24,7 @@ private:
     static const float Kc[2][3];
     float dt_;
     FirstOrderLowPassFilter *id_filter_, *iq_filter_;
-    float controller_gain_ = 0;
+    FOCParam param_;
 };
 
 
