@@ -51,12 +51,20 @@ typedef struct {
     float vbus_gain;                                // vbus sensor gain units V/count
 } FastLoopParam;
 
+typedef struct {
+    float gain;
+    float bias;
+    float k_temp;
+    float filter_frequency_hz;
+} TorqueSensorParam;
+
 enum MainControlMode {OPEN, DAMPED, CURRENT, POSITION, VELOCITY, CURRENT_TUNING, POSITION_TUNING, VOLTAGE, PHASE_LOCK, BOARD_RESET=255};
 typedef struct {
     PIDParam controller_param;
     struct {
         float cpr;                                  // output encoder cpr \sa FastLoopParam.motor_encoder.cpr
     } output_encoder;
+    TorqueSensorParam torque_sensor;
     float torque_gain, torque_bias;                 // not currently used
     float kt;                                       // not currently used
     float gear_ratio;                               // not currently used

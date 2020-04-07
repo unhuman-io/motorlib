@@ -57,5 +57,4 @@ class SPITorque final : public TorqueSensor {
     uint32_t result0_ = 0;
     uint32_t result1_ = 0;
     float torque_ = 0;
-    float k_temp_=0, gain_ = 1, bias_=0;
 };

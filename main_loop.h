@@ -17,12 +17,12 @@ template<typename FastLoop>
 class MainLoop {
  public:
     MainLoop(FastLoop &fast_loop, PIDDeadbandController &controller, Communication &communication, LED &led, Encoder &output_encoder, TorqueSensor &torque) : 
-        fast_loop_(fast_loop), controller_(controller), communication_(communication), led_(led), output_encoder_(output_encoder), torque_(torque) {}
+        fast_loop_(fast_loop), controller_(controller), communication_(communication), led_(led), output_encoder_(output_encoder), torque_sensor_(torque) {}
     void init() {}
     void update() {
       count_++;
       output_encoder_.trigger();
-      if(count_ % 4 == 0) torque_.trigger();
+      if(count_ % 4 == 0) torque_sensor_.trigger();
       
       last_timestamp_ = timestamp_;
       timestamp_ = get_clock();
@@ -38,8 +38,7 @@ class MainLoop {
         }
       }
 
-      static float torque = 0;
-      if(count_ % 4 == 0) torque = torque_.read();
+      if(count_ % 4 == 0) torque_ = torque_sensor_.read();
 
       float iq_des = 0;
       float vq_des = 0;
@@ -101,7 +100,7 @@ class MainLoop {
       send_data.motor_encoder = fast_loop_status_.motor_mechanical_position;
       send_data.motor_position = fast_loop_status_.motor_position.position;
       send_data.joint_position = output_encoder_.get_value();//*2.0*(float) M_PI/param_.output_encoder.cpr;
-      send_data.torque = torque;
+      send_data.torque = torque_;
       send_data.reserved[0] = iq_des; //fast_loop_status_.foc_status.measured.i_0;
       communication_.send_data(send_data);
       led_.update();
@@ -109,6 +108,7 @@ class MainLoop {
     }
     void set_param(MainLoopParam &param) {
       controller_.set_param(param.controller_param);
+      torque_sensor_.set_param(param.torque_sensor);
       param_ = param;
     }
     void get_status(MainLoopStatus * const main_loop_status) const {}
@@ -166,7 +166,8 @@ class MainLoop {
     FastLoopStatus fast_loop_status_ = {};
     MainControlMode mode_ = OPEN;
     Encoder &output_encoder_;
-    TorqueSensor &torque_;
+    TorqueSensor &torque_sensor_;
+    float torque_ = 0;
     float dt_ = 0;
     KahanSum phi_;
     uint32_t timestamp_ = 0;
