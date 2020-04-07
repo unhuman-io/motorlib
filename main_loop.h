@@ -22,7 +22,7 @@ class MainLoop {
     void update() {
       count_++;
       output_encoder_.trigger();
-      torque_.trigger();
+      if(count_ % 4 == 0) torque_.trigger();
       
       last_timestamp_ = timestamp_;
       timestamp_ = get_clock();
@@ -38,7 +38,8 @@ class MainLoop {
         }
       }
 
-      float torque = torque_.read();
+      static float torque = 0;
+      if(count_ % 4 == 0) torque = torque_.read();
 
       float iq_des = 0;
       float vq_des = 0;

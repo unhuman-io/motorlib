@@ -40,8 +40,8 @@ class SPITorque final : public TorqueSensor {
         // set CS high
         gpio_cs_.set();
         // process result
-        result0_ = (uint32_t) data_in_[1] << 24 | (uint32_t) data_in_[2] << 16 | (uint16_t) data_in_[3] << 8 | data_in_[4];
-        result1_ = (uint32_t) data_in_[5] << 24 | (uint32_t) data_in_[6] << 16 | (uint16_t) data_in_[7] << 8 | data_in_[8];
+        result0_ = (uint32_t) data_in_[4] << 24 | (uint32_t) data_in_[3] << 16 | (uint16_t) data_in_[2] << 8 | data_in_[1];
+        result1_ = (uint32_t) data_in_[8] << 24 | (uint32_t) data_in_[7] << 16 | (uint16_t) data_in_[6] << 8 | data_in_[5];
         int32_t diff = result0_ - result1_;
         float sum = (float) result0_ + (float) result1_;
         float tcomp = sum * k_temp_;
@@ -57,5 +57,5 @@ class SPITorque final : public TorqueSensor {
     uint32_t result0_ = 0;
     uint32_t result1_ = 0;
     float torque_ = 0;
-    float k_temp_, gain_, bias_;
+    float k_temp_=0, gain_ = 1, bias_=0;
 };
