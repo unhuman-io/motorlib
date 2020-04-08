@@ -16,8 +16,8 @@ class Encoder;
 template<typename FastLoop>
 class MainLoop {
  public:
-    MainLoop(FastLoop &fast_loop, PIDDeadbandController &controller, Communication &communication, LED &led, Encoder &output_encoder, TorqueSensor &torque) : 
-        fast_loop_(fast_loop), controller_(controller), communication_(communication), led_(led), output_encoder_(output_encoder), torque_sensor_(torque) {}
+    MainLoop(FastLoop &fast_loop, PIDDeadbandController &controller,  PIDController &torque_controller, PIDDeadbandController &impedance_controller, Communication &communication, LED &led, Encoder &output_encoder, TorqueSensor &torque) : 
+        fast_loop_(fast_loop), controller_(controller), torque_controller_(torque_controller), impedance_controller_(impedance_controller), communication_(communication), led_(led), output_encoder_(output_encoder), torque_sensor_(torque) {}
     void init() {}
     void update() {
       count_++;
@@ -35,6 +35,8 @@ class MainLoop {
         if (mode_ != static_cast<MainControlMode>(receive_data_.mode_desired)) {
           set_mode(static_cast<MainControlMode>(receive_data_.mode_desired));
           controller_.init(fast_loop_status_.motor_position.position);
+          torque_controller_.init(torque_);
+          impedance_controller_.init(fast_loop_status_.motor_position.position);
         }
       }
 
@@ -49,6 +51,18 @@ class MainLoop {
         case POSITION:
           iq_des = controller_.step(receive_data_.position_desired, receive_data_.velocity_desired, receive_data_.reserved, fast_loop_status_.motor_position.position) + \
                   receive_data_.current_desired;
+          break;
+        case TORQUE:
+          iq_des = torque_controller_.step(receive_data_.torque_desired, 0, torque_) + \
+                  receive_data_.current_desired;
+          break;
+        case IMPEDANCE:
+        {
+          float torque_des = impedance_controller_.step(receive_data_.position_desired, receive_data_.velocity_desired, receive_data_.reserved, fast_loop_status_.motor_position.position) + \
+                  receive_data_.torque_desired;
+          iq_des = torque_controller_.step(torque_des, 0, torque_) + \
+                  receive_data_.current_desired;
+        }
           break;
         case VELOCITY:
           // saturate position so that current = current max due to kp, so error max = 
@@ -108,6 +122,8 @@ class MainLoop {
     }
     void set_param(MainLoopParam &param) {
       controller_.set_param(param.controller_param);
+      torque_controller_.set_param(param.torque_controller_param);
+      impedance_controller_.set_param(param.impedance_controller_param);
       torque_sensor_.set_param(param.torque_sensor);
       param_ = param;
     }
@@ -158,6 +174,8 @@ class MainLoop {
     MainLoopParam param_;
     FastLoop &fast_loop_;
     PIDDeadbandController &controller_;
+    PIDController &torque_controller_;
+    PIDDeadbandController &impedance_controller_;
     Communication &communication_;
     LED &led_;
     ReceiveData receive_data_ = {};

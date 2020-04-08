@@ -10,8 +10,7 @@ class TorqueSensor {
         gain_ = param.gain;
         bias_ = param.bias;
         k_temp_ = param.k_temp;
-        filter_frequency_hz_ = param.filter_frequency_hz;
     }
  protected:
-    float gain_ = 0, bias_ = 0, k_temp_ = 0, filter_frequency_hz_ = 0;
+    float gain_ = 0, bias_ = 0, k_temp_ = 0;
 };
