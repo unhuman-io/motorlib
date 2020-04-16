@@ -11,16 +11,18 @@ class Encoder;
 #include "sincos.h"
 #include "led.h"
 #include "util.h"
+#include "torque_sensor.h"
 
 template<typename FastLoop>
 class MainLoop {
  public:
-    MainLoop(FastLoop &fast_loop, PIDDeadbandController &controller, Communication &communication, LED &led, Encoder &output_encoder) : 
-        fast_loop_(fast_loop), controller_(controller), communication_(communication), led_(led), output_encoder_(output_encoder) {}
+    MainLoop(FastLoop &fast_loop, PIDDeadbandController &controller,  PIDController &torque_controller, PIDDeadbandController &impedance_controller, Communication &communication, LED &led, Encoder &output_encoder, TorqueSensor &torque) : 
+        fast_loop_(fast_loop), controller_(controller), torque_controller_(torque_controller), impedance_controller_(impedance_controller), communication_(communication), led_(led), output_encoder_(output_encoder), torque_sensor_(torque) {}
     void init() {}
     void update() {
       count_++;
       output_encoder_.trigger();
+      if(count_ % 4 == 0) torque_sensor_.trigger();
       
       last_timestamp_ = timestamp_;
       timestamp_ = get_clock();
@@ -33,8 +35,12 @@ class MainLoop {
         if (mode_ != static_cast<MainControlMode>(receive_data_.mode_desired)) {
           set_mode(static_cast<MainControlMode>(receive_data_.mode_desired));
           controller_.init(fast_loop_status_.motor_position.position);
+          torque_controller_.init(torque_);
+          impedance_controller_.init(fast_loop_status_.motor_position.position);
         }
       }
+
+      if(count_ % 4 == 0) torque_ = torque_sensor_.read();
 
       float iq_des = 0;
       float vq_des = 0;
@@ -45,6 +51,18 @@ class MainLoop {
         case POSITION:
           iq_des = controller_.step(receive_data_.position_desired, receive_data_.velocity_desired, receive_data_.reserved, fast_loop_status_.motor_position.position) + \
                   receive_data_.current_desired;
+          break;
+        case TORQUE:
+          iq_des = torque_controller_.step(receive_data_.torque_desired, 0, torque_) + \
+                  receive_data_.current_desired;
+          break;
+        case IMPEDANCE:
+        {
+          float torque_des = impedance_controller_.step(receive_data_.position_desired, receive_data_.velocity_desired, receive_data_.reserved, fast_loop_status_.motor_position.position) + \
+                  receive_data_.torque_desired;
+          iq_des = torque_controller_.step(torque_des, 0, torque_) + \
+                  receive_data_.current_desired;
+        }
           break;
         case VELOCITY:
           // saturate position so that current = current max due to kp, so error max = 
@@ -96,6 +114,7 @@ class MainLoop {
       send_data.motor_encoder = fast_loop_status_.motor_mechanical_position;
       send_data.motor_position = fast_loop_status_.motor_position.position;
       send_data.joint_position = output_encoder_.get_value();//*2.0*(float) M_PI/param_.output_encoder.cpr;
+      send_data.torque = torque_;
       send_data.reserved[0] = iq_des; //fast_loop_status_.foc_status.measured.i_0;
       communication_.send_data(send_data);
       led_.update();
@@ -103,6 +122,9 @@ class MainLoop {
     }
     void set_param(MainLoopParam &param) {
       controller_.set_param(param.controller_param);
+      torque_controller_.set_param(param.torque_controller_param);
+      impedance_controller_.set_param(param.impedance_controller_param);
+      torque_sensor_.set_param(param.torque_sensor);
       param_ = param;
     }
     void get_status(MainLoopStatus * const main_loop_status) const {}
@@ -133,6 +155,10 @@ class MainLoop {
           fast_loop_.current_mode();
           led_.set_color(LED::BLUE);
           break;
+        case TORQUE:
+          fast_loop_.current_mode();
+          led_.set_color(LED::ROSE);
+          break;
         case VOLTAGE:
           fast_loop_.voltage_mode();
           led_.set_color(LED::VIOLET);
@@ -152,6 +178,8 @@ class MainLoop {
     MainLoopParam param_;
     FastLoop &fast_loop_;
     PIDDeadbandController &controller_;
+    PIDController &torque_controller_;
+    PIDDeadbandController &impedance_controller_;
     Communication &communication_;
     LED &led_;
     ReceiveData receive_data_ = {};
@@ -160,6 +188,8 @@ class MainLoop {
     FastLoopStatus fast_loop_status_ = {};
     MainControlMode mode_ = OPEN;
     Encoder &output_encoder_;
+    TorqueSensor &torque_sensor_;
+    float torque_ = 0;
     float dt_ = 0;
     KahanSum phi_;
     uint32_t timestamp_ = 0;
