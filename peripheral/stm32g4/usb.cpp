@@ -180,16 +180,20 @@ static void read_pma(uint8_t byte_count, __IO uint16_t * pma_address, uint8_t *b
 static void _send_data(uint8_t endpoint, const uint8_t *data, uint8_t length);
 
 bool USB1::tx_active(uint8_t endpoint) {
+    if (endpoint == 2) endpoint = 3;
     return (USBEPR->EP[endpoint].EPR & USB_EPTX_STAT) == USB_EP_TX_VALID;
 }
-
+#include "main.h"
 // Wait will pause until last packet has been received, If wait is false, then a buffered packet
 // will be discarded. For wait being false the maximum transmission is USBD_BULK_SIZE (64) bytes.
 void USB1::send_data(uint8_t endpoint, const uint8_t *data, uint8_t length, bool wait) {
+   // asm("bkpt 1");
     while (tx_active(endpoint)) {
+
         if (wait) {
             continue;
         } else {
+           // asm("bkpt 2");
             gpio_usb_GPIO_Port->BSRR |= gpio_usb_Pin; 
             uint8_t endpoint2 = endpoint; 
             if (endpoint == 2) { endpoint2 = 3; 
