@@ -155,6 +155,10 @@ class MainLoop {
           fast_loop_.current_mode();
           led_.set_color(LED::BLUE);
           break;
+        case TORQUE:
+          fast_loop_.current_mode();
+          led_.set_color(LED::ROSE);
+          break;
         case VOLTAGE:
           fast_loop_.voltage_mode();
           led_.set_color(LED::VIOLET);
