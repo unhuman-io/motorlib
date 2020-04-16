@@ -190,9 +190,36 @@ void USB1::send_data(uint8_t endpoint, const uint8_t *data, uint8_t length, bool
         if (wait) {
             continue;
         } else {
-            // need to double buffer
-            //epr_set_toggle(endpoint, USB_EP_TX_NAK, USB_EPTX_STAT);
-            break;
+            gpio_usb_GPIO_Port->BSRR |= gpio_usb_Pin; 
+            uint8_t endpoint2 = endpoint; 
+            if (endpoint == 2) { endpoint2 = 3; 
+             while((USBEPR->EP[endpoint2].EPR & USB_EPTX_STAT) != USB_EP_TX_NAK) {
+                 epr_set_toggle(endpoint2, USB_EP_TX_NAK, USB_EPTX_STAT);
+             }
+            }
+           // EXTI->RTSR1 |= EXTI_RTSR1_RT10;
+          //  EXTI->FTSR1 |= EXTI_FTSR1_FT10;
+            EXTI->PR1 = EXTI_PR1_PIF10;
+            uint32_t t_start = get_clock();
+            uint16_t idle_count = 0;
+            while((get_clock() - t_start) < 50000/(uint16_t) (1e9/CPU_FREQUENCY_HZ)) {
+                
+                if (EXTI->PR1 & EXTI_PR1_PIF10) {//(USB->FNR & USB_FNR_RXDM) {
+                    EXTI->PR1 = EXTI_PR1_PIF10;
+                    idle_count = 0;
+                } else {
+                    idle_count++;
+                }
+                if (idle_count > 3) {
+                    break;
+                }
+                if (USBEPR->EP[endpoint2].EPR & USB_EP_CTR_TX) {
+                    break;
+                }
+            }
+            //ns_delay(50000);
+            gpio_usb_GPIO_Port->BSRR |= gpio_usb_Pin << 16; 
+            //break;
         }
     }
     
@@ -202,6 +229,7 @@ void USB1::send_data(uint8_t endpoint, const uint8_t *data, uint8_t length, bool
     } else {
         _send_data(endpoint, data, length);
     }
+    //gpio_usb_GPIO_Port->BSRR |= gpio_usb_Pin << 16; 
 }
 
 void _send_data(uint8_t endpoint, const uint8_t *data, uint8_t length) {
@@ -209,7 +237,7 @@ void _send_data(uint8_t endpoint, const uint8_t *data, uint8_t length) {
     __IO uint16_t * pma_address = USBPMA->buffer[endpoint].EP_TX;
     if (endpoint == 2) {
         // double buffered DTOG_RX points to software_buffer to load, 0 or 1
-        int swbuf = (USBEPR->EP[3].EPR & USB_EP_DTOG_RX) >> 14;
+        int swbuf = 0;//(USBEPR->EP[3].EPR & USB_EP_DTOG_RX) >> 14;
         pma_address = USBPMA->EP_TX2[swbuf];
     }
     for(int i=0; i<length16; i++) {
@@ -217,14 +245,14 @@ void _send_data(uint8_t endpoint, const uint8_t *data, uint8_t length) {
     }
     if (endpoint == 2) {
         // toggle DTOG_TX to the buffer to the software_buffer that was just loaded
-        while ( ((USBEPR->EP[3].EPR & USB_EP_DTOG_TX) >> 6) != ((USBEPR->EP[3].EPR & USB_EP_DTOG_RX) >> 14) ) {
-            USBEPR->EP[3].EPR  = (USBEPR->EP[3].EPR & USB_EPREG_MASK) | USB_EP_CTR_TX | USB_EP_CTR_RX | USB_EP_DTOG_TX;
-        }
-        // toggle the software_buffer to the now open buffer
-        USBEPR->EP[3].EPR  = (USBEPR->EP[3].EPR & USB_EPREG_MASK) | USB_EP_CTR_TX | USB_EP_CTR_RX | USB_EP_DTOG_RX;
+        // while ( ((USBEPR->EP[3].EPR & USB_EP_DTOG_TX) >> 6) != ((USBEPR->EP[3].EPR & USB_EP_DTOG_RX) >> 14) ) {
+        //     USBEPR->EP[3].EPR  = (USBEPR->EP[3].EPR & USB_EPREG_MASK) | USB_EP_CTR_TX | USB_EP_CTR_RX | USB_EP_DTOG_TX;
+        // }
+        // // toggle the software_buffer to the now open buffer
+        // USBEPR->EP[3].EPR  = (USBEPR->EP[3].EPR & USB_EPREG_MASK) | USB_EP_CTR_TX | USB_EP_CTR_RX | USB_EP_DTOG_RX;
         // both counts are used, one for each buffer, just load both
         USBPMA->btable[3].COUNT_TX = length;
-        USBPMA->btable[3].COUNT_RX = length;
+       // USBPMA->btable[3].COUNT_RX = length;
         epr_set_toggle(3, USB_EP_TX_VALID, USB_EPTX_STAT);
     } else {
         USBPMA->btable[endpoint].COUNT_TX = length;
@@ -451,9 +479,9 @@ void USB1::interrupt() {
                     break;
                 case 0x09: // set configuration
                     // enable endpoint 2 IN (TX)
-                    USB->EP3R = 0x102; // Bulk on 2 double buf
+                    USB->EP3R = 0x002; // Bulk on 2 double buf
                     USBPMA->btable[3].ADDR_TX = offsetof(USBPMA_TypeDef, EP_TX2);
-                    USBPMA->btable[3].ADDR_RX = offsetof(USBPMA_TypeDef, EP_TX2)+64;
+                 //   USBPMA->btable[3].ADDR_RX = offsetof(USBPMA_TypeDef, EP_TX2)+64;
                     epr_set_toggle(3, USB_EP_TX_NAK, USB_EPTX_STAT);
                         // sets the toggle only bits to NAK, hardware better not change EPR during operation
                     
