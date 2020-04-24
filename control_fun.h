@@ -31,8 +31,8 @@ class KahanSum {
     {
         return sum_;
     }
-    void init() {
-        sum_ = 0;
+    void init(float value=0) {
+        sum_ = value;
         c_ = 0;
     }
  private:
@@ -108,9 +108,9 @@ class RateLimiter {
 
 class PIDController {
 public:
-    PIDController(float dt) : dt_(dt), error_dot_filter_(dt) {}
+    PIDController(float dt) : dt_(dt), error_dot_filter_(dt), output_filter_(dt) {}
     virtual ~PIDController() {}
-    void init(float measured) { rate_limit_.init(measured), measured_last_ = measured; error_dot_filter_.init(0); }
+    void init(float measured) { rate_limit_.init(measured), measured_last_ = measured; error_dot_filter_.init(0); output_filter_.init(0); } // todo init to current output 
     virtual float step(float desired, float velocity_desired, float measured, float velocity_limit = INFINITY);
     void set_param(const PIDParam &param);
 private:
@@ -121,6 +121,7 @@ private:
     Hysteresis hysteresis_;
     RateLimiter rate_limit_;
     FirstOrderLowPassFilter error_dot_filter_;
+    FirstOrderLowPassFilter output_filter_;
     template<typename, typename>
     friend class System;
 };
