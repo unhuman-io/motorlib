@@ -58,6 +58,9 @@ class FastLoop {
 
       if (mode_ == CURRENT_TUNING_MODE) {
          // only works down to frequencies of .047 Hz, could use kahansum to go slower
+         if (current_tuning_chirp_) {
+           tuning_frequency_ = chirp_frequency_.add(chirp_rate_ * dt_);
+         }
          phi_ += 2 * (float) M_PI * fabsf(tuning_frequency_) * dt_;   // use id des to set frequency
          if (phi_ > 2 * (float) M_PI) {
          phi_ -= 2 * (float) M_PI;
@@ -103,6 +106,11 @@ class FastLoop {
     void set_vq_des(float vq) { foc_command_.desired.v_q = vq; }
     void set_tuning_amplitude(float amplitude) { tuning_amplitude_ = amplitude; }
     void set_tuning_frequency(float frequency) { tuning_frequency_ = frequency; }
+    void set_tuning_chirp(bool on, float chirp_rate) { 
+      current_tuning_chirp_ = on; 
+      chirp_rate_ = chirp_rate; 
+      chirp_frequency_.init(0);
+    }
     void set_reserved(float reserved) { reserved_ = reserved; }
     void phase_lock_mode(float id) {
       phase_mode_ = 0;
@@ -206,6 +214,9 @@ class FastLoop {
    float phi_ = 0;
    float tuning_amplitude_ = 0;
    float tuning_frequency_ = 0;
+   float chirp_rate_ = 0;
+   bool current_tuning_chirp_ = false;
+   KahanSum chirp_frequency_;
 };
 
 #endif

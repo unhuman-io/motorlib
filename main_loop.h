@@ -94,9 +94,17 @@ class MainLoop {
           iq_des = controller_.step(position_desired, velocity_desired, 0, fast_loop_status_.motor_position.position);
           break;
         }
-        case CURRENT_TUNING: 
-          fast_loop_.set_tuning_amplitude(receive_data_.current_desired);
-          fast_loop_.set_tuning_frequency(receive_data_.reserved);
+        case CURRENT_TUNING:
+          if (count_received) {
+            if (receive_data_.current_desired < 0) { // flag for chirp mode
+              fast_loop_.set_tuning_amplitude(-receive_data_.current_desired);
+              fast_loop_.set_tuning_chirp(true, fabsf(receive_data_.reserved));
+            } else {
+              fast_loop_.set_tuning_chirp(false, 0);
+              fast_loop_.set_tuning_amplitude(receive_data_.current_desired);
+              fast_loop_.set_tuning_frequency(receive_data_.reserved);
+            }
+          }
           break;
         case VOLTAGE:
           vq_des = receive_data_.reserved;
