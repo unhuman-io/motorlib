@@ -40,7 +40,15 @@ class MainLoop {
         }
       }
 
-      if(count_ % 4 == 0) torque_ = torque_sensor_.read();
+      if(count_ % 4 == 0) {
+        float tmp_torque = torque_sensor_.read();
+      //  if (fabs(tmp_torque) < 2) {
+          torque_ = tmp_torque;
+      //  }
+      }
+
+      float torque_corrected = torque_+.02*fast_loop_status_.foc_status.measured.i_q;
+      float torque_filtered = torque_filter_.update(torque_corrected);
 
       float iq_des = 0;
       float vq_des = 0;
@@ -53,14 +61,14 @@ class MainLoop {
                   receive_data_.current_desired;
           break;
         case TORQUE:
-          iq_des = torque_controller_.step(receive_data_.torque_desired, 0, torque_) + \
+          iq_des = torque_controller_.step(receive_data_.torque_desired, 0, torque_filtered) + \
                   receive_data_.current_desired;
           break;
         case IMPEDANCE:
         {
           float torque_des = impedance_controller_.step(receive_data_.position_desired, receive_data_.velocity_desired, receive_data_.reserved, fast_loop_status_.motor_position.position) + \
                   receive_data_.torque_desired;
-          iq_des = torque_controller_.step(torque_des, 0, torque_) + \
+          iq_des = torque_controller_.step(torque_des, 0, torque_filtered) + \
                   receive_data_.current_desired;
         }
           break;
@@ -122,9 +130,11 @@ class MainLoop {
       send_data.motor_encoder = fast_loop_status_.motor_mechanical_position;
       send_data.motor_position = fast_loop_status_.motor_position.position;
       send_data.joint_position = output_encoder_.get_value();//*2.0*(float) M_PI/param_.output_encoder.cpr;
-      send_data.torque = torque_;
-      send_data.reserved[0] = iq_des; //fast_loop_status_.foc_status.measured.i_0;
+      send_data.torque = torque_filtered;
+      send_data.reserved[0] = torque_;
+      if(count_ % 4 == 0) {
       communication_.send_data(send_data);
+      }
       led_.update();
       last_receive_data_ = receive_data_;
     }
@@ -197,6 +207,7 @@ class MainLoop {
     MainControlMode mode_ = OPEN;
     Encoder &output_encoder_;
     TorqueSensor &torque_sensor_;
+    IIRFilter torque_filter_;
     float torque_ = 0;
     float dt_ = 0;
     KahanSum phi_;

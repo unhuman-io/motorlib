@@ -69,6 +69,35 @@ private:
     float alpha_, dt_;
 };
 
+#define IIRSIZE 4
+class IIRFilter {
+ public:
+    float update(float value) {
+        for (int i=IIRSIZE-1; i>0; i--) {
+            x_[i] = x_[i-1];
+            y_[i] = y_[i-1];
+        }
+        x_[0] = value;
+
+        float v = 0;
+        for (int i=0; i<IIRSIZE; i++) {
+            v += x_[i]*b_[i];
+        }
+        float n = 0;
+        for (int i=1; i<IIRSIZE; i++) {
+            n += y_[i]*a_[i];
+        }
+        y_[0] = v - n;
+        return y_[0];
+    }
+ private:
+    float x_[IIRSIZE] = {};
+    float y_[IIRSIZE] = {};
+    // note a_[0] ignored
+    float a_[IIRSIZE] = {1,         -2.87435689267748,           2.7564831952257,        -0.881893130592486};
+    float b_[IIRSIZE] = {2.91464944656705e-05,      8.74394833970116e-05,      8.74394833970116e-05,      2.91464944656705e-05};
+};
+
 class PIController {
 public:
     ~PIController() {}
