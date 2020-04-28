@@ -333,46 +333,43 @@ void USB1::interrupt() {
                         uint8_t byte_count = USBPMA->btable[0].COUNT_RX & USB_COUNT0_RX_COUNT0_RX;
                         read_pma(byte_count, USBPMA->buffer[0].EP_RX, buffer);
                         handle_setup_packet(buffer);
-                        // clear CTR
-                        USB->EP0R &= USB_EPREG_MASK & ~USB_EP_CTR_RX;
-                        // renable rx on ep0
-                        epr_set_toggle(0, USB_EP_RX_VALID, USB_EPRX_STAT);
-                    } else { // non setup rx
-                        USB->EP0R &= USB_EPREG_MASK & ~USB_EP_CTR_RX;
-                        epr_set_toggle(0, USB_EP_RX_VALID, USB_EPRX_STAT);
                     }
+                    // clear CTR
+                    USB->EP0R = (USB_EP_CTR_TX | (USB->EP0R & USB_EPREG_MASK)) & ~USB_EP_CTR_RX;
+                    // renable rx on ep0
+                    epr_set_toggle(0, USB_EP_RX_VALID, USB_EPRX_STAT);
                 }
                 if (USB->EP0R & USB_EP_CTR_TX) {
-                    USB->EP0R &= USB_EPREG_MASK & ~USB_EP_CTR_TX;
+                    // clear CTR_TX
+                    USB->EP0R = (USB_EP_CTR_RX | (USB->EP0R & USB_EPREG_MASK)) & ~USB_EP_CTR_TX;
                 }
                 break;
             case 2:
                 if (istr & USB_ISTR_DIR) { // RX
-                    USB->EP2R &= USB_EPREG_MASK & ~USB_EP_CTR_RX;
+                    // clear CTR_RX
+                    USB->EP2R = (USB_EP_CTR_TX | (USB->EP2R & USB_EPREG_MASK)) & ~USB_EP_CTR_RX;
                     count_rx_[2] = (USBPMA->btable[2].COUNT_RX & USB_COUNT2_RX_COUNT2_RX);
                     read_pma(count_rx_[2], USBPMA->buffer[2].EP_RX, rx_buffer_[2]);
                     new_rx_data_[2] = true;
                     epr_set_toggle(2, USB_EP_RX_VALID, USB_EPRX_STAT);
                 }
                 if (USB->EP2R & USB_EP_CTR_TX) {
-                    USB->EP2R &= USB_EPREG_MASK & ~USB_EP_CTR_TX;
+                    // clear CTR_TX
+                    USB->EP2R = (USB_EP_CTR_RX | (USB->EP2R & USB_EPREG_MASK)) & ~USB_EP_CTR_TX;
                 }
                 break;
             case 1:
                 if (istr & USB_ISTR_DIR) { // RX
-                    USB->EP1R &= USB_EPREG_MASK & ~USB_EP_CTR_RX;
+                    // clear CTR_RX
+                    USB->EP1R = (USB_EP_CTR_TX | (USB->EP1R & USB_EPREG_MASK)) & ~USB_EP_CTR_RX;
                     count_rx_[1] = (USBPMA->btable[1].COUNT_RX & USB_COUNT2_RX_COUNT2_RX);
                     read_pma(count_rx_[1], USBPMA->buffer[1].EP_RX, rx_buffer_[1]);
                     new_rx_data_[1] = true;
                     epr_set_toggle(1, USB_EP_RX_VALID, USB_EPRX_STAT);
                 }
                 if (USB->EP1R & USB_EP_CTR_TX) {
-                    USB->EP1R &= USB_EPREG_MASK & ~USB_EP_CTR_TX;
-                }
-                break;
-            case 3:
-                if (USB->EP3R & USB_EP_CTR_TX) {
-                    USB->EP3R &= USB_EPREG_MASK & ~USB_EP_CTR_TX;
+                     // clear CTR_TX
+                    USB->EP1R = (USB_EP_CTR_RX | (USB->EP1R & USB_EPREG_MASK)) & ~USB_EP_CTR_TX;
                 }
                 break;
         }
@@ -384,7 +381,7 @@ void USB1::interrupt() {
     }
 
     // clear anything remaining
-    USB->ISTR = 0;
+    //USB->ISTR = 0;
 }
 
  void USB1::handle_setup_packet(uint8_t *setup_data) {

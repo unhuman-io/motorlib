@@ -132,9 +132,9 @@ class MainLoop {
       send_data.joint_position = output_encoder_.get_value();//*2.0*(float) M_PI/param_.output_encoder.cpr;
       send_data.torque = torque_filtered;
       send_data.reserved[0] = torque_;
-      if(count_ % 4 == 0) {
+      //if(count_ % 4 == 0) {
       communication_.send_data(send_data);
-      }
+      //}
       led_.update();
       last_receive_data_ = receive_data_;
     }
