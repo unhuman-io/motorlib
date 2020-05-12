@@ -193,16 +193,16 @@ class FastLoop {
     float iq_des = 0;
     float id_des = 0;
     float iq_des_gain_ = 1;
-    uint16_t adc1, adc2, adc3;
+    volatile uint16_t adc1, adc2, adc3;
     FOCCommand foc_command_ = {};
 
     int32_t motor_index_pos_ = 0;
     int32_t motor_electrical_zero_pos_;
     float inv_motor_encoder_cpr_;
     int32_t frequency_hz_ = 100000;
-    float ia_bias_ = 0;
-    float ib_bias_ = 0;
-    float ic_bias_ = 0;
+    volatile float ia_bias_ = 0;
+    volatile float ib_bias_ = 0;
+    volatile float ic_bias_ = 0;
     float alpha_zero_ = 0.001;
     float v_bus_ = 12;
     mcu_time timestamp_;
