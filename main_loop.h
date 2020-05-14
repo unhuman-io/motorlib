@@ -46,6 +46,7 @@ class MainLoop {
           torque_ = tmp_torque;
       //  }
       }
+      output_encoder_.read();
 
       float torque_corrected = torque_+.02*fast_loop_status_.foc_status.measured.i_q;
       float torque_filtered = torque_filter_.update(torque_corrected);
@@ -129,7 +130,7 @@ class MainLoop {
       send_data.mcu_timestamp = fast_loop_status_.timestamp;
       send_data.motor_encoder = fast_loop_status_.motor_mechanical_position;
       send_data.motor_position = fast_loop_status_.motor_position.position;
-      send_data.joint_position = output_encoder_.get_value();//*2.0*(float) M_PI/param_.output_encoder.cpr;
+      send_data.joint_position = output_encoder_.get_value()*2.0*(float) M_PI/param_.output_encoder.cpr;
       send_data.torque = torque_filtered;
       send_data.reserved[0] = torque_;
       //if(count_ % 4 == 0) {
