@@ -22,6 +22,7 @@ class MainLoop {
     void update() {
       count_++;
       output_encoder_.trigger();
+      output_encoder_.read();
       if(count_ % 4 == 0) torque_sensor_.trigger();
       
       last_timestamp_ = timestamp_;
@@ -40,13 +41,15 @@ class MainLoop {
         }
       }
 
+      
+
       if(count_ % 4 == 0) {
         float tmp_torque = torque_sensor_.read();
       //  if (fabs(tmp_torque) < 2) {
           torque_ = tmp_torque;
       //  }
       }
-      output_encoder_.read();
+
 
       float torque_corrected = torque_+.02*fast_loop_status_.foc_status.measured.i_q;
       float torque_filtered = torque_filter_.update(torque_corrected);
