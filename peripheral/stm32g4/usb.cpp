@@ -2,7 +2,7 @@
 #include <algorithm>
 #include <cstring>
 #include "../../param.h"
-#include "../../../version.h"
+#include "../version.h"
 
 #include "stm32g4xx.h"
 #include "../../util.h"
