@@ -3,8 +3,8 @@
 
 #include <cstdint>
 
-// single to exit
-extern uint8_t go_to_bootloader;
+// signal to exit
+extern uint32_t go_to_bootloader;
 
 class USB1 {
  public:
