@@ -16,7 +16,7 @@ class Encoder;
 template<typename FastLoop>
 class MainLoop {
  public:
-    MainLoop(FastLoop &fast_loop, PIDDeadbandController &controller,  PIDController &torque_controller, PIDDeadbandController &impedance_controller, Communication &communication, LED &led, Encoder &output_encoder, TorqueSensor &torque) : 
+    MainLoop(FastLoop &fast_loop, PIDDeadbandController &controller,  PIDController &torque_controller, PIDDeadbandController &impedance_controller, Communication &communication, LED &led, Sensor &output_encoder, TorqueSensor &torque) : 
         fast_loop_(fast_loop), controller_(controller), torque_controller_(torque_controller), impedance_controller_(impedance_controller), communication_(communication), led_(led), output_encoder_(output_encoder), torque_sensor_(torque) {}
     void init() {}
     void update() {
@@ -209,7 +209,7 @@ class MainLoop {
     uint64_t count_ = 0;
     FastLoopStatus fast_loop_status_ = {};
     MainControlMode mode_ = OPEN;
-    Encoder &output_encoder_;
+    Sensor &output_encoder_;
     TorqueSensor &torque_sensor_;
     IIRFilter torque_filter_;
     float torque_ = 0;
