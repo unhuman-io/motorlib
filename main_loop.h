@@ -16,8 +16,10 @@ class Encoder;
 template<typename FastLoop>
 class MainLoop {
  public:
-    MainLoop(FastLoop &fast_loop, PIDDeadbandController &controller,  PIDController &torque_controller, PIDDeadbandController &impedance_controller, Communication &communication, LED &led, Encoder &output_encoder, TorqueSensor &torque) : 
-        fast_loop_(fast_loop), controller_(controller), torque_controller_(torque_controller), impedance_controller_(impedance_controller), communication_(communication), led_(led), output_encoder_(output_encoder), torque_sensor_(torque) {}
+    MainLoop(FastLoop &fast_loop, PIDDeadbandController &controller,  PIDController &torque_controller, PIDDeadbandController &impedance_controller, Communication &communication, LED &led, Encoder &output_encoder, TorqueSensor &torque, const MainLoopParam &param) : 
+        fast_loop_(fast_loop), controller_(controller), torque_controller_(torque_controller), impedance_controller_(impedance_controller), communication_(communication), led_(led), output_encoder_(output_encoder), torque_sensor_(torque) {
+          set_param(param);
+        }
     void init() {}
     void update() {
       count_++;
@@ -142,7 +144,7 @@ class MainLoop {
       led_.update();
       last_receive_data_ = receive_data_;
     }
-    void set_param(MainLoopParam &param) {
+    void set_param(const MainLoopParam &param) {
       controller_.set_param(param.controller_param);
       torque_controller_.set_param(param.torque_controller_param);
       impedance_controller_.set_param(param.impedance_controller_param);
@@ -186,7 +188,7 @@ class MainLoop {
           led_.set_color(LED::VIOLET);
           break;
         case PHASE_LOCK:
-          fast_loop_.phase_lock_mode(param()->startup_param.phase_lock_current);
+         // fast_loop_.phase_lock_mode(param()->startup_param.phase_lock_current);
           led_.set_color(LED::YELLOW);
           break;
         case BOARD_RESET:

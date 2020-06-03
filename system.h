@@ -2,7 +2,6 @@
 
 #ifdef __cplusplus
 #include "parameter_api.h"
-#include "param.h"
 #include <queue>
 #include <string>
 
@@ -14,10 +13,6 @@ extern uint32_t t_period_mainloop;
 template<typename Actuator, typename Communication>
 class System {
  public:
-    static void init() {
-        actuator_.set_param(param()->fast_loop_param, param()->main_loop_param);
-        log("finished system init");
-    }
     static void run() {
         actuator_.start();
 

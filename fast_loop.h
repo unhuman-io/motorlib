@@ -17,10 +17,11 @@
 template<typename PWM, typename Encoder>
 class FastLoop {
  public:
-    FastLoop(int32_t frequency_hz, PWM &pwm, Encoder &encoder) : pwm_(pwm), encoder_(encoder) {
+    FastLoop(int32_t frequency_hz, PWM &pwm, Encoder &encoder, const FastLoopParam &param) : pwm_(pwm), encoder_(encoder) {
        frequency_hz_ = frequency_hz;
        float dt = 1.0f/frequency_hz;
        foc_ = new FOC(dt);
+       set_param(param);
     }
     ~FastLoop() {
        delete foc_;
@@ -150,7 +151,7 @@ class FastLoop {
     }
     void set_param(const FastLoopParam &fast_loop_param) {
       param_ = fast_loop_param;
-      foc_->set_param(fast_loop_param.foc_param);
+      foc_->set_param(param_.foc_param);
       set_phase_mode();
       inv_motor_encoder_cpr_ = param_.motor_encoder.cpr != 0 ? 1.f/param_.motor_encoder.cpr : 0;
     }
