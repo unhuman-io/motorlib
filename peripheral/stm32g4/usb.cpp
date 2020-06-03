@@ -7,7 +7,7 @@
 #include "../../util.h"
 #include <cstdio>
 
-extern const char name[64];
+extern const char * const name;
 
 typedef struct { // up to 1024 bytes, 16 bit access only, first table is 64 bytes, reception buffers need two additional bytes for CRC
     struct {
