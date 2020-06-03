@@ -1,12 +1,13 @@
 #include "../usb.h"
 #include <algorithm>
 #include <cstring>
-#include "../../param.h"
 #include "../version.h"
 
 #include "stm32g4xx.h"
 #include "../../util.h"
 #include <cstdio>
+
+extern const char * const name;
 
 typedef struct { // up to 1024 bytes, 16 bit access only, first table is 64 bytes, reception buffers need two additional bytes for CRC
     struct {
@@ -422,7 +423,7 @@ void USB1::interrupt() {
                                     send_string(0, VERSION " " GIT_HASH " " BUILD_DATETIME, std::strlen(VERSION " " GIT_HASH " " BUILD_DATETIME));
                                     break;
                                 case 0x05:
-                                    send_string(0, param()->name, std::strlen(param()->name));
+                                    send_string(0, const_cast<const char*>(name), std::strlen(const_cast<const char*>(name)));
                                     break;
                                 case 0x06:
                                     send_string(0, "ST DFU mode", std::strlen("ST DFU mode"));

@@ -2,8 +2,9 @@
 #include "bootloader.h"
 
 #include <cstdio>
-#include "../../param.h"
 #include "../..//util.h"
+
+extern const char * const name;
 
 
 #define LOBYTE(x)  ((uint8_t)(x & 0x00FF))
@@ -255,7 +256,7 @@ void USB_OTG::handle_setup_packet(uint8_t *setup_data) {
                                     send_string(0, VERSION " " GIT_HASH " " BUILD_DATETIME, std::strlen(VERSION " " GIT_HASH " " BUILD_DATETIME));
                                     break;
                                 case 0x05:
-                                    send_string(0, param()->name, std::strlen(param()->name));
+                                    send_string(0, name, std::strlen(name));
                                     break;
                                 case 0x06:
                                     send_string(0, "ST DFU mode", std::strlen("ST DFU mode"));

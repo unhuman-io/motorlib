@@ -6,7 +6,7 @@ class TorqueSensor {
     virtual void init() {}
     virtual void trigger() {}
     virtual float read() = 0;
-    virtual void set_param(TorqueSensorParam &param) {
+    virtual void set_param(const TorqueSensorParam &param) {
         gain_ = param.gain;
         bias_ = param.bias;
         k_temp_ = param.k_temp;
