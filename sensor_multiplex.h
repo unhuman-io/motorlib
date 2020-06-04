@@ -10,15 +10,18 @@ class SensorMultiplex : public Sensor {
  public:
     class SecondarySensor : public Sensor {
      public:
-        int32_t get_value() { return secondary_.get_value(); }
+        SecondarySensor(Sensor *secondary) : secondary_(secondary) {}
+        int32_t get_value() const { return secondary_->get_value(); }
+     private:
+        Sensor *secondary_;
     };
 
     SensorMultiplex(Sensor1 &primary, Sensor2 &secondary) :
-        primary_(primary), secondary_(secondary) {}
-    SecondarySensor &secondary() { return  secondary_read_; }
-    int32_t read() { int32_t value = toggle_ ? primary_.read() : secondary_.read();  
+        primary_(primary), secondary_(secondary), secondary_read_(&secondary) {}
+    SecondarySensor &secondary() { return secondary_read_; }
+    int32_t read() {if (toggle_) primary_.read(); else secondary_.read();  
                             toggle_ = !toggle_;
-                            return value; }
+                            return primary_.get_value(); }
     int32_t get_value() const { return primary_.get_value(); }
     void trigger() { if (toggle_) primary_.trigger(); else secondary_.trigger(); }
     int32_t get_index_pos() const { return primary_.get_index_pos(); }
