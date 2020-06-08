@@ -25,7 +25,7 @@ class MainLoop {
       count_++;
       output_encoder_.trigger();
       output_encoder_.read();
-      if(count_ % 4 == 0) torque_sensor_.trigger();
+      if(count_ % 10 == 0) torque_sensor_.trigger();
       
       last_timestamp_ = timestamp_;
       timestamp_ = get_clock();
@@ -45,7 +45,7 @@ class MainLoop {
 
       
 
-      if(count_ % 4 == 0) {
+      if(count_ % 10 == 0) {
         float tmp_torque = torque_sensor_.read();
       //  if (fabs(tmp_torque) < 2) {
           torque_ = tmp_torque;

@@ -77,6 +77,17 @@ class System {
     static std::queue<std::string> log_queue_;
 };
 
+#include "../st_device.h"
+extern "C" void SystemClock_Config();
+
+struct SystemInitClass {
+ public:
+    SystemInitClass() {
+        HAL_Init();
+        SystemClock_Config();
+    }
+};
+
 extern "C" {
 #endif // __cplusplus
 
