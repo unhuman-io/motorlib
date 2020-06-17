@@ -24,6 +24,7 @@ class MainLoop {
     void update() {
       count_++;
       output_encoder_.trigger();
+      SendData send_data;
       output_encoder_.read();
       if(count_ % 10 == 0) torque_sensor_.trigger();
       
@@ -129,7 +130,7 @@ class MainLoop {
 
       fast_loop_.set_iq_des(iq_des);
       fast_loop_.set_vq_des(vq_des);
-      SendData send_data;
+
       send_data.iq = fast_loop_status_.foc_status.measured.i_q;
       send_data.host_timestamp_received = receive_data_.host_timestamp;
       send_data.mcu_timestamp = fast_loop_status_.timestamp;
