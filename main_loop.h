@@ -124,6 +124,9 @@ class MainLoop {
         case VOLTAGE:
           vq_des = receive_data_.reserved;
           break;
+        case PHASE_LOCK:
+          fast_loop_.phase_lock_mode(receive_data_.current_desired);
+          break;
         default:
           break;
       }
@@ -189,7 +192,7 @@ class MainLoop {
           led_.set_color(LED::VIOLET);
           break;
         case PHASE_LOCK:
-         // fast_loop_.phase_lock_mode(param()->startup_param.phase_lock_current);
+          fast_loop_.phase_lock_mode(0);
           led_.set_color(LED::YELLOW);
           break;
         case BOARD_RESET:
