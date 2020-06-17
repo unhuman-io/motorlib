@@ -32,8 +32,8 @@ class MA732Encoder final : public SPIEncoder {
         uint8_t value = send_and_read(0) >> 8;
         if (desired_filter != value) {
             // uncomment below to write the register
-            // filter.bits.command = 0b100; // write register
-            // filter.bits.value = desired_filter;
+            filter.bits.command = 0b100; // write register
+            filter.bits.value = desired_filter;
             send_and_read(filter.word);
             ms_delay(20); // 20 ms delay for idle time to register readout 
             value = send_and_read(0) >> 8;

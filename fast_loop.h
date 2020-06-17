@@ -218,6 +218,9 @@ class FastLoop {
    float chirp_rate_ = 0;
    bool current_tuning_chirp_ = false;
    KahanSum chirp_frequency_;
+
+    template<typename, typename>
+    friend class System;
 };
 
 #endif

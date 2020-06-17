@@ -31,6 +31,11 @@ class System {
         api.add_api_variable("va", new APIFloat(&actuator_.main_loop_.fast_loop_status_.foc_status.command.v_a));
         api.add_api_variable("vb", new APIFloat(&actuator_.main_loop_.fast_loop_status_.foc_status.command.v_b));
         api.add_api_variable("vc", new APIFloat(&actuator_.main_loop_.fast_loop_status_.foc_status.command.v_c));
+        api.add_api_variable("ia", new APIFloat(&actuator_.fast_loop_.foc_command_.measured.i_a));
+        api.add_api_variable("ib", new APIFloat(&actuator_.fast_loop_.foc_command_.measured.i_b));
+        api.add_api_variable("ic", new APIFloat(&actuator_.fast_loop_.foc_command_.measured.i_c));
+        api.add_api_variable("id", new APIFloat(&actuator_.main_loop_.fast_loop_status_.foc_status.measured.i_d));
+        api.add_api_variable("i0", new APIFloat(&actuator_.main_loop_.fast_loop_status_.foc_status.measured.i_0));
         while(1) {
             char *s = System::get_string();
             if (s != NULL) {
