@@ -170,7 +170,7 @@ class PIDInterpolateController : public PIDController {
     virtual ~PIDInterpolateController() {}
     virtual float step(float desired, float velocity_desired, float measured, float velocity_limit = INFINITY) {
         desired = filt2_.update(filt1_.update(desired));
-        return step(desired, velocity_desired, measured, velocity_limit);
+        return PIDController::step(desired, velocity_desired, measured, velocity_limit);
     }
  private:
     FirstOrderLowPassFilter filt1_, filt2_;
