@@ -106,6 +106,8 @@ public:
 private:
     float kp_ = 0, ki_ = 0, ki_sum_ = 0, ki_limit_ = 0, command_max_ = 0;
 
+    template<typename, typename>
+    friend class System;
 };
 
 class RateLimiter {

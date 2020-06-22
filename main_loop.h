@@ -16,7 +16,7 @@ class Encoder;
 template<typename FastLoop>
 class MainLoop {
  public:
-    MainLoop(FastLoop &fast_loop, PIDDeadbandController &controller,  PIDController &torque_controller, PIDDeadbandController &impedance_controller, Communication &communication, LED &led, Encoder &output_encoder, TorqueSensor &torque, const MainLoopParam &param) : 
+    MainLoop(FastLoop &fast_loop, PIDDeadbandController &controller,  PIDController &torque_controller, PIDDeadbandController &impedance_controller, Communication &communication, LED &led, Sensor &output_encoder, TorqueSensor &torque, const MainLoopParam &param) : 
         fast_loop_(fast_loop), controller_(controller), torque_controller_(torque_controller), impedance_controller_(impedance_controller), communication_(communication), led_(led), output_encoder_(output_encoder), torque_sensor_(torque) {
           set_param(param);
         }
@@ -24,8 +24,9 @@ class MainLoop {
     void update() {
       count_++;
       output_encoder_.trigger();
+      SendData send_data;
       output_encoder_.read();
-      if(count_ % 4 == 0) torque_sensor_.trigger();
+      if(count_ % 10 == 0) torque_sensor_.trigger();
       
       last_timestamp_ = timestamp_;
       timestamp_ = get_clock();
@@ -45,7 +46,7 @@ class MainLoop {
 
       
 
-      if(count_ % 4 == 0) {
+      if(count_ % 10 == 0) {
         float tmp_torque = torque_sensor_.read();
       //  if (fabs(tmp_torque) < 2) {
           torque_ = tmp_torque;
@@ -123,13 +124,16 @@ class MainLoop {
         case VOLTAGE:
           vq_des = receive_data_.reserved;
           break;
+        case PHASE_LOCK:
+          fast_loop_.phase_lock_mode(receive_data_.current_desired);
+          break;
         default:
           break;
       }
 
       fast_loop_.set_iq_des(iq_des);
       fast_loop_.set_vq_des(vq_des);
-      SendData send_data;
+
       send_data.iq = fast_loop_status_.foc_status.measured.i_q;
       send_data.host_timestamp_received = receive_data_.host_timestamp;
       send_data.mcu_timestamp = fast_loop_status_.timestamp;
@@ -188,7 +192,7 @@ class MainLoop {
           led_.set_color(LED::VIOLET);
           break;
         case PHASE_LOCK:
-         // fast_loop_.phase_lock_mode(param()->startup_param.phase_lock_current);
+          fast_loop_.phase_lock_mode(0);
           led_.set_color(LED::YELLOW);
           break;
         case BOARD_RESET:
@@ -211,7 +215,7 @@ class MainLoop {
     uint64_t count_ = 0;
     FastLoopStatus fast_loop_status_ = {};
     MainControlMode mode_ = OPEN;
-    Encoder &output_encoder_;
+    Sensor &output_encoder_;
     TorqueSensor &torque_sensor_;
     IIRFilter torque_filter_;
     float torque_ = 0;
