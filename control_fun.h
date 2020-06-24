@@ -164,6 +164,18 @@ public:
     virtual float step(float desired, float velocity_desired, float deadband, float measured, float velocity_limit = INFINITY);
 };
 
+class PIDInterpolateController : public PIDController {
+ public:
+    PIDInterpolateController(float dt, float filter_hz) : PIDController(dt), filt1_(dt, filter_hz), filt2_(dt, filter_hz) {}
+    virtual ~PIDInterpolateController() {}
+    virtual float step(float desired, float velocity_desired, float measured, float velocity_limit = INFINITY) {
+        desired = filt2_.update(filt1_.update(desired));
+        return PIDController::step(desired, velocity_desired, measured, velocity_limit);
+    }
+ private:
+    FirstOrderLowPassFilter filt1_, filt2_;
+};
+
 
 
 
