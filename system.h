@@ -18,7 +18,6 @@ class System {
 
         log("finished startup");
 
-        ParameterAPI api;
         uint32_t cpu_frequency = CPU_FREQUENCY_HZ;
         api.add_api_variable("kp", new APIFloat(&actuator_.main_loop_.controller_.kp_));
         api.add_api_variable("kd", new APIFloat(&actuator_.main_loop_.controller_.kd_));
@@ -39,6 +38,8 @@ class System {
         api.add_api_variable("ikp", new APIFloat(&actuator_.fast_loop_.foc_->pi_iq_->kp_));
         api.add_api_variable("iki", new APIFloat(&actuator_.fast_loop_.foc_->pi_iq_->ki_));
         api.add_api_variable("iki_limit", new APIFloat(&actuator_.fast_loop_.foc_->pi_iq_->ki_limit_));
+        api.add_api_variable("tkp", new APIFloat(&actuator_.main_loop_.torque_controller_.kp_));
+        api.add_api_variable("tkd", new APIFloat(&actuator_.main_loop_.torque_controller_.kd_));
         while(1) {
             char *s = System::get_string();
             if (s != NULL) {
@@ -83,6 +84,7 @@ class System {
     static Communication usb_;
     static Actuator actuator_;
     static std::queue<std::string> log_queue_;
+    static ParameterAPI api;
 };
 
 #include "../st_device.h"
