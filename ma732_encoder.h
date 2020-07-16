@@ -34,7 +34,7 @@ class MA732Encoder final : public SPIEncoder {
         reg.bits.address = address;
         reg.bits.command = 0b010; // read register
         send_and_read(reg.word);
-        ns_delay(1750); // read register delay
+        ns_delay(750); // read register delay
         uint8_t retval = send_and_read(0) >> 8;
         register_operation_--;
         return retval;
@@ -58,12 +58,20 @@ class MA732Encoder final : public SPIEncoder {
         return retval;
     }
 
-    void set_k(uint32_t value) {
+    void set_bct(uint32_t value) {
         set_register(0x2, value);
     }
 
-    uint32_t get_k() {
+    uint32_t get_bct() {
         return read_register(0x2);
+    }
+
+    void set_et(uint32_t value) {
+        set_register(0x3, value);
+    }
+
+    uint32_t get_et() {
+        return read_register(0x3);
     }
 
     virtual int32_t get_value()  const __attribute__((section (".ccmram"))) { return count_; }
