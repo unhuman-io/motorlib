@@ -19,30 +19,45 @@ class MA732Encoder final : public SPIEncoder {
         last_data_ = data_;
         return count_;
     }
-    virtual int32_t get_value()  const __attribute__((section (".ccmram"))) { return count_; }
-    bool init() {
-        // filter frequency 1500 Hz
-        MA732reg filter;
-        uint8_t desired_filter = filter_;
-        filter.bits.command = 0b010; // read register
-        filter.bits.address = 0xE;
-        filter.bits.value = 0;
-        send_and_read(filter.word);
+
+    uint8_t read_register(uint8_t address) const {
+        MA732reg reg = {};
+        reg.bits.address = address;
+        reg.bits.command = 0b010; // read register
+        const_cast<MA732Encoder*>(this)->send_and_read(reg.word);
         ns_delay(750); // read register delay
-        uint8_t value = send_and_read(0) >> 8;
-        if (desired_filter != value) {
-            // uncomment below to write the register
-            filter.bits.command = 0b100; // write register
-            filter.bits.value = desired_filter;
-            send_and_read(filter.word);
-            ms_delay(20); // 20 ms delay for idle time to register readout 
-            value = send_and_read(0) >> 8;
-            if (value != desired_filter) {
-                return false;
-            }
+        return const_cast<MA732Encoder*>(this)->send_and_read(0) >> 8;
+    }
+
+    bool set_register(uint8_t address, uint8_t value) {
+        if (read_register(address) != value) {
+            MA732reg reg = {};
+            reg.bits.address = address;
+            reg.bits.command = 0b100; // write register
+            reg.bits.value = value;
+            send_and_read(reg.word);
+            ms_delay(20); 
+            return read_register(address) == value;
         }
         return true;
     }
+
+    void set_k(uint32_t value) {
+        set_register(0x2, value);
+    }
+
+    uint32_t get_k() const {
+        return read_register(0x2);
+    }
+
+    virtual int32_t get_value()  const __attribute__((section (".ccmram"))) { return count_; }
+
+    bool init() {
+        // filter frequency
+        bool success = set_register(0xE, filter_);
+        return success;
+    }
+
  private:
     uint8_t filter_;
     uint16_t last_data_ = 0;
