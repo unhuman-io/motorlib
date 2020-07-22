@@ -13,7 +13,8 @@ class HRPWM final : public PWM {
          pwm_b_(regs.sTimerxRegs[ch_b].CMP1xR), 
          pwm_c_(regs.sTimerxRegs[ch_c].CMP1xR), 
          ch_a_(ch_a), ch_b_(ch_b), ch_c_(ch_c),
-         pwm3_mode_(pwm3_mode) {
+         pwm3_mode_(pwm3_mode),
+         deadtime_ns_(deadtime_ns) {
       set_frequency_hz(frequency_hz);
       set_vbus(12);
 
@@ -25,7 +26,7 @@ class HRPWM final : public PWM {
          regs_.sTimerxRegs[ch_c_].SETx2R = HRTIM_SET2R_SST;
       } else {
          uint32_t deadprescale = 0;
-         uint32_t deadtime = 68; //deadtime_ns * CPU_FREQUENCY_HZ * 32 / 4 / 1.e9;
+         uint32_t deadtime = deadtime_ns_ * CPU_FREQUENCY_HZ * 32 / 4 / 1.e9; // I think this should be /8 not /4, but /4 seems to give correct scale
          regs_.sTimerxRegs[ch_a_].OUTxR |= HRTIM_OUTR_DTEN;
          regs_.sTimerxRegs[ch_a_].DTxR |= (deadtime << HRTIM_DTR_DTF_Pos) | (deadtime << HRTIM_DTR_DTR_Pos) | (deadprescale << HRTIM_DTR_DTPRSC_Pos);
          regs_.sTimerxRegs[ch_b_].OUTxR |= HRTIM_OUTR_DTEN;
@@ -52,6 +53,7 @@ class HRPWM final : public PWM {
    uint8_t ch_a_, ch_b_, ch_c_;
    float v_to_pwm_;
    bool pwm3_mode_;
+   uint16_t deadtime_ns_;
 };
 
 #endif
