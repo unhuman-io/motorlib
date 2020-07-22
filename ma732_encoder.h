@@ -43,16 +43,14 @@ class MA732Encoder final : public SPIEncoder {
     bool set_register(uint8_t address, uint8_t value) {
         register_operation_++;
         bool retval = true;
-        for(int i=0; i<10; i++) {
-            if (read_register(address) != value) {
-                MA732reg reg = {};
-                reg.bits.address = address;
-                reg.bits.command = 0b100; // write register
-                reg.bits.value = value;
-                send_and_read(reg.word);
-                ms_delay(20); 
-                retval = read_register(address) == value;
-            }
+        if (read_register(address) != value) {
+            MA732reg reg = {};
+            reg.bits.address = address;
+            reg.bits.command = 0b100; // write register
+            reg.bits.value = value;
+            send_and_read(reg.word);
+            ms_delay(20); 
+            retval = read_register(address) == value;
         }
         register_operation_--;
         return retval;
@@ -109,6 +107,6 @@ class MA732Encoder final : public SPIEncoder {
     uint8_t filter_;
     uint16_t last_data_ = 0;
     int32_t count_ = 0;
-    int register_operation_ = 0;
+    volatile int register_operation_ = 0;
     uint32_t tmp;
 };
