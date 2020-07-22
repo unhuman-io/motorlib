@@ -35,6 +35,11 @@ void HRPWM::voltage_mode() {
     regs_.sTimerxRegs[ch_a_].SETx1R = HRTIM_SET1R_CMP1; // set to active on cmp1
     regs_.sTimerxRegs[ch_b_].SETx1R = HRTIM_SET1R_CMP1;
     regs_.sTimerxRegs[ch_c_].SETx1R = HRTIM_SET1R_CMP1;
+    if (pwm3_mode_) {
+        regs_.sTimerxRegs[ch_a_].SETx2R = HRTIM_SET2R_SST;
+        regs_.sTimerxRegs[ch_b_].SETx2R = HRTIM_SET2R_SST;
+        regs_.sTimerxRegs[ch_c_].SETx2R = HRTIM_SET2R_SST;
+    }
     regs_.sCommonRegs.CR1 = 0x0; // enable updates
     regs_.sCommonRegs.OENR = 0xFFF;
 }
