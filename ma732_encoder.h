@@ -74,6 +74,29 @@ class MA732Encoder final : public SPIEncoder {
         return read_register(0x3);
     }
 
+    void set_mgt(uint32_t value) {
+        set_register(0x6, value);
+    }
+
+    uint32_t get_magnetic_field_strength() {
+        uint8_t original_mgt = read_register(0x6);
+        uint8_t mght = 0, mglt = 7;
+        for (uint8_t i=0; i<8; i++) {
+            set_register(0x6, i<<2 | i<<5); // increment magnetic field thresholds
+            uint8_t test_mgt = read_register(0x1B);    
+            // find last value that mght is 1 and the last that mglt is 0
+            // I think they should be equal
+            if (test_mgt & 0x80) {
+                mght = i;
+            }
+            if (!(test_mgt & 0x40)) {
+                mglt = i;
+            }
+        }
+        set_register(0x6, original_mgt);
+        return (mght << 2 | mglt << 5);
+    }
+
     virtual int32_t get_value()  const __attribute__((section (".ccmram"))) { return count_; }
 
     bool init() {
