@@ -7,7 +7,7 @@
 
 class HRPWM final : public PWM {
  public:
-    HRPWM(uint32_t frequency_hz, HRTIM_TypeDef &regs, uint8_t ch_a, uint8_t ch_b, uint8_t ch_c, bool pwm3_mode = false) : 
+    HRPWM(uint32_t frequency_hz, HRTIM_TypeDef &regs, uint8_t ch_a, uint8_t ch_b, uint8_t ch_c, bool pwm3_mode = false, uint16_t deadtime_ns = 50) : 
          regs_(regs),
          pwm_a_(regs.sTimerxRegs[ch_a].CMP1xR), 
          pwm_b_(regs.sTimerxRegs[ch_b].CMP1xR), 
@@ -16,22 +16,29 @@ class HRPWM final : public PWM {
          pwm3_mode_(pwm3_mode) {
       set_frequency_hz(frequency_hz);
       set_vbus(12);
-      if (pwm3_mode) {
-         // nothing to be done
+
+   }
+   void init() {
+      if (pwm3_mode_) {
+         regs_.sTimerxRegs[ch_a_].SETx2R = HRTIM_SET2R_SST;
+         regs_.sTimerxRegs[ch_b_].SETx2R = HRTIM_SET2R_SST;
+         regs_.sTimerxRegs[ch_c_].SETx2R = HRTIM_SET2R_SST;
       } else {
-         uint32_t deadtime = 10;
          uint32_t deadprescale = 0;
-         HRTIM1->sTimerxRegs[ch_a].OUTxR |= HRTIM_OUTR_DTEN;
-         HRTIM1->sTimerxRegs[ch_a].DTxR |= (deadtime << HRTIM_DTR_DTF_Pos) | (deadtime << HRTIM_DTR_DTR_Pos) | (deadprescale << HRTIM_DTR_DTPRSC_Pos);
-         HRTIM1->sTimerxRegs[ch_b].OUTxR |= HRTIM_OUTR_DTEN;
-         HRTIM1->sTimerxRegs[ch_b].DTxR |= (deadtime << HRTIM_DTR_DTF_Pos) | (deadtime << HRTIM_DTR_DTR_Pos) | (deadprescale << HRTIM_DTR_DTPRSC_Pos);
-         HRTIM1->sTimerxRegs[ch_c].OUTxR |= HRTIM_OUTR_DTEN;
-         HRTIM1->sTimerxRegs[ch_c].DTxR |= (deadtime << HRTIM_DTR_DTF_Pos) | (deadtime << HRTIM_DTR_DTR_Pos) | (deadprescale << HRTIM_DTR_DTPRSC_Pos);
+         uint32_t deadtime = 68; //deadtime_ns * CPU_FREQUENCY_HZ * 32 / 4 / 1.e9;
+         regs_.sTimerxRegs[ch_a_].OUTxR |= HRTIM_OUTR_DTEN;
+         regs_.sTimerxRegs[ch_a_].DTxR |= (deadtime << HRTIM_DTR_DTF_Pos) | (deadtime << HRTIM_DTR_DTR_Pos) | (deadprescale << HRTIM_DTR_DTPRSC_Pos);
+         regs_.sTimerxRegs[ch_b_].OUTxR |= HRTIM_OUTR_DTEN;
+         regs_.sTimerxRegs[ch_b_].DTxR |= (deadtime << HRTIM_DTR_DTF_Pos) | (deadtime << HRTIM_DTR_DTR_Pos) | (deadprescale << HRTIM_DTR_DTPRSC_Pos);
+         regs_.sTimerxRegs[ch_c_].OUTxR |= HRTIM_OUTR_DTEN;
+         regs_.sTimerxRegs[ch_c_].DTxR |= (deadtime << HRTIM_DTR_DTF_Pos) | (deadtime << HRTIM_DTR_DTR_Pos) | (deadprescale << HRTIM_DTR_DTPRSC_Pos);
       }
-      regs.sTimerxRegs[ch_a].TIMxCR |= HRTIM_TIMCR_PREEN | HRTIM_TIMCR_TRSTU;
-      regs.sTimerxRegs[ch_b].TIMxCR |= HRTIM_TIMCR_PREEN | HRTIM_TIMCR_TRSTU;
-      regs.sTimerxRegs[ch_c].TIMxCR |= HRTIM_TIMCR_PREEN | HRTIM_TIMCR_TRSTU;
-   } 
+      regs_.sTimerxRegs[ch_a_].TIMxCR |= HRTIM_TIMCR_PREEN | HRTIM_TIMCR_TRSTU;
+      regs_.sTimerxRegs[ch_b_].TIMxCR |= HRTIM_TIMCR_PREEN | HRTIM_TIMCR_TRSTU;
+      regs_.sTimerxRegs[ch_c_].TIMxCR |= HRTIM_TIMCR_PREEN | HRTIM_TIMCR_TRSTU;
+   }
+
+
    void set_voltage(float v_abc[3])  __attribute__((section (".ccmram")));
    void set_vbus(float vbus);
    void open_mode();
