@@ -70,6 +70,9 @@ class FastLoop {
          sincos = sincos1(phi_);
          iq_des = tuning_amplitude_ * (tuning_frequency_ > 0 ? sincos.sin : ((sincos.sin > 0) - (sincos.sin < 0)));
       }
+      if (mode_ == STEPPER_TUNING_MODE) {
+
+      }
 
       // update FOC
       foc_command_.measured.motor_encoder = phase_mode_*(motor_enc - motor_electrical_zero_pos_)*(2*(float) M_PI  * inv_motor_encoder_cpr_);
@@ -139,6 +142,11 @@ class FastLoop {
       foc_->voltage_mode();
       mode_ = VOLTAGE_MODE;
     }
+    void stepper_mode() {
+      pwm_.voltage_mode();
+      foc_->voltage_mode();
+      mode_ = STEPPER_TUNING_MODE;
+    }
     void brake_mode() {
       pwm_.brake_mode();
       foc_->voltage_mode();
@@ -179,7 +187,7 @@ class FastLoop {
     FastLoopParam param_;
     FOC *foc_;
     PWM &pwm_;
-    enum {OPEN_MODE, BRAKE_MODE, CURRENT_MODE, PHASE_LOCK_MODE, VOLTAGE_MODE, CURRENT_TUNING_MODE} mode_ = CURRENT_MODE;
+    enum {OPEN_MODE, BRAKE_MODE, CURRENT_MODE, PHASE_LOCK_MODE, VOLTAGE_MODE, CURRENT_TUNING_MODE, STEPPER_TUNING_MODE} mode_ = CURRENT_MODE;
 
     int32_t motor_enc;
     int32_t last_motor_enc=0;

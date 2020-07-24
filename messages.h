@@ -130,7 +130,7 @@ typedef struct {
     float position_desired;             // motor position desired in rad
     float velocity_desired;             // motor velocity desired in rad/s
     float torque_desired;               // torque desired Nm
-    float reserved;                     // no position control for values < abs(position_deadband - position_desired)
+    float reserved;                     // reserved for strange uses
 } ReceiveData;
 
 #endif

@@ -183,7 +183,6 @@ class TrajectoryGenerator {
     struct TrajectoryValue {
         float value, value_dot;
     };
-    TrajectoryGenerator(float dt) : dt_(dt) {}
         // frequency | amplitude | trajectory
         // +         | +         | sin
         // -         | +         | square
@@ -210,13 +209,13 @@ class TrajectoryGenerator {
         }
     }
 
-    TrajectoryValue &step() {
+    TrajectoryValue &step(float dt) {
         // phi_ is a radian counter at the command frequency doesn't get larger than 2*pi
         if (mode_ == CHIRP) {
-           frequency_ = chirp_frequency_.add(chirp_rate_ * dt_);
+           frequency_ = chirp_frequency_.add(chirp_rate_ * dt);
         }
-        // KahanSum allows for and summing of dt_ allows for low frequencies without losing resolution
-        phi_.add(2 * (float) M_PI * fabsf(frequency_) * dt_);
+        // KahanSum allows for and summing of dt allows for low frequencies without losing resolution
+        phi_.add(2 * (float) M_PI * fabsf(frequency_) * dt);
         if (phi_.value() > 2 * (float) M_PI) {
             phi_.add(-2 * (float) M_PI);
         }
@@ -247,7 +246,6 @@ class TrajectoryGenerator {
  private:
     enum Mode {SIN, SQUARE, CHIRP, TRIANGLE} mode_ = SIN;
     float frequency_, amplitude_;
-    float dt_;
     TrajectoryValue trajectory_value_;
     KahanSum phi_, chirp_frequency_;
     float chirp_rate_;
