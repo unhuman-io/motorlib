@@ -88,20 +88,21 @@ class MainLoop {
         case STEPPER_TUNING:
           vq_des = receive_data_.current_desired;
         case POSITION_TUNING: 
-          if (count_received) {
-            position_trajectory_generator_.set_amplitude(receive_data_.position_desired);
-            position_trajectory_generator_.set_frequency(receive_data_.reserved);
+          {
+            if (count_received) {
+              position_trajectory_generator_.set_amplitude(receive_data_.position_desired);
+              position_trajectory_generator_.set_frequency(receive_data_.reserved);
+            }
+            TrajectoryGenerator::TrajectoryValue traj = position_trajectory_generator_.step(dt_);
+            float position_desired = traj.value;
+            float velocity_desired = traj.value_dot;
+            iq_des = controller_.step(position_desired, velocity_desired, fast_loop_status_.motor_position.position);
+            if (mode_ == STEPPER_TUNING) {
+              fast_loop_.set_stepper_position(position_desired);
+              fast_loop_.set_stepper_velocity(velocity_desired);
+            }
+            break;
           }
-          TrajectoryGenerator::TrajectoryValue traj = position_trajectory_generator_.step(dt_);
-          float position_desired = traj.value;
-          float velocity_desired = traj.value_dot;
-          iq_des = controller_.step(position_desired, velocity_desired, fast_loop_status_.motor_position.position);
-          if (mode_ == STEPPER_TUNING) {
-            //fast_loop_.set_stepper_position(position_desired);
-            //fast_loop_.set_stepper_velocity(velocity_desired);
-          }
-          break;
-        
         case CURRENT_TUNING:
           if (count_received) {
             if (receive_data_.current_desired < 0) { // flag for chirp mode
@@ -190,6 +191,7 @@ class MainLoop {
         case STEPPER_TUNING:
           fast_loop_.stepper_mode();
           led_.set_color(LED::CYAN);
+          break;
         case BOARD_RESET:
           NVIC_SystemReset();
           break;

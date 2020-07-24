@@ -70,13 +70,16 @@ class FastLoop {
          sincos = sincos1(phi_);
          iq_des = tuning_amplitude_ * (tuning_frequency_ > 0 ? sincos.sin : ((sincos.sin > 0) - (sincos.sin < 0)));
       }
-      if (mode_ == STEPPER_TUNING_MODE) {
-
-      }
 
       // update FOC
       foc_command_.measured.motor_encoder = phase_mode_*(motor_enc - motor_electrical_zero_pos_)*(2*(float) M_PI  * inv_motor_encoder_cpr_);
       foc_command_.desired.i_q = iq_des_gain_ * (iq_des + iq_ff);
+
+      if (mode_ == STEPPER_TUNING_MODE) {
+        foc_command_.measured.motor_encoder = stepper_position_;
+        motor_position_ = stepper_position_;
+        stepper_position_ += stepper_velocity_ * dt_;
+      }
       
       FOCStatus *foc_status = foc_->step(foc_command_);
 
@@ -115,6 +118,8 @@ class FastLoop {
       chirp_rate_ = chirp_rate; 
       chirp_frequency_.init(0);
     }
+    void set_stepper_position(float position) { stepper_position_ = position; }
+    void set_stepper_velocity(float velocity) { stepper_velocity_ = velocity; }
     void set_reserved(float reserved) { reserved_ = reserved; }
     void phase_lock_mode(float id) {
       phase_mode_ = 0;
@@ -226,6 +231,8 @@ class FastLoop {
    float chirp_rate_ = 0;
    bool current_tuning_chirp_ = false;
    KahanSum chirp_frequency_;
+   float stepper_position_ = 0;
+   float stepper_velocity_ = 0;
 
     template<typename, typename>
     friend class System;
