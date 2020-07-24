@@ -88,6 +88,11 @@ class MainLoop {
         case POSITION_TUNING: 
         {
           // phi_ is a radian counter at the command frequency doesn't get larger than 2*pi
+          // reserved | position | trajectory
+          // +        | +        | sin
+          // -        | +        | square
+          // +        | -        | chirp
+          // -        | -        | triangle
           float frequency_hz = receive_data_.reserved;  // negative frequencies are square waves, positive sine waves
           float amplitude = receive_data_.position_desired;
 
