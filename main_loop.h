@@ -46,7 +46,7 @@ class MainLoop {
 
       
  
-      if(count_ % 10 == 0) {
+      if(count_ % 6 == 0) {
         float tmp_torque = torque_sensor_.read();
       //  if (fabs(tmp_torque) < 2) {
           torque_ = tmp_torque;

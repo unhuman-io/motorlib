@@ -45,7 +45,9 @@ class SPITorque final : public TorqueSensor {
         int32_t diff = result0_ - result1_;
         float sum = (float) result0_ + (float) result1_;
         float tcomp = sum * k_temp_;
-        torque_ = diff/sum * gain_ + bias_ + tcomp;
+        if (sum != 0) {
+            torque_ = diff/sum * gain_ + bias_ + tcomp;
+        }
         return torque_;
     }
  private:
