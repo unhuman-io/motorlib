@@ -86,7 +86,6 @@ class MainLoop {
                   receive_data_.current_desired;
           break;
         case STEPPER_TUNING:
-          vq_des = receive_data_.current_desired;
         case POSITION_TUNING: 
           {
             if (count_received) {
@@ -98,6 +97,15 @@ class MainLoop {
             float velocity_desired = traj.value_dot;
             iq_des = controller_.step(position_desired, velocity_desired, fast_loop_status_.motor_position.position);
             if (mode_ == STEPPER_TUNING) {
+              if (receive_data_.velocity_desired < 0) {
+                vq_des = fabsf(receive_data_.velocity_desired*velocity_desired); // kv in v/rad/s is in receive_data_.velocity_desired
+              } else if (receive_data_.velocity_desired >= 0) {
+                vq_des = receive_data_.current_desired;
+                if (receive_data_.velocity_desired > 0) {
+                  fast_loop_.set_stepper_velocity(receive_data_.velocity_desired);
+                  break;
+                }
+              }
               fast_loop_.set_stepper_position(position_desired);
               fast_loop_.set_stepper_velocity(velocity_desired);
             }
