@@ -74,6 +74,12 @@ class FastLoop {
       // update FOC
       foc_command_.measured.motor_encoder = phase_mode_*(motor_enc - motor_electrical_zero_pos_)*(2*(float) M_PI  * inv_motor_encoder_cpr_);
       foc_command_.desired.i_q = iq_des_gain_ * (iq_des + iq_ff);
+
+      if (mode_ == STEPPER_TUNING_MODE) {
+        foc_command_.measured.motor_encoder = stepper_position_;
+        motor_position_ = stepper_position_;
+        stepper_position_ += stepper_velocity_ * dt_;
+      }
       
       FOCStatus *foc_status = foc_->step(foc_command_);
 
@@ -112,6 +118,8 @@ class FastLoop {
       chirp_rate_ = chirp_rate; 
       chirp_frequency_.init(0);
     }
+    void set_stepper_position(float position) { stepper_position_ = position; }
+    void set_stepper_velocity(float velocity) { stepper_velocity_ = velocity; }
     void set_reserved(float reserved) { reserved_ = reserved; }
     void phase_lock_mode(float id) {
       phase_mode_ = 0;
@@ -138,6 +146,11 @@ class FastLoop {
       pwm_.voltage_mode();
       foc_->voltage_mode();
       mode_ = VOLTAGE_MODE;
+    }
+    void stepper_mode() {
+      pwm_.voltage_mode();
+      foc_->voltage_mode();
+      mode_ = STEPPER_TUNING_MODE;
     }
     void brake_mode() {
       pwm_.brake_mode();
@@ -179,7 +192,7 @@ class FastLoop {
     FastLoopParam param_;
     FOC *foc_;
     PWM &pwm_;
-    enum {OPEN_MODE, BRAKE_MODE, CURRENT_MODE, PHASE_LOCK_MODE, VOLTAGE_MODE, CURRENT_TUNING_MODE} mode_ = CURRENT_MODE;
+    enum {OPEN_MODE, BRAKE_MODE, CURRENT_MODE, PHASE_LOCK_MODE, VOLTAGE_MODE, CURRENT_TUNING_MODE, STEPPER_TUNING_MODE} mode_ = CURRENT_MODE;
 
     int32_t motor_enc;
     int32_t last_motor_enc=0;
@@ -218,6 +231,8 @@ class FastLoop {
    float chirp_rate_ = 0;
    bool current_tuning_chirp_ = false;
    KahanSum chirp_frequency_;
+   float stepper_position_ = 0;
+   float stepper_velocity_ = 0;
 
     template<typename, typename>
     friend class System;

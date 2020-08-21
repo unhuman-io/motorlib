@@ -5,6 +5,8 @@
 #undef _DEFAULT_SOURCE
 #include <cmath>
 #define M_PI 3.1415926f
+#include "sincos.h"
+
 class Hysteresis {
  public:
     float step(float);
@@ -176,6 +178,78 @@ class PIDInterpolateController : public PIDController {
     FirstOrderLowPassFilter filt1_, filt2_;
 };
 
+class TrajectoryGenerator {
+ public:
+    struct TrajectoryValue {
+        float value, value_dot;
+    };
+        // frequency | amplitude | trajectory
+        // +         | +         | sin
+        // -         | +         | square
+        // +         | -         | chirp
+        // -         | -         | triangle
+    void set_frequency(float frequency) { frequency_ = frequency; set_mode(); }
+    void set_amplitude(float amplitude) { amplitude_ = amplitude; set_mode(); }
+    void set_mode() {
+        if (frequency_ > 0) {
+            if (amplitude_ > 0) {
+                mode_ = SIN;
+            } else {
+                mode_ = SQUARE;
+            }
+        } else {
+            if (amplitude_ > 0) {
+                mode_ = CHIRP;                
+                chirp_rate_ = frequency_;
+                frequency_ = 0;
+                chirp_frequency_.init();
+            } else {
+                mode_ = TRIANGLE;
+            }
+        }
+    }
+
+    TrajectoryValue &step(float dt) {
+        // phi_ is a radian counter at the command frequency doesn't get larger than 2*pi
+        if (mode_ == CHIRP) {
+           frequency_ = chirp_frequency_.add(chirp_rate_ * dt);
+        }
+        // KahanSum allows for and summing of dt allows for low frequencies without losing resolution
+        phi_.add(2 * (float) M_PI * fabsf(frequency_) * dt);
+        if (phi_.value() > 2 * (float) M_PI) {
+            phi_.add(-2 * (float) M_PI);
+        }
+        Sincos sincos;
+        sincos = sincos1(phi_.value());
+        switch(mode_) {
+            case SIN:
+            case CHIRP:
+                trajectory_value_.value = amplitude_ * sincos.sin;
+                trajectory_value_.value_dot = 2 * (float) M_PI * frequency_ * amplitude_ * sincos.cos;
+                break;
+            case SQUARE:
+                trajectory_value_.value = amplitude_ * fsignf(sincos.sin);
+                trajectory_value_.value_dot = 0;
+                break;
+            case TRIANGLE:
+                if (phi_.value() < M_PI) {
+                    trajectory_value_.value = amplitude_ * (2 * phi_.value() * (1/M_PI) - 1);
+                    trajectory_value_.value_dot = 4 * amplitude_ * frequency_;
+                } else {
+                    trajectory_value_.value = amplitude_ * (3 - 2 * phi_.value() * (1/M_PI));
+                    trajectory_value_.value_dot = -4 * amplitude_ * frequency_;
+                }
+                break;
+        }
+        return trajectory_value_;
+    }
+ private:
+    enum Mode {SIN, SQUARE, CHIRP, TRIANGLE} mode_ = SIN;
+    float frequency_, amplitude_;
+    TrajectoryValue trajectory_value_;
+    KahanSum phi_, chirp_frequency_;
+    float chirp_rate_;
+};
 
 
 

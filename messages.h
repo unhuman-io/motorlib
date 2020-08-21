@@ -59,7 +59,7 @@ typedef struct {
     float filter_frequency_hz;
 } TorqueSensorParam;
 
-enum MainControlMode {OPEN, DAMPED, CURRENT, POSITION, TORQUE, IMPEDANCE, VELOCITY, CURRENT_TUNING, POSITION_TUNING, VOLTAGE, PHASE_LOCK, BOARD_RESET=255};
+enum MainControlMode {OPEN, DAMPED, CURRENT, POSITION, TORQUE, IMPEDANCE, VELOCITY, CURRENT_TUNING, POSITION_TUNING, VOLTAGE, PHASE_LOCK, STEPPER_TUNING, BOARD_RESET=255};
 typedef struct {
     PIDParam controller_param;
     PIDParam torque_controller_param;
@@ -130,7 +130,7 @@ typedef struct {
     float position_desired;             // motor position desired in rad
     float velocity_desired;             // motor velocity desired in rad/s
     float torque_desired;               // torque desired Nm
-    float reserved;                     // no position control for values < abs(position_deadband - position_desired)
+    float reserved;                     // reserved for strange uses
 } ReceiveData;
 
 #endif
