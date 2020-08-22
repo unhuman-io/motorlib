@@ -251,6 +251,28 @@ class TrajectoryGenerator {
     float chirp_rate_;
 };
 
+inline int32_t wrap1(int32_t value, int32_t rollover) {
+    int32_t diff = 2*rollover;
+    if (value > rollover) {
+        value -= diff;
+    }
+    if (value < -rollover) {
+        value += diff;
+    }
+    return value;
+}
+
+inline int32_t unwrap1(int32_t value, int32_t last_value, int32_t rollover) {
+    int32_t diff = value - last_value;
+    int32_t diff2 = 2*rollover;
+    if (diff > rollover) {
+        value -= diff2;
+    }
+    if (diff < -rollover) {
+        value += diff2;
+    }
+    return value;
+}
 
 
 #endif //MOTOR_CONTROL_FUN_H

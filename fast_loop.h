@@ -42,9 +42,11 @@ class FastLoop {
       
       // get encoder value, may wait a little
       motor_enc = encoder_.read();
+      int32_t motor_enc_diff = motor_enc-last_motor_enc;
+      motor_enc_wrap_ = wrap1(motor_enc_wrap_ + motor_enc_diff, param_.motor_encoder.rollover);
 
-      motor_position_ = param_.motor_encoder.dir * 2 * (float) M_PI * inv_motor_encoder_cpr_ * motor_enc;
-      motor_velocity =  param_.motor_encoder.dir * (motor_enc-last_motor_enc)*(2*(float) M_PI * inv_motor_encoder_cpr_ * frequency_hz_);
+      motor_position_ = param_.motor_encoder.dir * 2 * (float) M_PI * inv_motor_encoder_cpr_ * motor_enc_wrap_;
+      motor_velocity =  param_.motor_encoder.dir * (motor_enc_diff)*(2*(float) M_PI * inv_motor_encoder_cpr_ * frequency_hz_);
       motor_velocity_filtered = (1-alpha)*motor_velocity_filtered + alpha*motor_velocity;
       last_motor_enc = motor_enc;
 
@@ -233,6 +235,7 @@ class FastLoop {
    KahanSum chirp_frequency_;
    float stepper_position_ = 0;
    float stepper_velocity_ = 0;
+   int32_t motor_enc_wrap_ = 0;
 
     template<typename, typename>
     friend class System;

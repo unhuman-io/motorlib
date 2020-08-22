@@ -44,6 +44,9 @@ typedef struct {
                                                     // Allows for more repeatable commutation from a quadrature encoder with index or absolute encoder
         uint32_t cpr;                               // Counts/revolution for encoder, for quadrature encoders 4x lines per revolution
         float dir;                                  // Set to 1 for positive output, -1 for negative
+        uint32_t rollover;                          // Encoder counts will rollover from +rollover to -rollover when it reaches this value. 
+                                                    // Position control will take the shortest route. Velocity control is continuous.
+                                                    // Set to 0 to disable.
     } motor_encoder;
     struct {
         float table[COGGING_TABLE_SIZE];            // cogging table in A
