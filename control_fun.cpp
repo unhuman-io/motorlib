@@ -91,11 +91,14 @@ float PIDController::step(float desired, float velocity_desired, float measured,
     // velocity limit: velocity_limit on command - not if not tracking velocity can exceed this
     rate_limit_.set_limit(fabsf(velocity_limit*dt_));
     float proxy_desired = rate_limit_.step(desired);
-    float proxy_dot_desired = fsat(velocity_desired, fabsf(rate_limit_.get_velocity()/dt_));
-    float error = proxy_desired - measured;
-    float velocity_measured = (measured - measured_last_)/dt_;
-    float error_dot = error_dot_filter_.update(velocity_desired - velocity_measured);
-    measured_last_ = measured;
+   // float proxy_wrap = wrap1(proxy_desired, rollover_);
+   // rate_limit_.init(proxy_wrap, rate_limit_.get_velocity());
+   // float proxy_dot_desired = fsat(velocity_desired, fabsf(rate_limit_.get_velocity()/dt_));
+    float error = wrap1_diff(desired, measured, rollover_);
+   // float error = proxy_desired - measured;
+   // float velocity_measured = (measured - measured_last_)/dt_;
+    float error_dot = error_dot_filter_.update((error - error_last_)/dt_);
+    error_last_ = error;
     ki_sum_ += ki_ * error;
     ki_sum_ = fsat(ki_sum_, ki_limit_);
     float filtered_out = output_filter_.update(kp_*error + ki_sum_ + kd_*error_dot);
