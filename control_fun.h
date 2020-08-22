@@ -147,12 +147,13 @@ public:
     virtual float step(float desired, float velocity_desired, float measured, float velocity_limit = INFINITY);
     void set_param(const PIDParam &param);
     float get_error() const { return error_last_; }
+    void set_rollover(float rollover) { rollover_ = rollover; }
 private:
     float kp_ = 0, kd_ = 0, ki_ = 0, ki_sum_ = 0, ki_limit_ = 0, command_max_ = 0;
     float error_last_ = 0;
     float last_desired_ = 0;
     float dt_;
-    float rollover_ = 2*M_PI*100;
+    float rollover_ = 0;
     Hysteresis hysteresis_;
     RateLimiter rate_limit_;
     FirstOrderLowPassFilter error_dot_filter_;
