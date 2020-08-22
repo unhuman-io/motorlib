@@ -157,6 +157,10 @@ class MainLoop {
       torque_sensor_.set_param(param.torque_sensor);
       param_ = param;
     }
+    void set_rollover(float rollover) {
+      controller_.set_rollover(rollover);
+      impedance_controller_.set_rollover(rollover);
+    }
     void get_status(MainLoopStatus * const main_loop_status) const {}
     void set_mode(MainControlMode mode) {
         mode_ = mode;

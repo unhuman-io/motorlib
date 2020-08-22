@@ -115,7 +115,7 @@ private:
 class RateLimiter {
  public:
     void set_limit(float limit) { limit_ = limit; }
-    void init(float value) { last_value_ = value; velocity_ = 0;}
+    void init(float value, float velocity = 0) { last_value_ = value; velocity_ = velocity;}
     float step(float value) {
         float out_value = value;
         if (value > (last_value_ + limit_)) {
@@ -143,14 +143,17 @@ class PIDController {
 public:
     PIDController(float dt) : dt_(dt), error_dot_filter_(dt), output_filter_(dt) {}
     virtual ~PIDController() {}
-    void init(float measured) { rate_limit_.init(measured), measured_last_ = measured; error_dot_filter_.init(0); output_filter_.init(0); } // todo init to current output 
+    void init(float measured) { rate_limit_.init(measured), error_last_ = 0; error_dot_filter_.init(0); output_filter_.init(0); } // todo init to current output 
     virtual float step(float desired, float velocity_desired, float measured, float velocity_limit = INFINITY);
     void set_param(const PIDParam &param);
+    float get_error() const { return error_last_; }
+    void set_rollover(float rollover) { rollover_ = rollover; }
 private:
     float kp_ = 0, kd_ = 0, ki_ = 0, ki_sum_ = 0, ki_limit_ = 0, command_max_ = 0;
-    float measured_last_ = 0;
+    float error_last_ = 0;
     float last_desired_ = 0;
     float dt_;
+    float rollover_ = 0;
     Hysteresis hysteresis_;
     RateLimiter rate_limit_;
     FirstOrderLowPassFilter error_dot_filter_;
@@ -251,6 +254,43 @@ class TrajectoryGenerator {
     float chirp_rate_;
 };
 
+template<class T>
+inline T wrap1(T value, T rollover) {
+    T diff = 2*rollover;
+    if (value > rollover) {
+        value -= diff;
+    }
+    if (value < -rollover) {
+        value += diff;
+    }
+    return value;
+}
+
+template<class T>
+inline T unwrap1(T value, T last_value, T rollover) {
+    T diff = value - last_value;
+    T diff2 = 2*rollover;
+    if (diff > rollover) {
+        value -= diff2;
+    }
+    if (diff < -rollover) {
+        value += diff2;
+    }
+    return value;
+}
+
+template<class T>
+inline T wrap1_diff(T value, T value2, T rollover) {
+    T diff = value - value2;
+    T diff2 = 2*rollover;
+    if (diff > rollover) {
+        diff = diff - diff2;
+    }
+    if (diff < -rollover) {
+        diff = diff + diff2;
+    }
+    return diff;
+}
 
 
 #endif //MOTOR_CONTROL_FUN_H
