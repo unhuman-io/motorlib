@@ -44,7 +44,16 @@ class MainLoop {
         }
       }
 
-      torque_ = torque_sensor_.read();
+      
+ 
+      if(count_ % 6 == 0) {
+        float tmp_torque = torque_sensor_.read();
+      //  if (fabs(tmp_torque) < 2) {
+          torque_ = tmp_torque;
+      //  }
+      }
+
+
       float torque_corrected = torque_+.02*fast_loop_status_.foc_status.measured.i_q;
       float torque_filtered = torque_filter_.update(torque_corrected);
 
@@ -76,30 +85,32 @@ class MainLoop {
                   receive_data_.velocity_desired, fast_loop_status_.motor_position.position, receive_data_.velocity_desired) + \
                   receive_data_.current_desired;
           break;
+        case STEPPER_TUNING:
         case POSITION_TUNING: 
-        {
-          // phi_ is a radian counter at the command frequency doesn't get larger than 2*pi
-          float frequency_hz = receive_data_.reserved;  // negative frequencies are square waves, positive sine waves
-          float amplitude = receive_data_.position_desired;
-
-          // KahanSum allows for and summing of dt_ allows for low frequencies without losing resolution
-          phi_.add(2 * (float) M_PI * fabsf(frequency_hz) * dt_);
-          if (phi_.value() > 2 * (float) M_PI) {
-            phi_.add(-2 * (float) M_PI);
+          {
+            if (count_received) {
+              position_trajectory_generator_.set_amplitude(receive_data_.position_desired);
+              position_trajectory_generator_.set_frequency(receive_data_.reserved);
+            }
+            TrajectoryGenerator::TrajectoryValue traj = position_trajectory_generator_.step(dt_);
+            float position_desired = traj.value;
+            float velocity_desired = traj.value_dot;
+            iq_des = controller_.step(position_desired, velocity_desired, fast_loop_status_.motor_position.position);
+            if (mode_ == STEPPER_TUNING) {
+              if (receive_data_.velocity_desired < 0) {
+                vq_des = fabsf(receive_data_.velocity_desired*velocity_desired); // kv in v/rad/s is in receive_data_.velocity_desired
+              } else if (receive_data_.velocity_desired >= 0) {
+                vq_des = receive_data_.current_desired;
+                if (receive_data_.velocity_desired > 0) {
+                  fast_loop_.set_stepper_velocity(receive_data_.velocity_desired);
+                  break;
+                }
+              }
+              fast_loop_.set_stepper_position(position_desired);
+              fast_loop_.set_stepper_velocity(velocity_desired);
+            }
+            break;
           }
-          Sincos sincos;
-          sincos = sincos1(phi_.value());
-          float position_desired, velocity_desired;
-          if (frequency_hz > 0) { // sin wave
-            position_desired = amplitude * sincos.sin;
-            velocity_desired = 2 * (float) M_PI * frequency_hz * amplitude * sincos.cos;
-          } else { // square wave
-            position_desired = amplitude * fsignf(sincos.sin);
-            velocity_desired = 0;
-          }
-          iq_des = controller_.step(position_desired, velocity_desired, fast_loop_status_.motor_position.position);
-          break;
-        }
         case CURRENT_TUNING:
           if (count_received) {
             if (receive_data_.current_desired < 0) { // flag for chirp mode
@@ -148,6 +159,10 @@ class MainLoop {
       torque_sensor_.set_param(param.torque_sensor);
       param_ = param;
     }
+    void set_rollover(float rollover) {
+      controller_.set_rollover(rollover);
+      impedance_controller_.set_rollover(rollover);
+    }
     void get_status(MainLoopStatus * const main_loop_status) const {}
     void set_mode(MainControlMode mode) {
         mode_ = mode;
@@ -170,7 +185,6 @@ class MainLoop {
           led_.set_color(LED::SPRING);
           break;
         case POSITION_TUNING:
-          phi_.init();
         case POSITION:
         case VELOCITY:
           fast_loop_.current_mode();
@@ -187,6 +201,10 @@ class MainLoop {
         case PHASE_LOCK:
           fast_loop_.phase_lock_mode(0);
           led_.set_color(LED::YELLOW);
+          break;
+        case STEPPER_TUNING:
+          fast_loop_.stepper_mode();
+          led_.set_color(LED::CYAN);
           break;
         case BOARD_RESET:
           NVIC_SystemReset();
@@ -213,7 +231,7 @@ class MainLoop {
     IIRFilter torque_filter_;
     float torque_ = 0;
     float dt_ = 0;
-    KahanSum phi_;
+    TrajectoryGenerator position_trajectory_generator_;
     uint32_t timestamp_ = 0;
     uint32_t last_timestamp_ = 0;
     uint32_t *reserved1_ = &timestamp_;

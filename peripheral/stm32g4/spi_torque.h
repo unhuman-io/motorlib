@@ -38,17 +38,19 @@ class SPITorque final : public TorqueSensor {
     }
 
     float read() {
-        if (count_ == 0) {
-            // wait until dma complete
-            while(rx_dma_.CNDTR);
-            // set CS high
-            gpio_cs_.set();
-            // process result
-            result0_ = (uint32_t) data_in_[4] << 24 | (uint32_t) data_in_[3] << 16 | (uint16_t) data_in_[2] << 8 | data_in_[1];
-            result1_ = (uint32_t) data_in_[8] << 24 | (uint32_t) data_in_[7] << 16 | (uint16_t) data_in_[6] << 8 | data_in_[5];
-            int32_t diff = result0_ - result1_;
-            float sum = (float) result0_ + (float) result1_;
-            float tcomp = sum * k_temp_;
+        static int count = 0;
+        count ++;
+        // wait until dma complete
+        while(rx_dma_.CNDTR);
+        // set CS high
+        gpio_cs_.set();
+        // process result
+        result0_ = (uint32_t) data_in_[4] << 24 | (uint32_t) data_in_[3] << 16 | (uint16_t) data_in_[2] << 8 | data_in_[1];
+        result1_ = (uint32_t) data_in_[8] << 24 | (uint32_t) data_in_[7] << 16 | (uint16_t) data_in_[6] << 8 | data_in_[5];
+        int32_t diff = result0_ - result1_;
+        float sum = (float) result0_ + (float) result1_;
+        float tcomp = sum * k_temp_;
+        if (sum != 0) {
             torque_ = diff/sum * gain_ + bias_ + tcomp;
         }
         return torque_;

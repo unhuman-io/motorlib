@@ -5,6 +5,8 @@
 #undef _DEFAULT_SOURCE
 #include <cmath>
 #define M_PI 3.1415926f
+#include "sincos.h"
+
 class Hysteresis {
  public:
     float step(float);
@@ -113,7 +115,7 @@ private:
 class RateLimiter {
  public:
     void set_limit(float limit) { limit_ = limit; }
-    void init(float value) { last_value_ = value; velocity_ = 0;}
+    void init(float value, float velocity = 0) { last_value_ = value; velocity_ = velocity;}
     float step(float value) {
         float out_value = value;
         if (value > (last_value_ + limit_)) {
@@ -141,14 +143,17 @@ class PIDController {
 public:
     PIDController(float dt) : dt_(dt), error_dot_filter_(dt), output_filter_(dt) {}
     virtual ~PIDController() {}
-    void init(float measured) { rate_limit_.init(measured), measured_last_ = measured; error_dot_filter_.init(0); output_filter_.init(0); } // todo init to current output 
+    void init(float measured) { rate_limit_.init(measured), error_last_ = 0; error_dot_filter_.init(0); output_filter_.init(0); } // todo init to current output 
     virtual float step(float desired, float velocity_desired, float measured, float velocity_limit = INFINITY);
     void set_param(const PIDParam &param);
+    float get_error() const { return error_last_; }
+    void set_rollover(float rollover) { rollover_ = rollover; }
 private:
     float kp_ = 0, kd_ = 0, ki_ = 0, ki_sum_ = 0, ki_limit_ = 0, command_max_ = 0;
-    float measured_last_ = 0;
+    float error_last_ = 0;
     float last_desired_ = 0;
     float dt_;
+    float rollover_ = 0;
     Hysteresis hysteresis_;
     RateLimiter rate_limit_;
     FirstOrderLowPassFilter error_dot_filter_;
@@ -176,7 +181,116 @@ class PIDInterpolateController : public PIDController {
     FirstOrderLowPassFilter filt1_, filt2_;
 };
 
+class TrajectoryGenerator {
+ public:
+    struct TrajectoryValue {
+        float value, value_dot;
+    };
+        // frequency | amplitude | trajectory
+        // +         | +         | sin
+        // -         | +         | square
+        // +         | -         | chirp
+        // -         | -         | triangle
+    void set_frequency(float frequency) { frequency_ = frequency; set_mode(); }
+    void set_amplitude(float amplitude) { amplitude_ = amplitude; set_mode(); }
+    void set_mode() {
+        if (frequency_ > 0) {
+            if (amplitude_ > 0) {
+                mode_ = SIN;
+            } else {
+                mode_ = SQUARE;
+            }
+        } else {
+            if (amplitude_ > 0) {
+                mode_ = CHIRP;                
+                chirp_rate_ = frequency_;
+                frequency_ = 0;
+                chirp_frequency_.init();
+            } else {
+                mode_ = TRIANGLE;
+            }
+        }
+    }
 
+    TrajectoryValue &step(float dt) {
+        // phi_ is a radian counter at the command frequency doesn't get larger than 2*pi
+        if (mode_ == CHIRP) {
+           frequency_ = chirp_frequency_.add(chirp_rate_ * dt);
+        }
+        // KahanSum allows for and summing of dt allows for low frequencies without losing resolution
+        phi_.add(2 * (float) M_PI * fabsf(frequency_) * dt);
+        if (phi_.value() > 2 * (float) M_PI) {
+            phi_.add(-2 * (float) M_PI);
+        }
+        Sincos sincos;
+        sincos = sincos1(phi_.value());
+        switch(mode_) {
+            case SIN:
+            case CHIRP:
+                trajectory_value_.value = amplitude_ * sincos.sin;
+                trajectory_value_.value_dot = 2 * (float) M_PI * frequency_ * amplitude_ * sincos.cos;
+                break;
+            case SQUARE:
+                trajectory_value_.value = amplitude_ * fsignf(sincos.sin);
+                trajectory_value_.value_dot = 0;
+                break;
+            case TRIANGLE:
+                if (phi_.value() < M_PI) {
+                    trajectory_value_.value = amplitude_ * (2 * phi_.value() * (1/M_PI) - 1);
+                    trajectory_value_.value_dot = 4 * amplitude_ * frequency_;
+                } else {
+                    trajectory_value_.value = amplitude_ * (3 - 2 * phi_.value() * (1/M_PI));
+                    trajectory_value_.value_dot = -4 * amplitude_ * frequency_;
+                }
+                break;
+        }
+        return trajectory_value_;
+    }
+ private:
+    enum Mode {SIN, SQUARE, CHIRP, TRIANGLE} mode_ = SIN;
+    float frequency_, amplitude_;
+    TrajectoryValue trajectory_value_;
+    KahanSum phi_, chirp_frequency_;
+    float chirp_rate_;
+};
+
+template<class T>
+inline T wrap1(T value, T rollover) {
+    T diff = 2*rollover;
+    if (value > rollover) {
+        value -= diff;
+    }
+    if (value < -rollover) {
+        value += diff;
+    }
+    return value;
+}
+
+template<class T>
+inline T unwrap1(T value, T last_value, T rollover) {
+    T diff = value - last_value;
+    T diff2 = 2*rollover;
+    if (diff > rollover) {
+        value -= diff2;
+    }
+    if (diff < -rollover) {
+        value += diff2;
+    }
+    return value;
+}
+
+template<class T>
+inline T wrap1_diff(T value, T value2, T rollover) {
+    T diff = value - value2;
+    T diff2 = 2*rollover;
+    if (diff > rollover) {
+        diff = diff - diff2;
+    }
+    if (diff < -rollover) {
+        diff = diff + diff2;
+    }
+    return diff;
+}
 
 
 #endif //MOTOR_CONTROL_FUN_H
