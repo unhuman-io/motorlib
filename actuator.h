@@ -36,4 +36,5 @@ private:
     const volatile StartupParam &startup_param_;
     template<typename, typename>
     friend class System;
+    friend void system_init();
 };

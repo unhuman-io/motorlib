@@ -33,6 +33,17 @@ class APIUint32 : public APIVariable2<uint32_t> {
    void set(std::string);
 };
 
+#include <functional>
+class APICallbackUint32 : public APIVariable {
+ public:
+   APICallbackUint32(std::function<uint32_t()> getfun , std::function<void(uint32_t)> setfun) : getfun_(getfun), setfun_(setfun) {}
+   void set(std::string);
+   std::string get() const;
+ private:
+   std::function<uint32_t()> getfun_;
+   std::function<void(uint32_t)> setfun_;
+};
+
 // allows for setting variables through text commands
 class ParameterAPI {
  public:

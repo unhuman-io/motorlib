@@ -26,7 +26,7 @@ class MainLoop {
       output_encoder_.trigger();
       SendData send_data;
       output_encoder_.read();
-      if(count_ % 10 == 0) torque_sensor_.trigger();
+      torque_sensor_.trigger();
       
       last_timestamp_ = timestamp_;
       timestamp_ = get_clock();
@@ -160,6 +160,8 @@ class MainLoop {
       send_data.joint_position = output_encoder_.get_value()*2.0*(float) M_PI/param_.output_encoder.cpr;
       send_data.torque = torque_filtered;
       send_data.reserved[0] = torque_;
+      send_data.reserved[1] = *reinterpret_cast<float *>(reserved1_);
+      send_data.reserved[2] = *reinterpret_cast<float *>(reserved2_);
       //if(count_ % 4 == 0) {
       communication_.send_data(send_data);
       //}
@@ -252,8 +254,11 @@ class MainLoop {
     TrajectoryGenerator position_trajectory_generator_;
     uint32_t timestamp_ = 0;
     uint32_t last_timestamp_ = 0;
+    uint32_t *reserved1_ = &timestamp_;
+    uint32_t *reserved2_ = &last_timestamp_;
     template<typename, typename>
     friend class System;
+    friend void system_init() ;
 
 
 inline uint16_t minu16(uint16_t a, uint16_t b) {

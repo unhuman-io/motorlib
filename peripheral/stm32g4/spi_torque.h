@@ -20,6 +20,11 @@ class SPITorque final : public TorqueSensor {
     }
 
     void trigger() {
+        count_++;
+        if (count_ < 8) {
+            return;
+        }
+        count_ = 0;
 
         // set CS low
         gpio_cs_.clear();
@@ -50,7 +55,7 @@ class SPITorque final : public TorqueSensor {
         }
         return torque_;
     }
- private:
+ //private:
     SPI_TypeDef &regs_;
     GPIO &gpio_cs_;
     DMA_Channel_TypeDef &tx_dma_, &rx_dma_;
@@ -59,4 +64,8 @@ class SPITorque final : public TorqueSensor {
     uint32_t result0_ = 0;
     uint32_t result1_ = 0;
     float torque_ = 0;
+    uint8_t count_ = 0;
+
+    template<typename, typename>
+    friend class System;
 };

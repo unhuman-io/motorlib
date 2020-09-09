@@ -58,3 +58,11 @@ void APIFloat::set(std::string s) {
 void APIUint32::set(std::string s) {
     *value_ = std::stoi(s);
 }
+
+void APICallbackUint32::set(std::string s) {
+    setfun_(std::stoi(s));
+}
+
+std::string APICallbackUint32::get() const {
+    return std::to_string(getfun_());
+}
