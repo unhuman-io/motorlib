@@ -34,8 +34,26 @@ class MainLoop {
 
       fast_loop_.get_status(&fast_loop_status_);
 
-      int count_received = communication_.receive_data(&receive_data_);
-      if (count_received) {
+      ReceiveData receive_data;
+      int count_received = communication_.receive_data(&receive_data);
+      bool command_received = false;
+      if ((count_received && !safe_mode_) || (count_received && receive_data.mode_desired == param_.safe_mode)) {
+        no_command_ = 0;
+        receive_data_ = receive_data;
+        command_received = true;
+        safe_mode_ = false;
+      } else {
+        no_command_++;
+        if (no_command_ > 16000)
+           no_command_ = 16000;
+      } 
+        
+      if (param_.host_timeout && no_command_ > param_.host_timeout && started_) {
+          safe_mode_ = true;
+          set_mode(param_.safe_mode);
+      }
+
+      if (command_received) {
         if (mode_ != static_cast<MainControlMode>(receive_data_.mode_desired)) {
           set_mode(static_cast<MainControlMode>(receive_data_.mode_desired));
           controller_.init(fast_loop_status_.motor_position.position);
@@ -44,8 +62,6 @@ class MainLoop {
         }
       }
 
-      
- 
       if(count_ % 6 == 0) {
         float tmp_torque = torque_sensor_.read();
       //  if (fabs(tmp_torque) < 2) {
@@ -165,6 +181,7 @@ class MainLoop {
     }
     void get_status(MainLoopStatus * const main_loop_status) const {}
     void set_mode(MainControlMode mode) {
+      started_ = true;
         mode_ = mode;
       switch (mode) {
         case OPEN:
@@ -224,6 +241,9 @@ class MainLoop {
     ReceiveData receive_data_ = {};
     ReceiveData last_receive_data_ = {};
     uint64_t count_ = 0;
+    uint16_t no_command_ = 0;
+    bool safe_mode_ = false;
+    bool started_ = false;
     FastLoopStatus fast_loop_status_ = {};
     MainControlMode mode_ = OPEN;
     Sensor &output_encoder_;
