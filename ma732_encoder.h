@@ -18,11 +18,14 @@ class MA732Encoder final : public SPIEncoder {
         }
     }
 
+    // interrupt context
     virtual void trigger()  __attribute__((section (".ccmram"))) {
         if (!*register_operation_) {
             SPIEncoder::trigger();
         }
-    }   
+    }
+
+    // interrupt context   
     virtual int32_t read()  __attribute__((section (".ccmram"))) {
         if (!*register_operation_) {
             SPIEncoder::read();
@@ -32,6 +35,7 @@ class MA732Encoder final : public SPIEncoder {
         return count_;
     }
 
+    // non interrupt context
     uint8_t read_register(uint8_t address) {
         (*register_operation_)++;
         MA732reg reg = {};
@@ -44,6 +48,7 @@ class MA732Encoder final : public SPIEncoder {
         return retval;
     }
 
+    // non interrupt context
     bool set_register(uint8_t address, uint8_t value) {
         (*register_operation_)++;
         bool retval = true;
