@@ -72,6 +72,9 @@ typedef struct {
         float cpr;                                  // output encoder cpr \sa FastLoopParam.motor_encoder.cpr
     } output_encoder;
     TorqueSensorParam torque_sensor;
+    int16_t host_timeout;                             // 0 to disable, if no commands received before host timeout, go to safe_mode
+    enum MainControlMode safe_mode;                 // goes to this mode and freeze command if error
+                                                    // need to send reset from host to exit
     float torque_gain, torque_bias;                 // not currently used
     float kt;                                       // not currently used
     float gear_ratio;                               // not currently used
