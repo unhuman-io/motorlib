@@ -62,12 +62,11 @@ class MainLoop {
         }
       }
 
-      if(count_ % 6 == 0) {
-        float tmp_torque = torque_sensor_.read();
+      float tmp_torque = torque_sensor_.read();
       //  if (fabs(tmp_torque) < 2) {
           torque_ = tmp_torque;
       //  }
-      }
+
 
 
       float torque_corrected = torque_+.02*fast_loop_status_.foc_status.measured.i_q;

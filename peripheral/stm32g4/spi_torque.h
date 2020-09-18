@@ -7,9 +7,9 @@
 // A two reading torque source
 class SPITorque final : public TorqueSensor {
  public:
-    SPITorque(SPI_TypeDef &regs, GPIO &gpio_cs, DMA_Channel_TypeDef &tx_dma, DMA_Channel_TypeDef &rx_dma) : 
+    SPITorque(SPI_TypeDef &regs, GPIO &gpio_cs, DMA_Channel_TypeDef &tx_dma, DMA_Channel_TypeDef &rx_dma, uint8_t decimation = 50) : 
         regs_(regs), gpio_cs_(gpio_cs), 
-        tx_dma_(tx_dma), rx_dma_(rx_dma) {}
+        tx_dma_(tx_dma), rx_dma_(rx_dma), decimation_(decimation) {}
 
     void init() {
         regs_.CR2 |= SPI_CR2_RXDMAEN | SPI_CR2_TXDMAEN;
@@ -21,7 +21,7 @@ class SPITorque final : public TorqueSensor {
 
     void trigger() {
         count_++;
-        if (count_ < 8) {
+        if (count_ < decimation_) {
             return;
         }
         count_ = 0;
@@ -38,20 +38,20 @@ class SPITorque final : public TorqueSensor {
     }
 
     float read() {
-        static int count = 0;
-        count ++;
-        // wait until dma complete
-        while(rx_dma_.CNDTR);
-        // set CS high
-        gpio_cs_.set();
-        // process result
-        result0_ = (uint32_t) data_in_[4] << 24 | (uint32_t) data_in_[3] << 16 | (uint16_t) data_in_[2] << 8 | data_in_[1];
-        result1_ = (uint32_t) data_in_[8] << 24 | (uint32_t) data_in_[7] << 16 | (uint16_t) data_in_[6] << 8 | data_in_[5];
-        int32_t diff = result0_ - result1_;
-        float sum = (float) result0_ + (float) result1_;
-        float tcomp = sum * k_temp_;
-        if (sum != 0) {
-            torque_ = diff/sum * gain_ + bias_ + tcomp;
+        if (count_ == 0) {
+            // wait until dma complete
+            while(rx_dma_.CNDTR);
+            // set CS high
+            gpio_cs_.set();
+            // process result
+            result0_ = (uint32_t) data_in_[4] << 24 | (uint32_t) data_in_[3] << 16 | (uint16_t) data_in_[2] << 8 | data_in_[1];
+            result1_ = (uint32_t) data_in_[8] << 24 | (uint32_t) data_in_[7] << 16 | (uint16_t) data_in_[6] << 8 | data_in_[5];
+            int32_t diff = result0_ - result1_;
+            float sum = (float) result0_ + (float) result1_;
+            float tcomp = sum * k_temp_;
+            if (sum != 0) {
+                torque_ = diff/sum * gain_ + bias_ + tcomp;
+            }
         }
         return torque_;
     }
@@ -65,6 +65,7 @@ class SPITorque final : public TorqueSensor {
     uint32_t result1_ = 0;
     float torque_ = 0;
     uint8_t count_ = 0;
+    uint8_t decimation_;
 
     template<typename, typename>
     friend class System;
