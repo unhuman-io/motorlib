@@ -62,15 +62,14 @@ class MainLoop {
         }
       }
 
-      float tmp_torque = torque_sensor_.read();
-      //  if (fabs(tmp_torque) < 2) {
-          torque_ = tmp_torque;
-      //  }
-
-
-
-      float torque_corrected = torque_+.02*fast_loop_status_.foc_status.measured.i_q;
-      float torque_filtered = torque_filter_.update(torque_corrected);
+      float torque_corrected = torque_sensor_.read();
+      if (torque_corrected != torque_) {
+        torque_corrected += .01*fast_loop_status_.foc_status.measured.i_q;
+      }
+      torque_ = torque_corrected;
+   
+      //float torque_filtered = torque_filter_.update(torque_corrected);
+      float torque_filtered = torque_corrected;
 
       float iq_des = 0;
       float vq_des = 0;

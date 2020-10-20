@@ -47,6 +47,7 @@ class SPITorque final : public TorqueSensor {
             result0_ = (uint32_t) data_in_[4] << 24 | (uint32_t) data_in_[3] << 16 | (uint16_t) data_in_[2] << 8 | data_in_[1];
             result1_ = (uint32_t) data_in_[8] << 24 | (uint32_t) data_in_[7] << 16 | (uint16_t) data_in_[6] << 8 | data_in_[5];
             int32_t diff = result0_ - result1_;
+            sum_ = result0_ + result1_;
             float sum = (float) result0_ + (float) result1_;
             float tcomp = sum * k_temp_;
             if (sum != 0) {
@@ -63,6 +64,7 @@ class SPITorque final : public TorqueSensor {
     uint8_t data_in_[9] = {};
     uint32_t result0_ = 0;
     uint32_t result1_ = 0;
+    uint32_t sum_;
     float torque_ = 0;
     uint8_t count_ = 0;
     uint8_t decimation_;
