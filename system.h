@@ -23,6 +23,7 @@ class System {
         uint32_t cpu_frequency = CPU_FREQUENCY_HZ;
         api.add_api_variable("kp", new APIFloat(&actuator_.main_loop_.controller_.kp_));
         api.add_api_variable("kd", new APIFloat(&actuator_.main_loop_.controller_.kd_));
+        api.add_api_variable("max", new APIFloat(&actuator_.main_loop_.controller_.command_max_));
         api.add_api_variable("cpu_frequency", new APIUint32(&cpu_frequency));
         api.add_api_variable("t_exec_fastloop", new APIUint32(&t_exec_fastloop));
         api.add_api_variable("t_exec_mainloop", new APIUint32(&t_exec_mainloop));
@@ -40,6 +41,7 @@ class System {
         api.add_api_variable("ikp", new APIFloat(&actuator_.fast_loop_.foc_->pi_iq_->kp_));
         api.add_api_variable("iki", new APIFloat(&actuator_.fast_loop_.foc_->pi_iq_->ki_));
         api.add_api_variable("iki_limit", new APIFloat(&actuator_.fast_loop_.foc_->pi_iq_->ki_limit_));
+        api.add_api_variable("imax", new APIFloat(&actuator_.fast_loop_.foc_->pi_iq_->command_max_));
         api.add_api_variable("tkp", new APIFloat(&actuator_.main_loop_.torque_controller_.kp_));
         api.add_api_variable("tkd", new APIFloat(&actuator_.main_loop_.torque_controller_.kd_));
         while(1) {
