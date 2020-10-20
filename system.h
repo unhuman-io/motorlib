@@ -10,6 +10,8 @@ extern uint32_t t_exec_mainloop;
 extern uint32_t t_period_fastloop;
 extern uint32_t t_period_mainloop;
 
+void system_maintenance();
+
 template<typename Actuator, typename Communication>
 class System {
  public:
@@ -46,6 +48,7 @@ class System {
                 System::log(api.parse_string(s));
             }
             send_log();
+            system_maintenance();
             actuator_.maintenance();
         }
     }
