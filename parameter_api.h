@@ -34,6 +34,17 @@ class APIUint32 : public APIVariable2<uint32_t> {
 };
 
 #include <functional>
+template<class T>
+class APICallback : public APIVariable {
+ public:
+  APICallback(std::function<T()> getfun, std::function<void(T)> setfun) : getfun_(getfun), setfun_(setfun) {}
+  void set(std::string s) { setfun_(std::stof(s)); }
+  std::string get() const {return std::to_string(getfun_()); }
+ private:
+  std::function<T()> getfun_;
+  std::function<void(T)> setfun_;
+};
+
 class APICallbackUint32 : public APIVariable {
  public:
    APICallbackUint32(std::function<uint32_t()> getfun , std::function<void(uint32_t)> setfun) : getfun_(getfun), setfun_(setfun) {}
