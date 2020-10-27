@@ -46,6 +46,7 @@ class FastLoop {
       motor_enc_wrap_ = wrap1(motor_enc_wrap_ + motor_enc_diff, param_.motor_encoder.rollover);
 
       motor_position_ = param_.motor_encoder.dir * 2 * (float) M_PI * inv_motor_encoder_cpr_ * motor_enc_wrap_;
+      motor_position_filtered_ = (1-alpha10)*motor_position_filtered_ + alpha10*motor_position_;
       motor_velocity =  param_.motor_encoder.dir * (motor_enc_diff)*(2*(float) M_PI * inv_motor_encoder_cpr_ * frequency_hz_);
       motor_velocity_filtered = (1-alpha)*motor_velocity_filtered + alpha*motor_velocity;
       last_motor_enc = motor_enc;
@@ -175,7 +176,7 @@ class FastLoop {
       foc_->get_status(&(fast_loop_status->foc_status));
       fast_loop_status->motor_mechanical_position = motor_mechanical_position_;
       fast_loop_status->foc_command = foc_command_;
-      fast_loop_status->motor_position.position = motor_position_;
+      fast_loop_status->motor_position.position = motor_position_filtered_;
       fast_loop_status->motor_position.velocity = motor_velocity_filtered;
       fast_loop_status->motor_position.raw = motor_enc;
       fast_loop_status->timestamp = timestamp_;
@@ -201,9 +202,11 @@ class FastLoop {
     int32_t motor_enc;
     int32_t last_motor_enc=0;
     float motor_position_ = 0;
+    float motor_position_filtered_ = 0;
     float motor_velocity=0;
     float motor_velocity_filtered=0;
     float alpha=0.001;
+    float alpha10=0.3859;   // 1/10 cutoff frequency
     float phase_mode_ = 1;    // 1: standard or -1: two wires switched
     float phase_mode_desired_ = 1;
     int32_t motor_mechanical_position_ = 0;
