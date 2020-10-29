@@ -38,8 +38,8 @@ template<class T>
 class APICallback : public APIVariable {
  public:
   APICallback(std::function<T()> getfun, std::function<void(T)> setfun) : getfun_(getfun), setfun_(setfun) {}
-  void set(std::string s) { setfun_(std::stof(s)); }
-  std::string get() const {return std::to_string(getfun_()); }
+  void set(std::string s) { setfun_(s); }
+  std::string get() const {return getfun_(); }
  private:
   std::function<T()> getfun_;
   std::function<void(T)> setfun_;
