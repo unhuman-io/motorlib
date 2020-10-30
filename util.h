@@ -30,6 +30,13 @@ class FrequencyLimiter {
  private:
     uint32_t t_diff_, last_time_;
 };
+
+template <typename T, unsigned B>
+inline T signextend(const T x)
+{
+  struct {T x:B;} s;
+  return s.x = x;
+}
 #endif
 
 #endif
