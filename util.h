@@ -4,7 +4,9 @@
 #include "../st_device.h"
 #include "core_cm4.h"
 
-static inline uint32_t get_clock() { return DWT->CYCCNT; }
+extern volatile uint32_t * const cpu_clock;
+
+static inline uint32_t get_clock() { return *cpu_clock; }
 static inline uint8_t get_cpi_count() { return DWT->CPICNT; }
 static inline uint8_t get_lsu_count() { return DWT->LSUCNT; }
 
