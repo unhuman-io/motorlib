@@ -45,6 +45,16 @@ class APICallback : public APIVariable {
   std::function<void(T)> setfun_;
 };
 
+class APICallbackFloat : public APIVariable {
+ public:
+   APICallbackFloat(std::function<float()> getfun , std::function<void(float)> setfun) : getfun_(getfun), setfun_(setfun) {}
+   void set(std::string s) { setfun_(stof(s)); }
+   std::string get() const { return std::to_string(getfun_()); };
+ private:
+   std::function<float()> getfun_;
+   std::function<void(float)> setfun_;
+};
+
 class APICallbackUint32 : public APIVariable {
  public:
    APICallbackUint32(std::function<uint32_t()> getfun , std::function<void(uint32_t)> setfun) : getfun_(getfun), setfun_(setfun) {}
