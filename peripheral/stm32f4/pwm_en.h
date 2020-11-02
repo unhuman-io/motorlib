@@ -6,7 +6,7 @@
 
 class GPIO;
 
-class PWM_EN final : public PWM {
+class PWM_EN final : public PWMBase {
  public:
     PWM_EN(int32_t frequency_hz, uint32_t &pwm_a, uint32_t &pwm_b, 
          uint32_t &pwm_c, TIM_TypeDef &regs, GPIO &enable) : 

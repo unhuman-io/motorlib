@@ -12,7 +12,6 @@ extern uint32_t t_period_mainloop;
 
 void system_maintenance();
 
-template<typename Actuator, typename Communication>
 class System {
  public:
     static void run() {
@@ -86,7 +85,7 @@ class System {
         }
     }
 // private:
-    static Communication usb_;
+    static USB1 usb_;
     static Actuator actuator_;
     static std::queue<std::string> log_queue_;
     static ParameterAPI api;

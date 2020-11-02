@@ -4,7 +4,6 @@
 
 #include "util.h"
 
-template<typename FastLoop, typename MainLoop>
 class Actuator {
  public:
     Actuator(FastLoop &fast_loop, MainLoop &main_loop, const volatile StartupParam &startup_param) : fast_loop_(fast_loop), main_loop_(main_loop), startup_param_(startup_param) {}
@@ -34,7 +33,6 @@ private:
     FastLoop &fast_loop_;
     MainLoop &main_loop_;
     const volatile StartupParam &startup_param_;
-    template<typename, typename>
+
     friend class System;
-    friend void system_init();
 };

@@ -3,10 +3,10 @@
 
 #include "messages.h"
 
-class Communication {
+class CommunicationBase {
  public:
-    virtual int receive_data(ReceiveData * const data) = 0;
-    virtual void send_data(const SendData &data) = 0;
+    int receive_data(ReceiveData * const data) { return 0; }
+    void send_data(const SendData &data) {}
 };
 
 #endif

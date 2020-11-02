@@ -25,6 +25,5 @@ class MAX31875 {
     uint32_t value_;
     bool first_read_ = true;
 
-    template<typename, typename>
     friend class System;
 };

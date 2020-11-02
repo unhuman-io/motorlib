@@ -67,6 +67,5 @@ class SPIDebug {
     uint16_t start_cs_delay_ns_ = 100;
     uint16_t end_cs_delay_ns_ = 100;
 
-    template<typename, typename>
     friend class System;
 };

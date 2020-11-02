@@ -2,10 +2,6 @@
 
 #include "messages.h"
 
-class PIDDeadbandController;
-class Communication;
-class Encoder;
-
 #include <cmath>
 #include "control_fun.h"
 #include "sincos.h"
@@ -13,10 +9,9 @@ class Encoder;
 #include "util.h"
 #include "torque_sensor.h"
 
-template<typename FastLoop>
 class MainLoop {
  public:
-    MainLoop(FastLoop &fast_loop, PIDController &controller,  PIDController &torque_controller, PIDDeadbandController &impedance_controller, Communication &communication, LED &led, Sensor &output_encoder, TorqueSensor &torque, const MainLoopParam &param) : 
+    MainLoop(FastLoop &fast_loop, PIDController &controller,  PIDController &torque_controller, PIDDeadbandController &impedance_controller, Communication &communication, LED &led, OutputEncoder &output_encoder, TorqueSensor &torque, const MainLoopParam &param) : 
         fast_loop_(fast_loop), controller_(controller), torque_controller_(torque_controller), impedance_controller_(impedance_controller), communication_(communication), led_(led), output_encoder_(output_encoder), torque_sensor_(torque) {
           set_param(param);
         }
@@ -244,7 +239,7 @@ class MainLoop {
     bool started_ = false;
     FastLoopStatus fast_loop_status_ = {};
     MainControlMode mode_ = OPEN;
-    Sensor &output_encoder_;
+    OutputEncoder &output_encoder_;
     TorqueSensor &torque_sensor_;
     IIRFilter torque_filter_;
     float torque_ = 0;
@@ -254,9 +249,9 @@ class MainLoop {
     uint32_t last_timestamp_ = 0;
     uint32_t *reserved1_ = &timestamp_;
     uint32_t *reserved2_ = &last_timestamp_;
-    template<typename, typename>
+
     friend class System;
-    friend void system_init() ;
+    //friend void system_init() ;
 
 
 inline uint16_t minu16(uint16_t a, uint16_t b) {

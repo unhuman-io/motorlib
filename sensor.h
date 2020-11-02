@@ -2,11 +2,11 @@
 
 #include <cstdint>
 
-class Sensor {
+class SensorBase {
  public:
-    virtual int32_t read() { return get_value(); }
-    virtual int32_t get_value() const { return 0; }
-    virtual void trigger() {}
-    virtual int32_t get_index_pos() const { return 0; }
-    virtual bool index_received() const { return false; }
+    int32_t read() { return get_value(); }
+    int32_t get_value() const { return 0; }
+    void trigger() {}
+    int32_t get_index_pos() const { return 0; }
+    bool index_received() const { return false; }
 };

@@ -14,10 +14,9 @@
 // #include "../st_device.h"
 #include "sincos.h"
 
-template<typename PWM, typename Encoder>
 class FastLoop {
  public:
-    FastLoop(int32_t frequency_hz, PWM &pwm, Encoder &encoder, const FastLoopParam &param) : pwm_(pwm), encoder_(encoder) {
+    FastLoop(int32_t frequency_hz, PWM &pwm, MotorEncoder &encoder, const FastLoopParam &param) : pwm_(pwm), encoder_(encoder) {
        frequency_hz_ = frequency_hz;
        float dt = 1.0f/frequency_hz;
        foc_ = new FOC(dt);
@@ -227,7 +226,7 @@ class FastLoop {
     float alpha_zero_ = 0.001;
     float v_bus_ = 12;
     mcu_time timestamp_;
-   Encoder &encoder_;
+   MotorEncoder &encoder_;
    float reserved_ = 0;
    KahanSum t_seconds_;
    mcu_time last_timestamp_ = 0;
@@ -242,8 +241,7 @@ class FastLoop {
    float stepper_velocity_ = 0;
    int32_t motor_enc_wrap_ = 0;
 
-    template<typename, typename>
-    friend class System;
+   friend class System;
 };
 
 #endif
