@@ -9,7 +9,3 @@ void main_loop_interrupt() {
 void fast_loop_interrupt() {
     System::fast_loop_interrupt();
 }
-
-void usb_interrupt() {
-    System::usb_interrupt();
-}

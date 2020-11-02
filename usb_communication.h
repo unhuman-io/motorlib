@@ -12,6 +12,18 @@ class USBCommunication : public CommunicationBase {
     void send_data(const SendData &data) {
        usb_.send_data(2, reinterpret_cast<const uint8_t *>(&data), sizeof(SendData), false);
     }
+    int receive_string(char * const string) {
+       int count = usb_.receive_data(1, (uint8_t * const) string, 64);
+       string[count] = 0;
+       return count;
+    }
+    bool send_string(const char * const string, uint8_t length) {
+       if (!usb_.tx_active(1)) {
+         usb_.send_data(1, (const uint8_t * const) string, length, false);
+         return true;
+       }
+       return false;
+    }
  private:
     USB1 &usb_;
 };
