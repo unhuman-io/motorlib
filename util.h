@@ -4,7 +4,9 @@
 #include "../st_device.h"
 #include "core_cm4.h"
 
-static inline uint32_t get_clock() { return DWT->CYCCNT; }
+extern volatile uint32_t * const cpu_clock;
+
+static inline uint32_t get_clock() { return *cpu_clock; }
 static inline uint8_t get_cpi_count() { return DWT->CPICNT; }
 static inline uint8_t get_lsu_count() { return DWT->LSUCNT; }
 
@@ -30,6 +32,13 @@ class FrequencyLimiter {
  private:
     uint32_t t_diff_, last_time_;
 };
+
+template <typename T, unsigned B>
+inline T signextend(const T x)
+{
+  struct {T x:B;} s;
+  return s.x = x;
+}
 #endif
 
 #endif
