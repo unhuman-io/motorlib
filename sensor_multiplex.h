@@ -6,14 +6,14 @@
 // alternates reads between two sensors. Calling SensorMultiplex functions return the primary sensor values
 // Calling the secondary sensor functions only returns values
 template<class Sensor1, class Sensor2>
-class SensorMultiplex : public Sensor {
+class SensorMultiplex : public SensorBase {
  public:
-    class SecondarySensor : public Sensor {
+    class SecondarySensor : public SensorBase {
      public:
-        SecondarySensor(Sensor *secondary) : secondary_(secondary) {}
+        SecondarySensor(Sensor2 *secondary) : secondary_(secondary) {}
         int32_t get_value() const { return secondary_->get_value(); }
      private:
-        Sensor *secondary_;
+        Sensor2 *secondary_;
     };
 
     SensorMultiplex(Sensor1 &primary, Sensor2 &secondary) :

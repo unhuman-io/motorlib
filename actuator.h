@@ -4,6 +4,10 @@
 
 #include "util.h"
 
+extern "C" {
+void system_init();
+}
+
 class Actuator {
  public:
     Actuator(FastLoop &fast_loop, MainLoop &main_loop, const volatile StartupParam &startup_param) : fast_loop_(fast_loop), main_loop_(main_loop), startup_param_(startup_param) {}
@@ -35,4 +39,5 @@ private:
     const volatile StartupParam &startup_param_;
 
     friend class System;
+    friend void system_init();
 };

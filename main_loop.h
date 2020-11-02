@@ -9,6 +9,10 @@
 #include "util.h"
 #include "torque_sensor.h"
 
+extern "C" {
+void system_init();
+}
+
 class MainLoop {
  public:
     MainLoop(FastLoop &fast_loop, PIDController &controller,  PIDController &torque_controller, PIDDeadbandController &impedance_controller, Communication &communication, LED &led, OutputEncoder &output_encoder, TorqueSensor &torque, const MainLoopParam &param) : 
@@ -251,7 +255,7 @@ class MainLoop {
     uint32_t *reserved2_ = &last_timestamp_;
 
     friend class System;
-    //friend void system_init() ;
+    friend void system_init();
 
 
 inline uint16_t minu16(uint16_t a, uint16_t b) {
