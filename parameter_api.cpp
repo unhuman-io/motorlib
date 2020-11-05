@@ -59,6 +59,10 @@ void APIUint32::set(std::string s) {
     *value_ = std::stoi(s);
 }
 
+void APIUint8::set(std::string s) {
+    *value_ = std::stoi(s);
+}
+
 void APICallbackUint32::set(std::string s) {
     setfun_(std::stoi(s));
 }

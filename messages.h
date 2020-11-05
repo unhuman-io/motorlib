@@ -64,10 +64,29 @@ typedef struct {
 } TorqueSensorParam;
 
 enum MainControlMode {OPEN, DAMPED, CURRENT, POSITION, TORQUE, IMPEDANCE, VELOCITY, CURRENT_TUNING, POSITION_TUNING, VOLTAGE, PHASE_LOCK, STEPPER_TUNING, BOARD_RESET=255};
+
 typedef struct {
-    PIDParam controller_param;
-    PIDParam torque_controller_param;
-    PIDParam impedance_controller_param;
+    PIDParam position;
+} PositionControllerParam;
+
+typedef struct {
+    PIDParam torque;
+} TorqueControllerParam;
+
+typedef struct {
+    PIDParam impedance;
+    PIDParam torque;
+} ImpedanceControllerParam;
+
+typedef struct {
+    PIDParam position;
+} VelocityControllerParam;
+
+typedef struct {
+    PositionControllerParam position_controller_param;
+    TorqueControllerParam torque_controller_param;
+    ImpedanceControllerParam impedance_controller_param;
+    VelocityControllerParam velocity_controller_param;
     struct {
         float cpr;                                  // output encoder cpr \sa FastLoopParam.motor_encoder.cpr
     } output_encoder;
@@ -75,6 +94,7 @@ typedef struct {
     int16_t host_timeout;                             // 0 to disable, if no commands received before host timeout, go to safe_mode
     enum MainControlMode safe_mode;                 // goes to this mode and freeze command if error
                                                     // need to send reset from host to exit
+    float torque_correction;
     float torque_gain, torque_bias;                 // not currently used
     float kt;                                       // not currently used
     float gear_ratio;                               // not currently used
@@ -117,7 +137,10 @@ typedef struct {
     float vbus;                         // bus voltage V
 } FastLoopStatus;
 
-typedef struct {} MainLoopStatus;       // not currently used
+typedef struct {
+    FastLoopStatus fast_loop;
+    float torque_filtered;
+} MainLoopStatus;
 
 typedef struct {
     mcu_time mcu_timestamp;             // timestamp in microcontroller clock cycles

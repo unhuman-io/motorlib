@@ -20,29 +20,31 @@ class System {
         log("finished startup");
 
         uint32_t cpu_frequency = CPU_FREQUENCY_HZ;
-        api.add_api_variable("kp", new APIFloat(&actuator_.main_loop_.controller_.kp_));
-        api.add_api_variable("kd", new APIFloat(&actuator_.main_loop_.controller_.kd_));
-        api.add_api_variable("max", new APIFloat(&actuator_.main_loop_.controller_.command_max_));
+        api.add_api_variable("mode", new APIUint32((uint32_t *) &actuator_.main_loop_.mode_));
+        api.add_api_variable("kp", new APIFloat(&actuator_.main_loop_.position_controller_.controller_.kp_));
+        api.add_api_variable("kd", new APIFloat(&actuator_.main_loop_.position_controller_.controller_.kd_));
+        api.add_api_variable("max", new APIFloat(&actuator_.main_loop_.position_controller_.controller_.command_max_));
         api.add_api_variable("cpu_frequency", new APIUint32(&cpu_frequency));
         api.add_api_variable("t_exec_fastloop", new APIUint32(&t_exec_fastloop));
         api.add_api_variable("t_exec_mainloop", new APIUint32(&t_exec_mainloop));
         api.add_api_variable("t_period_fastloop", new APIUint32(&t_period_fastloop));
         api.add_api_variable("t_period_mainloop", new APIUint32(&t_period_mainloop));
-        api.add_api_variable("vbus", new APIFloat(&actuator_.main_loop_.fast_loop_status_.vbus));
-        api.add_api_variable("va", new APIFloat(&actuator_.main_loop_.fast_loop_status_.foc_status.command.v_a));
-        api.add_api_variable("vb", new APIFloat(&actuator_.main_loop_.fast_loop_status_.foc_status.command.v_b));
-        api.add_api_variable("vc", new APIFloat(&actuator_.main_loop_.fast_loop_status_.foc_status.command.v_c));
+        api.add_api_variable("vbus", new APIFloat(&actuator_.main_loop_.status_.fast_loop.vbus));
+        api.add_api_variable("va", new APIFloat(&actuator_.main_loop_.status_.fast_loop.foc_status.command.v_a));
+        api.add_api_variable("vb", new APIFloat(&actuator_.main_loop_.status_.fast_loop.foc_status.command.v_b));
+        api.add_api_variable("vc", new APIFloat(&actuator_.main_loop_.status_.fast_loop.foc_status.command.v_c));
         api.add_api_variable("ia", new APIFloat(&actuator_.fast_loop_.foc_command_.measured.i_a));
         api.add_api_variable("ib", new APIFloat(&actuator_.fast_loop_.foc_command_.measured.i_b));
         api.add_api_variable("ic", new APIFloat(&actuator_.fast_loop_.foc_command_.measured.i_c));
-        api.add_api_variable("id", new APIFloat(&actuator_.main_loop_.fast_loop_status_.foc_status.measured.i_d));
-        api.add_api_variable("i0", new APIFloat(&actuator_.main_loop_.fast_loop_status_.foc_status.measured.i_0));
+        api.add_api_variable("id", new APIFloat(&actuator_.main_loop_.status_.fast_loop.foc_status.measured.i_d));
+        api.add_api_variable("i0", new APIFloat(&actuator_.main_loop_.status_.fast_loop.foc_status.measured.i_0));
         api.add_api_variable("ikp", new APIFloat(&actuator_.fast_loop_.foc_->pi_iq_->kp_));
         api.add_api_variable("iki", new APIFloat(&actuator_.fast_loop_.foc_->pi_iq_->ki_));
         api.add_api_variable("iki_limit", new APIFloat(&actuator_.fast_loop_.foc_->pi_iq_->ki_limit_));
         api.add_api_variable("imax", new APIFloat(&actuator_.fast_loop_.foc_->pi_iq_->command_max_));
-        api.add_api_variable("tkp", new APIFloat(&actuator_.main_loop_.torque_controller_.kp_));
-        api.add_api_variable("tkd", new APIFloat(&actuator_.main_loop_.torque_controller_.kd_));
+        api.add_api_variable("tkp", new APIFloat(&actuator_.main_loop_.torque_controller_.controller_.kp_));
+        api.add_api_variable("tkd", new APIFloat(&actuator_.main_loop_.torque_controller_.controller_.kd_));
+        api.add_api_variable("tmax", new APIFloat(&actuator_.main_loop_.torque_controller_.controller_.command_max_));
         while(1) {
             char *s = System::get_string();
             if (s[0] != 0) {

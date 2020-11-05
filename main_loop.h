@@ -15,8 +15,12 @@ void system_init();
 
 class MainLoop {
  public:
-    MainLoop(FastLoop &fast_loop, PIDController &controller,  PIDController &torque_controller, PIDDeadbandController &impedance_controller, Communication &communication, LED &led, OutputEncoder &output_encoder, TorqueSensor &torque, const MainLoopParam &param) : 
-        fast_loop_(fast_loop), controller_(controller), torque_controller_(torque_controller), impedance_controller_(impedance_controller), communication_(communication), led_(led), output_encoder_(output_encoder), torque_sensor_(torque) {
+    MainLoop(FastLoop &fast_loop, PositionController &position_controller,  TorqueController &torque_controller, 
+        ImpedanceController &impedance_controller, VelocityController &velocity_controller, Communication &communication,
+        LED &led, OutputEncoder &output_encoder, TorqueSensor &torque, const MainLoopParam &param) : 
+          fast_loop_(fast_loop), position_controller_(position_controller), torque_controller_(torque_controller), 
+          impedance_controller_(impedance_controller), velocity_controller_(velocity_controller), 
+          communication_(communication), led_(led), output_encoder_(output_encoder), torque_sensor_(torque) {
           set_param(param);
         }
     void init() {}
@@ -31,7 +35,7 @@ class MainLoop {
       timestamp_ = get_clock();
       dt_ = (timestamp_ - last_timestamp_) * (1.0f/CPU_FREQUENCY_HZ);
 
-      fast_loop_.get_status(&fast_loop_status_);
+      fast_loop_.get_status(&status_.fast_loop);
 
       ReceiveData receive_data;
       int count_received = communication_.receive_data(&receive_data);
@@ -55,20 +59,17 @@ class MainLoop {
       if (command_received) {
         if (mode_ != static_cast<MainControlMode>(receive_data_.mode_desired)) {
           set_mode(static_cast<MainControlMode>(receive_data_.mode_desired));
-          controller_.init(fast_loop_status_.motor_position.position);
-          torque_controller_.init(torque_);
-          impedance_controller_.init(fast_loop_status_.motor_position.position);
         }
       }
 
       float torque_corrected = torque_sensor_.read();
       if (torque_corrected != torque_) {
-        torque_corrected += .01*fast_loop_status_.foc_status.measured.i_q;
+        torque_corrected += param_.torque_correction*status_.fast_loop.foc_status.measured.i_q;
       }
       torque_ = torque_corrected;
    
       //float torque_filtered = torque_filter_.update(torque_corrected);
-      float torque_filtered = torque_corrected;
+      status_.torque_filtered = torque_corrected;
 
       float iq_des = 0;
       float vq_des = 0;
@@ -77,26 +78,16 @@ class MainLoop {
           iq_des = receive_data_.current_desired;
           break;
         case POSITION:
-          iq_des = controller_.step(receive_data_.position_desired, receive_data_.velocity_desired, fast_loop_status_.motor_position.position) + \
-                  receive_data_.current_desired;
+          iq_des = position_controller_.step(receive_data_, status_);
           break;
         case TORQUE:
-          iq_des = torque_controller_.step(receive_data_.torque_desired, 0, torque_filtered) + \
-                  receive_data_.current_desired;
+          iq_des = torque_controller_.step(receive_data_, status_);
           break;
         case IMPEDANCE:
-        {
-          float torque_des = impedance_controller_.step(receive_data_.position_desired, receive_data_.velocity_desired, 0, fast_loop_status_.motor_position.position) + \
-                  receive_data_.torque_desired;
-          iq_des = torque_controller_.step(torque_des, 0, torque_filtered) + \
-                  receive_data_.current_desired;
-        }
+          iq_des = impedance_controller_.step(receive_data_, status_);
           break;
         case VELOCITY:
-          // saturate position so that current = current max due to kp, so error max = 
-          iq_des = controller_.step(fast_loop_status_.motor_position.position + param_.controller_param.command_max/param_.controller_param.kp*fsignf(receive_data_.velocity_desired), 
-                  receive_data_.velocity_desired, fast_loop_status_.motor_position.position, receive_data_.velocity_desired) + \
-                  receive_data_.current_desired;
+          iq_des = velocity_controller_.step(receive_data_, status_);
           break;
         case STEPPER_TUNING:
         case POSITION_TUNING: 
@@ -106,9 +97,12 @@ class MainLoop {
               position_trajectory_generator_.set_frequency(receive_data_.reserved);
             }
             TrajectoryGenerator::TrajectoryValue traj = position_trajectory_generator_.step(dt_);
+            ReceiveData trajectory = {};
             float position_desired = traj.value;
             float velocity_desired = traj.value_dot;
-            iq_des = controller_.step(position_desired, velocity_desired, fast_loop_status_.motor_position.position);
+            trajectory.position_desired = position_desired;
+            trajectory.velocity_desired = velocity_desired;
+            iq_des = position_controller_.step(trajectory, status_);
             if (mode_ == STEPPER_TUNING) {
               if (receive_data_.velocity_desired < 0) {
                 vq_des = fabsf(receive_data_.velocity_desired*velocity_desired); // kv in v/rad/s is in receive_data_.velocity_desired
@@ -149,32 +143,34 @@ class MainLoop {
       fast_loop_.set_iq_des(iq_des);
       fast_loop_.set_vq_des(vq_des);
 
-      send_data.iq = fast_loop_status_.foc_status.measured.i_q;
+      send_data.iq = status_.fast_loop.foc_status.measured.i_q;
       send_data.host_timestamp_received = receive_data_.host_timestamp;
-      send_data.mcu_timestamp = fast_loop_status_.timestamp;
-      send_data.motor_encoder = fast_loop_status_.motor_mechanical_position;
-      send_data.motor_position = fast_loop_status_.motor_position.position;
+      send_data.mcu_timestamp = status_.fast_loop.timestamp;
+      send_data.motor_encoder = status_.fast_loop.motor_mechanical_position;
+      send_data.motor_position = status_.fast_loop.motor_position.position;
       send_data.joint_position = output_encoder_.get_value()*2.0*(float) M_PI/param_.output_encoder.cpr;
-      send_data.torque = torque_filtered;
+      send_data.torque = status_.torque_filtered;
       send_data.reserved[0] = torque_;
       send_data.reserved[1] = *reinterpret_cast<float *>(reserved1_);
       send_data.reserved[2] = *reinterpret_cast<float *>(reserved2_);
-      //if(count_ % 4 == 0) {
       communication_.send_data(send_data);
-      //}
       led_.update();
       last_receive_data_ = receive_data_;
     }
+
+
     void set_param(const MainLoopParam &param) {
-      controller_.set_param(param.controller_param);
+      position_controller_.set_param(param.position_controller_param);
       torque_controller_.set_param(param.torque_controller_param);
       impedance_controller_.set_param(param.impedance_controller_param);
+      velocity_controller_.set_param(param.velocity_controller_param);
       torque_sensor_.set_param(param.torque_sensor);
       param_ = param;
     }
     void set_rollover(float rollover) {
-      controller_.set_rollover(rollover);
+      position_controller_.set_rollover(rollover);
       impedance_controller_.set_rollover(rollover);
+      velocity_controller_.set_rollover(rollover);
     }
     void get_status(MainLoopStatus * const main_loop_status) const {}
     void set_mode(MainControlMode mode) {
@@ -200,12 +196,20 @@ class MainLoop {
           break;
         case POSITION_TUNING:
         case POSITION:
+          position_controller_.init(status_);
         case VELOCITY:
           fast_loop_.current_mode();
+          velocity_controller_.init(status_);
           led_.set_color(LED::BLUE);
+          break;
+        case IMPEDANCE:
+          fast_loop_.current_mode();
+          impedance_controller_.init(status_);
+          led_.set_color(LED::CHARTREUSE);
           break;
         case TORQUE:
           fast_loop_.current_mode();
+          torque_controller_.init(status_);
           led_.set_color(LED::ROSE);
           break;
         case VOLTAGE:
@@ -230,9 +234,10 @@ class MainLoop {
  private:
     MainLoopParam param_;
     FastLoop &fast_loop_;
-    PIDController &controller_;
-    PIDController &torque_controller_;
-    PIDDeadbandController &impedance_controller_;
+    PositionController &position_controller_;
+    TorqueController &torque_controller_;
+    ImpedanceController &impedance_controller_;
+    VelocityController &velocity_controller_;
     Communication &communication_;
     LED &led_;
     ReceiveData receive_data_ = {};
@@ -241,7 +246,7 @@ class MainLoop {
     uint16_t no_command_ = 0;
     bool safe_mode_ = false;
     bool started_ = false;
-    FastLoopStatus fast_loop_status_ = {};
+    MainLoopStatus status_ = {};
     MainControlMode mode_ = OPEN;
     OutputEncoder &output_encoder_;
     TorqueSensor &torque_sensor_;
