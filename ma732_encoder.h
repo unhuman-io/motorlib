@@ -1,4 +1,5 @@
 #include "peripheral/spi_encoder.h"
+#include "util.h"
 
 // Note MA732 encoder expects cpol 1, cpha 1, max 25 mbit
 // 80 ns cs start to sclk, 25 ns sclk end to cs end
@@ -19,14 +20,14 @@ class MA732Encoder final : public SPIEncoder {
     }
 
     // interrupt context
-    virtual void trigger()  __attribute__((section (".ccmram"))) {
+    void trigger()  __attribute__((section (".ccmram"))) {
         if (!*register_operation_) {
             SPIEncoder::trigger();
         }
     }
 
     // interrupt context   
-    virtual int32_t read()  __attribute__((section (".ccmram"))) {
+    int32_t read()  __attribute__((section (".ccmram"))) {
         if (!*register_operation_) {
             SPIEncoder::read();
             count_ += (int16_t) (data_ - last_data_); // rollover summing
@@ -107,7 +108,7 @@ class MA732Encoder final : public SPIEncoder {
         return (mght << 0 | (uint16_t) mglt << 8);
     }
 
-    virtual int32_t get_value()  const __attribute__((section (".ccmram"))) { return count_; }
+    int32_t get_value()  const __attribute__((section (".ccmram"))) { return count_; }
 
     bool init() {
         // filter frequency

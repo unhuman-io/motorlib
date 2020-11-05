@@ -26,7 +26,6 @@ private:
     FirstOrderLowPassFilter *id_filter_, *iq_filter_;
     FOCParam param_;
 
-    template<typename, typename>
     friend class System;
 };
 

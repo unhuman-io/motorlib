@@ -12,7 +12,6 @@ extern uint32_t t_period_mainloop;
 
 void system_maintenance();
 
-template<typename Actuator, typename Communication>
 class System {
  public:
     static void run() {
@@ -46,7 +45,7 @@ class System {
         api.add_api_variable("tkd", new APIFloat(&actuator_.main_loop_.torque_controller_.kd_));
         while(1) {
             char *s = System::get_string();
-            if (s != NULL) {
+            if (s[0] != 0) {
                 System::log(api.parse_string(s));
             }
             send_log();
@@ -60,33 +59,27 @@ class System {
     static void fast_loop_interrupt() {
         actuator_.fast_loop_.update();
     }
-    static void usb_interrupt() {
-        usb_.interrupt();
-    }
     static void log(std::string str) {
         if (log_queue_.size() < 10) {
             log_queue_.push(str);
         }
     }
     static void send_log() {
-        if (!usb_.tx_active(1) && !log_queue_.empty()) {
+        if (!log_queue_.empty()) {
             std::string str = log_queue_.front();
-            log_queue_.pop();
-            usb_.send_data(1, (const uint8_t *) str.c_str(), str.size()+1, false);
+            bool sent = communication_.send_string(str.c_str(), str.length());
+            if (sent) {
+                log_queue_.pop();
+            }
         }
     }
     static char *get_string() {
-        static char buf[64];
-        int count = usb_.receive_data(1, (uint8_t *) buf, 64);
-        buf[count] = 0;
-        if (count) {
-            return buf;
-        } else {
-            return NULL;
-        }
+        static char buf[65];
+        communication_.receive_string(buf);
+        return buf;
     }
-// private:
-    static Communication usb_;
+
+    static Communication communication_;
     static Actuator actuator_;
     static std::queue<std::string> log_queue_;
     static ParameterAPI api;

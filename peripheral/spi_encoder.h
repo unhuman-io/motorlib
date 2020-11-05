@@ -6,14 +6,14 @@
 
 class GPIO;
 
-class SPIEncoder : public Encoder {
+class SPIEncoder : public EncoderBase {
  public:
-    SPIEncoder(SPI_TypeDef &regs, GPIO &gpio_cs) : Encoder(), regs_(regs), gpio_cs_(gpio_cs) {} 
+    SPIEncoder(SPI_TypeDef &regs, GPIO &gpio_cs) : EncoderBase(), regs_(regs), gpio_cs_(gpio_cs) {} 
     //void init() {}
-    virtual int32_t read()  __attribute__((section (".ccmram")));
-    virtual int32_t get_value()  const __attribute__((section (".ccmram")));
-    virtual void trigger()  __attribute__((section (".ccmram")));
-    virtual bool index_received() { return true; }
+    int32_t read()  __attribute__((section (".ccmram")));
+    int32_t get_value()  const __attribute__((section (".ccmram")));
+    void trigger()  __attribute__((section (".ccmram")));
+    bool index_received() { return true; }
     
     // for configuration values, make sure to only call when trigger and read
     // are not running

@@ -5,7 +5,7 @@
 #include <cstdint>
 #include "../../../st_device.h"
 
-class HRPWM final : public PWM {
+class HRPWM final : public PWMBase {
  public:
     HRPWM(uint32_t frequency_hz, HRTIM_TypeDef &regs, uint8_t ch_a, uint8_t ch_b, uint8_t ch_c, bool pwm3_mode = false, uint16_t deadtime_ns = 50) : 
          regs_(regs),

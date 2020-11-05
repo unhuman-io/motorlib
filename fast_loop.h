@@ -14,10 +14,12 @@
 // #include "../st_device.h"
 #include "sincos.h"
 
-template<typename PWM, typename Encoder>
 class FastLoop {
  public:
-    FastLoop(int32_t frequency_hz, PWM &pwm, Encoder &encoder, const FastLoopParam &param) : pwm_(pwm), encoder_(encoder) {
+    FastLoop(int32_t frequency_hz, PWM &pwm, MotorEncoder &encoder, const FastLoopParam &param,
+      volatile uint32_t *const i_a_dr, volatile uint32_t *const i_b_dr, volatile uint32_t *const i_c_dr, 
+      volatile uint32_t *const v_bus_dr) 
+      : pwm_(pwm), encoder_(encoder), i_a_dr_(i_a_dr), i_b_dr_(i_b_dr), i_c_dr_(i_c_dr), v_bus_dr_(v_bus_dr) {
        frequency_hz_ = frequency_hz;
        float dt = 1.0f/frequency_hz;
        foc_ = new FOC(dt);
@@ -33,9 +35,9 @@ class FastLoop {
       timestamp_ = get_clock();
 
       // get ADC
-      adc1 = I_A_DR;
-      adc2 = I_B_DR;
-      adc3 = I_C_DR;
+      adc1 = *i_a_dr_;
+      adc2 = *i_b_dr_;
+      adc3 = *i_c_dr_;
       foc_command_.measured.i_a = param_.adc1_gain*(adc1-param_.adc1_offset) - ia_bias_;
       foc_command_.measured.i_b = param_.adc2_gain*(adc2-param_.adc2_offset) - ib_bias_;
       foc_command_.measured.i_c = param_.adc3_gain*(adc3-param_.adc3_offset) - ic_bias_;
@@ -108,7 +110,7 @@ class FastLoop {
          motor_electrical_zero_pos_ = encoder_.get_value();
       }
 
-      v_bus_ = V_BUS_DR*param_.vbus_gain;
+      v_bus_ = *v_bus_dr_*param_.vbus_gain;
       v_bus_ = fmaxf(10, v_bus_);
       pwm_.set_vbus(v_bus_);
     }
@@ -227,7 +229,7 @@ class FastLoop {
     float alpha_zero_ = 0.001;
     float v_bus_ = 12;
     mcu_time timestamp_;
-   Encoder &encoder_;
+   MotorEncoder &encoder_;
    float reserved_ = 0;
    KahanSum t_seconds_;
    mcu_time last_timestamp_ = 0;
@@ -241,9 +243,12 @@ class FastLoop {
    float stepper_position_ = 0;
    float stepper_velocity_ = 0;
    int32_t motor_enc_wrap_ = 0;
+   volatile uint32_t *const i_a_dr_;
+   volatile uint32_t *const i_b_dr_;
+   volatile uint32_t *const i_c_dr_;
+   volatile uint32_t *const v_bus_dr_;
 
-    template<typename, typename>
-    friend class System;
+   friend class System;
 };
 
 #endif

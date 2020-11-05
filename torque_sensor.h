@@ -1,12 +1,12 @@
 #pragma once
 #include "messages.h"
 
-class TorqueSensor {
+class TorqueSensorBase {
  public:
-    virtual void init() {}
-    virtual void trigger() {}
-    virtual float read() = 0;
-    virtual void set_param(const TorqueSensorParam &param) {
+    void init() {}
+    void trigger() {}
+    float read() { return 0; }
+    void set_param(const TorqueSensorParam &param) {
         gain_ = param.gain;
         bias_ = param.bias;
         k_temp_ = param.k_temp;

@@ -5,7 +5,7 @@
 #include "../../torque_sensor.h"
 
 // A two reading torque source
-class SPITorque final : public TorqueSensor {
+class SPITorque final : public TorqueSensorBase {
  public:
     SPITorque(SPI_TypeDef &regs, GPIO &gpio_cs, DMA_Channel_TypeDef &tx_dma, DMA_Channel_TypeDef &rx_dma, uint8_t decimation = 50) : 
         regs_(regs), gpio_cs_(gpio_cs), 
@@ -69,6 +69,5 @@ class SPITorque final : public TorqueSensor {
     uint8_t count_ = 0;
     uint8_t decimation_;
 
-    template<typename, typename>
     friend class System;
 };

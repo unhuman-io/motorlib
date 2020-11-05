@@ -108,7 +108,6 @@ public:
 private:
     float kp_ = 0, ki_ = 0, ki_sum_ = 0, ki_limit_ = 0, command_max_ = 0;
 
-    template<typename, typename>
     friend class System;
 };
 
@@ -158,7 +157,7 @@ private:
     RateLimiter rate_limit_;
     FirstOrderLowPassFilter error_dot_filter_;
     FirstOrderLowPassFilter output_filter_;
-    template<typename, typename>
+
     friend class System;
 };
 
