@@ -33,6 +33,12 @@ class APIUint32 : public APIVariable2<uint32_t> {
    void set(std::string);
 };
 
+class APIUint8 : public APIVariable2<uint8_t> {
+ public:
+   APIUint8(uint8_t *u) : APIVariable2(u) {}
+   void set(std::string);
+};
+
 #include <functional>
 template<class T>
 class APICallback : public APIVariable {
