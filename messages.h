@@ -117,8 +117,9 @@ typedef struct {
         float i_d, i_q;                         // \sa FOCCommand.desired
     } desired;
     struct {
-        float position;                         // motor electrical position
-        float i_d, i_q, i_0;                    // measured processed currents, unfiltered
+        float position;                         // motor electrical position, rad filtered by 1/10
+        float i_d, i_q, i_0;                    // measured processed currents, A filtered
+        float sin, cos;                         // sin and cos of the electrical position
     } measured;
     struct { float v_a, v_b, v_c, v_d, v_q; } command;  // command in V to PWM
 } FOCStatus;

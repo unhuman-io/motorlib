@@ -10,12 +10,16 @@ class FOC {
 public:
     FOC(float dt);
     ~FOC();
+    struct Vdq0 {
+        float vd, vq, v0;
+    };
 
     FOCStatus * const step(const FOCCommand &command)  __attribute__((section (".ccmram")));
     void set_param(const FOCParam &param);
     void get_status(FOCStatus *status) const { *status = status_; }
     void voltage_mode();
     void current_mode();
+    static void calculate_vdq0(Vdq0 *const, float cos, float sin, float va, float vb, float vc);
 
 private:
     uint16_t num_poles_ = 7;
