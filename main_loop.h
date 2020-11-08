@@ -230,8 +230,9 @@ class MainLoop {
   }
   receive_data_.mode_desired = mode;
     }
-    LED* led() { return &led_; }
+    
  private:
+    LED* led() { return &led_; }
     MainLoopParam param_;
     FastLoop &fast_loop_;
     PositionController &position_controller_;
