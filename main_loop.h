@@ -146,7 +146,7 @@ class MainLoop {
       send_data.iq = status_.fast_loop.foc_status.measured.i_q;
       send_data.host_timestamp_received = receive_data_.host_timestamp;
       send_data.mcu_timestamp = status_.fast_loop.timestamp;
-      send_data.motor_encoder = status_.fast_loop.motor_mechanical_position;
+      send_data.motor_encoder = status_.fast_loop.motor_position.raw;
       send_data.motor_position = status_.fast_loop.motor_position.position;
       send_data.joint_position = output_encoder_.get_value()*2.0*(float) M_PI/param_.output_encoder.cpr;
       send_data.torque = status_.torque_filtered;
