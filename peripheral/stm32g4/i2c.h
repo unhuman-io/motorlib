@@ -9,10 +9,10 @@ class I2C {
         regs_.CR2 = (address << 1) | (nbytes << I2C_CR2_NBYTES_Pos);
         regs_.CR2 |= I2C_CR2_START;
         for (int i=1; i<nbytes; i++) {
-            while(!(regs_.ISR & I2C_ISR_TXE));
+            while(!(regs_.ISR & (I2C_ISR_TXE | I2C_ISR_NACKF)));
             regs_.TXDR = data[i];
         }
-        while(!(regs_.ISR & I2C_ISR_TXE));
+        while(!(regs_.ISR & (I2C_ISR_TXE | I2C_ISR_NACKF)));
         if (stop) {
             regs_.CR2 = I2C_CR2_STOP;
         }
@@ -23,7 +23,7 @@ class I2C {
         //while(!(regs_.ISR & I2C_ISR_TC));
         //regs_.CR2 = I2C_CR2_STOP;
         for(int i=0;i<nbytes; i++) {
-            while(!(regs_.ISR & I2C_ISR_RXNE));
+            while(!(regs_.ISR & (I2C_ISR_RXNE | I2C_ISR_NACKF)));
             data[i] = regs_.RXDR;
         }
         while(!(regs_.ISR & I2C_ISR_STOPF));
