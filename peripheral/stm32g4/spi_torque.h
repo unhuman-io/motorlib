@@ -17,6 +17,7 @@ class SPITorque final : public TorqueSensorBase {
         tx_dma_.CPAR = (uint32_t) &regs_.DR;
         rx_dma_.CMAR = (uint32_t) data_in_;
         rx_dma_.CPAR = (uint32_t) &regs_.DR;
+        reset();
     }
 
     void trigger() {
@@ -55,6 +56,29 @@ class SPITorque final : public TorqueSensorBase {
             }
         }
         return torque_;
+    }
+
+    void reset(uint32_t a=1) {
+        if (a) {
+            gpio_cs_.clear();
+            // start dma transfer
+            data_out_[0] = 0x88;
+            tx_dma_.CCR = 0;
+            rx_dma_.CCR = 0;
+            tx_dma_.CNDTR = 1;
+            rx_dma_.CNDTR = 1;        
+            rx_dma_.CCR = DMA_CCR_EN | DMA_CCR_MINC;
+            tx_dma_.CCR = DMA_CCR_EN | DMA_CCR_MINC | DMA_CCR_DIR; // DIR = 1 > read from memory
+            // wait until dma complete
+            while(rx_dma_.CNDTR);
+            // set CS high
+            gpio_cs_.set();
+            data_out_[0] = 0x40;
+        }
+    }
+
+    uint32_t reset2() {
+        return 0;
     }
  //private:
     SPI_TypeDef &regs_;
