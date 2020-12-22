@@ -13,6 +13,8 @@ static inline uint8_t get_lsu_count() { return DWT->LSUCNT; }
 void ms_delay(uint16_t ms);
 void ns_delay(uint16_t ns);
 
+#define while_timeout_ms(condition, ms) while((condition) || ((get_clock() - t_start) < ms*CPU_FREQUENCY_HZ/1000))
+
 #ifdef __cplusplus
 class FrequencyLimiter {
  public:
