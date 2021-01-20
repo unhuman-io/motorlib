@@ -1,7 +1,9 @@
 #pragma once
 #include <cstdint>
+#include <vector>
 #include "../st_device.h"
 #include "../../gpio.h"
+#include "../../util.h"
 
 inline std::vector<char> HexToBytes(const std::string& hex) {
   std::vector<char> bytes;
