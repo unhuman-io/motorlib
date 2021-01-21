@@ -24,7 +24,7 @@ class ADS1235 : public TorqueSensorBase {
     }
     float read() {
       spidma_.finish_readwrite();
-      int32_t torque_int = signextend<int32_t, 24>(data_[2] << 16 | data_[3] << 8 | data_[4]);
+      int32_t torque_int = signextend<int32_t, 24>((data_[2]) << 16 | (data_[3] << 8) | data_[4]);
       float torque = gain_*torque_int + bias_;
       return torque;
     }
