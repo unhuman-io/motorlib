@@ -33,11 +33,11 @@ class ICPZ : public EncoderBase {
        spidma_.readwrite(command, data_in, 3);
        command[0] = 0xcf;
        command[1] = 0x07;
-       command[2] = 0x09;     // sys_ovr = 9 bit
+       command[2] = 0x80;     // sys_ovr = 9 bit
        spidma_.readwrite(command, data_in, 3);
        command[0] = 0xcf;
        command[1] = 0x0F;
-       command[2] = 0x80;     // ran_fld = 0 -> never update position based on absolute track after initial
+       command[2] = 0x00;     // ran_fld = 0 -> never update position based on absolute track after initial
        spidma_.readwrite(command, data_in, 3);
        command[0] = 0xcf;
        command[1] = 0x40;
@@ -76,11 +76,11 @@ class ICPZ : public EncoderBase {
       if (!*register_operation_) {
         spidma_.finish_readwrite();
         //uint32_t data = (data_[1] << 16) | (data_[2] << 8) | data_[3];
-        //uint16_t data = (data_[2] << 8) | data_[3];
-        //pos_ += (int16_t) (data - last_data_); // rollover summing
+        uint16_t data = (data_[2] << 8) | data_[3];
+        pos_ += (int16_t) (data - last_data_); // rollover summing
         //pos_ = data;
-        pos_ = data_[1];
-        //last_data_ = data;
+        //pos_ = data_[1];
+        last_data_ = data;
       }
       return get_value();
     }
