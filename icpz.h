@@ -33,11 +33,11 @@ class ICPZ : public EncoderBase {
        spidma_.readwrite(command, data_in, 3);
        command[0] = 0xcf;
        command[1] = 0x07;
-       command[2] = 0x80;     // sys_ovr = 9 bit
+       command[2] = 0x90;     // now 8 // sys_ovr = 9 bit
        spidma_.readwrite(command, data_in, 3);
        command[0] = 0xcf;
        command[1] = 0x0F;
-       command[2] = 0x00;     // ran_fld = 0 -> never update position based on absolute track after initial
+       command[2] = 0x10;     // ran_fld = 0 -> never update position based on absolute track after initial
        spidma_.readwrite(command, data_in, 3);
        command[0] = 0xcf;
        command[1] = 0x40;
@@ -75,11 +75,10 @@ class ICPZ : public EncoderBase {
     int32_t read() {
       if (!*register_operation_) {
         spidma_.finish_readwrite();
-        //uint32_t data = (data_[1] << 16) | (data_[2] << 8) | data_[3];
-        uint16_t data = (data_[2] << 8) | data_[3];
-        pos_ += (int16_t) (data - last_data_); // rollover summing
-        //pos_ = data;
-        //pos_ = data_[1];
+        uint32_t data = ((data_[1] << 16) | (data_[2] << 8) | data_[3]) << 8;
+        int32_t diff = (data - last_data_); // rollover summing
+        pos_ += diff/256;
+        //pos_ = data/256;
         last_data_ = data;
       }
       return get_value();
@@ -118,7 +117,7 @@ class ICPZ : public EncoderBase {
     uint8_t command_[4] = {};
     uint8_t data_[4] = {};
     int32_t pos_ = 0;
-    uint16_t last_data_ = 0;
+    uint32_t last_data_ = 0;
     volatile int register_operation_local_ = 0;
     volatile int *register_operation_ = &register_operation_local_;
 };
