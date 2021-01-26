@@ -37,7 +37,7 @@ class ICPZ : public EncoderBase {
        spidma_.readwrite(command, data_in, 3);
        command[0] = 0xcf;
        command[1] = 0x0F;
-       command[2] = 0x10;     // ran_fld = 0 -> never update position based on absolute track after initial
+       command[2] = 0x90;     // ran_fld = 0 -> never update position based on absolute track after initial
        spidma_.readwrite(command, data_in, 3);
        command[0] = 0xcf;
        command[1] = 0x40;
@@ -45,13 +45,13 @@ class ICPZ : public EncoderBase {
        spidma_.readwrite(command, data_in, 3);
        command[0] = 0xcf;
        command[1] = 0x08;
-       command[2] = 0xC0;     // ai_phase = -20
-       command[3] = 0xF1;
+       command[2] = 0xc0;     // ai_phase 
+       command[3] = 0xd1;
        spidma_.readwrite(command, data_in, 4);
        command[0] = 0xcf;
        command[1] = 0x0a;
-       command[2] = 0x00;     // ai_scale = .9558
-       command[3] = 0xD8;
+       command[2] = 0x00;     // ai_scale
+       command[3] = 0xcd;
        spidma_.readwrite(command, data_in, 4);
        command[0] = 0xd9;
        command[1] = 0x41;     // write command conf write all    
