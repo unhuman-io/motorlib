@@ -20,7 +20,7 @@ class VelocityController : public Controller {
         position_change_max_ = param.position.command_max/param.position.kp;
     }
     void set_rollover(float rollover) { controller_.set_rollover(rollover); }
- private:
+// private:
     float position_change_max_ = 0;
     PIDController controller_;
 

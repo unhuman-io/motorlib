@@ -48,7 +48,7 @@ class FastLoop {
       motor_enc_wrap_ = wrap1(motor_enc_wrap_ + motor_enc_diff, param_.motor_encoder.rollover);
 
       motor_position_ = param_.motor_encoder.dir * 2 * (float) M_PI * inv_motor_encoder_cpr_ * motor_enc_wrap_;
-      motor_position_filtered_ = (1-alpha10)*motor_position_filtered_ + alpha10*motor_position_;
+      motor_position_filtered_ = motor_position_; //(1-alpha10)*motor_position_filtered_ + alpha10*motor_position_;
       motor_velocity =  param_.motor_encoder.dir * (motor_enc_diff)*(2*(float) M_PI * inv_motor_encoder_cpr_ * frequency_hz_);
       motor_velocity_filtered = (1-alpha)*motor_velocity_filtered + alpha*motor_velocity;
       last_motor_enc = motor_enc;

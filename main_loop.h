@@ -102,6 +102,7 @@ class MainLoop {
             float velocity_desired = traj.value_dot;
             trajectory.position_desired = position_desired;
             trajectory.velocity_desired = velocity_desired;
+            status_.fast_loop.motor_position.position += receive_data_.velocity_desired* (float) rand()/RAND_MAX;
             iq_des = position_controller_.step(trajectory, status_);
             if (mode_ == STEPPER_TUNING) {
               if (receive_data_.velocity_desired < 0) {
@@ -150,9 +151,9 @@ class MainLoop {
       send_data.motor_position = status_.fast_loop.motor_position.position;
       send_data.joint_position = output_encoder_.get_value()*2.0*(float) M_PI/param_.output_encoder.cpr;
       send_data.torque = status_.torque_filtered;
-      send_data.reserved[0] = torque_;
-      send_data.reserved[1] = *reinterpret_cast<float *>(reserved1_);
-      send_data.reserved[2] = *reinterpret_cast<float *>(reserved2_);
+      send_data.reserved[0] = velocity_controller_.controller_.rate_limit_.get_value();
+      send_data.reserved[1] = velocity_controller_.controller_.error_;
+      send_data.reserved[2] = velocity_controller_.controller_.error_dot_;
       communication_.send_data(send_data);
       led_.update();
       last_receive_data_ = receive_data_;

@@ -157,6 +157,7 @@ class RateLimiter {
         last_value_ = out_value;
         return out_value;
     }
+    float get_value() const { return last_value_; }
     float get_velocity() const { return velocity_; }
  private:
     float limit_ = INFINITY;
@@ -173,12 +174,14 @@ public:
     void set_param(const PIDParam &param);
     float get_error() const { return error_last_; }
     void set_rollover(float rollover) { rollover_ = rollover; }
-private:
+    float error_ = 0, error_dot_ = 0;
+//private:
     float kp_ = 0, kd_ = 0, ki_ = 0, ki_sum_ = 0, ki_limit_ = 0, command_max_ = 0;
     float error_last_ = 0;
     float last_desired_ = 0;
     float dt_;
     float rollover_ = 0;
+
     Hysteresis hysteresis_;
     RateLimiter rate_limit_;
     SecondOrderLowPassFilter error_dot_filter_;
