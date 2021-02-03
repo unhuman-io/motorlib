@@ -66,9 +66,35 @@ public:
             alpha_ = 2*M_PI*dt_*frequency_hz/(2*M_PI*dt_*frequency_hz + 1);
         }
     }
+    float get_frequency() const {
+        return 0;
+    }
 private:
     float value_ = 0, last_value_ = 0;
     float alpha_, dt_;
+};
+
+class SecondOrderLowPassFilter {
+ public:
+    SecondOrderLowPassFilter(float dt, float frequency_hz=0) :
+        low_pass_1_(dt, frequency_hz), low_pass_2_(dt, frequency_hz) {}
+    void init(float value) {
+        low_pass_1_.init(value);
+        low_pass_2_.init(value);
+    }
+    float update(float value) {
+        return low_pass_2_.update(low_pass_1_.update(value));
+    }
+    float get_value() const { return low_pass_2_.get_value(); }
+    void set_frequency(float frequency_hz) {
+        low_pass_1_.set_frequency(frequency_hz);
+        low_pass_2_.set_frequency(frequency_hz);
+    }
+    float get_frequency() const {
+        return 0;
+    }
+ private:
+    FirstOrderLowPassFilter low_pass_1_, low_pass_2_;
 };
 
 #define IIRSIZE 4
@@ -155,7 +181,7 @@ private:
     float rollover_ = 0;
     Hysteresis hysteresis_;
     RateLimiter rate_limit_;
-    FirstOrderLowPassFilter error_dot_filter_;
+    SecondOrderLowPassFilter error_dot_filter_;
     FirstOrderLowPassFilter output_filter_;
 
     friend class System;
