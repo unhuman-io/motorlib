@@ -208,7 +208,7 @@ class FastLoop {
     float motor_velocity=0;
     float motor_velocity_filtered=0;
     float alpha=0.001;
-    float alpha10=0.3859;   // 1/10 cutoff frequency
+    float alpha10=1;//0.3859;   // 1/10 cutoff frequency
     float phase_mode_ = 1;    // 1: standard or -1: two wires switched
     float phase_mode_desired_ = 1;
     int32_t motor_mechanical_position_ = 0;
