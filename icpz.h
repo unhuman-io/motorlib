@@ -16,52 +16,56 @@ class ICPZ : public EncoderBase {
        command[1] = 0x09;
        command[2] = 0x00;     // multiturn data length = 0
        spidma_.readwrite(command, data_in, 3);
-       command[0] = 0xcf;
-       command[1] = 0x40;
-       command[2] = 0x08;     // memory bank 8
-       spidma_.readwrite(command, data_in, 3);
-       command[0] = 0xcf;
-       command[1] = 0x00;
-       command[2] = 0xbe;     // flexcode 446, 216
-       command[3] = 0x01;
-       command[4] = 216;
-       command[5] = 0x00;
-       spidma_.readwrite(command, data_in, 6);
+      //  command[0] = 0xcf;
+      //  command[1] = 0x40;
+      //  command[2] = 0x08;     // memory bank 8
+      //  spidma_.readwrite(command, data_in, 3);
+      //  command[0] = 0xcf;
+      //  command[1] = 0x00;
+      //  command[2] = 0xbe;     // flexcode 446, 216
+      //  command[3] = 0x01;
+      //  command[4] = 216;
+      //  command[5] = 0x00;
+      //  spidma_.readwrite(command, data_in, 6);
        command[0] = 0xcf;
        command[1] = 0x40;
        command[2] = 0x00;     // memory bank 0
        spidma_.readwrite(command, data_in, 3);
        command[0] = 0xcf;
-       command[1] = 0x07;
-       command[2] = 0x90;     // now 8 // sys_ovr = 9 bit
+       command[1] = 0x00;
+       command[2] = 0x03;     // fast speed on port a
        spidma_.readwrite(command, data_in, 3);
+      //  command[0] = 0xcf;
+      //  command[1] = 0x07;
+      //  command[2] = 0x90;     // now 8 // sys_ovr = 9 bit
+      //  spidma_.readwrite(command, data_in, 3);
        command[0] = 0xcf;
        command[1] = 0x0F;
-       command[2] = 0x90;     // ran_fld = 0 -> never update position based on absolute track after initial
+       command[2] = 0x00;     // 0x00 ran_fld = 0 -> never update position based on absolute track after initial
        spidma_.readwrite(command, data_in, 3);
-       command[0] = 0xcf;
-       command[1] = 0x40;
-       command[2] = 0x01;     // memory bank 1
-       spidma_.readwrite(command, data_in, 3);
-       command[0] = 0xcf;
-       command[1] = 0x08;
-       command[2] = 0xc0;     // ai_phase 
-       command[3] = 0xd1;
-       spidma_.readwrite(command, data_in, 4);
-       command[0] = 0xcf;
-       command[1] = 0x0a;
-       command[2] = 0x00;     // ai_scale
-       command[3] = 0xcd;
-       spidma_.readwrite(command, data_in, 4);
-       command[0] = 0xd9;
-       command[1] = 0x41;     // write command conf write all    
-       spidma_.readwrite(command, data_in, 2);
-       ms_delay(10);
-       command[0] = 0x81;
-       command[1] = 0x76;
-       command[2] = 0x00;     // cmd stat
-       command[3] = 0x00;
-       spidma_.readwrite(command, data_in, 4);
+      //  command[0] = 0xcf;
+      //  command[1] = 0x40;
+      //  command[2] = 0x01;     // memory bank 1
+      //  spidma_.readwrite(command, data_in, 3);
+      //  command[0] = 0xcf;
+      //  command[1] = 0x08;
+      //  command[2] = 0xc0;     // ai_phase 
+      //  command[3] = 0xd1;
+      //  spidma_.readwrite(command, data_in, 4);
+      //  command[0] = 0xcf;
+      //  command[1] = 0x0a;
+      //  command[2] = 0x00;     // ai_scale
+      //  command[3] = 0xcd;
+      //  spidma_.readwrite(command, data_in, 4);
+      //  command[0] = 0xd9;
+      //  command[1] = 0x41;     // write command conf write all    
+      //  spidma_.readwrite(command, data_in, 2);
+      //  ms_delay(10);
+      //  command[0] = 0x81;
+      //  command[1] = 0x76;
+      //  command[2] = 0x00;     // cmd stat
+      //  command[3] = 0x00;
+      //  spidma_.readwrite(command, data_in, 4);
        if (data_in[3] == 0) { // cmd succeeded
          return true;
        }
