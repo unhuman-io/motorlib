@@ -40,15 +40,15 @@ class APIUint8 : public APIVariable2<uint8_t> {
 };
 
 #include <functional>
-template<class T>
+
 class APICallback : public APIVariable {
  public:
-  APICallback(std::function<T()> getfun, std::function<void(T)> setfun) : getfun_(getfun), setfun_(setfun) {}
+  APICallback(std::function<std::string()> getfun, std::function<void(std::string)> setfun) : getfun_(getfun), setfun_(setfun) {}
   void set(std::string s) { setfun_(s); }
   std::string get() const {return getfun_(); }
  private:
-  std::function<T()> getfun_;
-  std::function<void(T)> setfun_;
+  std::function<std::string()> getfun_;
+  std::function<void(std::string)> setfun_;
 };
 
 class APICallbackFloat : public APIVariable {

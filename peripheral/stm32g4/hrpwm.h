@@ -26,7 +26,8 @@ class HRPWM final : public PWMBase {
          regs_.sTimerxRegs[ch_c_].SETx2R = HRTIM_SET2R_SST;
       } else {
          uint32_t deadprescale = 0;
-         uint32_t deadtime = deadtime_ns_ * CPU_FREQUENCY_HZ * 32 / 4 / 1.e9; // I think this should be /8 not /4, but /4 seems to give correct scale
+         uint32_t deadtime = deadtime_ns_ * CPU_FREQUENCY_HZ * 32 / 4 / 1.e9; // Datasheet says /8 not /4, but /4 seems to give correct scale
+                                                                              // 9 bits at 170e6*32/4 gives 376 ns
          regs_.sTimerxRegs[ch_a_].OUTxR |= HRTIM_OUTR_DTEN;
          regs_.sTimerxRegs[ch_a_].DTxR |= (deadtime << HRTIM_DTR_DTF_Pos) | (deadtime << HRTIM_DTR_DTR_Pos) | (deadprescale << HRTIM_DTR_DTPRSC_Pos);
          regs_.sTimerxRegs[ch_b_].OUTxR |= HRTIM_OUTR_DTEN;

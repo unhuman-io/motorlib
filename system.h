@@ -51,6 +51,7 @@ class System {
         api.add_api_variable("tkp", new APIFloat(&actuator_.main_loop_.torque_controller_.controller_.kp_));
         api.add_api_variable("tkd", new APIFloat(&actuator_.main_loop_.torque_controller_.controller_.kd_));
         api.add_api_variable("tmax", new APIFloat(&actuator_.main_loop_.torque_controller_.controller_.command_max_));
+        api.add_api_variable("log", new APICallback(get_log, log));
 
         std::function<void(float)> set_filt = std::bind(&SecondOrderLowPassFilter::set_frequency, &actuator_.main_loop_.position_controller_.controller_.error_dot_filter_, std::placeholders::_1);
         std::function<float(void)> get_filt = std::bind(&SecondOrderLowPassFilter::get_frequency, &actuator_.main_loop_.position_controller_.controller_.error_dot_filter_);
@@ -59,9 +60,9 @@ class System {
         while(1) {
             char *s = System::get_string();
             if (s[0] != 0) {
-                System::log(api.parse_string(s));
+                auto response = api.parse_string(s);
+                communication_.send_string(response.c_str(), response.length());
             }
-            send_log();
             system_maintenance();
             actuator_.maintenance();
         }
@@ -77,14 +78,13 @@ class System {
             log_queue_.push(str);
         }
     }
-    static void send_log() {
+    static std::string get_log() {
+        std::string str = "log end";
         if (!log_queue_.empty()) {
-            std::string str = log_queue_.front();
-            bool sent = communication_.send_string(str.c_str(), str.length());
-            if (sent) {
-                log_queue_.pop();
-            }
+            str = log_queue_.front();
+            log_queue_.pop();
         }
+        return str;
     }
     static char *get_string() {
         static char buf[65];
