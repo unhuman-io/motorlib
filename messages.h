@@ -138,6 +138,7 @@ typedef struct {
     float vbus;                         // bus voltage V
 } FastLoopStatus;
 
+#define MOTOR_MESSAGES_VERSION  "1.0"
 typedef struct {
     FastLoopStatus fast_loop;
     float torque_filtered;
