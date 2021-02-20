@@ -1,9 +1,11 @@
-
-#ifndef MOTOR_MESSAGES_H
-#define MOTOR_MESSAGES_H
+#pragma once
 
 #include <stdint.h>
+#include "motor_messages/motor_messages.h"
 
+typedef MotorCommand ReceiveData;
+typedef MotorStatus SendData;
+typedef MotorMode MainControlMode;
 typedef uint32_t mcu_time;  // a timestamp in cpu cycles
 
 typedef struct {
@@ -63,8 +65,6 @@ typedef struct {
     float filter_frequency_hz;
 } TorqueSensorParam;
 
-enum MainControlMode {OPEN, DAMPED, CURRENT, POSITION, TORQUE, IMPEDANCE, VELOCITY, CURRENT_TUNING, POSITION_TUNING, VOLTAGE, PHASE_LOCK, STEPPER_TUNING, BOARD_RESET=255};
-
 typedef struct {
     PIDParam position;
 } PositionControllerParam;
@@ -92,7 +92,7 @@ typedef struct {
     } output_encoder;
     TorqueSensorParam torque_sensor;
     int16_t host_timeout;                             // 0 to disable, if no commands received before host timeout, go to safe_mode
-    enum MainControlMode safe_mode;                 // goes to this mode and freeze command if error
+    MainControlMode safe_mode;                 // goes to this mode and freeze command if error
                                                     // need to send reset from host to exit
     float torque_correction;
     float torque_gain, torque_bias;                 // not currently used
@@ -104,7 +104,7 @@ typedef struct {
     uint8_t do_phase_lock;          // 1: yes, 0: no
     float phase_lock_current;       // current in A
     float phase_lock_duration;      // duration in seconds
-    enum MainControlMode startup_mode;
+    MainControlMode startup_mode;
 } StartupParam;
 
 typedef struct {
@@ -138,31 +138,7 @@ typedef struct {
     float vbus;                         // bus voltage V
 } FastLoopStatus;
 
-#define MOTOR_MESSAGES_VERSION  "1.0"
 typedef struct {
     FastLoopStatus fast_loop;
     float torque_filtered;
 } MainLoopStatus;
-
-typedef struct {
-    mcu_time mcu_timestamp;             // timestamp in microcontroller clock cycles
-    uint32_t host_timestamp_received;   // return of host_timestamp from ReceiveData
-    float motor_position;               // motor position in radians
-    float joint_position;               // joint position in radians
-    float iq;                           // Measured motor current in A line-line
-    float torque;                       // measured torque in Nm
-    int32_t motor_encoder;              // motor position in raw counts
-    float reserved[3];
-} SendData;
-
-typedef struct {
-    uint32_t host_timestamp;            // Value from host
-    uint8_t mode_desired;               // \sa MainControlMode
-    float current_desired;              // motor current desired in A line-line
-    float position_desired;             // motor position desired in rad
-    float velocity_desired;             // motor velocity desired in rad/s
-    float torque_desired;               // torque desired Nm
-    float reserved;                     // reserved for strange uses
-} ReceiveData;
-
-#endif
