@@ -1,9 +1,11 @@
-
-#ifndef MOTOR_MESSAGES_H
-#define MOTOR_MESSAGES_H
+#pragma once
 
 #include <stdint.h>
+#include "motor_messages/motor_messages.h"
 
+typedef MotorCommand ReceiveData;
+typedef MotorStatus SendData;
+typedef MotorMode MainControlMode;
 typedef uint32_t mcu_time;  // a timestamp in cpu cycles
 
 typedef struct {
@@ -20,6 +22,7 @@ typedef struct {
     float kd;               // derivative gain, implemented on error units same as kp * seconds
     float command_max;      // \sa PIParam.command_max
     float velocity_filter_frequency_hz; // First order filter on velocity feedback
+    float output_filter_frequency_hz; // First order filter on output
 } PIDParam;
 
 typedef struct {
@@ -31,7 +34,6 @@ typedef struct {
 
 #define COGGING_TABLE_SIZE 8192  // must be multiple of 2
 typedef struct {
-    int32_t pwm_frequency;  // PWM frequency in Hz, default usually 100000
     float adc1_offset, adc2_offset, adc3_offset;    // initial guess at current sensor bias in counts - default 2048
     float adc1_gain, adc2_gain, adc3_gain;          // current sensor linear gain units A/count
     FOCParam foc_param;
@@ -44,6 +46,10 @@ typedef struct {
                                                     // Allows for more repeatable commutation from a quadrature encoder with index or absolute encoder
         uint32_t cpr;                               // Counts/revolution for encoder, for quadrature encoders 4x lines per revolution
         float dir;                                  // Set to 1 for positive output, -1 for negative
+        int32_t rollover;                           // Encoder counts will rollover from +rollover to -rollover when it reaches this value. 
+                                                    // Position control will take the shortest route. Velocity control is continuous.
+                                                    // Set to 0 to disable.
+                                                    // Ideally set to an even multiple of cpr smaller than 8388608 for no resolution loss 
     } motor_encoder;
     struct {
         float table[COGGING_TABLE_SIZE];            // cogging table in A
@@ -52,13 +58,43 @@ typedef struct {
     float vbus_gain;                                // vbus sensor gain units V/count
 } FastLoopParam;
 
-enum MainControlMode {OPEN, DAMPED, CURRENT, POSITION, VELOCITY, CURRENT_TUNING, POSITION_TUNING, BOARD_RESET=255};
 typedef struct {
-    int32_t update_frequency;                       // main loop update frequency in Hz
-    PIDParam controller_param;
+    float gain;
+    float bias;
+    float k_temp;
+    float filter_frequency_hz;
+} TorqueSensorParam;
+
+typedef struct {
+    PIDParam position;
+} PositionControllerParam;
+
+typedef struct {
+    PIDParam torque;
+} TorqueControllerParam;
+
+typedef struct {
+    PIDParam impedance;
+    PIDParam torque;
+} ImpedanceControllerParam;
+
+typedef struct {
+    PIDParam position;
+} VelocityControllerParam;
+
+typedef struct {
+    PositionControllerParam position_controller_param;
+    TorqueControllerParam torque_controller_param;
+    ImpedanceControllerParam impedance_controller_param;
+    VelocityControllerParam velocity_controller_param;
     struct {
         float cpr;                                  // output encoder cpr \sa FastLoopParam.motor_encoder.cpr
     } output_encoder;
+    TorqueSensorParam torque_sensor;
+    int16_t host_timeout;                             // 0 to disable, if no commands received before host timeout, go to safe_mode
+    MainControlMode safe_mode;                 // goes to this mode and freeze command if error
+                                                    // need to send reset from host to exit
+    float torque_correction;
     float torque_gain, torque_bias;                 // not currently used
     float kt;                                       // not currently used
     float gear_ratio;                               // not currently used
@@ -68,18 +104,11 @@ typedef struct {
     uint8_t do_phase_lock;          // 1: yes, 0: no
     float phase_lock_current;       // current in A
     float phase_lock_duration;      // duration in seconds
-    enum MainControlMode startup_mode;
+    MainControlMode startup_mode;
 } StartupParam;
 
 typedef struct {
-    FastLoopParam fast_loop_param;
-    MainLoopParam main_loop_param;
-    StartupParam startup_param;
-    char name[64];                 // name available through usb string
-} Param;
-
-typedef struct {
-    struct { float i_d, i_q; } desired;         // desired current in A, i_d typically 0, i_q creates torque
+    struct { float i_d, i_q, v_q; } desired;         // desired current in A, i_d typically 0, i_q creates torque, v_q in V is a feedforward
     struct { float i_a, i_b, i_c, motor_encoder; } measured;    // sensor currents in A, motor_encoder in rad referenced to electrical zero
 } FOCCommand;
 
@@ -88,8 +117,9 @@ typedef struct {
         float i_d, i_q;                         // \sa FOCCommand.desired
     } desired;
     struct {
-        float position;                         // motor electrical position
-        float i_d, i_q, i_0;                    // measured processed currents, unfiltered
+        float position;                         // motor electrical position, rad filtered by 1/10
+        float i_d, i_q, i_0;                    // measured processed currents, A filtered
+        float sin, cos;                         // sin and cos of the electrical position
     } measured;
     struct { float v_a, v_b, v_c, v_d, v_q; } command;  // command in V to PWM
 } FOCStatus;
@@ -108,25 +138,7 @@ typedef struct {
     float vbus;                         // bus voltage V
 } FastLoopStatus;
 
-typedef struct {} MainLoopStatus;       // not currently used
-
 typedef struct {
-    mcu_time mcu_timestamp;             // timestamp in microcontroller clock cycles
-    uint32_t host_timestamp_received;   // return of host_timestamp from ReceiveData
-    float motor_position;               // motor position in radians
-    float joint_position;               // joint position in radians
-    float iq;                           // Measured motor current in A line-line
-    int32_t motor_encoder;              // motor position in raw counts
-    float reserved[2];
-} SendData;
-
-typedef struct {
-    uint32_t host_timestamp;            // Value from host
-    uint8_t mode_desired;               // 0: open, 1: damped, 2: active
-    float current_desired;              // motor current desired in A line-line
-    float position_desired;             // motor position desired in rad
-    float velocity_desired;             // motor velocity desired in rad/s
-    float reserved;                     // no position control for values < abs(position_deadband - position_desired)
-} ReceiveData;
-
-#endif
+    FastLoopStatus fast_loop;
+    float torque_filtered;
+} MainLoopStatus;

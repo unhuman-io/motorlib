@@ -1,19 +1,17 @@
-void system_init() {
-    SystemConfig::init();
-}
+#include <string>
 
 void system_run() {
-    SystemConfig::run();
+    System::run();
 }
 
 void main_loop_interrupt() {
-    SystemConfig::main_loop_interrupt();
+    System::main_loop_interrupt();
 }
 
 void fast_loop_interrupt() {
-    SystemConfig::fast_loop_interrupt();
+    System::fast_loop_interrupt();
 }
 
-void usb_interrupt() {
-    SystemConfig::usb_interrupt();
+void system_log(std::string s) {
+    System::log(s);
 }

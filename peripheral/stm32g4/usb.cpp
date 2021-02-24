@@ -1,12 +1,13 @@
 #include "../usb.h"
 #include <algorithm>
 #include <cstring>
-#include "../../param.h"
-#include "../../../version.h"
+#include "../version.h"
 
 #include "stm32g4xx.h"
 #include "../../util.h"
 #include <cstdio>
+
+extern const char * const name;
 
 typedef struct { // up to 1024 bytes, 16 bit access only, first table is 64 bytes, reception buffers need two additional bytes for CRC
     struct {
@@ -21,7 +22,6 @@ typedef struct { // up to 1024 bytes, 16 bit access only, first table is 64 byte
     __IO uint16_t EP_TX[32];
     __IO uint16_t EP_RX[48];
     } buffer[3];
-    __IO uint16_t EP_TX2[2][32]; // double buffer
 } USBPMA_TypeDef;
 #define USBPMA ((USBPMA_TypeDef *) USB_PMAADDR)
 
@@ -190,9 +190,34 @@ void USB1::send_data(uint8_t endpoint, const uint8_t *data, uint8_t length, bool
         if (wait) {
             continue;
         } else {
-            // need to double buffer
-            //epr_set_toggle(endpoint, USB_EP_TX_NAK, USB_EPTX_STAT);
-            break;
+            // set NAK but it doesn't cancel any transfer in progress right now
+            while((USBEPR->EP[endpoint].EPR & USB_EPTX_STAT) != USB_EP_TX_NAK) {
+                epr_set_toggle(endpoint, USB_EP_TX_NAK, USB_EPTX_STAT);
+            }
+
+            // wait for any current transfer to complete, checking for activity on an EXTI pin 
+            // and checking for CTR_TX
+            // timeout of 50000 ns
+            EXTI->PR1 = EXTI_PR1_PIF10;
+            uint32_t t_start = get_clock();
+            uint16_t idle_count = 0;
+            while((get_clock() - t_start) < 50000/(uint16_t) (1e9/CPU_FREQUENCY_HZ)) {
+                if (EXTI->PR1 & EXTI_PR1_PIF10) {
+                    EXTI->PR1 = EXTI_PR1_PIF10;
+                    idle_count = 0;
+                } else {
+                    idle_count++;
+                }
+                if (idle_count > 3) { 
+                    // 3 gives about 2 us right now, usb pins must transition within 7 bits/.58 us
+                    break;
+                }
+                if (USBEPR->EP[endpoint].EPR & USB_EP_CTR_TX) {
+                    break;
+                }
+            }
+            // after making it through the endpoint may still be active (NAK was set, but a completed 
+            // tranfer will toggle a bit to thus reenable TX_VALID) so return to while(tx_active(endpoint)) 
         }
     }
     
@@ -207,29 +232,11 @@ void USB1::send_data(uint8_t endpoint, const uint8_t *data, uint8_t length, bool
 void _send_data(uint8_t endpoint, const uint8_t *data, uint8_t length) {
     uint8_t length16 = (length+1)>>1;
     __IO uint16_t * pma_address = USBPMA->buffer[endpoint].EP_TX;
-    if (endpoint == 2) {
-        // double buffered DTOG_RX points to software_buffer to load, 0 or 1
-        int swbuf = (USBEPR->EP[3].EPR & USB_EP_DTOG_RX) >> 14;
-        pma_address = USBPMA->EP_TX2[swbuf];
-    }
     for(int i=0; i<length16; i++) {
         pma_address[i] = ((const uint16_t *) data)[i];
     }
-    if (endpoint == 2) {
-        // toggle DTOG_TX to the buffer to the software_buffer that was just loaded
-        while ( ((USBEPR->EP[3].EPR & USB_EP_DTOG_TX) >> 6) != ((USBEPR->EP[3].EPR & USB_EP_DTOG_RX) >> 14) ) {
-            USBEPR->EP[3].EPR  = (USBEPR->EP[3].EPR & USB_EPREG_MASK) | USB_EP_CTR_TX | USB_EP_CTR_RX | USB_EP_DTOG_TX;
-        }
-        // toggle the software_buffer to the now open buffer
-        USBEPR->EP[3].EPR  = (USBEPR->EP[3].EPR & USB_EPREG_MASK) | USB_EP_CTR_TX | USB_EP_CTR_RX | USB_EP_DTOG_RX;
-        // both counts are used, one for each buffer, just load both
-        USBPMA->btable[3].COUNT_TX = length;
-        USBPMA->btable[3].COUNT_RX = length;
-        epr_set_toggle(3, USB_EP_TX_VALID, USB_EPTX_STAT);
-    } else {
-        USBPMA->btable[endpoint].COUNT_TX = length;
-        epr_set_toggle(endpoint, USB_EP_TX_VALID, USB_EPTX_STAT);
-    }
+    USBPMA->btable[endpoint].COUNT_TX = length;
+    epr_set_toggle(endpoint, USB_EP_TX_VALID, USB_EPTX_STAT);
 }
 
 // todo protect
@@ -327,46 +334,43 @@ void USB1::interrupt() {
                         uint8_t byte_count = USBPMA->btable[0].COUNT_RX & USB_COUNT0_RX_COUNT0_RX;
                         read_pma(byte_count, USBPMA->buffer[0].EP_RX, buffer);
                         handle_setup_packet(buffer);
-                        // clear CTR
-                        USB->EP0R &= USB_EPREG_MASK & ~USB_EP_CTR_RX;
-                        // renable rx on ep0
-                        epr_set_toggle(0, USB_EP_RX_VALID, USB_EPRX_STAT);
-                    } else { // non setup rx
-                        USB->EP0R &= USB_EPREG_MASK & ~USB_EP_CTR_RX;
-                        epr_set_toggle(0, USB_EP_RX_VALID, USB_EPRX_STAT);
                     }
+                    // clear CTR
+                    USB->EP0R = (USB_EP_CTR_TX | (USB->EP0R & USB_EPREG_MASK)) & ~USB_EP_CTR_RX;
+                    // renable rx on ep0
+                    epr_set_toggle(0, USB_EP_RX_VALID, USB_EPRX_STAT);
                 }
                 if (USB->EP0R & USB_EP_CTR_TX) {
-                    USB->EP0R &= USB_EPREG_MASK & ~USB_EP_CTR_TX;
+                    // clear CTR_TX
+                    USB->EP0R = (USB_EP_CTR_RX | (USB->EP0R & USB_EPREG_MASK)) & ~USB_EP_CTR_TX;
                 }
                 break;
             case 2:
                 if (istr & USB_ISTR_DIR) { // RX
-                    USB->EP2R &= USB_EPREG_MASK & ~USB_EP_CTR_RX;
+                    // clear CTR_RX
+                    USB->EP2R = (USB_EP_CTR_TX | (USB->EP2R & USB_EPREG_MASK)) & ~USB_EP_CTR_RX;
                     count_rx_[2] = (USBPMA->btable[2].COUNT_RX & USB_COUNT2_RX_COUNT2_RX);
                     read_pma(count_rx_[2], USBPMA->buffer[2].EP_RX, rx_buffer_[2]);
                     new_rx_data_[2] = true;
                     epr_set_toggle(2, USB_EP_RX_VALID, USB_EPRX_STAT);
                 }
                 if (USB->EP2R & USB_EP_CTR_TX) {
-                    USB->EP2R &= USB_EPREG_MASK & ~USB_EP_CTR_TX;
+                    // clear CTR_TX
+                    USB->EP2R = (USB_EP_CTR_RX | (USB->EP2R & USB_EPREG_MASK)) & ~USB_EP_CTR_TX;
                 }
                 break;
             case 1:
                 if (istr & USB_ISTR_DIR) { // RX
-                    USB->EP1R &= USB_EPREG_MASK & ~USB_EP_CTR_RX;
+                    // clear CTR_RX
+                    USB->EP1R = (USB_EP_CTR_TX | (USB->EP1R & USB_EPREG_MASK)) & ~USB_EP_CTR_RX;
                     count_rx_[1] = (USBPMA->btable[1].COUNT_RX & USB_COUNT2_RX_COUNT2_RX);
                     read_pma(count_rx_[1], USBPMA->buffer[1].EP_RX, rx_buffer_[1]);
                     new_rx_data_[1] = true;
                     epr_set_toggle(1, USB_EP_RX_VALID, USB_EPRX_STAT);
                 }
                 if (USB->EP1R & USB_EP_CTR_TX) {
-                    USB->EP1R &= USB_EPREG_MASK & ~USB_EP_CTR_TX;
-                }
-                break;
-            case 3:
-                if (USB->EP3R & USB_EP_CTR_TX) {
-                    USB->EP3R &= USB_EPREG_MASK & ~USB_EP_CTR_TX;
+                     // clear CTR_TX
+                    USB->EP1R = (USB_EP_CTR_RX | (USB->EP1R & USB_EPREG_MASK)) & ~USB_EP_CTR_TX;
                 }
                 break;
         }
@@ -378,7 +382,7 @@ void USB1::interrupt() {
     }
 
     // clear anything remaining
-    USB->ISTR = 0;
+    //USB->ISTR = 0;
 }
 
  void USB1::handle_setup_packet(uint8_t *setup_data) {
@@ -416,10 +420,10 @@ void USB1::interrupt() {
                                 }
                                 case 0x04:
                                     //send_string(0, "abc", std::strlen("abc"));
-                                    send_string(0, VERSION " " GIT_HASH " " BUILD_DATETIME, std::strlen(VERSION " " GIT_HASH " " BUILD_DATETIME));
+                                    send_string(0, GIT_HASH " " BUILD_DATETIME, std::strlen(GIT_HASH " " BUILD_DATETIME));
                                     break;
                                 case 0x05:
-                                    send_string(0, param()->name, std::strlen(param()->name));
+                                    send_string(0, const_cast<const char*>(name), std::strlen(const_cast<const char*>(name)));
                                     break;
                                 case 0x06:
                                     send_string(0, "ST DFU mode", std::strlen("ST DFU mode"));
@@ -451,11 +455,10 @@ void USB1::interrupt() {
                     break;
                 case 0x09: // set configuration
                     // enable endpoint 2 IN (TX)
-                    USB->EP3R = 0x102; // Bulk on 2 double buf
-                    USBPMA->btable[3].ADDR_TX = offsetof(USBPMA_TypeDef, EP_TX2);
-                    USBPMA->btable[3].ADDR_RX = offsetof(USBPMA_TypeDef, EP_TX2)+64;
-                    epr_set_toggle(3, USB_EP_TX_NAK, USB_EPTX_STAT);
-                        // sets the toggle only bits to NAK, hardware better not change EPR during operation
+                    USB->EP2R = 0x002; // Bulk on 2 
+                    USBPMA->btable[2].ADDR_TX = offsetof(USBPMA_TypeDef, buffer[2].EP_TX);
+                    epr_set_toggle(2, USB_EP_TX_NAK, USB_EPTX_STAT);
+                    // sets the toggle only bits to NAK, hardware better not change EPR during operation
                     
                     USB->EP2R = 2;
                     // enable endpoint 2 OUT (RX)
@@ -502,7 +505,7 @@ void USB1::interrupt() {
                 send_data(0,0,0);
                 while ((USB->EP0R & USB_EPTX_STAT) == USB_EP_TX_VALID); // wait for packet to go through
                 ms_delay(10);
-                go_to_bootloader = 0xB0;
+                go_to_bootloader = 0xB007;
                 NVIC_SystemReset();
             } else {
                 send_stall(0);

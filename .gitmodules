@@ -1,0 +1,4 @@
+[submodule "motor_messages"]
+	path = motor_messages
+	url = ../motor_messages
+	branch = main

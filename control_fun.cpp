@@ -78,6 +78,7 @@ void PIDController::set_param(const PIDParam &param) {
     kd_ = param.kd;
     command_max_ = param.command_max;
     error_dot_filter_.set_frequency(param.velocity_filter_frequency_hz);
+    output_filter_.set_frequency(param.output_filter_frequency_hz);
     hysteresis_.set_hysteresis(command_max_/kp_);
 }
 
@@ -90,14 +91,18 @@ float PIDController::step(float desired, float velocity_desired, float measured,
     // velocity limit: velocity_limit on command - not if not tracking velocity can exceed this
     rate_limit_.set_limit(fabsf(velocity_limit*dt_));
     float proxy_desired = rate_limit_.step(desired);
-    float proxy_dot_desired = fsat(velocity_desired, fabsf(rate_limit_.get_velocity()/dt_));
-    float error = proxy_desired - measured;
-    float velocity_measured = (measured - measured_last_)/dt_;
-    float error_dot = error_dot_filter_.update(velocity_desired - velocity_measured);
-    measured_last_ = measured;
+    float proxy_wrap = wrap1(proxy_desired, rollover_);
+    rate_limit_.init(proxy_wrap, rate_limit_.get_velocity());
+   // float proxy_dot_desired = fsat(velocity_desired, fabsf(rate_limit_.get_velocity()/dt_));
+    float error = wrap1_diff(proxy_wrap, measured, rollover_);
+   // float error = proxy_desired - measured;
+   // float velocity_measured = (measured - measured_last_)/dt_;
+    float error_dot = error_dot_filter_.update((error - error_last_)/dt_);
+    error_last_ = error;
     ki_sum_ += ki_ * error;
     ki_sum_ = fsat(ki_sum_, ki_limit_);
-    return fsat(kp_*error + ki_sum_ + kd_*error_dot, command_max_);
+    float filtered_out = output_filter_.update(kp_*error + ki_sum_ + kd_*error_dot);
+    return fsat(filtered_out, command_max_);
 }
 
 float PIDDeadbandController::step(float desired, float velocity_desired, float deadband, float measured, float velocity_limit) {

@@ -18,23 +18,23 @@ void HRPWM::brake_mode() {
     regs_.sCommonRegs.ODISR = 0x555;
     regs_.sCommonRegs.OENR = 0xAAA;
     regs_.sCommonRegs.CR1 = 0x7F; // disable updates
-    regs_.sTimerxRegs[ch_a_].SETx1R = HRTIM_SET1R_SST;
+    regs_.sTimerxRegs[ch_a_].SETx1R = HRTIM_SET1R_SST; // set active state for some reason
     regs_.sTimerxRegs[ch_b_].SETx1R = HRTIM_SET1R_SST;
     regs_.sTimerxRegs[ch_c_].SETx1R = HRTIM_SET1R_SST;
-    regs_.sTimerxRegs[ch_a_].RSTx1R = HRTIM_RST1R_SRT;
+    regs_.sTimerxRegs[ch_a_].RSTx1R = HRTIM_RST1R_SRT; // set inactive state
     regs_.sTimerxRegs[ch_b_].RSTx1R = HRTIM_RST1R_SRT;
     regs_.sTimerxRegs[ch_c_].RSTx1R = HRTIM_RST1R_SRT;
     regs_.sCommonRegs.CR1 = 0x0; // enable updates
-    regs_.sTimerxRegs[ch_a_].RSTx1R = HRTIM_RST1R_SRT;
+    regs_.sTimerxRegs[ch_a_].RSTx1R = HRTIM_RST1R_SRT; // set inactive state again for some reason
     regs_.sTimerxRegs[ch_b_].RSTx1R = HRTIM_RST1R_SRT;
     regs_.sTimerxRegs[ch_c_].RSTx1R = HRTIM_RST1R_SRT;
 }
 
 void HRPWM::voltage_mode() {
     regs_.sCommonRegs.CR1 = 0x7F; // disable updates
-    regs_.sTimerxRegs[ch_a_].SETx1R = HRTIM_SET2R_CMP1;
-    regs_.sTimerxRegs[ch_b_].SETx1R = HRTIM_SET2R_CMP1;
-    regs_.sTimerxRegs[ch_c_].SETx1R = HRTIM_SET2R_CMP1;
+    regs_.sTimerxRegs[ch_a_].SETx1R = HRTIM_SET1R_CMP1; // set to active on cmp1
+    regs_.sTimerxRegs[ch_b_].SETx1R = HRTIM_SET1R_CMP1;
+    regs_.sTimerxRegs[ch_c_].SETx1R = HRTIM_SET1R_CMP1;
     regs_.sCommonRegs.CR1 = 0x0; // enable updates
     regs_.sCommonRegs.OENR = 0xFFF;
 }

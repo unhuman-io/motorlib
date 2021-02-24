@@ -33,6 +33,44 @@ class APIUint32 : public APIVariable2<uint32_t> {
    void set(std::string);
 };
 
+class APIUint8 : public APIVariable2<uint8_t> {
+ public:
+   APIUint8(uint8_t *u) : APIVariable2(u) {}
+   void set(std::string);
+};
+
+#include <functional>
+
+class APICallback : public APIVariable {
+ public:
+  APICallback(std::function<std::string()> getfun, std::function<void(std::string)> setfun) : getfun_(getfun), setfun_(setfun) {}
+  void set(std::string s) { setfun_(s); }
+  std::string get() const {return getfun_(); }
+ private:
+  std::function<std::string()> getfun_;
+  std::function<void(std::string)> setfun_;
+};
+
+class APICallbackFloat : public APIVariable {
+ public:
+   APICallbackFloat(std::function<float()> getfun , std::function<void(float)> setfun) : getfun_(getfun), setfun_(setfun) {}
+   void set(std::string s) { setfun_(stof(s)); }
+   std::string get() const { return std::to_string(getfun_()); };
+ private:
+   std::function<float()> getfun_;
+   std::function<void(float)> setfun_;
+};
+
+class APICallbackUint32 : public APIVariable {
+ public:
+   APICallbackUint32(std::function<uint32_t()> getfun , std::function<void(uint32_t)> setfun) : getfun_(getfun), setfun_(setfun) {}
+   void set(std::string);
+   std::string get() const;
+ private:
+   std::function<uint32_t()> getfun_;
+   std::function<void(uint32_t)> setfun_;
+};
+
 // allows for setting variables through text commands
 class ParameterAPI {
  public:
