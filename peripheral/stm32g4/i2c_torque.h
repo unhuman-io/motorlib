@@ -8,7 +8,7 @@
 // A two reading torque source
 class I2CTorque final : public TorqueSensorBase {
  public:
-    I2CTorque(I2C_DMA i2c, uint8_t address = 0, uint8_t decimation = 50) : 
+    I2CTorque(I2C_DMA &i2c, uint8_t address = 0, uint8_t decimation = 50) : 
         i2c_(i2c), decimation_(decimation) {
             address_ = 0x28 + address;
     }
