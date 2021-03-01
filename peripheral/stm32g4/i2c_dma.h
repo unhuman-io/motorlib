@@ -16,6 +16,7 @@ class I2C_DMA {
     void write(uint8_t address, int8_t nbytes, uint8_t *data, bool stop = false) {
         while(!ready());
         clear_isr();
+        tx_dma_.CCR = 0;
         tx_dma_.CMAR = (uint32_t) data;
         tx_dma_.CNDTR = nbytes;
         tx_dma_.CCR = DMA_CCR_EN | DMA_CCR_MINC | DMA_CCR_DIR; // DIR = 1 > read from memory
@@ -27,7 +28,7 @@ class I2C_DMA {
         while(!ready());
         clear_isr();
         regs_.CR2 = (address << 1) | I2C_CR2_RD_WRN | (nbytes << I2C_CR2_NBYTES_Pos) | I2C_CR2_AUTOEND;
-        
+        rx_dma_.CCR = 0;
         rx_dma_.CMAR = (uint32_t) data;
         rx_dma_.CNDTR = nbytes;
         rx_dma_.CCR = DMA_CCR_EN | DMA_CCR_MINC;
