@@ -11,6 +11,8 @@ class I2CTorque final : public TorqueSensorBase {
     I2CTorque(I2C_DMA &i2c, uint8_t address = 0, uint8_t decimation = 50) : 
         i2c_(i2c), decimation_(decimation) {
             address_ = 0x28 + address;
+            data_out_[0] = 0x88;
+            i2c_.write(address_, 1, data_out_);
     }
 
     void trigger() {
