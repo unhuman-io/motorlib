@@ -23,7 +23,7 @@ class I2CTorque final : public TorqueSensorBase {
         count_ = 0;
 
        data_out_[0] = 0x40;
-       i2c_.write(address_, 1, data_out_, true);
+       i2c_.write(address_, 1, data_out_);
        i2c_.read(address_, 6*4, data_in_);
     }
 
