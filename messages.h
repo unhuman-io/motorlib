@@ -62,7 +62,6 @@ typedef struct {
     float gain;
     float bias;
     float k_temp;
-    float filter_frequency_hz;
 } TorqueSensorParam;
 
 typedef struct {
@@ -95,9 +94,6 @@ typedef struct {
     MainControlMode safe_mode;                 // goes to this mode and freeze command if error
                                                     // need to send reset from host to exit
     float torque_correction;
-    float torque_gain, torque_bias;                 // not currently used
-    float kt;                                       // not currently used
-    float gear_ratio;                               // not currently used
 } MainLoopParam;
 
 typedef struct {
@@ -140,5 +136,5 @@ typedef struct {
 
 typedef struct {
     FastLoopStatus fast_loop;
-    float torque_filtered;
+    float torque;
 } MainLoopStatus;

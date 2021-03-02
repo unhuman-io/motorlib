@@ -4,6 +4,10 @@
 #include "../../gpio.h"
 #include "../../torque_sensor.h"
 
+extern "C" {
+void system_init();
+}
+
 // A two reading torque source
 class SPITorque final : public TorqueSensorBase {
  public:
@@ -80,7 +84,7 @@ class SPITorque final : public TorqueSensorBase {
     uint32_t reset2() {
         return 0;
     }
- //private:
+ private:
     SPI_TypeDef &regs_;
     GPIO &gpio_cs_;
     DMA_Channel_TypeDef &tx_dma_, &rx_dma_;
@@ -94,4 +98,5 @@ class SPITorque final : public TorqueSensorBase {
     uint8_t decimation_;
 
     friend class System;
+    friend void system_init();
 };

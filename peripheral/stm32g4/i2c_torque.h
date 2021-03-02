@@ -5,6 +5,11 @@
 #include "../../torque_sensor.h"
 #include "i2c_dma.h"
 
+
+extern "C" {
+void system_init();
+}
+
 // A two reading torque source
 class I2CTorque final : public TorqueSensorBase {
  public:
@@ -48,7 +53,7 @@ class I2CTorque final : public TorqueSensorBase {
     }
 
 
- //private:
+ private:
     I2C_DMA &i2c_;
     uint8_t address_;
     uint8_t data_out_[1] = {};
@@ -61,4 +66,5 @@ class I2CTorque final : public TorqueSensorBase {
     uint8_t decimation_;
 
     friend class System;
+    friend void system_init();
 };

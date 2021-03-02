@@ -12,6 +12,12 @@ extern uint32_t t_period_mainloop;
 
 void system_maintenance();
 
+#define API_ADD_FILTER(name, type, location) \
+    std::function<void(float)> set_filt_##name = std::bind(&type::set_frequency, &location, std::placeholders::_1); \
+    std::function<float(void)> get_filt_##name = std::bind(&type::get_frequency, &location); \
+    api.add_api_variable(#name, new APICallbackFloat(get_filt_##name, set_filt_##name))
+
+
 class System {
  public:
     static void run() {
@@ -26,6 +32,8 @@ class System {
         api.add_api_variable("ki", new APIFloat(&actuator_.main_loop_.position_controller_.controller_.ki_));
         api.add_api_variable("ki_limit", new APIFloat(&actuator_.main_loop_.position_controller_.controller_.ki_limit_));
         api.add_api_variable("max", new APIFloat(&actuator_.main_loop_.position_controller_.controller_.command_max_));
+        API_ADD_FILTER(velocity_filter, SecondOrderLowPassFilter, actuator_.main_loop_.position_controller_.controller_.error_dot_filter_);
+        API_ADD_FILTER(output_filter, FirstOrderLowPassFilter, actuator_.main_loop_.position_controller_.controller_.output_filter_);
         api.add_api_variable("vkp", new APIFloat(&actuator_.main_loop_.velocity_controller_.controller_.kp_));
         api.add_api_variable("vkd", new APIFloat(&actuator_.main_loop_.velocity_controller_.controller_.kd_));
         api.add_api_variable("cpu_frequency", new APIUint32(&cpu_frequency));
@@ -50,13 +58,16 @@ class System {
         api.add_api_variable("imax", new APIFloat(&actuator_.fast_loop_.foc_->pi_iq_->command_max_));
         api.add_api_variable("tkp", new APIFloat(&actuator_.main_loop_.torque_controller_.controller_.kp_));
         api.add_api_variable("tkd", new APIFloat(&actuator_.main_loop_.torque_controller_.controller_.kd_));
+        api.add_api_variable("tki", new APIFloat(&actuator_.main_loop_.torque_controller_.controller_.ki_));
+        api.add_api_variable("tki_limit", new APIFloat(&actuator_.main_loop_.torque_controller_.controller_.ki_limit_));
+        API_ADD_FILTER(t_velocity_filter, SecondOrderLowPassFilter, actuator_.main_loop_.torque_controller_.controller_.error_dot_filter_);
+        API_ADD_FILTER(t_output_filter, FirstOrderLowPassFilter, actuator_.main_loop_.torque_controller_.controller_.output_filter_);
         api.add_api_variable("tmax", new APIFloat(&actuator_.main_loop_.torque_controller_.controller_.command_max_));
+        api.add_api_variable("tgain", new APIFloat(&actuator_.main_loop_.torque_sensor_.gain_));
+        api.add_api_variable("tbias", new APIFloat(&actuator_.main_loop_.torque_sensor_.bias_));
+        api.add_api_variable("t_i_correction", new APIFloat(&actuator_.main_loop_.param_.torque_correction));
         api.add_api_variable("log", new APICallback(get_log, log));
         api.add_api_variable("messages_version", new APICallback([](){ return MOTOR_MESSAGES_VERSION; }, [](std::string s) {} ));
-
-        std::function<void(float)> set_filt = std::bind(&SecondOrderLowPassFilter::set_frequency, &actuator_.main_loop_.position_controller_.controller_.error_dot_filter_, std::placeholders::_1);
-        std::function<float(void)> get_filt = std::bind(&SecondOrderLowPassFilter::get_frequency, &actuator_.main_loop_.position_controller_.controller_.error_dot_filter_);
-        api.add_api_variable("filt", new APICallbackFloat(get_filt, set_filt));
 
         while(1) {
             char *s = System::get_string();

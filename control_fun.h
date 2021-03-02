@@ -67,7 +67,7 @@ public:
         }
     }
     float get_frequency() const {
-        return 0;
+        return alpha_/(2*M_PI*dt_*(1-alpha_));
     }
 private:
     float value_ = 0, last_value_ = 0;
@@ -91,7 +91,7 @@ class SecondOrderLowPassFilter {
         low_pass_2_.set_frequency(frequency_hz);
     }
     float get_frequency() const {
-        return 0;
+        return low_pass_1_.get_frequency();
     }
  private:
     FirstOrderLowPassFilter low_pass_1_, low_pass_2_;

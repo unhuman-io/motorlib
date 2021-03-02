@@ -6,12 +6,12 @@ class ImpedanceController : public Controller {
     ImpedanceController(float dt) : Controller(dt), impedance_controller_(dt), torque_controller_(dt) {}
     void init(const MainLoopStatus &status) {
         impedance_controller_.init(status.fast_loop.motor_position.position);
-        torque_controller_.init(status.torque_filtered);
+        torque_controller_.init(status.torque);
     }
     float step(const MotorCommand &command, const MainLoopStatus &status) {
         float torque_des = impedance_controller_.step(command.position_desired, command.velocity_desired, 0, status.fast_loop.motor_position.position) + \
                   command.torque_desired;
-        float iq_des = torque_controller_.step(torque_des, 0, status.torque_filtered) + \
+        float iq_des = torque_controller_.step(torque_des, 0, status.torque) + \
                   command.current_desired;
         return iq_des;
     }

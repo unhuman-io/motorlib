@@ -5,7 +5,7 @@ class TorqueSensorBase {
  public:
     void init() {}
     void trigger() {}
-    float read() { return 0; }
+    float read() { return bias_; }
     void set_param(const TorqueSensorParam &param) {
         gain_ = param.gain;
         bias_ = param.bias;
@@ -13,4 +13,5 @@ class TorqueSensorBase {
     }
  protected:
     float gain_ = 0, bias_ = 0, k_temp_ = 0;
+    friend class System;
 };

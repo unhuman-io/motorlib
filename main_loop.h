@@ -63,13 +63,11 @@ class MainLoop {
       }
 
       float torque_corrected = torque_sensor_.read();
-      if (torque_corrected != torque_) {
+      if (torque_corrected != status_.torque) {
         torque_corrected += param_.torque_correction*status_.fast_loop.foc_status.measured.i_q;
       }
-      torque_ = torque_corrected;
-   
-      //float torque_filtered = torque_filter_.update(torque_corrected);
-      status_.torque_filtered = torque_corrected;
+      status_.torque = torque_corrected;
+
 
       float iq_des = 0;
       float vq_des = 0;
@@ -149,8 +147,8 @@ class MainLoop {
       send_data.motor_encoder = status_.fast_loop.motor_position.raw;
       send_data.motor_position = status_.fast_loop.motor_position.position;
       send_data.joint_position = output_encoder_.get_value()*2.0*(float) M_PI/param_.output_encoder.cpr;
-      send_data.torque = status_.torque_filtered;
-      send_data.reserved[0] = torque_;
+      send_data.torque = status_.torque;
+      send_data.reserved[0] = 0;
       send_data.reserved[1] = *reinterpret_cast<float *>(reserved1_);
       send_data.reserved[2] = *reinterpret_cast<float *>(reserved2_);
       communication_.send_data(send_data);
@@ -251,8 +249,6 @@ class MainLoop {
     MainControlMode mode_ = OPEN;
     OutputEncoder &output_encoder_;
     TorqueSensor &torque_sensor_;
-    IIRFilter torque_filter_;
-    float torque_ = 0;
     float dt_ = 0;
     TrajectoryGenerator position_trajectory_generator_;
     uint32_t timestamp_ = 0;
@@ -262,13 +258,4 @@ class MainLoop {
 
     friend class System;
     friend void system_init();
-
-
-inline uint16_t minu16(uint16_t a, uint16_t b) {
-  if (a > b) {
-    return b;
-  } else {
-    return a;
-  }
-}
 };
