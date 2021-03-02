@@ -19,34 +19,61 @@ class I2C {
             regs_.CR1 |= I2C_CR1_PE;
     }
     void write(uint8_t address, int8_t nbytes, uint8_t *data, bool stop = false) {
-        clear_isr();
+        regs_.ISR = I2C_ISR_TXE; // flush txdr
         regs_.TXDR = data[0];
-        regs_.CR2 = (address << 1) | (nbytes << I2C_CR2_NBYTES_Pos);
-        regs_.CR2 |= I2C_CR2_START;
+       // regs_.CR2 = 0;
+        regs_.CR2 = (address << 1) | (nbytes << I2C_CR2_NBYTES_Pos) | I2C_CR2_START;
+
         for (int i=1; i<nbytes; i++) {
             uint32_t t_start = get_clock();
-            while_timeout_ms(!(regs_.ISR & (I2C_ISR_TXE | I2C_ISR_NACKF)), 10);
+            while_timeout_ms(!tx_ready() && !trouble(), .1);
+            if(trouble()) {
+                clear_isr();
+                regs_.CR2 = 0;
+                return;
+            }
             regs_.TXDR = data[i];
         }
         uint32_t t_start = get_clock();
-        while_timeout_ms(!(regs_.ISR & (I2C_ISR_TXE | I2C_ISR_NACKF)), 10);
+        while_timeout_ms(!transfer_complete() && !trouble(), .2);
+        if(trouble()) {
+            clear_isr();
+            regs_.CR2 = 0;
+            return;
+        }
         if (stop) {
             regs_.CR2 = I2C_CR2_STOP;
         }
+
     }
     void read(uint8_t address, uint8_t nbytes, uint8_t *data) {
-        regs_.CR2 = (address << 1) | I2C_CR2_RD_WRN | (nbytes << I2C_CR2_NBYTES_Pos) | I2C_CR2_AUTOEND;
-        regs_.CR2 |= I2C_CR2_START;
-        //while(!(regs_.ISR & I2C_ISR_TC));
-        //regs_.CR2 = I2C_CR2_STOP;
+        //regs_.CR2 = 0;
+        regs_.CR2 = (address << 1) | I2C_CR2_RD_WRN | (nbytes << I2C_CR2_NBYTES_Pos) | I2C_CR2_START;// | I2C_CR2_AUTOEND;
+
         for(int i=0;i<nbytes; i++) {
             uint32_t t_start = get_clock();
-            while_timeout_ms(!(regs_.ISR & (I2C_ISR_RXNE | I2C_ISR_NACKF)), 10);
+            while_timeout_ms(!rx_ready() && !trouble(), .1);
+            if(trouble()) {
+                clear_isr();
+                return;
+            }
             data[i] = regs_.RXDR;
         }
         uint32_t t_start = get_clock();
-        while_timeout_ms(!(regs_.ISR & I2C_ISR_STOPF), 10);
-        regs_.ICR = I2C_ICR_STOPCF;
+        while_timeout_ms(!transfer_complete(), .2);
+        regs_.CR2 = I2C_CR2_STOP;
+    }
+    bool tx_ready() const {
+        return regs_.ISR &  I2C_ISR_TXE;
+    }
+    bool rx_ready() const {
+        return regs_.ISR & I2C_ISR_RXNE;
+    }
+    bool transfer_complete() const {
+        return regs_.ISR & I2C_ISR_TC;
+    }
+    bool trouble() const {
+        return regs_.ISR & (I2C_ISR_NACKF | I2C_ISR_ARLO | I2C_ISR_BERR);
     }
  private:
     void clear_isr() {
