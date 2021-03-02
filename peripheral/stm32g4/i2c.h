@@ -3,10 +3,19 @@
 
 class I2C {
  public:
-    I2C(I2C_TypeDef &regs) : regs_(regs) {
-            regs_.TIMINGR = 0x30a0a7fb; // 100 kHz at 170 MHz clock
-            // regs_.TIMINGR = 0x10802d9b; // 400 kHz at 170 MHz clock
-            // regs_.TIMINGR = 0x00802172; // 1 Mbps at 170 MHz clock
+    I2C(I2C_TypeDef &regs, uint16_t speed_khz = 100) : regs_(regs) {
+            switch (speed_khz) {
+                case 1000:
+                    regs_.TIMINGR = 0x00802172; // 1 Mbps at 170 MHz clock
+                    break;
+                case 400:
+                    regs_.TIMINGR = 0x10802d9b; // 400 kHz at 170 MHz clock
+                    break;
+                default:
+                case 100:
+                    regs_.TIMINGR = 0x30a0a7fb; // 100 kHz at 170 MHz clock
+                    break;
+            }       
             regs_.CR1 |= I2C_CR1_PE;
     }
     void write(uint8_t address, int8_t nbytes, uint8_t *data, bool stop = false) {
