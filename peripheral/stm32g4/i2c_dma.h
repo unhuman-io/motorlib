@@ -37,7 +37,7 @@ class I2C_DMA {
         regs_.CR2 |= I2C_CR2_START;
     }
     bool ready() const {
-        return ((rx_dma_.CNDTR == 0) && (tx_dma_.CNDTR == 0)) || (regs_.ISR & (I2C_ISR_NACKF | I2C_ISR_STOPF));
+        return ((rx_dma_.CNDTR == 0) && (tx_dma_.CNDTR == 0)) || (regs_.ISR & (I2C_ISR_NACKF | I2C_ISR_STOPF | I2C_ISR_ARLO | I2C_ISR_BERR));
     }
  private:
     void clear_isr() {
