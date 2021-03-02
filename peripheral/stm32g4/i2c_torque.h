@@ -13,6 +13,7 @@ class I2CTorque final : public TorqueSensorBase {
             address_ = 0x28 + address;
             data_out_[0] = 0x88;
             i2c_.write(address_, 1, data_out_, true);
+            ms_delay(1);
     }
 
     void trigger() {
