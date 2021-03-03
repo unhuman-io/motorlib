@@ -154,6 +154,7 @@ class MainLoop {
       communication_.send_data(send_data);
       led_.update();
       last_receive_data_ = receive_data_;
+      IWDG->KR = 0xAAAA;
     }
 
 
@@ -221,6 +222,13 @@ class MainLoop {
         case STEPPER_TUNING:
           fast_loop_.stepper_mode();
           led_.set_color(LED::CYAN);
+          break;
+        case CRASH:
+          led_.set_color(LED::RED);
+          while(1) {
+            led_.update();
+            ns_delay(2000);
+          }
           break;
         case BOARD_RESET:
           NVIC_SystemReset();
