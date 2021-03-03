@@ -26,6 +26,7 @@ class System {
         log("finished startup");
 
         uint32_t cpu_frequency = CPU_FREQUENCY_HZ;
+        api.add_api_variable("system_count", new APIUint32((uint32_t *) &count_));
         api.add_api_variable("mode", new APIUint32((uint32_t *) &actuator_.main_loop_.mode_));
         api.add_api_variable("kp", new APIFloat(&actuator_.main_loop_.position_controller_.controller_.kp_));
         api.add_api_variable("kd", new APIFloat(&actuator_.main_loop_.position_controller_.controller_.kd_));
@@ -70,6 +71,7 @@ class System {
         api.add_api_variable("messages_version", new APICallback([](){ return MOTOR_MESSAGES_VERSION; }, [](std::string s) {} ));
 
         while(1) {
+            count_++;
             char *s = System::get_string();
             if (s[0] != 0) {
                 auto response = api.parse_string(s);
@@ -108,6 +110,7 @@ class System {
     static Actuator actuator_;
     static std::queue<std::string> log_queue_;
     static ParameterAPI api;
+    static uint32_t count_;
 };
 
 #include "../st_device.h"
