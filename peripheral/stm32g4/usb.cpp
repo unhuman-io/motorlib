@@ -93,7 +93,7 @@ static const uint8_t USB_CONFIGURATION_DESCRIPTOR[] =
   0x01,   /* bConfigurationValue: Configuration value */
   0x04,   /* iConfiguration: Index of string descriptor describing the configuration */
   0xC0,   /* bmAttributes: self powered */
-  0x32,   /* MaxPower 0 mA */
+  0x32,   /* MaxPower 100 mA */
   
   /*---------------------------------------------------------------------------*/
   
@@ -376,9 +376,9 @@ void USB1::interrupt() {
         }
     }
 
-    if (USB->ISTR & USB_ISTR_ERR) {
+    if (USB->ISTR & (USB_ISTR_ERR | USB_ISTR_ESOF)) {
         error_count_++;
-        USB->ISTR &= ~USB_ISTR_ERR;
+        USB->ISTR &= ~(USB_ISTR_ERR | USB_ISTR_ESOF);
     }
 
     // clear anything remaining
@@ -390,7 +390,7 @@ void USB1::interrupt() {
         case 0x80:  // standard request get
             switch (setup_data[1]) {
                 case 0x00:  // get status
-                    send_data(0, reinterpret_cast<const uint8_t *>("\x1\x0"), 2);  // self powered
+                    send_data(0, reinterpret_cast<const uint8_t *>("\x0\x0"), 2);  // not self powered or remote wakeup
                     break;
                 case 0x06:  // get descriptor
                     switch (setup_data[3]) {
@@ -419,7 +419,6 @@ void USB1::interrupt() {
                                     break;
                                 }
                                 case 0x04:
-                                    //send_string(0, "abc", std::strlen("abc"));
                                     send_string(0, GIT_HASH " " BUILD_DATETIME, std::strlen(GIT_HASH " " BUILD_DATETIME));
                                     break;
                                 case 0x05:

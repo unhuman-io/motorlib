@@ -26,6 +26,7 @@ class USBCommunication : public CommunicationBase {
     }
  private:
     USB1 &usb_;
+    friend class System;
 };
 
 #endif
