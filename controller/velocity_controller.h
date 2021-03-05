@@ -3,26 +3,31 @@
 
 class VelocityController : public Controller {
  public:
-    VelocityController(float dt) : Controller(dt), controller_(dt) {}
+    VelocityController(float dt) : Controller(dt), controller_(dt), velocity_filter_(dt) {}
     void init(const MainLoopStatus &status) {
-        controller_.init(status.fast_loop.motor_position.position);
+        controller_.init(0);    // can only switch into this mode at zero velocity without glitch
+        last_motor_position_ = status.fast_loop.motor_position.position;
     }
     float step(const MotorCommand &command, const MainLoopStatus &status) {
-        float position_desired = status.fast_loop.motor_position.position + 
-            position_change_max_*fsignf(command.velocity_desired);
-        float iq_des = controller_.step(position_desired, 
-                  command.velocity_desired, status.fast_loop.motor_position.position, command.velocity_desired) +
-                  command.current_desired;
+        float velocity_measured = wrap1_diff(status.fast_loop.motor_position.position, last_motor_position_, rollover_)/dt_;
+        last_motor_position_ = status.fast_loop.motor_position.position;
+        velocity_measured_filt_ = velocity_filter_.update(velocity_measured);
+        float iq_des = controller_.step(command.velocity_desired, 0, velocity_measured_filt_, acceleration_limit_) + command.current_desired;
         return iq_des;
     }
     void set_param(const VelocityControllerParam &param) {
-        controller_.set_param(param.position);
-        position_change_max_ = param.position.command_max/param.position.kp;
+        controller_.set_param(param.velocity);
+        acceleration_limit_ = param.acceleration_limit;
+        velocity_filter_.set_frequency(param.velocity.velocity_filter_frequency_hz);
     }
-    void set_rollover(float rollover) { controller_.set_rollover(rollover); }
+    void set_rollover(float rollover) { rollover_ = rollover; controller_.set_rollover(INFINITY); }
  private:
-    float position_change_max_ = 0;
+    float velocity_measured_filt_ = 0;
+    float last_motor_position_ = 0;
+    float rollover_ = 0;
     PIDController controller_;
+    FirstOrderLowPassFilter velocity_filter_;
+    float acceleration_limit_ = INFINITY;
 
     friend class System;
 };

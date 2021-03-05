@@ -109,7 +109,7 @@ float PIDController::step(float desired, float velocity_desired, float measured,
     error_ = wrap1_diff(proxy_desired, measured, rollover_);
     error_dot_ = error_dot_filter_.update((error_ - error_last_)/dt_);
     error_last_ = error_;
-    ki_sum_ += ki_ * error_;
+    ki_sum_ += ki_ * dt_ * error_;
     ki_sum_ = fsat(ki_sum_, ki_limit_);
     float filtered_out = output_filter_.update(kp_*error_ + ki_sum_ + kd_*error_dot_);
     return fsat(filtered_out, command_max_);
