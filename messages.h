@@ -78,7 +78,8 @@ typedef struct {
 } ImpedanceControllerParam;
 
 typedef struct {
-    PIDParam position;
+    PIDParam velocity;
+    float acceleration_limit;
 } VelocityControllerParam;
 
 typedef struct {
