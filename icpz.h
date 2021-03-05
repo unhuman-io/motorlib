@@ -11,6 +11,7 @@ class ICPZ : public EncoderBase {
     }
     bool init() {
       bool success = true;
+      set_register(7, 9, {0});
       success = set_register(7, 9, {0}) ? success : false; // multiturn data length = 0
       success = set_register(0, 0, {3}) ? success : false; // fast speed on port a
       success = set_register(0, 0xF, {0}) ? success : false; // 0x00 ran_fld = 0 -> never update position based on absolute track after initial
@@ -120,7 +121,8 @@ class ICPZ : public EncoderBase {
           uint8_t data_out[] = {0xcf, 0x40, bank};
           spidma_.readwrite(data_out, data_in, 3);
           if (read_register(0x40, 1) != std::vector<uint8_t>{bank}) {
-            system_log("pz 0x40 " + std::to_string(read_register(0x40, 1)[0]));
+            system_log("pz 0x40 " + std::to_string(read_register(0x40, 1)[0]) + " not " + std::to_string(bank));
+            (*register_operation_)--;
             return false;
           }
           bank_ = bank;
