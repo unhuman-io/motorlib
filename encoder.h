@@ -6,6 +6,7 @@
 class EncoderBase : public SensorBase {
  public:
     EncoderBase() { }
+    bool init() { return false; }
     int32_t read() { return get_value(); }
     int32_t get_value() const { return 0; }
     void trigger() {}

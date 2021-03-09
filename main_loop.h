@@ -63,9 +63,9 @@ class MainLoop {
       }
 
       float torque_corrected = torque_sensor_.read();
-      if (torque_corrected != status_.torque) {
+      //if (torque_corrected != status_.torque) {
         torque_corrected += param_.torque_correction*status_.fast_loop.foc_status.measured.i_q;
-      }
+      //}
       status_.torque = torque_corrected;
 
 
