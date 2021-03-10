@@ -75,6 +75,8 @@ class System {
         api.add_api_variable("log", new APICallback(get_log, log));
         api.add_api_variable("messages_version", new APICallback([](){ return MOTOR_MESSAGES_VERSION; }, [](std::string s) {} ));
         api.add_api_variable("usb_err", new APIUint32(&((USBCommunication *) &communication_)->usb_.error_count_));
+        api.add_api_variable("index_pos", new APICallback([](){ return std::to_string(actuator_.fast_loop_.encoder_.get_index_pos()); }, [](std::string s) {}));
+        api.add_api_variable("index_received", new APICallbackUint32([](){return actuator_.fast_loop_.encoder_.index_received();}, [](uint32_t u) {}));
 
         while(1) {
             count_++;
