@@ -139,7 +139,7 @@ private:
 
 class RateLimiter {
  public:
-    void set_limit(float limit) { limit_ = limit; }
+    void set_limit(float limit) { limit_ = (limit == 0 ? INFINITY : limit); }
     void init(float value, float velocity = 0) { last_value_ = value; velocity_ = velocity;}
     float step(float value) {
         float out_value = value;
@@ -157,6 +157,7 @@ class RateLimiter {
         last_value_ = out_value;
         return out_value;
     }
+    float get_value() const { return last_value_; }
     float get_velocity() const { return velocity_; }
  private:
     float limit_ = INFINITY;
@@ -168,12 +169,13 @@ class PIDController {
 public:
     PIDController(float dt) : dt_(dt), error_dot_filter_(dt), output_filter_(dt) {}
     virtual ~PIDController() {}
-    void init(float measured) { rate_limit_.init(measured), error_last_ = 0; error_dot_filter_.init(0); output_filter_.init(0); } // todo init to current output 
+    void init(float measured) { rate_limit_.init(measured), ki_sum_ = 0; error_last_ = 0; error_dot_filter_.init(0); output_filter_.init(0); } // todo init to current output 
     virtual float step(float desired, float velocity_desired, float measured, float velocity_limit = INFINITY);
     void set_param(const PIDParam &param);
     float get_error() const { return error_last_; }
     void set_rollover(float rollover) { rollover_ = rollover; }
 private:
+    float error_ = 0, error_dot_ = 0;
     float kp_ = 0, kd_ = 0, ki_ = 0, ki_sum_ = 0, ki_limit_ = 0, command_max_ = 0;
     float error_last_ = 0;
     float last_desired_ = 0;
