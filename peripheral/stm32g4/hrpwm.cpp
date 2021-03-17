@@ -41,7 +41,7 @@ void HRPWM::voltage_mode() {
 
 // todo doesn't work at startup before regs exist
 void HRPWM::set_frequency_hz(uint32_t frequency_hz) {
-    period_ = CPU_FREQUENCY_HZ*32/frequency_hz;
+    period_ = (double) CPU_FREQUENCY_HZ*32/2/frequency_hz;
     regs_.sTimerxRegs[ch_a_].PERxR = period_;
     regs_.sTimerxRegs[ch_b_].PERxR = period_;
     regs_.sTimerxRegs[ch_c_].PERxR = period_;
