@@ -8,6 +8,8 @@ extern uint32_t go_to_bootloader;
 
 class USB1 {
  public:
+    USB1();
+    void connect();
     // limited to 64 bytes
     void send_data(uint8_t endpoint, const uint8_t * const data, uint8_t length, bool wait = true);
 

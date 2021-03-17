@@ -183,6 +183,14 @@ bool USB1::tx_active(uint8_t endpoint) {
     return (USBEPR->EP[endpoint].EPR & USB_EPTX_STAT) == USB_EP_TX_VALID;
 }
 
+USB1::USB1() {
+    USB->CNTR = USB_CNTR_L1REQM | USB_CNTR_RESETM | USB_CNTR_SUSPM | USB_CNTR_WKUPM | USB_CNTR_ERRM | USB_CNTR_CTRM;
+}
+
+void USB1::connect() {
+    USB->BCDR |= USB_BCDR_DPPU; // device pull up
+}
+
 // Wait will pause until last packet has been received, If wait is false, then a buffered packet
 // will be discarded. For wait being false the maximum transmission is USBD_BULK_SIZE (64) bytes.
 void USB1::send_data(uint8_t endpoint, const uint8_t *data, uint8_t length, bool wait) {
