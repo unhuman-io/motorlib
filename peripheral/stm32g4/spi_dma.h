@@ -12,6 +12,7 @@ class SPIDMA {
             regs_.CR2 |= SPI_CR2_RXDMAEN | SPI_CR2_TXDMAEN;
             tx_dma_.CPAR = (uint32_t) &regs_.DR;
             rx_dma_.CPAR = (uint32_t) &regs_.DR;
+            regs_.CR1 |= SPI_CR1_SPE; // enable
     }
 
     void readwrite(const uint8_t * const data_out, uint8_t * const data_in, uint8_t length) {
