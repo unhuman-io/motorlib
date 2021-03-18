@@ -14,9 +14,11 @@ class TempSensor {
     void set_value(float value) {
         bias_ = value - read();
     }
-    float read() {
-        value_ = (110.0-30.0)/(*TS_CAL2 - *TS_CAL1) * ((int16_t) ADC1->JDR1 / 3.3 - *TS_CAL1) + 30 + bias_;
+    float read() {        
         ADC1->CR |= ADC_CR_JADSTART;
+        while(ADC1->CR & ADC_CR_JADSTART);
+        value_ = (110.0-30.0)/(*TS_CAL2 - *TS_CAL1) * ((int16_t) ADC1->JDR1 / 3.3 - *TS_CAL1) + 30 + bias_;
+
         return value_;
     }
     float get_value() const { return value_; }
