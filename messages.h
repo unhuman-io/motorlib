@@ -33,6 +33,7 @@ typedef struct {
 } FOCParam;
 
 #define COGGING_TABLE_SIZE 8192  // must be multiple of 2
+#define MOTOR_ENCODER_TABLE_LENGTH  512
 typedef struct {
     float adc1_offset, adc2_offset, adc3_offset;    // initial guess at current sensor bias in counts - default 2048
     float adc1_gain, adc2_gain, adc3_gain;          // current sensor linear gain units A/count
@@ -50,7 +51,7 @@ typedef struct {
                                                     // Position control will take the shortest route. Velocity control is continuous.
                                                     // Set to 0 to disable.
                                                     // Ideally set to an even multiple of cpr smaller than 8388608 for no resolution loss
-        float table[4][512];                        // Additive pchip correction table in motor radians. motor_position = measured_motor_position + table 
+        float table[4][MOTOR_ENCODER_TABLE_LENGTH]; // Additive pchip correction table in motor radians. motor_position = measured_motor_position + table 
     } motor_encoder;
     struct {
         float table[COGGING_TABLE_SIZE];            // cogging table in A
