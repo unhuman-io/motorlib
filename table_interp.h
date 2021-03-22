@@ -15,9 +15,9 @@ class PChipTable {
         i &= TABLE_LENGTH - 1;
 
         float a = table_[0][i];
-        float b = table_[0][i];
-        float c = table_[0][i];
-        float d = table_[0][i];
+        float b = table_[1][i];
+        float c = table_[2][i];
+        float d = table_[3][i];
 
         float y = a + b*dx + c*dx*dx + d*dx*dx*dx;
         return y;
