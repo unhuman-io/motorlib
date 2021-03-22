@@ -49,7 +49,8 @@ typedef struct {
         int32_t rollover;                           // Encoder counts will rollover from +rollover to -rollover when it reaches this value. 
                                                     // Position control will take the shortest route. Velocity control is continuous.
                                                     // Set to 0 to disable.
-                                                    // Ideally set to an even multiple of cpr smaller than 8388608 for no resolution loss 
+                                                    // Ideally set to an even multiple of cpr smaller than 8388608 for no resolution loss
+        float table[4][512];                        // Additive pchip correction table in motor radians. motor_position = measured_motor_position + table 
     } motor_encoder;
     struct {
         float table[COGGING_TABLE_SIZE];            // cogging table in A
