@@ -6,7 +6,7 @@
 template<int TABLE_LENGTH>
 class PChipTable {
  public:
-    PChipTable(const float (&table)[4][TABLE_LENGTH]) : table_(table) {}
+    PChipTable(const float (&table)[TABLE_LENGTH][4]) : table_(table) {}
     float table_interp(float x) {
         float table_x = x*TABLE_LENGTH;
         uint32_t i = table_x;
@@ -14,14 +14,14 @@ class PChipTable {
         float dx = remainder_x*(1.0/TABLE_LENGTH);
         i &= TABLE_LENGTH - 1;
 
-        float a = table_[0][i];
-        float b = table_[1][i];
-        float c = table_[2][i];
-        float d = table_[3][i];
+        float a = table_[i][0];
+        float b = table_[i][1];
+        float c = table_[i][2];
+        float d = table_[i][3];
 
         float y = a + b*dx + c*dx*dx + d*dx*dx*dx;
         return y;
     }
  private:
-    const float (&table_)[4][TABLE_LENGTH];
+    const float (&table_)[TABLE_LENGTH][4];
 };

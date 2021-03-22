@@ -51,7 +51,7 @@ typedef struct {
                                                     // Position control will take the shortest route. Velocity control is continuous.
                                                     // Set to 0 to disable.
                                                     // Ideally set to an even multiple of cpr smaller than 8388608 for no resolution loss
-        float table[4][MOTOR_ENCODER_TABLE_LENGTH]; // Additive pchip correction table in motor radians. motor_position = measured_motor_position + table 
+        float table[MOTOR_ENCODER_TABLE_LENGTH][4]; // Additive pchip correction table in motor radians. motor_position = measured_motor_position + table 
     } motor_encoder;
     struct {
         float table[COGGING_TABLE_SIZE];            // cogging table in A
