@@ -9,10 +9,10 @@ class PChipTable {
     PChipTable(const float (&table)[TABLE_LENGTH][4]) : table_(table) {}
     float table_interp(float x) {
         float table_x = x*TABLE_LENGTH;
-        uint32_t i = table_x;
-        float remainder_x = table_x - i;
-        float dx = remainder_x*(1.0/TABLE_LENGTH);
-        i &= TABLE_LENGTH - 1;
+        int32_t i = table_x;
+        float dx = table_x - i;
+        //float dx = remainder_x*(1.0/TABLE_LENGTH);
+        i &= TABLE_LENGTH - 1; // requirement for multiples of 2
 
         float a = table_[i][0];
         float b = table_[i][1];

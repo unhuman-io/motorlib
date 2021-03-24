@@ -51,8 +51,9 @@ class FastLoop {
       motor_mechanical_position_ = (motor_enc_wrap_ - motor_index_pos_);
       float motor_x = motor_mechanical_position_*inv_motor_encoder_cpr_;
 
-      motor_position_ = param_.motor_encoder.dir * 2 * (float) M_PI * inv_motor_encoder_cpr_ * motor_enc_wrap_ + motor_correction_table_.table_interp(motor_x);
-      motor_position_filtered_ = (1-alpha10)*motor_position_filtered_ + alpha10*motor_position_;
+      motor_position_ = param_.motor_encoder.dir * (2 * (float) M_PI * inv_motor_encoder_cpr_ * motor_enc_wrap_ 
+                          + motor_index_pos_set_*motor_correction_table_.table_interp(motor_x));
+      motor_position_filtered_ = motor_position_;//(1-alpha10)*motor_position_filtered_ + alpha10*motor_position_;
       motor_velocity =  param_.motor_encoder.dir * (motor_enc_diff)*(2*(float) M_PI * inv_motor_encoder_cpr_ * frequency_hz_);
       motor_velocity_filtered = (1-alpha)*motor_velocity_filtered + alpha*motor_velocity;
       last_motor_enc = motor_enc;
@@ -101,13 +102,14 @@ class FastLoop {
       t_seconds_.add(dt_);
     }
     void maintenance() {
-      if (encoder_.index_received()) {
+      if (encoder_.index_received() && !motor_index_pos_set_) {
          motor_index_pos_ = encoder_.get_index_pos();
          if (param_.motor_encoder.use_index_electrical_offset_pos) {
             // motor_index_electrical_offset_pos is the value of an electrical zero minus the index position
             // motor_electrical_zero_pos is the offset to the initial encoder value
             motor_electrical_zero_pos_ = param_.motor_encoder.index_electrical_offset_pos + motor_index_pos_;
          }
+         motor_index_pos_set_ = true;
       }
 
       if (mode_ == PHASE_LOCK_MODE) {
@@ -224,6 +226,7 @@ class FastLoop {
     FOCCommand foc_command_ = {};
 
     int32_t motor_index_pos_ = 0;
+    bool motor_index_pos_set_ = false;
     int32_t motor_electrical_zero_pos_;
     float inv_motor_encoder_cpr_;
     int32_t frequency_hz_ = 100000;

@@ -18,7 +18,7 @@ class QEPEncoder final : public EncoderBase {
    int32_t read() { value_ = regs_.CNT; return value_; } __attribute__((section (".ccmram")));
    int32_t get_value() const { return value_; } __attribute__((section (".ccmram")));
    void trigger() {} __attribute__((section (".ccmram")));
-   int32_t get_index_pos() { return regs_.CNT; }
+   int32_t get_index_pos() { return regs_.CCR3; }
    bool index_received() { return regs_.SR & TIM_SR_CC3IF; }
  private:
    TIM_TypeDef &regs_;
