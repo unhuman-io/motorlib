@@ -21,7 +21,7 @@ class FastLoop {
       volatile uint32_t *const i_a_dr, volatile uint32_t *const i_b_dr, volatile uint32_t *const i_c_dr, 
       volatile uint32_t *const v_bus_dr) 
       : param_(param), pwm_(pwm), encoder_(encoder), i_a_dr_(i_a_dr), i_b_dr_(i_b_dr), i_c_dr_(i_c_dr), v_bus_dr_(v_bus_dr),
-        motor_correction_table_(param_.motor_encoder.table) {
+        motor_correction_table_(param_.motor_encoder.table), cogging_correction_table_(param_.cogging.table) {
        frequency_hz_ = frequency_hz;
        float dt = 1.0f/frequency_hz;
        foc_ = new FOC(dt);
@@ -59,13 +59,7 @@ class FastLoop {
       last_motor_enc = motor_enc;
 
       // cogging compensation, interpolate in the table
-      motor_mechanical_position_ = (motor_enc - motor_index_pos_); 
-      float i_pos = motor_mechanical_position_*COGGING_TABLE_SIZE*inv_motor_encoder_cpr_;
-      uint16_t i = (int16_t) i_pos & (COGGING_TABLE_SIZE - 1);
-   //   float ifrac = i_pos - i;  // TODO fix for negative values
-      // Note (i+1) & (COGGING_TABLE_SIZE-1) allows wrap around, requires COGGING_TABLE_SIZE is multiple of 2
-   //   float iq_ff = param_.cogging.gain * (param_.cogging.table[i] + ifrac * (param_.cogging.table[(i+1) & (COGGING_TABLE_SIZE-1)] - param_.cogging.table[i]));
-      float iq_ff = param_.cogging.gain * param_.cogging.table[i];
+      float iq_ff = param_.cogging.gain * cogging_correction_table_.table_interp(motor_x);
 
       if (mode_ == CURRENT_TUNING_MODE) {
          // only works down to frequencies of .047 Hz, could use kahansum to go slower
@@ -255,6 +249,7 @@ class FastLoop {
    volatile uint32_t *const i_c_dr_;
    volatile uint32_t *const v_bus_dr_;
    PChipTable<MOTOR_ENCODER_TABLE_LENGTH> motor_correction_table_;
+   PChipTable<COGGING_TABLE_SIZE> cogging_correction_table_;
 
    friend class System;
 };
