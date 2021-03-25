@@ -18,6 +18,9 @@ class Hysteresis {
 };
 
 float fsignf(float a);
+inline int32_t sign(int32_t a) {
+    return a > 0 ? 1 : (a < 0 ? -1 : 0);
+}
 
 class KahanSum {
  public:

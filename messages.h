@@ -32,7 +32,8 @@ typedef struct {
     float num_poles;        // number of motor pole pairs - i.e. number of motor magnets/2
 } FOCParam;
 
-#define COGGING_TABLE_SIZE 8192  // must be multiple of 2
+#define COGGING_TABLE_SIZE 512  // must be multiple of 2
+#define MOTOR_ENCODER_TABLE_LENGTH  512
 typedef struct {
     float adc1_offset, adc2_offset, adc3_offset;    // initial guess at current sensor bias in counts - default 2048
     float adc1_gain, adc2_gain, adc3_gain;          // current sensor linear gain units A/count
@@ -49,10 +50,11 @@ typedef struct {
         int32_t rollover;                           // Encoder counts will rollover from +rollover to -rollover when it reaches this value. 
                                                     // Position control will take the shortest route. Velocity control is continuous.
                                                     // Set to 0 to disable.
-                                                    // Ideally set to an even multiple of cpr smaller than 8388608 for no resolution loss 
+                                                    // Ideally set to an even multiple of cpr smaller than 8388608 for no resolution loss
+        float table[MOTOR_ENCODER_TABLE_LENGTH][4]; // Additive pchip correction table in motor radians. motor_position = measured_motor_position + table 
     } motor_encoder;
     struct {
-        float table[COGGING_TABLE_SIZE];            // cogging table in A
+        float table[COGGING_TABLE_SIZE][4];            // cogging table in A, pchip
         float gain;                                 // cogging table multiplier - 0 to disable, 1 for 1:1 ratio
     } cogging;
     float vbus_gain;                                // vbus sensor gain units V/count

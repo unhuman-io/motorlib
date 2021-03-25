@@ -13,13 +13,15 @@
 // #include "encoder.h"
 // #include "../st_device.h"
 #include "sincos.h"
+#include "table_interp.h"
 
 class FastLoop {
  public:
     FastLoop(int32_t frequency_hz, PWM &pwm, MotorEncoder &encoder, const FastLoopParam &param,
       volatile uint32_t *const i_a_dr, volatile uint32_t *const i_b_dr, volatile uint32_t *const i_c_dr, 
       volatile uint32_t *const v_bus_dr) 
-      : pwm_(pwm), encoder_(encoder), i_a_dr_(i_a_dr), i_b_dr_(i_b_dr), i_c_dr_(i_c_dr), v_bus_dr_(v_bus_dr) {
+      : param_(param), pwm_(pwm), encoder_(encoder), i_a_dr_(i_a_dr), i_b_dr_(i_b_dr), i_c_dr_(i_c_dr), v_bus_dr_(v_bus_dr),
+        motor_correction_table_(param_.motor_encoder.table), cogging_correction_table_(param_.cogging.table) {
        frequency_hz_ = frequency_hz;
        float dt = 1.0f/frequency_hz;
        foc_ = new FOC(dt);
@@ -46,21 +48,18 @@ class FastLoop {
       motor_enc = encoder_.read();
       int32_t motor_enc_diff = motor_enc-last_motor_enc;
       motor_enc_wrap_ = wrap1(motor_enc_wrap_ + motor_enc_diff, param_.motor_encoder.rollover);
+      motor_mechanical_position_ = (motor_enc_wrap_ - motor_index_pos_);
+      float motor_x = motor_mechanical_position_*inv_motor_encoder_cpr_;
 
-      motor_position_ = param_.motor_encoder.dir * 2 * (float) M_PI * inv_motor_encoder_cpr_ * motor_enc_wrap_;
-      motor_position_filtered_ = (1-alpha10)*motor_position_filtered_ + alpha10*motor_position_;
+      motor_position_ = param_.motor_encoder.dir * (2 * (float) M_PI * inv_motor_encoder_cpr_ * motor_enc_wrap_ 
+                          + motor_index_pos_set_*motor_correction_table_.table_interp(motor_x));
+      motor_position_filtered_ = motor_position_;//(1-alpha10)*motor_position_filtered_ + alpha10*motor_position_;
       motor_velocity =  param_.motor_encoder.dir * (motor_enc_diff)*(2*(float) M_PI * inv_motor_encoder_cpr_ * frequency_hz_);
       motor_velocity_filtered = (1-alpha)*motor_velocity_filtered + alpha*motor_velocity;
       last_motor_enc = motor_enc;
 
       // cogging compensation, interpolate in the table
-      motor_mechanical_position_ = (motor_enc - motor_index_pos_); 
-      float i_pos = motor_mechanical_position_*COGGING_TABLE_SIZE*inv_motor_encoder_cpr_;
-      uint16_t i = (int16_t) i_pos & (COGGING_TABLE_SIZE - 1);
-   //   float ifrac = i_pos - i;  // TODO fix for negative values
-      // Note (i+1) & (COGGING_TABLE_SIZE-1) allows wrap around, requires COGGING_TABLE_SIZE is multiple of 2
-   //   float iq_ff = param_.cogging.gain * (param_.cogging.table[i] + ifrac * (param_.cogging.table[(i+1) & (COGGING_TABLE_SIZE-1)] - param_.cogging.table[i]));
-      float iq_ff = param_.cogging.gain * param_.cogging.table[i];
+      float iq_ff = param_.cogging.gain * cogging_correction_table_.table_interp(motor_x);
 
       if (mode_ == CURRENT_TUNING_MODE) {
          // only works down to frequencies of .047 Hz, could use kahansum to go slower
@@ -97,13 +96,14 @@ class FastLoop {
       t_seconds_.add(dt_);
     }
     void maintenance() {
-      if (encoder_.index_received()) {
+      if (encoder_.index_received() && !motor_index_pos_set_) {
          motor_index_pos_ = encoder_.get_index_pos();
          if (param_.motor_encoder.use_index_electrical_offset_pos) {
             // motor_index_electrical_offset_pos is the value of an electrical zero minus the index position
             // motor_electrical_zero_pos is the offset to the initial encoder value
             motor_electrical_zero_pos_ = param_.motor_encoder.index_electrical_offset_pos + motor_index_pos_;
          }
+         motor_index_pos_set_ = true;
       }
 
       if (mode_ == PHASE_LOCK_MODE) {
@@ -220,6 +220,7 @@ class FastLoop {
     FOCCommand foc_command_ = {};
 
     int32_t motor_index_pos_ = 0;
+    bool motor_index_pos_set_ = false;
     int32_t motor_electrical_zero_pos_;
     float inv_motor_encoder_cpr_;
     int32_t frequency_hz_ = 100000;
@@ -247,6 +248,8 @@ class FastLoop {
    volatile uint32_t *const i_b_dr_;
    volatile uint32_t *const i_c_dr_;
    volatile uint32_t *const v_bus_dr_;
+   PChipTable<MOTOR_ENCODER_TABLE_LENGTH> motor_correction_table_;
+   PChipTable<COGGING_TABLE_SIZE> cogging_correction_table_;
 
    friend class System;
 };
