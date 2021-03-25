@@ -127,7 +127,7 @@ extern "C" void SystemClock_Config();
 struct SystemInitClass {
  public:
     SystemInitClass() {
-        HAL_Init();
+        //HAL_Init();
         SystemClock_Config();
     }
 };
