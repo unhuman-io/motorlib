@@ -15,6 +15,7 @@ template<class T>
 class APIVariable2 : public APIVariable {
  public:
    APIVariable2(T *value) : value_(value) {};
+   APIVariable2(const T* value) : value_(const_cast<T*>(value)) {}
    virtual std::string get() const { return std::to_string(*value_); }
    virtual void set(std::string) = 0;
  protected:
@@ -24,12 +25,14 @@ class APIVariable2 : public APIVariable {
 class APIFloat : public APIVariable2<float> {
  public:
    APIFloat(float *f) : APIVariable2(f) {}
+   APIFloat(const  float *f) : APIVariable2(f) {}
    void set(std::string);
 };
 
 class APIUint32 : public APIVariable2<uint32_t> {
  public:
    APIUint32(uint32_t *u) : APIVariable2(u) {}
+   APIUint32(const uint32_t *u) : APIVariable2(u) {}
    void set(std::string);
 };
 
@@ -61,6 +64,7 @@ class APICallback : public APIVariable {
 class APICallbackFloat : public APIVariable {
  public:
    APICallbackFloat(std::function<float()> getfun , std::function<void(float)> setfun) : getfun_(getfun), setfun_(setfun) {}
+   APICallbackFloat(std::function<float()> getfun) : getfun_(getfun) {}
    void set(std::string s) { setfun_(stof(s)); }
    std::string get() const { return std::to_string(getfun_()); };
  private:
@@ -83,11 +87,13 @@ class ParameterAPI {
  public:
     // type is used by scanf to parse the string
     void add_api_variable(std::string name, APIVariable *variable);
+    void add_api_variable(std::string name, const APIVariable *variable);
     void set_api_variable(std::string name, std::string value);
     std::string get_api_variable(std::string name);
     std::string parse_string(std::string);
  private:
     std::map<std::string, APIVariable *> variable_map_;
+    std::map<std::string, const APIVariable *> const_variable_map_;
     std::string last_string_;
 };
 

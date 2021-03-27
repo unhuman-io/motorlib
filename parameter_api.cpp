@@ -13,6 +13,10 @@ void ParameterAPI::add_api_variable(std::string name, APIVariable *var) {
     variable_map_[name] = var;
 }
 
+void ParameterAPI::add_api_variable(std::string name, const APIVariable *var) {
+    const_variable_map_[name] = var;
+}
+
 void ParameterAPI::set_api_variable(std::string name, std::string value) {
     if (variable_map_.count(name))  {
         variable_map_[name]->set(value);
@@ -23,6 +27,8 @@ std::string ParameterAPI::get_api_variable(std::string name) {
     std::string out;
     if (variable_map_.count(name)) {
         out = variable_map_[name]->get();
+    } else if (const_variable_map_.count(name)) {
+        out = const_variable_map_[name]->get();
     }
     return out;
 }
