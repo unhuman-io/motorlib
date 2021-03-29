@@ -266,4 +266,5 @@ class MainLoop {
 
     friend class System;
     friend void system_init();
+    friend void config_init();
 };
