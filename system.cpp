@@ -17,3 +17,5 @@ void system_log(std::string s) {
 }
 
 uint32_t System::count_ = 0;
+std::queue<std::string> System::log_queue_ = {};
+ParameterAPI System::api = {};

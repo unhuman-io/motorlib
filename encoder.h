@@ -12,6 +12,7 @@ class EncoderBase : public SensorBase {
     void trigger() {}
     int32_t get_index_pos() const { return 0; }
     bool index_received() const { return false; }
+    int32_t index_error(int32_t cpr) { return 0; }
  private:
 };
 
