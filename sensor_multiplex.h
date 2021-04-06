@@ -12,6 +12,7 @@ class SensorMultiplex : public SensorBase {
      public:
         SecondarySensor(Sensor2 *secondary) : secondary_(secondary) {}
         int32_t get_value() const { return secondary_->get_value(); }
+        bool init() { return secondary_->init(); }
      private:
         Sensor2 *secondary_;
     };
@@ -26,6 +27,7 @@ class SensorMultiplex : public SensorBase {
     void trigger() { if (toggle_) primary_.trigger(); else secondary_.trigger(); }
     int32_t get_index_pos() const { return primary_.get_index_pos(); }
     bool index_received() const { return primary_.index_received(); }
+    bool init() { return primary_.init(); }
 
  private:
     Sensor1 &primary_;
