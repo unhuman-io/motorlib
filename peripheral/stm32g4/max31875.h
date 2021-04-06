@@ -20,6 +20,9 @@ class MAX31875 {
         value_ = ((raw_val[0] << 8 | raw_val[1])>>3) * (100.0/16);
         return value_;
     }
+    float get_temperature() const {
+        return value_*0.01;
+    }
  //private:
     I2C &i2c_;
     uint32_t value_;
