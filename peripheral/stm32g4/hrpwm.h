@@ -55,6 +55,8 @@ class HRPWM final : public PWMBase {
    float v_to_pwm_;
    bool pwm3_mode_;
    uint16_t deadtime_ns_;
+   float pwm_min_ = 0;
+   float pwm_max_;
 };
 
 #endif

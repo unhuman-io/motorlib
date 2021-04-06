@@ -1,10 +1,11 @@
 
 #include "hrpwm.h"
+#include "../../control_fun.h"
 
 void HRPWM::set_voltage(float v_abc[3]) {
-    pwm_a_ = v_abc[0] * v_to_pwm_ + half_period_;
-    pwm_b_ = v_abc[1] * v_to_pwm_ + half_period_;
-    pwm_c_ = v_abc[2] * v_to_pwm_ + half_period_;
+    pwm_a_ = fsat2(v_abc[0] * v_to_pwm_ + half_period_, pwm_min_, pwm_max_);
+    pwm_b_ = fsat2(v_abc[1] * v_to_pwm_ + half_period_, pwm_min_, pwm_max_);
+    pwm_c_ = fsat2(v_abc[2] * v_to_pwm_ + half_period_, pwm_min_, pwm_max_);
 }
 
 void HRPWM::set_vbus(float vbus) {
@@ -46,4 +47,5 @@ void HRPWM::set_frequency_hz(uint32_t frequency_hz) {
     regs_.sTimerxRegs[ch_b_].PERxR = period_;
     regs_.sTimerxRegs[ch_c_].PERxR = period_;
     half_period_ = period_/2; 
+    pwm_max_ = period_;
 }
