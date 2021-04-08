@@ -82,6 +82,14 @@ class MA732Encoder final : public SPIEncoder {
         return read_register(0x3);
     }
 
+    uint32_t get_filt() {
+        return read_register(0xE);
+    }
+
+    void set_filt(uint32_t value) {
+        set_register(0xE, value);
+    }
+
     void set_mgt(uint32_t value) {
         set_register(0x6, value);
     }
