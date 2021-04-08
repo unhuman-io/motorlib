@@ -111,8 +111,7 @@ class FastLoop {
       }
 
       v_bus_ = *v_bus_dr_*param_.vbus_gain;
-      v_bus_ = fmaxf(10, v_bus_);
-      pwm_.set_vbus(v_bus_);
+      pwm_.set_vbus(fmaxf(7, v_bus_));
     }
     void set_id_des(float id) { foc_command_.desired.i_d = id; }
     void set_iq_des(float iq) { if (mode_ == CURRENT_MODE) iq_des = iq; }
