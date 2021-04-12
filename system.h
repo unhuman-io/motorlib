@@ -124,17 +124,6 @@ class System {
     static uint32_t count_;
 };
 
-#include "../st_device.h"
-extern "C" void SystemClock_Config();
-
-struct SystemInitClass {
- public:
-    SystemInitClass() {
-        //HAL_Init();
-        SystemClock_Config();
-    }
-};
-
 extern "C" {
 #endif // __cplusplus
 
