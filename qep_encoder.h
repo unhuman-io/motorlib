@@ -34,6 +34,7 @@ class QEPEncoder final : public EncoderBase {
      int32_t error = (abs(diff) + cpr/2) % cpr - cpr/2;
      return sign(diff) * error;
    }
+   bool init() { return true; }
  private:
    TIM_TypeDef &regs_;
    int32_t value_ = 0;
