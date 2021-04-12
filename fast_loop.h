@@ -48,15 +48,20 @@ class FastLoop {
       motor_enc = encoder_.read();
       int32_t motor_enc_diff = motor_enc-last_motor_enc;
       motor_enc_wrap_ = wrap1(motor_enc_wrap_ + motor_enc_diff, param_.motor_encoder.rollover);
+      //motor_enc_wrap_ = (motor_enc_wrap_ + motor_enc_diff + param_.motor_encoder.rollover ) % (param_.motor_encoder.rollover*2) - param_.motor_encoder.rollover ;
       motor_mechanical_position_ = (motor_enc_wrap_ - motor_index_pos_);
       float motor_x = motor_mechanical_position_*inv_motor_encoder_cpr_;
 
       motor_position_ = param_.motor_encoder.dir * (2 * (float) M_PI * inv_motor_encoder_cpr_ * motor_enc_wrap_ 
                           + motor_index_pos_set_*motor_correction_table_.table_interp(motor_x));
-      motor_position_filtered_ = motor_position_;//(1-alpha10)*motor_position_filtered_ + alpha10*motor_position_;
-      motor_velocity =  param_.motor_encoder.dir * (motor_enc_diff)*(2*(float) M_PI * inv_motor_encoder_cpr_ * frequency_hz_);
-      motor_velocity_filtered = (1-alpha)*motor_velocity_filtered + alpha*motor_velocity;
+      float diff = wrap1_diff(motor_position_, last_motor_position_, 2 * (float) M_PI * inv_motor_encoder_cpr_ * param_.motor_encoder.rollover);
+      //motor_position_filtered_ = last_motor_position_ + diff;//(1-alpha10)*motor_position_filtered_ + alpha10*motor_position_;
+      motor_position_filtered_ = (1-alpha10)*motor_position_filtered_ + alpha10*(last_motor_position_ + diff);
+      motor_position_filtered_ = wrap1(motor_position_filtered_,  2 * (float) M_PI * inv_motor_encoder_cpr_ * param_.motor_encoder.rollover);
+      // motor_velocity =  param_.motor_encoder.dir * (motor_enc_diff)*(2*(float) M_PI * inv_motor_encoder_cpr_ * frequency_hz_);
+      // motor_velocity_filtered = (1-alpha)*motor_velocity_filtered + alpha*motor_velocity;
       last_motor_enc = motor_enc;
+      last_motor_position_ = motor_position_;
 
       // cogging compensation, interpolate in the table
       float iq_ff = param_.cogging.gain * cogging_correction_table_.table_interp(motor_x);
@@ -203,6 +208,7 @@ class FastLoop {
     int32_t motor_enc;
     int32_t last_motor_enc=0;
     float motor_position_ = 0;
+    float last_motor_position_ = 0;
     float motor_position_filtered_ = 0;
     float motor_velocity=0;
     float motor_velocity_filtered=0;
