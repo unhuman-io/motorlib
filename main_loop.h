@@ -18,10 +18,10 @@ class MainLoop {
     MainLoop(FastLoop &fast_loop, PositionController &position_controller,  TorqueController &torque_controller, 
         ImpedanceController &impedance_controller, VelocityController &velocity_controller, Communication &communication,
         LED &led, OutputEncoder &output_encoder, TorqueSensor &torque, const MainLoopParam &param) : 
-          fast_loop_(fast_loop), position_controller_(position_controller), torque_controller_(torque_controller), 
+          param_(param), fast_loop_(fast_loop), position_controller_(position_controller), torque_controller_(torque_controller), 
           impedance_controller_(impedance_controller), velocity_controller_(velocity_controller), 
           communication_(communication), led_(led), output_encoder_(output_encoder), torque_sensor_(torque),
-          output_encoder_correction_table_(param.output_encoder.table) {
+          output_encoder_correction_table_(param_.output_encoder.table) {
           set_param(param);
         }
     void init() {}
@@ -169,7 +169,6 @@ class MainLoop {
       impedance_controller_.set_param(param.impedance_controller_param);
       velocity_controller_.set_param(param.velocity_controller_param);
       torque_sensor_.set_param(param.torque_sensor);
-      param_ = param;
     }
     void set_rollover(float rollover) {
       position_controller_.set_rollover(rollover);
