@@ -13,6 +13,30 @@ static inline uint8_t get_lsu_count() { return DWT->LSUCNT; }
 void ms_delay(uint16_t ms);
 void ns_delay(uint16_t ns);
 
+extern char _estack;
+extern uint32_t _Min_Stack_Size;
+inline uint32_t get_stack_free() {
+    char *start = &_estack - (uint32_t) &_Min_Stack_Size; 
+    char *count = start;
+    while(!*count++); // assume zero filled
+    return (count - start);
+}
+inline uint32_t get_stack_used() {
+    return (uint32_t) &_Min_Stack_Size - get_stack_free();
+}
+
+extern char _end;
+extern uint32_t _Min_Heap_Size;
+inline uint32_t get_heap_free() {
+    char *start = &_end + (uint32_t) &_Min_Heap_Size; 
+    char *count = start;
+    while(!*count--); // assume zero filled
+    return (start - count);
+}
+inline uint32_t get_heap_used() {
+    return (uint32_t) &_Min_Heap_Size - get_heap_free();
+}
+
 #define while_timeout_ms(condition, ms) while((condition) && ((get_clock() - t_start) < ms*CPU_FREQUENCY_HZ/1000))
 
 #ifdef __cplusplus

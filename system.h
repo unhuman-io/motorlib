@@ -5,6 +5,7 @@
 #include <queue>
 #include <string>
 
+
 extern uint32_t t_exec_fastloop;
 extern uint32_t t_exec_mainloop;
 extern uint32_t t_period_fastloop;
@@ -80,6 +81,10 @@ class System {
         api.add_api_variable("mcpr", new const APIUint32(&param->fast_loop_param.motor_encoder.cpr));
         api.add_api_variable("ocpr", new const APIFloat(&param->main_loop_param.output_encoder.cpr));
         api.add_api_variable("irange", new const APICallbackFloat([](){ return 2048*param->fast_loop_param.adc1_gain; }));
+        api.add_api_variable("stack_free", new const APICallbackUint32(get_stack_free));
+        api.add_api_variable("stack_used", new const APICallbackUint32(get_stack_used));
+        api.add_api_variable("heap_free", new const APICallbackUint32(get_heap_free));
+        api.add_api_variable("heap_used", new const APICallbackUint32(get_heap_used));
 
         while(1) {
             count_++;

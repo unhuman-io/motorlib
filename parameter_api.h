@@ -75,6 +75,7 @@ class APICallbackFloat : public APIVariable {
 class APICallbackUint32 : public APIVariable {
  public:
    APICallbackUint32(std::function<uint32_t()> getfun , std::function<void(uint32_t)> setfun) : getfun_(getfun), setfun_(setfun) {}
+   APICallbackUint32(std::function<uint32_t()> getfun) : getfun_(getfun) {}
    void set(std::string);
    std::string get() const;
  private:
