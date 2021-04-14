@@ -20,7 +20,8 @@ class MainLoop {
         LED &led, OutputEncoder &output_encoder, TorqueSensor &torque, const MainLoopParam &param) : 
           fast_loop_(fast_loop), position_controller_(position_controller), torque_controller_(torque_controller), 
           impedance_controller_(impedance_controller), velocity_controller_(velocity_controller), 
-          communication_(communication), led_(led), output_encoder_(output_encoder), torque_sensor_(torque) {
+          communication_(communication), led_(led), output_encoder_(output_encoder), torque_sensor_(torque),
+          output_encoder_correction_table_(param.output_encoder.table) {
           set_param(param);
         }
     void init() {}
@@ -28,7 +29,6 @@ class MainLoop {
       count_++;
       output_encoder_.trigger();
       SendData send_data;
-      output_encoder_.read();
       torque_sensor_.trigger();
       
       last_timestamp_ = timestamp_;
@@ -61,6 +61,11 @@ class MainLoop {
           set_mode(static_cast<MainControlMode>(receive_data_.mode_desired));
         }
       }
+
+      int32_t output_encoder_raw = output_encoder_.read();
+      float output_encoder_x = (output_encoder_raw % (int32_t) param_.output_encoder.cpr) / (float) param_.output_encoder.cpr;
+      float output_encoder_rad = output_encoder_raw*2.0*(float) M_PI/param_.output_encoder.cpr;
+      output_encoder_pos_ = output_encoder_rad + output_encoder_correction_table_.table_interp(output_encoder_x);
 
       float torque_corrected = torque_sensor_.read();
       //if (torque_corrected != status_.torque) {
@@ -146,7 +151,7 @@ class MainLoop {
       send_data.mcu_timestamp = status_.fast_loop.timestamp;
       send_data.motor_encoder = status_.fast_loop.motor_position.raw;
       send_data.motor_position = status_.fast_loop.motor_position.position;
-      send_data.joint_position = output_encoder_.get_value()*2.0*(float) M_PI/param_.output_encoder.cpr;
+      send_data.joint_position = output_encoder_pos_;
       send_data.torque = status_.torque;
       send_data.reserved[0] = 0;
       send_data.reserved[1] = *reinterpret_cast<float *>(reserved1_);
@@ -263,6 +268,8 @@ class MainLoop {
     uint32_t last_timestamp_ = 0;
     uint32_t *reserved1_ = &timestamp_;
     uint32_t *reserved2_ = &last_timestamp_;
+    float output_encoder_pos_;
+    PChipTable<OUTPUT_ENCODER_TABLE_LENGTH> output_encoder_correction_table_;
 
     friend class System;
     friend void system_init();

@@ -34,6 +34,7 @@ typedef struct {
 
 #define COGGING_TABLE_SIZE 512  // must be multiple of 2
 #define MOTOR_ENCODER_TABLE_LENGTH  512
+#define OUTPUT_ENCODER_TABLE_LENGTH  128
 typedef struct {
     float adc1_offset, adc2_offset, adc3_offset;    // initial guess at current sensor bias in counts - default 2048
     float adc1_gain, adc2_gain, adc3_gain;          // current sensor linear gain units A/count
@@ -90,6 +91,7 @@ typedef struct {
     ImpedanceControllerParam impedance_controller_param;
     VelocityControllerParam velocity_controller_param;
     struct {
+        float table[OUTPUT_ENCODER_TABLE_LENGTH][4];
         float cpr;                                  // output encoder cpr \sa FastLoopParam.motor_encoder.cpr
     } output_encoder;
     TorqueSensorParam torque_sensor;
