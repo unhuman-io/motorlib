@@ -95,6 +95,7 @@ class MainLoop {
         case STEPPER_TUNING:
         case POSITION_TUNING: 
           {
+            float bias = receive_data_.torque_desired;
             if (count_received) {
               position_trajectory_generator_.set_amplitude(receive_data_.position_desired);
               position_trajectory_generator_.set_frequency(receive_data_.reserved);
@@ -103,7 +104,7 @@ class MainLoop {
             ReceiveData trajectory = {};
             float position_desired = traj.value;
             float velocity_desired = traj.value_dot;
-            trajectory.position_desired = position_desired;
+            trajectory.position_desired = position_desired+bias;
             trajectory.velocity_desired = velocity_desired;
             iq_des = position_controller_.step(trajectory, status_);
             if (mode_ == STEPPER_TUNING) {
@@ -116,13 +117,14 @@ class MainLoop {
                   break;
                 }
               }
-              fast_loop_.set_stepper_position(position_desired);
+              fast_loop_.set_stepper_position(position_desired+bias);
               fast_loop_.set_stepper_velocity(velocity_desired);
             }
             break;
           }
         case CURRENT_TUNING:
           if (count_received) {
+            fast_loop_.set_tuning_bias(receive_data_.torque_desired);
             if (receive_data_.current_desired < 0) { // flag for chirp mode
               fast_loop_.set_tuning_amplitude(-receive_data_.current_desired);
               fast_loop_.set_tuning_chirp(true, fabsf(receive_data_.reserved));
