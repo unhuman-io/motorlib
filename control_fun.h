@@ -222,55 +222,42 @@ class TrajectoryGenerator {
     struct TrajectoryValue {
         float value, value_dot;
     };
-        // frequency | amplitude | trajectory
-        // +         | +         | sin
-        // -         | +         | square
-        // +         | -         | chirp
-        // -         | -         | triangle
-    void set_frequency(float frequency) { frequency_ = frequency; set_mode(); }
-    void set_amplitude(float amplitude) { amplitude_ = amplitude; set_mode(); }
-    void set_mode() {
-        if (frequency_ > 0) {
-            if (amplitude_ > 0) {
-                mode_ = SIN;
-            } else {
-                mode_ = SQUARE;
-            }
-        } else {
-            if (amplitude_ > 0) {
-                mode_ = CHIRP;                
+    void set_frequency(float frequency) { frequency_ = frequency; }
+    void set_amplitude(float amplitude) { amplitude_ = amplitude; }
+    void set_mode(TuningMode mode) {
+        if (mode <= TuningMode::CHIRP) {
+            mode_ = mode;
+            if (mode == TuningMode::CHIRP) {
                 chirp_rate_ = frequency_;
                 frequency_ = 0;
                 chirp_frequency_.init();
-            } else {
-                mode_ = TRIANGLE;
             }
         }
     }
 
     TrajectoryValue &step(float dt) {
         // phi_ is a radian counter at the command frequency doesn't get larger than 2*pi
-        if (mode_ == CHIRP) {
+        if (mode_ == TuningMode::CHIRP) {
            frequency_ = chirp_frequency_.add(chirp_rate_ * dt);
         }
         // KahanSum allows for and summing of dt allows for low frequencies without losing resolution
         phi_.add(2 * (float) M_PI * fabsf(frequency_) * dt);
-        if (phi_.value() > 2 * (float) M_PI) {
+        if (phi_.value() > 2 * (float) M_PI) {  
             phi_.add(-2 * (float) M_PI);
         }
         Sincos sincos;
         sincos = sincos1(phi_.value());
         switch(mode_) {
-            case SIN:
-            case CHIRP:
+            case TuningMode::SINE:
+            case TuningMode::CHIRP:
                 trajectory_value_.value = amplitude_ * sincos.sin;
                 trajectory_value_.value_dot = 2 * (float) M_PI * frequency_ * amplitude_ * sincos.cos;
                 break;
-            case SQUARE:
+            case TuningMode::SQUARE:
                 trajectory_value_.value = amplitude_ * fsignf(sincos.sin);
                 trajectory_value_.value_dot = 0;
                 break;
-            case TRIANGLE:
+            case TuningMode::TRIANGLE:
                 if (phi_.value() < M_PI) {
                     trajectory_value_.value = amplitude_ * (2 * phi_.value() * (1/M_PI) - 1);
                     trajectory_value_.value_dot = 4 * amplitude_ * frequency_;
@@ -283,7 +270,7 @@ class TrajectoryGenerator {
         return trajectory_value_;
     }
  private:
-    enum Mode {SIN, SQUARE, CHIRP, TRIANGLE} mode_ = SIN;
+    TuningMode mode_ = TuningMode::SINE;
     float frequency_, amplitude_;
     TrajectoryValue trajectory_value_;
     KahanSum phi_, chirp_frequency_;

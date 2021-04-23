@@ -72,7 +72,7 @@ class FastLoop {
          }
          Sincos sincos;
          sincos = sincos1(phi_);
-         iq_des = tuning_bias_ + tuning_amplitude_ * (tuning_frequency_ > 0 ? sincos.sin : ((sincos.sin > 0) - (sincos.sin < 0)));
+         iq_des = tuning_bias_ + tuning_amplitude_ * (tuning_square_ ? sincos.sin : ((sincos.sin > 0) - (sincos.sin < 0)));
       }
 
       // update FOC
@@ -124,6 +124,7 @@ class FastLoop {
       chirp_frequency_.init(0);
     }
     void set_tuning_bias(float bias) { tuning_bias_ = bias; }
+    void set_tuning_square(bool square = true) { tuning_square_ = square; }
     void set_stepper_position(float position) { stepper_position_ = position; }
     void set_stepper_velocity(float velocity) { stepper_velocity_ = velocity; }
     void set_reserved(float reserved) { reserved_ = reserved; }
@@ -239,6 +240,7 @@ class FastLoop {
    float tuning_amplitude_ = 0;
    float tuning_frequency_ = 0;
    float tuning_bias_ = 0;
+   bool tuning_square_ = false;
    float chirp_rate_ = 0;
    bool current_tuning_chirp_ = false;
    KahanSum chirp_frequency_;
