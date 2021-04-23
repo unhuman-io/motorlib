@@ -92,46 +92,49 @@ class MainLoop {
         case VELOCITY:
           iq_des = velocity_controller_.step(receive_data_, status_);
           break;
+        case STEPPER_VELOCITY:
+          vq_des = receive_data_.stepper_velocity.voltage;
+          fast_loop_.set_stepper_velocity(receive_data_.stepper_velocity.velocity);
+          break;
         case STEPPER_TUNING:
+          {
+            if (count_received) {
+              position_trajectory_generator_.set_amplitude(receive_data_.stepper_tuning.amplitude);
+              position_trajectory_generator_.set_frequency(receive_data_.stepper_tuning.frequency);
+              position_trajectory_generator_.set_mode((TuningMode) receive_data_.stepper_tuning.mode);
+            }
+            TrajectoryGenerator::TrajectoryValue traj = position_trajectory_generator_.step(dt_);
+            fast_loop_.set_stepper_position(traj.value);
+            fast_loop_.set_stepper_velocity(traj.value_dot);
+            vq_des = receive_data_.stepper_tuning.kv*traj.value_dot;
+            break;
+          }
         case POSITION_TUNING: 
           {
-            float bias = receive_data_.torque_desired;
             if (count_received) {
-              position_trajectory_generator_.set_amplitude(receive_data_.position_desired);
-              position_trajectory_generator_.set_frequency(receive_data_.reserved);
+              position_trajectory_generator_.set_amplitude(receive_data_.position_tuning.amplitude);
+              position_trajectory_generator_.set_frequency(receive_data_.position_tuning.frequency);
+              position_trajectory_generator_.set_mode((TuningMode) receive_data_.position_tuning.mode);
             }
             TrajectoryGenerator::TrajectoryValue traj = position_trajectory_generator_.step(dt_);
             ReceiveData trajectory = {};
             float position_desired = traj.value;
             float velocity_desired = traj.value_dot;
-            trajectory.position_desired = position_desired+bias;
+            trajectory.position_desired = position_desired+receive_data_.position_tuning.bias;
             trajectory.velocity_desired = velocity_desired;
             iq_des = position_controller_.step(trajectory, status_);
-            if (mode_ == STEPPER_TUNING) {
-              if (receive_data_.velocity_desired < 0) {
-                vq_des = fabsf(receive_data_.velocity_desired*velocity_desired); // kv in v/rad/s is in receive_data_.velocity_desired
-              } else if (receive_data_.velocity_desired >= 0) {
-                vq_des = receive_data_.current_desired;
-                if (receive_data_.velocity_desired > 0) {
-                  fast_loop_.set_stepper_velocity(receive_data_.velocity_desired);
-                  break;
-                }
-              }
-              fast_loop_.set_stepper_position(position_desired+bias);
-              fast_loop_.set_stepper_velocity(velocity_desired);
-            }
             break;
           }
         case CURRENT_TUNING:
           if (count_received) {
-            fast_loop_.set_tuning_bias(receive_data_.torque_desired);
-            if (receive_data_.current_desired < 0) { // flag for chirp mode
-              fast_loop_.set_tuning_amplitude(-receive_data_.current_desired);
-              fast_loop_.set_tuning_chirp(true, fabsf(receive_data_.reserved));
+            fast_loop_.set_tuning_amplitude(receive_data_.current_tuning.amplitude);
+            fast_loop_.set_tuning_frequency(receive_data_.current_tuning.frequency);
+            fast_loop_.set_tuning_bias(receive_data_.current_tuning.bias);
+            fast_loop_.set_tuning_square(receive_data_.current_tuning.mode == TuningMode::SQUARE);
+            if (receive_data_.current_tuning.mode == TuningMode::CHIRP) { // flag for chirp mode
+              fast_loop_.set_tuning_chirp(true, receive_data_.current_tuning.frequency);
             } else {
               fast_loop_.set_tuning_chirp(false, 0);
-              fast_loop_.set_tuning_amplitude(receive_data_.current_desired);
-              fast_loop_.set_tuning_frequency(receive_data_.reserved);
             }
           }
           break;
@@ -225,6 +228,7 @@ class MainLoop {
           fast_loop_.phase_lock_mode(0);
           led_.set_color(LED::YELLOW);
           break;
+        case STEPPER_VELOCITY:
         case STEPPER_TUNING:
           fast_loop_.stepper_mode();
           led_.set_color(LED::CYAN);
