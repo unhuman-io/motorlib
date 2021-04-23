@@ -72,7 +72,7 @@ class FastLoop {
          }
          Sincos sincos;
          sincos = sincos1(phi_);
-         iq_des = tuning_bias_ + tuning_amplitude_ * (tuning_square_ ? sincos.sin : ((sincos.sin > 0) - (sincos.sin < 0)));
+         iq_des = tuning_bias_ + tuning_amplitude_ * (tuning_square_ ? fsignf(sincos.sin) : sincos.sin);
       }
 
       // update FOC

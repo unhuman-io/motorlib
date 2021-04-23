@@ -41,7 +41,6 @@ float fsat(float a, float sat) {
 
 float fsignf(float a) {
     return a>=0 ? 1 : -1;
-    // possibly this could be better: (sincos.sin > 0) - (sincos.sin < 0)
 }
 
 void Hysteresis::set_hysteresis(float value) {
