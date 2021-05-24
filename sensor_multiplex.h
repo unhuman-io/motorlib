@@ -12,7 +12,9 @@ class SensorMultiplex : public SensorBase {
      public:
         SecondarySensor(Sensor2 *secondary) : secondary_(secondary) {}
         int32_t get_value() const { return secondary_->get_value(); }
+        int32_t read() { return get_value(); }
         bool init() { return secondary_->init(); }
+        bool index_received() const { return secondary_->index_received(); }
      private:
         Sensor2 *secondary_;
     };
