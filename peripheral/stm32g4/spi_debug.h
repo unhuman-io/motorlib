@@ -31,6 +31,5 @@ class SPIDebug {
     std::string hex_str_ = "";
     volatile int register_operation_local_;
 
-    friend class System;
-    friend void system_init();
+    friend void config_init();
 };

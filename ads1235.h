@@ -66,7 +66,7 @@ class ADS1235 : public TorqueSensorBase {
     uint8_t command_[5] = {};
     uint8_t data_[5] = {};
     volatile int register_operation_local_ = 0;
-    float torque_ = 0;
 
+    friend class System;
     friend void system_init();
 };

@@ -12,6 +12,6 @@ class TorqueSensorBase {
         k_temp_ = param.k_temp;
     }
  protected:
-    float gain_ = 0, bias_ = 0, k_temp_ = 0;
+    float gain_ = 0, bias_ = 0, k_temp_ = 0, torque_ = 0;
     friend class System;
 };

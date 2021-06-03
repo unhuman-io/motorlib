@@ -41,6 +41,7 @@ class ADS1235_2 : public ADS1235 {
     uint16_t count2_ = 0;
     uint8_t toggle_ = true;
 
+    friend class System;
     friend void system_init();
     friend void config_init();
 };
