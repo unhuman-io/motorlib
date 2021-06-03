@@ -2,6 +2,10 @@
 #include "torque_sensor.h"
 #include "util.h"
 
+extern "C" {
+void system_init();
+}
+
 class ADS1235 : public TorqueSensorBase {
  public:
     ADS1235(SPIDMA &spidma, volatile int* register_operation = nullptr) : 
@@ -13,10 +17,10 @@ class ADS1235 : public TorqueSensorBase {
     }
     uint32_t init() {
        uint32_t retval = 0;
-       uint32_t shift = 0;
-       retval |= set_register(2, 0x4B) << shift++; // 1200 SPS, sinc4 filter
-       retval |= set_register(0x10, 0x07) << shift++; // pga gain 128
-       retval |= set_register(0x11, 0x34) << shift++; // inputs AIN0 AIN1
+       retval = set_register(2, 0x4B); // 1200 SPS, sinc4 filter
+       retval += set_register(3, 0x21) ? 10 : 0; // chop mode, 50 us start delay (default)
+       retval += set_register(0x10, 0x07) ? 100 : 0; // pga gain 128
+       retval += set_register(0x11, 0x34) ? 1000 : 0; // inputs AIN0 AIN1
        return retval;
     }
     void trigger() {
@@ -33,7 +37,7 @@ class ADS1235 : public TorqueSensorBase {
       return torque_;
     }
     volatile int *register_operation_ = &register_operation_local_;
- private:
+ protected:
 
     uint8_t read_register(uint8_t address) {
         (*register_operation_)++;
