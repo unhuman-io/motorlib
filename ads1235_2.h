@@ -29,7 +29,7 @@ class ADS1235_2 : public ADS1235 {
           mux[1] = 0x34; // ain 0 & 1
         }
         toggle_ ^= true;
-        torque_diff_ = torque1_ - torque2_;
+        torque_diff_ = torque1_ - torque2_ + bias_;
         spidma_.readwrite(mux, data_, 2);
       }
       return torque_diff_;
