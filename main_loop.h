@@ -40,7 +40,7 @@ class MainLoop {
       ReceiveData receive_data;
       int count_received = communication_.receive_data(&receive_data);
       bool command_received = false;
-      if ((count_received && !safe_mode_) || (count_received && receive_data.mode_desired == param_.safe_mode)) {
+      if (started_ && ((count_received && !safe_mode_) || (count_received && receive_data.mode_desired == param_.safe_mode))) {
         no_command_ = 0;
         receive_data_ = receive_data;
         command_received = true;
@@ -181,8 +181,8 @@ class MainLoop {
       velocity_controller_.set_rollover(rollover);
     }
     void get_status(MainLoopStatus * const main_loop_status) const {}
+    void set_started() { started_ = true; }
     void set_mode(MainControlMode mode) {
-      started_ = true;
         mode_ = mode;
       switch (mode) {
         case OPEN:
