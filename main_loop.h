@@ -57,7 +57,7 @@ class MainLoop {
       }
 
       if (command_received) {
-        if (mode_ != static_cast<MainControlMode>(receive_data_.mode_desired)) {
+        if (mode_ != static_cast<MainControlMode>(receive_data_.mode_desired) || mode_ == SLEEP) {
           set_mode(static_cast<MainControlMode>(receive_data_.mode_desired));
         }
       }
@@ -232,6 +232,18 @@ class MainLoop {
         case STEPPER_TUNING:
           fast_loop_.stepper_mode();
           led_.set_color(LED::CYAN);
+          break;
+        case SLEEP:
+          led_.set_color(LED::WHITE);
+          led_.set_on();
+          fast_loop_.open_mode();
+          NVIC_DisableIRQ(TIM1_UP_TIM16_IRQn);
+          NVIC_DisableIRQ(ADC5_IRQn);
+          NVIC_SetPriority(USB_LP_IRQn, NVIC_EncodePriority(NVIC_GetPriorityGrouping(), 0, 0));
+          __WFI();
+          NVIC_SetPriority(USB_LP_IRQn, NVIC_EncodePriority(NVIC_GetPriorityGrouping(), 2, 0));
+          NVIC_EnableIRQ(TIM1_UP_TIM16_IRQn);
+          NVIC_EnableIRQ(ADC5_IRQn);
           break;
         case CRASH:
           led_.set_color(LED::RED);
