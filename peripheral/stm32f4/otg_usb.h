@@ -199,6 +199,8 @@ class USB_OTG {
         return USBx_INEP(ep_num)->DIEPCTL & USB_OTG_DIEPCTL_EPENA;
     }
 
+    bool new_rx_data(uint8_t endpoint) const { return new_rx_data_[endpoint]; }
+
 private:
     uint8_t device_address_ = 0;
     uint8_t setup_data[64];
