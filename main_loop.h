@@ -235,12 +235,18 @@ class MainLoop {
           break;
         case SLEEP:
           led_.set_color(LED::WHITE);
-          led_.set_on();
+          led_.set_on_dim();
           fast_loop_.open_mode();
+          RCC->APB2SMENR = 0;
           NVIC_DisableIRQ(TIM1_UP_TIM16_IRQn);
           NVIC_DisableIRQ(ADC5_IRQn);
-          NVIC_SetPriority(USB_LP_IRQn, NVIC_EncodePriority(NVIC_GetPriorityGrouping(), 0, 0));
-          __WFI();
+          NVIC_SetPriority(USB_LP_IRQn, NVIC_EncodePriority(NVIC_GetPriorityGrouping(), 0, 1));
+          NVIC_EnableIRQ(RTC_WKUP_IRQn);
+          RTC->SCR = RTC_SCR_CWUTF;
+          while(!communication_.new_rx_data()) {
+            __WFI();
+          }
+          NVIC_DisableIRQ(RTC_WKUP_IRQn);
           NVIC_SetPriority(USB_LP_IRQn, NVIC_EncodePriority(NVIC_GetPriorityGrouping(), 2, 0));
           NVIC_EnableIRQ(TIM1_UP_TIM16_IRQn);
           NVIC_EnableIRQ(ADC5_IRQn);
