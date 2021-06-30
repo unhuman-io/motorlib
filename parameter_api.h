@@ -54,6 +54,7 @@ class APIUint8 : public APIVariable2<uint8_t> {
 class APICallback : public APIVariable {
  public:
   APICallback(std::function<std::string()> getfun, std::function<void(std::string)> setfun) : getfun_(getfun), setfun_(setfun) {}
+  APICallback(std::function<std::string()> getfun) : getfun_(getfun) {}
   void set(std::string s) { setfun_(s); }
   std::string get() const {return getfun_(); }
  private:
