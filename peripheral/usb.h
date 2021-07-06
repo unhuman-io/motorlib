@@ -22,6 +22,8 @@ class USB1 {
 
     void interrupt();
 
+    bool new_rx_data(uint8_t endpoint) const { return new_rx_data_[endpoint]; }
+
  private:
      // send tx stall
     void send_stall(uint8_t endpoint);

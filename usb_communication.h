@@ -24,6 +24,7 @@ class USBCommunication : public CommunicationBase {
        }
        return false;
     }
+    bool new_rx_data() { return usb_.new_rx_data(1) || usb_.new_rx_data(2); }
  private:
     USB1 &usb_;
     friend class System;

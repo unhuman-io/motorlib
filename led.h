@@ -19,6 +19,11 @@ class LED {
         intensity_green_ = intensity_color_[color][1];
         intensity_blue_ = intensity_color_[color][2];
     }
+    void set_on_dim() {
+        *red_reg_ = intensity_red_* 65535*brightness_*0.1;
+        *green_reg_ = intensity_green_* 65535*brightness_*0.1;
+        *blue_reg_ = intensity_blue_* 65535*brightness_*0.1;
+    }
     void set_rate(float frequency) {}
     void update() {
         // TODO figure out where to put 10000

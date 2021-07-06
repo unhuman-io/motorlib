@@ -13,6 +13,9 @@ extern "C" {
 void system_init();
 }
 
+void setup_sleep();
+void finish_sleep();
+
 class MainLoop {
  public:
     MainLoop(FastLoop &fast_loop, PositionController &position_controller,  TorqueController &torque_controller, 
@@ -57,7 +60,7 @@ class MainLoop {
       }
 
       if (command_received) {
-        if (mode_ != static_cast<MainControlMode>(receive_data_.mode_desired)) {
+        if (mode_ != static_cast<MainControlMode>(receive_data_.mode_desired) || mode_ == SLEEP) {
           set_mode(static_cast<MainControlMode>(receive_data_.mode_desired));
         }
       }
@@ -232,6 +235,16 @@ class MainLoop {
         case STEPPER_TUNING:
           fast_loop_.stepper_mode();
           led_.set_color(LED::CYAN);
+          break;
+        case SLEEP:
+          led_.set_color(LED::WHITE);
+          led_.set_on_dim();
+          fast_loop_.open_mode();
+          setup_sleep();
+          while(!communication_.new_rx_data()) {
+            __WFI();
+          }
+          finish_sleep();
           break;
         case CRASH:
           led_.set_color(LED::RED);
