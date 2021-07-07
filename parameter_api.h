@@ -29,25 +29,22 @@ class APIFloat : public APIVariable2<float> {
    void set(std::string);
 };
 
-class APIUint32 : public APIVariable2<uint32_t> {
- public:
-   APIUint32(uint32_t *u) : APIVariable2(u) {}
-   APIUint32(const uint32_t *u) : APIVariable2(u) {}
-   void set(std::string);
+template<class T>
+class APIInt : public APIVariable2<T> {
+  public:
+    APIInt(T *u) : APIVariable2<T>(u) {}
+    APIInt(const T *u) : APIVariable2<T>(u) {}
+    void set(std::string s) {
+      *this->value_ = std::stoi(s);
+    }
 };
 
-class APIInt32 : public APIVariable2<int32_t> {
- public:
-   APIInt32(int32_t *u) : APIVariable2(u) {}
-   void set(std::string);
-};
-
-
-class APIUint8 : public APIVariable2<uint8_t> {
- public:
-   APIUint8(uint8_t *u) : APIVariable2(u) {}
-   void set(std::string);
-};
+typedef APIInt<uint32_t> APIUint32;
+typedef APIInt<uint16_t> APIUint16;
+typedef APIInt<uint8_t> APIUint8;
+typedef APIInt<int32_t> APIInt32;
+typedef APIInt<int16_t> APIInt16;
+typedef APIInt<int8_t> APIInt8;
 
 #include <functional>
 
