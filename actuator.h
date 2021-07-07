@@ -50,7 +50,7 @@ class Actuator {
             MainLoopStatus status;
             main_loop_.get_status(&status);
             main_loop_.set_motor_encoder_bias(status.output_position * startup_param_.gear_ratio 
-               - status.motor_position + startup_param_.motor_encoder_bias);
+              - status.fast_loop.motor_position.position + startup_param_.motor_encoder_bias);
             break;
          }
       }

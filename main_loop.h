@@ -187,7 +187,7 @@ class MainLoop {
       velocity_controller_.set_rollover(rollover);
     }
     void set_motor_encoder_bias(float bias) { motor_encoder_bias_ = bias; }
-    void get_status(MainLoopStatus * const main_loop_status) const {}
+    void get_status(MainLoopStatus * const main_loop_status) const { *main_loop_status = status_; }
     void set_started() { started_ = true; }
     void set_mode(MainControlMode mode) {
         mode_ = mode;
