@@ -5,10 +5,10 @@ class PositionController : public Controller {
  public:
     PositionController(float dt) : Controller(dt), controller_(dt) {}
     void init(const MainLoopStatus &status) {
-        controller_.init(status.fast_loop.motor_position.position);
+        controller_.init(status.motor_position);
     }
     float step(const MotorCommand &command, const MainLoopStatus &status) {
-        float iq_des = controller_.step(command.position_desired, command.velocity_desired, status.fast_loop.motor_position.position) + \
+        float iq_des = controller_.step(command.position_desired, command.velocity_desired, status.motor_position) + \
                   command.current_desired;
         return iq_des;
     }

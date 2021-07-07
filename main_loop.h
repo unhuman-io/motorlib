@@ -68,7 +68,10 @@ class MainLoop {
       int32_t output_encoder_raw = output_encoder_.read();
       float output_encoder_x = (output_encoder_raw % (int32_t) param_.output_encoder.cpr) / (float) param_.output_encoder.cpr;
       float output_encoder_rad = output_encoder_raw*2.0*(float) M_PI/param_.output_encoder.cpr;
-      output_encoder_pos_ = output_encoder_rad + output_encoder_correction_table_.table_interp(output_encoder_x);
+      status_.output_position = output_encoder_rad + param_.output_encoder.bias 
+        + output_encoder_correction_table_.table_interp(output_encoder_x);
+
+      status_.motor_position = status_.fast_loop.motor_position.position + motor_encoder_bias_;
 
       float torque_corrected = torque_sensor_.read();
       //if (torque_corrected != status_.torque) {
@@ -158,8 +161,8 @@ class MainLoop {
       send_data.host_timestamp_received = receive_data_.host_timestamp;
       send_data.mcu_timestamp = status_.fast_loop.timestamp;
       send_data.motor_encoder = status_.fast_loop.motor_position.raw;
-      send_data.motor_position = status_.fast_loop.motor_position.position;
-      send_data.joint_position = output_encoder_pos_;
+      send_data.motor_position = status_.motor_position;
+      send_data.joint_position = status_.output_position;
       send_data.torque = status_.torque;
       send_data.reserved[0] = 0;
       send_data.reserved[1] = *reinterpret_cast<float *>(reserved1_);
@@ -183,6 +186,7 @@ class MainLoop {
       impedance_controller_.set_rollover(rollover);
       velocity_controller_.set_rollover(rollover);
     }
+    void set_motor_encoder_bias(float bias) { motor_encoder_bias_ = bias; }
     void get_status(MainLoopStatus * const main_loop_status) const {}
     void set_started() { started_ = true; }
     void set_mode(MainControlMode mode) {
@@ -279,6 +283,7 @@ class MainLoop {
     MainLoopStatus status_ = {};
     MainControlMode mode_ = OPEN;
     OutputEncoder &output_encoder_;
+    float motor_encoder_bias_ = 0;
     TorqueSensor &torque_sensor_;
     float dt_ = 0;
     TrajectoryGenerator position_trajectory_generator_;

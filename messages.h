@@ -93,6 +93,7 @@ typedef struct {
     struct {
         float table[OUTPUT_ENCODER_TABLE_LENGTH][4];
         float cpr;                                  // output encoder cpr \sa FastLoopParam.motor_encoder.cpr
+        float bias;
     } output_encoder;
     TorqueSensorParam torque_sensor;
     int16_t host_timeout;                             // 0 to disable, if no commands received before host timeout, go to safe_mode
@@ -105,6 +106,14 @@ typedef struct {
     uint8_t do_phase_lock;          // 1: yes, 0: no
     float phase_lock_current;       // current in A
     float phase_lock_duration;      // duration in seconds
+    enum {
+        ENCODER_ZERO, // motor encoder is 0 at startup plus any absolute offset
+        ENCODER_BIAS, // motor encoder is set to bias at startup
+        ENCODER_BIAS_FROM_OUTPUT // motor encoder is set to 
+                        // (output_encoder/cpr - output_encoder.bias)*gear_ratio+motor_encoder_bias
+    } motor_encoder_startup;
+    float gear_ratio;   // gear ratio from input to output
+    float motor_encoder_bias;   // bias to add to motor encoder
     MainControlMode startup_mode;
 } StartupParam;
 
@@ -142,4 +151,6 @@ typedef struct {
 typedef struct {
     FastLoopStatus fast_loop;
     float torque;
+    float output_position;
+    float motor_position;
 } MainLoopStatus;
