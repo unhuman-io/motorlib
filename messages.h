@@ -95,6 +95,14 @@ typedef struct {
         float cpr;                                  // output encoder cpr \sa FastLoopParam.motor_encoder.cpr
         float bias;
     } output_encoder;
+    struct {
+        float motor_hard_max;         // will switch to safe mode if going past these limits
+        float motor_hard_min;         // ignored if both are set to the same value
+        float output_hard_max;
+        float output_hard_min;
+        float motor_controlled_max;   // will attempt to use position control to stay in these limits
+        float motor_controlled_min;
+    } encoder_limits;
     TorqueSensorParam torque_sensor;
     int16_t host_timeout;                             // 0 to disable, if no commands received before host timeout, go to safe_mode
     MainControlMode safe_mode;                 // goes to this mode and freeze command if error

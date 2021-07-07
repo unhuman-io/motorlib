@@ -79,6 +79,13 @@ class MainLoop {
       //}
       status_.torque = torque_corrected;
 
+      if (status_.motor_position > param_.encoder_limits.motor_hard_max ||
+          status_.motor_position < param_.encoder_limits.motor_hard_min ||
+          status_.output_position > param_.encoder_limits.output_hard_max ||
+          status_.output_position < param_.encoder_limits.output_hard_min) {
+          safe_mode_ = true;
+          set_mode(param_.safe_mode);
+      }
 
       float iq_des = 0;
       float vq_des = 0;
@@ -152,6 +159,13 @@ class MainLoop {
           break;
         default:
           break;
+      }
+
+      if ((status_.motor_position > param_.encoder_limits.motor_controlled_max && iq_des > 0) ||
+          (status_.motor_position < param_.encoder_limits.motor_controlled_min && iq_des < 0)) {
+          set_mode(VELOCITY);
+          receive_data_.velocity_desired = 0;
+          iq_des = velocity_controller_.step(receive_data_, status_);
       }
 
       fast_loop_.set_iq_des(iq_des);
