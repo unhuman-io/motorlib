@@ -150,11 +150,13 @@ class FastLoop {
       mode_ = CURRENT_TUNING_MODE;
     }
     void voltage_mode() {
+      phase_mode_ = phase_mode_desired_;
       pwm_.voltage_mode();
       foc_->voltage_mode();
       mode_ = VOLTAGE_MODE;
     }
     void stepper_mode() {
+      phase_mode_ = phase_mode_desired_;
       pwm_.voltage_mode();
       foc_->voltage_mode();
       mode_ = STEPPER_TUNING_MODE;

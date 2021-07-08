@@ -142,7 +142,7 @@ class MainLoop {
           }
           break;
         case VOLTAGE:
-          vq_des = receive_data_.reserved;
+          vq_des = receive_data_.voltage.voltage_desired;
           break;
         case PHASE_LOCK:
           fast_loop_.phase_lock_mode(receive_data_.current_desired);
