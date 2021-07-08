@@ -19,6 +19,7 @@ class Actuator {
       while ((get_clock() - t_start)/CPU_FREQUENCY_HZ < 2) {
          fast_loop_.zero_current_sensors();
       }
+      set_bias();
 
       if (startup_param_.do_phase_lock) {
          fast_loop_.maintenance();
@@ -34,6 +35,26 @@ class Actuator {
     void maintenance() {
       fast_loop_.maintenance();
     }
+    void set_bias() {
+      switch(startup_param_.motor_encoder_startup) {
+         default:
+         case StartupParam::ENCODER_ZERO:
+            break;
+         case StartupParam::ENCODER_BIAS: {
+            MainLoopStatus status;
+            main_loop_.get_status(&status);
+            main_loop_.set_motor_encoder_bias(-status.motor_position + startup_param_.motor_encoder_bias);
+            break;
+         }
+         case StartupParam::ENCODER_BIAS_FROM_OUTPUT: {
+            MainLoopStatus status;
+            main_loop_.get_status(&status);
+            main_loop_.set_motor_encoder_bias(status.output_position * startup_param_.gear_ratio 
+              - status.fast_loop.motor_position.position + startup_param_.motor_encoder_bias);
+            break;
+         }
+      }
+   }
 private:
     FastLoop &fast_loop_;
     MainLoop &main_loop_;
