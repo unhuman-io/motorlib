@@ -161,11 +161,14 @@ class MainLoop {
           break;
       }
 
-      if ((status_.motor_position > param_.encoder_limits.motor_controlled_max && iq_des > 0) ||
-          (status_.motor_position < param_.encoder_limits.motor_controlled_min && iq_des < 0)) {
-          set_mode(VELOCITY);
-          receive_data_.velocity_desired = 0;
-          iq_des = velocity_controller_.step(receive_data_, status_);
+      if ((status_.motor_position > param_.encoder_limits.motor_controlled_max && iq_des >= 0) ||
+          (status_.motor_position < param_.encoder_limits.motor_controlled_min && iq_des <= 0)) {
+          if (mode_ != VELOCITY && mode_ != param_.safe_mode) {
+            set_mode(VELOCITY);
+          }
+          MotorCommand tmp_receive_data = receive_data_;
+          tmp_receive_data.velocity_desired = 0;
+          iq_des = velocity_controller_.step(tmp_receive_data, status_);
       }
 
       fast_loop_.set_iq_des(iq_des);
@@ -194,6 +197,18 @@ class MainLoop {
       impedance_controller_.set_param(param.impedance_controller_param);
       velocity_controller_.set_param(param.velocity_controller_param);
       torque_sensor_.set_param(param.torque_sensor);
+      if (param_.encoder_limits.motor_hard_max == param_.encoder_limits.motor_hard_min) {
+        param_.encoder_limits.motor_hard_max = INFINITY;
+        param_.encoder_limits.motor_hard_min = -INFINITY;
+      }
+      if (param_.encoder_limits.motor_controlled_max == param_.encoder_limits.motor_controlled_min) {
+        param_.encoder_limits.motor_controlled_max = INFINITY;
+        param_.encoder_limits.motor_controlled_min = -INFINITY;
+      }
+      if (param_.encoder_limits.output_hard_max == param_.encoder_limits.output_hard_min) {
+        param_.encoder_limits.output_hard_max = INFINITY;
+        param_.encoder_limits.output_hard_min = -INFINITY;
+      }
     }
     void set_rollover(float rollover) {
       position_controller_.set_rollover(rollover);
@@ -204,78 +219,80 @@ class MainLoop {
     void get_status(MainLoopStatus * const main_loop_status) const { *main_loop_status = status_; }
     void set_started() { started_ = true; }
     void set_mode(MainControlMode mode) {
+      if (mode != mode_) {
         mode_ = mode;
-      switch (mode) {
-        case OPEN:
-        default:
-          fast_loop_.open_mode();
-          led_.set_color(LED::AZURE);
-          break;
-        case DAMPED:
-          fast_loop_.brake_mode();
-          led_.set_color(LED::ORANGE);
-          break;
-        case CURRENT:
-          fast_loop_.current_mode();
-          led_.set_color(LED::GREEN);
-          break;
-        case CURRENT_TUNING:
-          fast_loop_.current_tuning_mode();
-          led_.set_color(LED::SPRING);
-          break;
-        case POSITION_TUNING:
-        case POSITION:
-          position_controller_.init(status_);
-        case VELOCITY:
-          fast_loop_.current_mode();
-          velocity_controller_.init(status_);
-          led_.set_color(LED::BLUE);
-          break;
-        case IMPEDANCE:
-          fast_loop_.current_mode();
-          impedance_controller_.init(status_);
-          led_.set_color(LED::CHARTREUSE);
-          break;
-        case TORQUE:
-          fast_loop_.current_mode();
-          torque_controller_.init(status_);
-          led_.set_color(LED::ROSE);
-          break;
-        case VOLTAGE:
-          fast_loop_.voltage_mode();
-          led_.set_color(LED::VIOLET);
-          break;
-        case PHASE_LOCK:
-          fast_loop_.phase_lock_mode(0);
-          led_.set_color(LED::YELLOW);
-          break;
-        case STEPPER_VELOCITY:
-        case STEPPER_TUNING:
-          fast_loop_.stepper_mode();
-          led_.set_color(LED::CYAN);
-          break;
-        case SLEEP:
-          led_.set_color(LED::WHITE);
-          led_.set_on_dim();
-          fast_loop_.open_mode();
-          setup_sleep();
-          while(!communication_.new_rx_data()) {
-            __WFI();
-          }
-          finish_sleep();
-          break;
-        case CRASH:
-          led_.set_color(LED::RED);
-          while(1) {
-            led_.update();
-            ns_delay(2000);
-          }
-          break;
-        case BOARD_RESET:
-          NVIC_SystemReset();
-          break;
-  }
-  receive_data_.mode_desired = mode;
+        switch (mode) {
+          case OPEN:
+          default:
+            fast_loop_.open_mode();
+            led_.set_color(LED::AZURE);
+            break;
+          case DAMPED:
+            fast_loop_.brake_mode();
+            led_.set_color(LED::ORANGE);
+            break;
+          case CURRENT:
+            fast_loop_.current_mode();
+            led_.set_color(LED::GREEN);
+            break;
+          case CURRENT_TUNING:
+            fast_loop_.current_tuning_mode();
+            led_.set_color(LED::SPRING);
+            break;
+          case POSITION_TUNING:
+          case POSITION:
+            position_controller_.init(status_);
+          case VELOCITY:
+            fast_loop_.current_mode();
+            velocity_controller_.init(status_);
+            led_.set_color(LED::BLUE);
+            break;
+          case IMPEDANCE:
+            fast_loop_.current_mode();
+            impedance_controller_.init(status_);
+            led_.set_color(LED::CHARTREUSE);
+            break;
+          case TORQUE:
+            fast_loop_.current_mode();
+            torque_controller_.init(status_);
+            led_.set_color(LED::ROSE);
+            break;
+          case VOLTAGE:
+            fast_loop_.voltage_mode();
+            led_.set_color(LED::VIOLET);
+            break;
+          case PHASE_LOCK:
+            fast_loop_.phase_lock_mode(0);
+            led_.set_color(LED::YELLOW);
+            break;
+          case STEPPER_VELOCITY:
+          case STEPPER_TUNING:
+            fast_loop_.stepper_mode();
+            led_.set_color(LED::CYAN);
+            break;
+          case SLEEP:
+            led_.set_color(LED::WHITE);
+            led_.set_on_dim();
+            fast_loop_.open_mode();
+            setup_sleep();
+            while(!communication_.new_rx_data()) {
+              __WFI();
+            }
+            finish_sleep();
+            break;
+          case CRASH:
+            led_.set_color(LED::RED);
+            while(1) {
+              led_.update();
+              ns_delay(2000);
+            }
+            break;
+          case BOARD_RESET:
+            NVIC_SystemReset();
+            break;
+        }
+      }
+      receive_data_.mode_desired = mode;
     }
     
  private:
@@ -295,7 +312,7 @@ class MainLoop {
     bool safe_mode_ = false;
     bool started_ = false;
     MainLoopStatus status_ = {};
-    MainControlMode mode_ = OPEN;
+    MainControlMode mode_ = NO_MODE;
     OutputEncoder &output_encoder_;
     float motor_encoder_bias_ = 0;
     TorqueSensor &torque_sensor_;
