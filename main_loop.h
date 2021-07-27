@@ -59,6 +59,13 @@ class MainLoop {
           set_mode(param_.safe_mode);
       }
 
+      // internal command, not recommended in conjunction with host_timeout or safe mode
+      if (internal_command_received_) {
+        receive_data_ = internal_command_;
+        internal_command_received_ = false;
+        command_received = true;
+      }
+
       if (command_received) {
         if (mode_ != static_cast<MainControlMode>(receive_data_.mode_desired) || mode_ == SLEEP) {
           set_mode(static_cast<MainControlMode>(receive_data_.mode_desired));
@@ -294,6 +301,13 @@ class MainLoop {
       }
       receive_data_.mode_desired = mode;
     }
+
+    // use to set the command from another low priority source than communication, 
+    // such as from the System or Actuator classes
+    void set_command(const MotorCommand &command) {
+      internal_command_ = command;
+      internal_command_received_ = true;
+    }
     
  private:
     LED* led() { return &led_; }
@@ -307,6 +321,8 @@ class MainLoop {
     LED &led_;
     ReceiveData receive_data_ = {};
     ReceiveData last_receive_data_ = {};
+    MotorCommand internal_command_;
+    bool internal_command_received_ = false;
     uint64_t count_ = 0;
     uint16_t no_command_ = 0;
     bool safe_mode_ = false;
