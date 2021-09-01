@@ -187,7 +187,7 @@ class MainLoop {
       send_data.motor_encoder = status_.fast_loop.motor_position.raw;
       send_data.motor_position = status_.motor_position;
       send_data.joint_position = status_.output_position;
-      send_data.torque = status_.torque;
+      send_data.torque = status_.torque + t0;
       send_data.reserved[0] = 0;
       send_data.reserved[1] = *reinterpret_cast<float *>(reserved1_);
       send_data.reserved[2] = *reinterpret_cast<float *>(reserved2_);
@@ -195,6 +195,8 @@ class MainLoop {
       led_.update();
       last_receive_data_ = receive_data_;
       IWDG->KR = 0xAAAA;
+
+      last_torque = status_.torque;
     }
 
 
@@ -309,6 +311,14 @@ class MainLoop {
       internal_command_received_ = true;
     }
     
+    void set_t0() {
+      t0 = -last_torque;
+    }
+
+    float get_t0() {
+      return t0;
+    }
+
  private:
     LED* led() { return &led_; }
     MainLoopParam param_;
@@ -340,6 +350,8 @@ class MainLoop {
     uint32_t *reserved2_ = &last_timestamp_;
     float output_encoder_pos_;
     PChipTable<OUTPUT_ENCODER_TABLE_LENGTH> output_encoder_correction_table_;
+    float t0 = 0;
+    float last_torque = 0;
 
     friend class System;
     friend void system_init();

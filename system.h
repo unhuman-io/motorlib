@@ -4,6 +4,7 @@
 #include "parameter_api.h"
 #include <queue>
 #include <string>
+#include <cmath>
 
 
 extern uint32_t t_exec_fastloop;
@@ -87,13 +88,91 @@ class System {
         api.add_api_variable("heap_free", new const APICallbackUint32(get_heap_free));
         api.add_api_variable("heap_used", new const APICallbackUint32(get_heap_used));
 
+    
+        actuator_.main_loop_.set_t0();
+        float t0 = actuator_.main_loop_.get_t0();
+        float starting_position = 0;
+        
+        MotorMode mode_ = POSITION;
+        
+        MotorCommand cmd = {};
+        cmd.mode_desired = POSITION;
+        cmd.position_desired = actuator_.main_loop_.status_.motor_position;
+        actuator_.main_loop_.set_command(cmd);
+        
+        float init_pos_enabled = 1; //actuator_.main_loop_.param_.system_controller.init_pos_enabled;
+        float init_pos = 1; //actuator_.main_loop_.param_.system_controller.init_pos;
+
+        float micro_on = 1;
+
+        float pos = actuator_.main_loop_.status_.motor_position;
+        
+        while(init_pos_enabled) {
+            if(actuator_.main_loop_.status_.motor_position > init_pos) {
+                pos += 0.0001;
+            } else if(actuator_.main_loop_.status_.motor_position < init_pos) {
+                pos -= 0.0001;
+            } else {
+                init_pos_enabled = 0;
+            }
+            
+            MotorCommand cmd = {};
+            cmd.mode_desired = POSITION;
+            cmd.position_desired = pos;
+            actuator_.main_loop_.set_command(cmd);
+        }
+        
         while(1) {
             count_++;
+            double t = count_/10000;
+
             char *s = System::get_string();
+
             if (s[0] != 0) {
                 auto response = api.parse_string(s);
                 communication_.send_string(response.c_str(), response.length());
             }
+            
+            switch(mode_) {
+                case POSITION:
+                    if (actuator_.main_loop_.status_.torque+t0 > actuator_.main_loop_.param_.system_controller.pst_load && actuator_.main_loop_.status_.torque != 0) {
+                        cmd.mode_desired = TORQUE;
+                        cmd.torque_desired = actuator_.main_loop_.param_.system_controller.pst_load-t0;
+                        starting_position = actuator_.main_loop_.status_.motor_position;
+                        mode_ = TORQUE;
+                    }
+                    break;
+
+                case TORQUE:
+                    if (actuator_.main_loop_.status_.motor_position > starting_position) {
+                        cmd.mode_desired = POSITION;
+                        cmd.position_desired = starting_position;
+                        pos = starting_position;
+                        mode_ = POSITION;
+                    }
+                    break;
+
+                default:
+                break;
+            }
+
+            float major_hz = actuator_.main_loop_.param_.system_controller.frequency_major_hz;
+            float minor_hz = actuator_.main_loop_.param_.system_controller.frequency_minor_hz;
+            float major_amp = actuator_.main_loop_.param_.system_controller.amplitude_major;
+            float minor_amp = actuator_.main_loop_.param_.system_controller.amplitude_minor;
+
+            pos = (micro_on*major_amp*(1-cos(2*M_PI*major_hz*t)) + minor_amp*2*M_PI*(1-sin((2*M_PI*minor_hz*t)-minor_amp)));
+            
+            //cmd.position_desired = pos;
+
+            /*
+            MotorCommand cmd = {};
+            cmd.mode_desired = mode_;
+            cmd.position_desired = pos+micro_on*(10*2*M_PI*sincos.cos);
+            */
+
+            actuator_.main_loop_.set_command(cmd);
+
             system_maintenance();
             actuator_.maintenance();
         }

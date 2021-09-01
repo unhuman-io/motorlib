@@ -103,6 +103,30 @@ typedef struct {
         float motor_controlled_max;   // will attempt to use position control to stay in these limits
         float motor_controlled_min;
     } encoder_limits;
+    struct {
+        float init_pos;
+        float init_pos_enabled;
+        float voltage_max;
+        float pst_load;
+        float load_max;
+        float load_min;
+        float load_gain;
+        float load_kp;
+        float load_kd;
+        float load_ki;
+        float load_ki_limit;
+        float load_current_max;
+        float position_kp;
+        float position_kd;
+        float position_ki;
+        float position_ki_limit;
+        float position_current_max;
+        float amplitude_major;
+        float amplitude_minor;
+        float torque_amplitude_gain;
+        float frequency_major_hz;
+        float frequency_minor_hz;
+    } system_controller;
     TorqueSensorParam torque_sensor;
     int16_t host_timeout;                             // 0 to disable, if no commands received before host timeout, go to safe_mode
     MainControlMode safe_mode;                 // goes to this mode and freeze command if error
