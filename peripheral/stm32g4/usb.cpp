@@ -349,7 +349,7 @@ void USB1::interrupt() {
                         uint8_t buffer[64];
                         uint8_t byte_count = USBPMA->btable[0].COUNT_RX & USB_COUNT0_RX_COUNT0_RX;
                         read_pma(byte_count, USBPMA->buffer[0].EP_RX, buffer);
-                        handle_setup_packet(buffer);
+                        handle_setup_packet(reinterpret_cast<usb_control_request *>(buffer));
                     }
                     // clear CTR
                     USB->EP0R = (USB_EP_CTR_TX | (USB->EP0R & USB_EPREG_MASK)) & ~USB_EP_CTR_RX;
