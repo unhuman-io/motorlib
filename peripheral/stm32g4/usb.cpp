@@ -404,12 +404,12 @@ void USB1::interrupt() {
  void USB1::handle_setup_packet(usb_control_request *setup_data) {
     switch(setup_data->bRequestType) {
         case 0x80:  // standard request get
-            switch setup_data->bRequest) {
+            switch (setup_data->bRequest) {
                 case 0x00:  // get status
                     send_data(0, reinterpret_cast<const uint8_t *>("\x0\x0"), 2);  // not self powered or remote wakeup
                     break;
                 case 0x06:  // get descriptor
-                    switch (setup_data->wValue) {
+                    switch (setup_data->wValue >> 8) {
                         case 0x01:   // device descriptor
                             send_data(0, USB_DEVICE_DESCIPTOR, std::min(static_cast<size_t>(setup_data->wLength),sizeof(USB_DEVICE_DESCIPTOR)));
                             break;
@@ -417,7 +417,7 @@ void USB1::interrupt() {
                             send_data(0, USB_CONFIGURATION_DESCRIPTOR, std::min(static_cast<size_t>(setup_data->wLength),sizeof(USB_CONFIGURATION_DESCRIPTOR)));
                             break;
                         case 0x03:  // string descriptor
-                            switch (setup_data->wValue) {
+                            switch (setup_data->wValue & 0xFF) {
                                 case 0x00: // language descriptor
                                     send_data(0, reinterpret_cast<const uint8_t *>("\x4\x3\x9\x4"), 4); // english
                                     break;

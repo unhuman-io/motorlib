@@ -5,7 +5,7 @@
 
 // signal to exit
 extern uint32_t go_to_bootloader;
-
+struct usb_control_request;
 class USB1 {
  public:
     USB1();
@@ -28,7 +28,7 @@ class USB1 {
      // send tx stall
     void send_stall(uint8_t endpoint);
 
-    void handle_setup_packet(uint8_t *setup_data);
+    void handle_setup_packet(usb_control_request *setup_data);
 
     uint8_t device_address_ = 0;
     uint16_t interface_ = 0;
