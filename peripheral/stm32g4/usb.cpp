@@ -171,6 +171,14 @@ static const uint8_t USB_CONFIGURATION_DESCRIPTOR[] =
   0x01
 };
 
+struct usb_control_request {
+    uint8_t bRequestType;
+    uint8_t bRequest;
+    uint16_t wValue;    // little endian
+    uint16_t wIndex;
+    uint16_t wLength;
+} __attribute__ ((packed));
+
 // special function due to difficulty of toggle bits and clear bits;
 // hopefully hardware doesn't change values during this function
 static void epr_set_toggle(uint8_t endpoint, uint16_t set_bits, uint16_t set_mask);
@@ -393,23 +401,23 @@ void USB1::interrupt() {
     //USB->ISTR = 0;
 }
 
- void USB1::handle_setup_packet(uint8_t *setup_data) {
-    switch(setup_data[0]) {
+ void USB1::handle_setup_packet(usb_control_request *setup_data) {
+    switch(setup_data->bRequestType) {
         case 0x80:  // standard request get
-            switch (setup_data[1]) {
+            switch setup_data->bRequest) {
                 case 0x00:  // get status
                     send_data(0, reinterpret_cast<const uint8_t *>("\x0\x0"), 2);  // not self powered or remote wakeup
                     break;
                 case 0x06:  // get descriptor
-                    switch (setup_data[3]) {
+                    switch (setup_data->wValue) {
                         case 0x01:   // device descriptor
-                            send_data(0, USB_DEVICE_DESCIPTOR, std::min(static_cast<size_t>(setup_data[6]),sizeof(USB_DEVICE_DESCIPTOR)));
+                            send_data(0, USB_DEVICE_DESCIPTOR, std::min(static_cast<size_t>(setup_data->wLength),sizeof(USB_DEVICE_DESCIPTOR)));
                             break;
                         case 0x02:   // configuration descriptor
-                            send_data(0, USB_CONFIGURATION_DESCRIPTOR, std::min(static_cast<size_t>(setup_data[6]),sizeof(USB_CONFIGURATION_DESCRIPTOR)));
+                            send_data(0, USB_CONFIGURATION_DESCRIPTOR, std::min(static_cast<size_t>(setup_data->wLength),sizeof(USB_CONFIGURATION_DESCRIPTOR)));
                             break;
                         case 0x03:  // string descriptor
-                            switch (setup_data[2]) {
+                            switch (setup_data->wValue) {
                                 case 0x00: // language descriptor
                                     send_data(0, reinterpret_cast<const uint8_t *>("\x4\x3\x9\x4"), 4); // english
                                     break;
@@ -451,9 +459,9 @@ void USB1::interrupt() {
             }
             break;
         case 0x00:  // standard request set
-            switch (setup_data[1]) {
+            switch (setup_data->bRequest) {
                 case 0x05:  // set address
-                    device_address_ = setup_data[2];
+                    device_address_ = setup_data->wValue;
                     send_data(0,0,0);
                     // set device address after acknowledge
                     while((USB->EP0R & USB_EPTX_STAT) == USB_EP_TX_VALID);
@@ -493,22 +501,22 @@ void USB1::interrupt() {
             }
             break;
         case 0x01:  // interface request set
-            if (setup_data[1] == 11) { // set inteface request
-                interface_ = setup_data[4];
+            if (setup_data->bRequest == 11) { // set inteface request
+                interface_ = setup_data->wIndex;
                 send_data(0,0,0);
             } else {
                 send_stall(0);
             }
             break;
         case 0xa1:  // interface class get
-            if ((setup_data[1] == 3) && (interface_ == DFU_INTERFACE_NUMBER)) { // dfu get_status
+            if ((setup_data->bRequest == 3) && (interface_ == DFU_INTERFACE_NUMBER)) { // dfu get_status
                 send_data(0,reinterpret_cast<const uint8_t *>("\x00\x00\x00\x00\x00\x00"), 6);
             } else {
                 send_stall(0);
             }
             break;
         case 0x21:  // interface class request
-            if ((setup_data[1] == 0) && (interface_ == DFU_INTERFACE_NUMBER)) { // dfu detach
+            if ((setup_data->bRequest == 0) && (interface_ == DFU_INTERFACE_NUMBER)) { // dfu detach
                 send_data(0,0,0);
                 while ((USB->EP0R & USB_EPTX_STAT) == USB_EP_TX_VALID); // wait for packet to go through
                 ms_delay(10);
