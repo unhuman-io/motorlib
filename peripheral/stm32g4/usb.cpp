@@ -237,7 +237,7 @@ void USB1::send_data(uint8_t endpoint, const uint8_t *data, uint8_t length, bool
         }
     }
     
-    if (wait && (length > USBD_BULK_SIZE)) {
+    if (wait && (length >= USBD_BULK_SIZE)) {
         _send_data(endpoint, data, USBD_BULK_SIZE);
         send_data(endpoint, data+USBD_BULK_SIZE, length-USBD_BULK_SIZE);
     } else {
