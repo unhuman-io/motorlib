@@ -308,6 +308,7 @@ class MainLoop {
       internal_command_ = command;
       internal_command_received_ = true;
     }
+    bool is_started() const { return started_; }
     
  private:
     LED* led() { return &led_; }
