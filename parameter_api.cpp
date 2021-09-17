@@ -60,7 +60,6 @@ std::string ParameterAPI::parse_string(std::string s) {
 std::string ParameterAPI::get_all_api_variables() const {
     std::string s;
     s = std::to_string(variable_map_.size() + const_variable_map_.size()) + " variables:\n";
-    int i = 0;
     for(auto const& m : variable_map_) {
         s += m.first + "\n";
     }
