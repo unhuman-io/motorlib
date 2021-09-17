@@ -201,7 +201,7 @@ void USB1::connect() {
 
 // Wait will pause until last packet has been received, If wait is false, then a buffered packet
 // will be discarded. For wait being false the maximum transmission is USBD_BULK_SIZE (64) bytes.
-void USB1::send_data(uint8_t endpoint, const uint8_t *data, uint8_t length, bool wait) {
+void USB1::send_data(uint8_t endpoint, const uint8_t *data, uint16_t length, bool wait) {
     while (tx_active(endpoint)) {
         if (wait) {
             continue;
