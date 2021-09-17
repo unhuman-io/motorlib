@@ -86,6 +86,7 @@ class System {
         api.add_api_variable("stack_used", new const APICallbackUint32(get_stack_used));
         api.add_api_variable("heap_free", new const APICallbackUint32(get_heap_free));
         api.add_api_variable("heap_used", new const APICallbackUint32(get_heap_used));
+        api.add_api_variable("help", new const APICallback([](){ return api.get_all_api_variables(); }));
 
         while(1) {
             count_++;

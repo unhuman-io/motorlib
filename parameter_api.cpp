@@ -57,6 +57,19 @@ std::string ParameterAPI::parse_string(std::string s) {
     return out;
 }
 
+std::string ParameterAPI::get_all_api_variables() const {
+    std::string s;
+    s = std::to_string(variable_map_.size() + const_variable_map_.size()) + " variables:\n";
+    int i = 0;
+    for(auto const& m : variable_map_) {
+        s += m.first + "\n";
+    }
+    for(auto const& m : const_variable_map_) {
+        s += m.first + "\n";
+    }
+    return s;
+}
+
 void APIFloat::set(std::string s) {
     *value_ = std::stof(s);
 }

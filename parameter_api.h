@@ -90,6 +90,7 @@ class ParameterAPI {
     void set_api_variable(std::string name, std::string value);
     std::string get_api_variable(std::string name);
     std::string parse_string(std::string);
+    std::string get_all_api_variables() const;
  private:
     std::map<std::string, APIVariable *> variable_map_;
     std::map<std::string, const APIVariable *> const_variable_map_;

@@ -15,7 +15,7 @@ extern uint8_t go_to_bootloader;
 class USB_OTG {
  public:
 
-    void send_data(uint8_t endpoint, const uint8_t *data, uint8_t length, bool wait=true) {
+    void send_data(uint8_t endpoint, const uint8_t *data, uint16_t length, bool wait=true) {
         send_data32(endpoint, (uint32_t *) data, (length+3)/4, length);
     }
 
