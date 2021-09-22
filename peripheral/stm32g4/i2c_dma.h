@@ -68,9 +68,9 @@ class I2C_DMA {
         rx_dma_.CCR = 0;
         rx_dma_.CNDTR = 0;
         regs_.CR2 |= I2C_CR2_STOP;
-        // ns_delay(1000);
-        // regs_.CR1 &= ~I2C_CR1_PE;
-        // regs_.CR1 |= I2C_CR1_PE;                    
+        ns_delay(10000);
+        regs_.CR1 &= ~I2C_CR1_PE;
+        regs_.CR1 |= I2C_CR1_PE;                    
         clear_isr();
     }
 
@@ -78,6 +78,9 @@ class I2C_DMA {
         tx_dma_.CCR = 0;
         tx_dma_.CNDTR = 0;
         regs_.CR2 |= I2C_CR2_STOP;
+        ns_delay(10000);
+        regs_.CR1 &= ~I2C_CR1_PE;
+        regs_.CR1 |= I2C_CR1_PE;  
         clear_isr();
     }
 
@@ -114,18 +117,18 @@ class I2C_DMA {
             error = async_read(address, nbytes, data);
             timeout = get_clock() - t_start > CPU_FREQUENCY_HZ/1e6*timeout_us;
         } while(error && !trouble() && !timeout);
-        if (error || trouble() || timeout) {
+        if (trouble()) {
             cancel_async_read();
             return -1;
+        }
+        if (timeout) {
+            cancel_async_read();
+            return -2;
         }
         do {
             error = busy();
             timeout = get_clock() - t_start > CPU_FREQUENCY_HZ/1e6*timeout_us;
         } while(error && !trouble() && !timeout);
-        if (error) {
-            cancel_async_read();
-            return -2;
-        }
         if (trouble()) {
             cancel_async_read();
             return -3;
@@ -136,11 +139,11 @@ class I2C_DMA {
         }
         return nbytes;
     }
-    bool busy() const {
+    volatile bool busy() const {
         // note start can be asserted before busy becomes active
         return (regs_.ISR & I2C_ISR_BUSY) | (regs_.CR2 & I2C_CR2_START);
     }
-    bool trouble() const {
+    volatile bool trouble() const {
         return regs_.ISR & (I2C_ISR_NACKF | I2C_ISR_ARLO | I2C_ISR_BERR);
     }
  private:
