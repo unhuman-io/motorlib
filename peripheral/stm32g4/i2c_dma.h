@@ -27,9 +27,14 @@ class I2C_DMA {
 
     }
 
-    // return 1 for error, 0 for success
+    // return 1 for not ready, 0 for success
     int async_write(uint8_t address, int8_t nbytes, uint8_t *data, bool stop = false) {
-        if (!ready()) {
+        if (!(regs_.CR2 & I2C_CR2_AUTOEND)) {
+            // this will be new or a repeat start, still need to wait for dma to be complete
+            if(tx_dma_.CNDTR != 0) {
+                return 1;
+            }
+        } else if (busy()) {
             return 1;
         }
         clear_isr();
@@ -40,9 +45,14 @@ class I2C_DMA {
         regs_.CR2 = (address << 1) | (nbytes << I2C_CR2_NBYTES_Pos) | (stop ? I2C_CR2_AUTOEND : 0) | I2C_CR2_START;
         return 0;
     }
-    // return 1 for error, 0 for success
+    // return 1 for not ready, 0 for success
     int async_read(uint8_t address, uint8_t nbytes, uint8_t *data) {
-        if (!ready()) {
+        if (!(regs_.CR2 & I2C_CR2_AUTOEND)) {
+            // this will be new or a repeat start, still need to wait for dma to be complete
+            if(rx_dma_.CNDTR != 0) {
+                return 1;
+            }
+        } else if (busy()) {
             return 1;
         }
         clear_isr();
@@ -54,40 +64,88 @@ class I2C_DMA {
         return 0;
     }
 
-    // return -1 or 0 for error, nbytes for success
-    int write(uint8_t address, int8_t nbytes, uint8_t *data, bool stop = false, uint32_t timeout_us = 0) {
-        bool retval = wait_while_true_with_timeout_us(async_write(address, nbytes, data, stop), timeout_us);
-        if(retval) {
-            return 0;
-        }
-        retval = wait_while_false_with_timeout_us(ready(), timeout_us); // todo, double timeout
-        if(retval) {
-            return -1;
-        } else {
-            return nbytes;
-        }
+    void cancel_async_read() {
+        rx_dma_.CCR = 0;
+        rx_dma_.CNDTR = 0;
+        regs_.CR2 |= I2C_CR2_STOP;
+        // ns_delay(1000);
+        // regs_.CR1 &= ~I2C_CR1_PE;
+        // regs_.CR1 |= I2C_CR1_PE;                    
+        clear_isr();
     }
 
-    // return -1 or 0 for error, nbytes for success
-    int read(uint8_t address, int8_t nbytes, uint8_t *data, uint32_t timeout_us = 0) {
-        bool retval = wait_while_true_with_timeout_us(async_read(address, nbytes, data), timeout_us);
-        if(retval) {
-            return 0;
-        }
-        retval = wait_while_false_with_timeout_us(ready(), timeout_us); // todo, double timeout
-        if(retval) {
-            return -1;
-        } else {
-            return nbytes;
-        }
+    void cancel_async_write() {
+        tx_dma_.CCR = 0;
+        tx_dma_.CNDTR = 0;
+        regs_.CR2 |= I2C_CR2_STOP;
+        clear_isr();
     }
 
-    bool ready() const {
-        return ((rx_dma_.CNDTR == 0) && (tx_dma_.CNDTR == 0)) || (regs_.ISR & (I2C_ISR_NACKF | I2C_ISR_STOPF | I2C_ISR_ARLO | I2C_ISR_BERR));
+    // return <= 0 for error, nbytes for success
+    int write(uint8_t address, int8_t nbytes, uint8_t *data, bool stop=false, uint16_t timeout_us=1000) {
+        bool error;
+        uint32_t t_start = get_clock();
+        bool timeout = false;
+        do {
+            error = async_write(address, nbytes, data, stop);
+            timeout = get_clock() - t_start > CPU_FREQUENCY_HZ/1e6*timeout_us;
+        } while(error && !trouble() && !timeout);
+        if (error || trouble() || timeout) {
+            cancel_async_write();
+            return -1;
+        }
+        do {
+            error = busy();
+            timeout = get_clock() - t_start > CPU_FREQUENCY_HZ/1e6*timeout_us;
+        } while(error && !trouble() && !timeout);
+        if (error || trouble() || timeout) {
+            cancel_async_write();
+            return -2;
+        }
+        return nbytes;
+    }
+
+    // return <= 0 for error, nbytes for success
+    int read(uint8_t address, int8_t nbytes, uint8_t *data, uint16_t timeout_us=1000) {
+        bool error;
+        uint32_t t_start = get_clock();
+        bool timeout = false;
+        do {
+            error = async_read(address, nbytes, data);
+            timeout = get_clock() - t_start > CPU_FREQUENCY_HZ/1e6*timeout_us;
+        } while(error && !trouble() && !timeout);
+        if (error || trouble() || timeout) {
+            cancel_async_read();
+            return -1;
+        }
+        do {
+            error = busy();
+            timeout = get_clock() - t_start > CPU_FREQUENCY_HZ/1e6*timeout_us;
+        } while(error && !trouble() && !timeout);
+        if (error) {
+            cancel_async_read();
+            return -2;
+        }
+        if (trouble()) {
+            cancel_async_read();
+            return -3;
+        }
+        if (timeout) {
+            cancel_async_read();
+            return -4;
+        }
+        return nbytes;
+    }
+    bool busy() const {
+        // note start can be asserted before busy becomes active
+        return (regs_.ISR & I2C_ISR_BUSY) | (regs_.CR2 & I2C_CR2_START);
+    }
+    bool trouble() const {
+        return regs_.ISR & (I2C_ISR_NACKF | I2C_ISR_ARLO | I2C_ISR_BERR);
     }
  private:
     void clear_isr() {
-        regs_.ICR |= 0x3F38;
+        regs_.ICR = 0x3F30;
     }
     I2C_TypeDef &regs_;
     DMA_Channel_TypeDef &tx_dma_, &rx_dma_;
