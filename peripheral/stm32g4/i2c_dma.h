@@ -143,6 +143,9 @@ class I2C_DMA {
         // note start can be asserted before busy becomes active
         return (regs_.ISR & I2C_ISR_BUSY) | (regs_.CR2 & I2C_CR2_START);
     }
+    volatile bool ready() const {
+        return !busy();
+    }
     volatile bool trouble() const {
         return regs_.ISR & (I2C_ISR_NACKF | I2C_ISR_ARLO | I2C_ISR_BERR);
     }
