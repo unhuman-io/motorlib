@@ -6,9 +6,10 @@
 
 extern volatile uint32_t * const cpu_clock;
 
-static inline uint32_t get_clock() { return *cpu_clock; }
+static inline volatile uint32_t get_clock() { return *cpu_clock; }
 static inline uint8_t get_cpi_count() { return DWT->CPICNT; }
 static inline uint8_t get_lsu_count() { return DWT->LSUCNT; }
+
 
 void ms_delay(uint16_t ms);
 void ns_delay(uint16_t ns);
@@ -36,6 +37,23 @@ inline uint32_t get_heap_free() {
 inline uint32_t get_heap_used() {
     return (uint32_t) &_Min_Heap_Size - get_heap_free();
 }
+
+#define wait_while_false(condition) while(!(condition))
+#define wait_while_true(condition) while(condition)
+
+// true for success, false for timed out
+// gcc syntax
+// max timeout 4e9/170 = 23s
+#define wait_while_false_with_timeout_us(condition, timeout_us) ({ \
+    uint32_t wait_while_false_with_timeout_us_t_start = get_clock(); \
+    bool wait_while_false_with_timeout_us_retval; \
+    bool wait_while_false_with_timeout_us_timeout; \
+    do { \
+        wait_while_false_with_timeout_us_retval = condition; \
+        wait_while_false_with_timeout_us_timeout = (get_clock() - wait_while_false_with_timeout_us_t_start < timeout_us*(CPU_FREQUENCY_HZ/1000000)); \
+    } while( !wait_while_false_with_timeout_us_retval && wait_while_false_with_timeout_us_timeout); \
+    wait_while_false_with_timeout_us_retval; });
+#define wait_while_true_with_timeout_us(condition, timeout_us) wait_while_false_with_timeout_us(!condition, timeout_us)
 
 #define while_timeout_ms(condition, ms) while((condition) && ((get_clock() - t_start) < ms*CPU_FREQUENCY_HZ/1000))
 

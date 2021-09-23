@@ -17,7 +17,7 @@ class I2CTorque final : public TorqueSensorBase {
         i2c_(i2c), decimation_(decimation) {
             address_ = 0x28 + address;
             data_out_[0] = 0x88;
-            i2c_.write(address_, 1, data_out_, true);
+            i2c_.write(address_, 1, data_out_, true, timeout_us_);
             ms_delay(1);
     }
 
@@ -29,24 +29,25 @@ class I2CTorque final : public TorqueSensorBase {
         count_ = 0;
 
        data_out_[0] = 0x40;
-       i2c_.write(address_, 1, data_out_);
-       i2c_.read(address_, 6*4, data_in_);
+       i2c_.write(address_, 1, data_out_, false, timeout_us_);
+       i2c_.async_read(address_, 6*4, data_in_);
     }
 
     float read() {
         if (count_ == 0) {
             // wait until dma complete
-            while(!i2c_.ready())
-
-            // process result
-            result0_ = (uint32_t) data_in_[3] << 24 | (uint32_t) data_in_[2] << 16 | (uint16_t) data_in_[1] << 8 | data_in_[0];
-            result1_ = (uint32_t) data_in_[23] << 24 | (uint32_t) data_in_[22] << 16 | (uint16_t) data_in_[21] << 8 | data_in_[20];
-            int32_t diff = result0_ - result1_;
-            sum_ = result0_ + result1_;
-            float sum = (float) result0_ + (float) result1_;
-            float tcomp = sum * k_temp_;
-            if (sum != 0) {
-                torque_ = diff/sum * gain_ + bias_ + tcomp;
+            bool ready = wait_while_false_with_timeout_us(i2c_.ready(), timeout_us_);
+            if (ready) {
+                // process result
+                result0_ = (uint32_t) data_in_[3] << 24 | (uint32_t) data_in_[2] << 16 | (uint16_t) data_in_[1] << 8 | data_in_[0];
+                result1_ = (uint32_t) data_in_[23] << 24 | (uint32_t) data_in_[22] << 16 | (uint16_t) data_in_[21] << 8 | data_in_[20];
+                int32_t diff = result0_ - result1_;
+                sum_ = result0_ + result1_;
+                float sum = (float) result0_ + (float) result1_;
+                float tcomp = sum * k_temp_;
+                if (sum != 0) {
+                    torque_ = diff/sum * gain_ + bias_ + tcomp;
+                }
             }
         }
         return torque_;
@@ -64,6 +65,7 @@ class I2CTorque final : public TorqueSensorBase {
     float torque_ = 0;
     uint8_t count_ = 0;
     uint8_t decimation_;
+    uint32_t timeout_us_ = 5;
 
     friend class System;
     friend void system_init();
