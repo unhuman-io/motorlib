@@ -16,6 +16,12 @@ void system_init();
 void setup_sleep();
 void finish_sleep();
 
+
+float tmin = .0001;
+float tmax = .1;
+float t1_ = 0;
+float a_ = 0;
+float ki = 0;
 class MainLoop {
  public:
     MainLoop(FastLoop &fast_loop, PositionController &position_controller,  TorqueController &torque_controller, 
@@ -38,7 +44,10 @@ class MainLoop {
       timestamp_ = get_clock();
       dt_ = (timestamp_ - last_timestamp_) * (1.0f/CPU_FREQUENCY_HZ);
 
+      last_fast_loop_timestamp_ = fast_loop_timestamp_;
       fast_loop_.get_status(&status_.fast_loop);
+      fast_loop_timestamp_ = status_.fast_loop.timestamp;
+      status_.dt = (fast_loop_timestamp_ - last_fast_loop_timestamp_)  * (1.0f/CPU_FREQUENCY_HZ);
 
       ReceiveData receive_data;
       int count_received = communication_.receive_data(&receive_data);
@@ -48,11 +57,23 @@ class MainLoop {
         receive_data_ = receive_data;
         command_received = true;
         safe_mode_ = false;
+        if (last_receive_data_.mode_desired == POSITION && receive_data.mode_desired == POSITION) {
+          
+          if (position_command_.velocity_desired + receive_data.velocity_desired  < 1e-16) {
+            t1_ = tmax;
+          } else {
+            t1_ = 2*(receive_data.position_desired - position_command_.position_desired)/(position_command_.velocity_desired + receive_data.velocity_desired);
+          }
+          t1_ = fsat2(t1_, tmin, tmax);
+          a_ = (receive_data.velocity_desired - position_command_.velocity_desired)/t1_;
+        }
       } else {
         no_command_++;
         if (no_command_ > 16000)
            no_command_ = 16000;
-      } 
+      }
+      position_command_.velocity_desired += a_*dt_ + ki*(receive_data_.position_desired - position_command_.position_desired);
+      position_command_.position_desired += position_command_.velocity_desired*dt_;
         
       if (param_.host_timeout && no_command_ > param_.host_timeout && started_) {
           safe_mode_ = true;
@@ -80,6 +101,7 @@ class MainLoop {
 
       status_.motor_position = status_.fast_loop.motor_position.position + motor_encoder_bias_;
 
+
       float torque_corrected = torque_sensor_.read();
       //if (torque_corrected != status_.torque) {
         torque_corrected += param_.torque_correction*status_.fast_loop.foc_status.measured.i_q;
@@ -101,7 +123,7 @@ class MainLoop {
           iq_des = receive_data_.current_desired;
           break;
         case POSITION:
-          iq_des = position_controller_.step(receive_data_, status_);
+          iq_des = position_controller_.step(position_command_, status_);
           break;
         case TORQUE:
           iq_des = torque_controller_.step(receive_data_, status_);
@@ -337,6 +359,8 @@ class MainLoop {
     TrajectoryGenerator position_trajectory_generator_;
     uint32_t timestamp_ = 0;
     uint32_t last_timestamp_ = 0;
+    uint32_t fast_loop_timestamp_ = 0;
+    uint32_t last_fast_loop_timestamp_ = 0;
     uint32_t *reserved1_ = &timestamp_;
     uint32_t *reserved2_ = &last_timestamp_;
     float output_encoder_pos_;
@@ -345,4 +369,5 @@ class MainLoop {
     friend class System;
     friend void system_init();
     friend void config_init();
+    ReceiveData position_command_ = {};
 };

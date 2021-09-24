@@ -11,7 +11,7 @@ class ImpedanceController : public Controller {
     float step(const MotorCommand &command, const MainLoopStatus &status) {
         float torque_des = impedance_controller_.step(command.position_desired, command.velocity_desired, 0, status.motor_position) + \
                   command.torque_desired;
-        float iq_des = torque_controller_.step(torque_des, 0, status.torque) + \
+        float iq_des = torque_controller_.step(torque_des, 0, status.torque, status.dt) + \
                   command.current_desired;
         return iq_des;
     }

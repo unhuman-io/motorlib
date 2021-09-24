@@ -8,7 +8,7 @@ class TorqueController : public Controller {
         controller_.init(status.torque);
     }
     float step(const MotorCommand &command, const MainLoopStatus &status) {
-        float iq_des = controller_.step(command.torque_desired, 0, status.torque) + \
+        float iq_des = controller_.step(command.torque_desired, 0, status.torque, status.dt) + \
                   command.current_desired;
         return iq_des;
     }

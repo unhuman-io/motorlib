@@ -81,7 +81,7 @@ void PIDController::set_param(const PIDParam &param) {
     hysteresis_.set_hysteresis(command_max_/kp_);
 }
 
-float PIDController::step(float desired, float velocity_desired, float measured, float velocity_limit) {
+float PIDController::step(float desired, float velocity_desired, float measured, float dt, float velocity_limit) {
     // PID controller with formula
     // out = (ki/s + kp + kd*s) * error
     // with s*error given by velocity_desired - velocity measured from measured with internal 2nd order filter
@@ -93,22 +93,14 @@ float PIDController::step(float desired, float velocity_desired, float measured,
     //      e.g. rollover = 2*pi, measured = 1.5*pi, desired = -1.5*pi, motor will go through rollover
     //      if desired is > 2*pi motor will still calculate error correctly, but will spin forever
 
-    rate_limit_.set_limit(fabsf(velocity_limit*dt_));
-    float desired_wrap = wrap1(desired, rollover_);
-    // wrap the rate limiter if necessary
-    if (fabsf(desired_wrap - rate_limit_.get_value()) > 1.5*rollover_) {
-        rate_limit_.init(rate_limit_.get_value() + desired_wrap - desired, rate_limit_.get_velocity());
-    }
-    
-    // proxy is a prefix for a limited desired value
-    float proxy_desired = rate_limit_.step(desired_wrap);
-    //float proxy_wrap = wrap1(proxy_desired, rollover_);
-    //rate_limit_.init(proxy_wrap, rate_limit_.get_velocity());
-   // float proxy_dot_desired = fsat(velocity_desired, fabsf(rate_limit_.get_velocity()/dt_));
-    error_ = wrap1_diff(proxy_desired, measured, rollover_);
-    error_dot_ = error_dot_filter_.update((error_ - error_last_)/dt_);
-    error_last_ = error_;
-    ki_sum_ += ki_ * dt_ * error_;
+    error_ = desired - measured;
+    float velocity_measured = (measured - measured_last_)/dt;
+    measured_last_ = measured;
+    float error_dot = velocity_desired - velocity_measured;
+
+
+    error_dot_ = error_dot_filter_.update(error_dot);
+    ki_sum_ += ki_ * dt * error_;
     ki_sum_ = fsat(ki_sum_, ki_limit_);
     float filtered_out = output_filter_.update(kp_*error_ + ki_sum_ + kd_*error_dot_);
     return fsat(filtered_out, command_max_);

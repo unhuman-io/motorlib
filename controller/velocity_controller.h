@@ -12,7 +12,7 @@ class VelocityController : public Controller {
         float velocity_measured = wrap1_diff(status.motor_position, last_motor_position_, rollover_)/dt_;
         last_motor_position_ = status.motor_position;
         velocity_measured_filt_ = velocity_filter_.update(velocity_measured);
-        float iq_des = controller_.step(command.velocity_desired, 0, velocity_measured_filt_, acceleration_limit_) + command.current_desired;
+        float iq_des = controller_.step(command.velocity_desired, 0, velocity_measured_filt_, status.dt, acceleration_limit_) + command.current_desired;
         return iq_des;
     }
     void set_param(const VelocityControllerParam &param) {

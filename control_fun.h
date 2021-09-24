@@ -178,8 +178,8 @@ class PIDController {
 public:
     PIDController(float dt) : dt_(dt), error_dot_filter_(dt), output_filter_(dt) {}
     virtual ~PIDController() {}
-    void init(float measured) { rate_limit_.init(measured), ki_sum_ = 0; error_last_ = 0; error_dot_filter_.init(0); output_filter_.init(0); } // todo init to current output 
-    virtual float step(float desired, float velocity_desired, float measured, float velocity_limit = INFINITY);
+    void init(float measured) { measured_last_ = measured; rate_limit_.init(measured), ki_sum_ = 0; error_last_ = 0; error_dot_filter_.init(0); output_filter_.init(0); } // todo init to current output 
+    virtual float step(float desired, float velocity_desired, float measured, float dt, float velocity_limit = INFINITY);
     void set_param(const PIDParam &param);
     float get_error() const { return error_last_; }
     void set_rollover(float rollover) { rollover_ = rollover; }
@@ -190,6 +190,7 @@ private:
     float last_desired_ = 0;
     float dt_;
     float rollover_ = 0;
+    float measured_last_ = 0;
     Hysteresis hysteresis_;
     RateLimiter rate_limit_;
     SecondOrderLowPassFilter error_dot_filter_;

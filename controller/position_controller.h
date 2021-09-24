@@ -8,7 +8,7 @@ class PositionController : public Controller {
         controller_.init(status.motor_position);
     }
     float step(const MotorCommand &command, const MainLoopStatus &status) {
-        float iq_des = controller_.step(command.position_desired, command.velocity_desired, status.motor_position) + \
+        float iq_des = controller_.step(command.position_desired, command.velocity_desired, status.motor_position, status.dt) + \
                   command.current_desired;
         return iq_des;
     }

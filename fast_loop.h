@@ -182,11 +182,13 @@ class FastLoop {
       fast_loop_status->motor_mechanical_position = motor_mechanical_position_;
       fast_loop_status->foc_command = foc_command_;
       fast_loop_status->motor_position.position = motor_position_filtered_;
+      fast_loop_status->timestamp = timestamp_;
+      fast_loop_status->dt = dt_;
       fast_loop_status->motor_position.velocity = motor_velocity_filtered;
       fast_loop_status->motor_position.raw = motor_enc;
-      fast_loop_status->timestamp = timestamp_;
+      
       fast_loop_status->t_seconds = t_seconds_.value();
-      fast_loop_status->dt = dt_;
+      
       fast_loop_status->vbus = v_bus_;
     }
     void zero_current_sensors() {
