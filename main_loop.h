@@ -47,6 +47,7 @@ class MainLoop {
         no_command_ = 0;
         receive_data_ = receive_data;
         command_received = true;
+        first_command_received_ = true;
         safe_mode_ = false;
       } else {
         no_command_++;
@@ -60,7 +61,7 @@ class MainLoop {
       }
 
       // internal command, not recommended in conjunction with host_timeout or safe mode
-      if (internal_command_received_) {
+      if (started_ && internal_command_received_) {
         receive_data_ = internal_command_;
         internal_command_received_ = false;
         command_received = true;
@@ -309,7 +310,7 @@ class MainLoop {
       internal_command_received_ = true;
     }
     bool is_started() const { return started_; }
-    
+    bool first_command_received() const { return first_command_received_; }
  private:
     LED* led() { return &led_; }
     MainLoopParam param_;
@@ -341,6 +342,7 @@ class MainLoop {
     uint32_t *reserved2_ = &last_timestamp_;
     float output_encoder_pos_;
     PChipTable<OUTPUT_ENCODER_TABLE_LENGTH> output_encoder_correction_table_;
+    bool first_command_received_ = false;
 
     friend class System;
     friend void system_init();
