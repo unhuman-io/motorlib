@@ -107,7 +107,7 @@ class FastLoop {
 
       dt_ = (timestamp_ - last_timestamp_)*(float) (1.0f/CPU_FREQUENCY_HZ);
       last_timestamp_ = timestamp_;
-      t_seconds_.add(dt_);
+
       store_status();
     }
     void maintenance() {
@@ -260,7 +260,6 @@ class FastLoop {
     mcu_time timestamp_;
    MotorEncoder &encoder_;
    float reserved_ = 0;
-   KahanSum t_seconds_;
    mcu_time last_timestamp_ = 0;
    float dt_ = 0;
    float phi_ = 0;

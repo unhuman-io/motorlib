@@ -129,7 +129,7 @@ typedef struct {
 
 typedef struct {
     struct { float i_d, i_q, v_q; } desired;         // desired current in A, i_d typically 0, i_q creates torque, v_q in V is a feedforward
-    struct { float i_a, i_b, i_c, motor_encoder; } measured;    // sensor currents in A, motor_encoder in rad referenced to electrical zero
+    struct { float i_a, i_b, i_c, motor_encoder; } measured;    // sensor currents in A, motor_encoder in mechanical rad referenced to electrical zero
 } FOCCommand;
 
 typedef struct {
@@ -137,9 +137,7 @@ typedef struct {
         float i_d, i_q;                         // \sa FOCCommand.desired
     } desired;
     struct {
-        float position;                         // motor electrical position, rad filtered by 1/10
         float i_d, i_q, i_0;                    // measured processed currents, A filtered
-        float sin, cos;                         // sin and cos of the electrical position
     } measured;
     struct { float v_a, v_b, v_c, v_d, v_q; } command;  // command in V to PWM
 } FOCStatus;
@@ -149,12 +147,10 @@ typedef struct {
     FOCStatus foc_status;
     struct {
         int32_t raw;                    // raw counts since startup
-        float position;                 // position in radians, 0 at startup or absolute value
-        float velocity;                 // velocity in rad/s some filter        
+        float position;                 // position in radians, 0 at startup or absolute value    
     } motor_position;
     float motor_mechanical_position;    // counts referenced to index
     FOCCommand foc_command;
-    float t_seconds, dt;                // time since startup in seconds, will lose resolution, dt is measured time in seconds
     float vbus;                         // bus voltage V
 } FastLoopStatus;
 
