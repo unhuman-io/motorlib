@@ -193,6 +193,7 @@ class MainLoop {
       send_data.reserved[1] = *reinterpret_cast<float *>(reserved1_);
       send_data.reserved[2] = *reinterpret_cast<float *>(reserved2_);
       communication_.send_data(send_data);
+      status_stack_.push(status_);
       led_.update();
       last_receive_data_ = receive_data_;
       IWDG->KR = 0xAAAA;
@@ -224,7 +225,7 @@ class MainLoop {
       velocity_controller_.set_rollover(rollover);
     }
     void set_motor_encoder_bias(float bias) { motor_encoder_bias_ = bias; }
-    void get_status(MainLoopStatus * const main_loop_status) const { *main_loop_status = status_; }
+    const MainLoopStatus & get_status() const { return status_stack_.top(); }
     void set_started() { started_ = true; }
     void set_mode(MainControlMode mode) {
       if (mode != mode_) {
@@ -342,6 +343,7 @@ class MainLoop {
     uint32_t *reserved2_ = &last_timestamp_;
     float output_encoder_pos_;
     PChipTable<OUTPUT_ENCODER_TABLE_LENGTH> output_encoder_correction_table_;
+    CStack<MainLoopStatus,2> status_stack_;
     bool first_command_received_ = false;
 
     friend class System;

@@ -192,11 +192,11 @@ class FastLoop {
       set_phase_mode();
       inv_motor_encoder_cpr_ = param_.motor_encoder.cpr != 0 ? 1.f/param_.motor_encoder.cpr : 0;
     }
-    FastLoopStatus get_status() const {
+    const FastLoopStatus &get_status() const {
       return status_.top();
     }
     void store_status() {
-      auto s = status_.next();
+      FastLoopStatus &s = status_.next();
       s.motor_mechanical_position = motor_mechanical_position_;
       s.motor_position.position = motor_position_filtered_;
       s.motor_position.raw = motor_enc;

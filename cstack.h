@@ -20,7 +20,7 @@ class CStack {
 	void finish() {
 		pos_.store(future_pos_, std::memory_order_release);
 	}
-	T top() const { // return a copy of the data
+	const T &top() const { // return a copy of the data
 		return data_[pos_.load(std::memory_order_acquire)];
 	}
  private:
