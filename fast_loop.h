@@ -14,6 +14,7 @@
 // #include "../st_device.h"
 #include "sincos.h"
 #include "table_interp.h"
+#include "cstack.h"
 
 class FastLoop {
  public:
@@ -107,6 +108,7 @@ class FastLoop {
       dt_ = (timestamp_ - last_timestamp_)*(float) (1.0f/CPU_FREQUENCY_HZ);
       last_timestamp_ = timestamp_;
       t_seconds_.add(dt_);
+      store_status();
     }
     void maintenance() {
       if (encoder_.index_received() && !motor_index_pos_set_) {
@@ -190,18 +192,21 @@ class FastLoop {
       set_phase_mode();
       inv_motor_encoder_cpr_ = param_.motor_encoder.cpr != 0 ? 1.f/param_.motor_encoder.cpr : 0;
     }
-    void get_status(FastLoopStatus *fast_loop_status) {
-      foc_->get_status(&(fast_loop_status->foc_status));
-      fast_loop_status->motor_mechanical_position = motor_mechanical_position_;
-      fast_loop_status->foc_command = foc_command_;
-      fast_loop_status->motor_position.position = motor_position_filtered_;
-      fast_loop_status->motor_position.velocity = motor_velocity_filtered;
-      fast_loop_status->motor_position.raw = motor_enc;
-      fast_loop_status->timestamp = timestamp_;
-      fast_loop_status->t_seconds = t_seconds_.value();
-      fast_loop_status->dt = dt_;
-      fast_loop_status->vbus = v_bus_;
+    FastLoopStatus get_status() const {
+      return status_.top();
     }
+    void store_status() {
+      auto s = status_.next();
+      s.motor_mechanical_position = motor_mechanical_position_;
+      s.motor_position.position = motor_position_filtered_;
+      s.motor_position.raw = motor_enc;
+      s.timestamp = timestamp_;
+      s.vbus = v_bus_;
+      s.foc_command = foc_command_;
+      foc_->get_status(&s.foc_status);
+      status_.finish();
+    }
+
     void zero_current_sensors() {
       ia_bias_ = (1-alpha_zero_)*ia_bias_ + alpha_zero_* param_.adc1_gain*(adc1-param_.adc1_offset);
       ib_bias_ = (1-alpha_zero_)*ib_bias_ + alpha_zero_* param_.adc2_gain*(adc2-param_.adc2_offset);
@@ -275,6 +280,7 @@ class FastLoop {
    volatile uint32_t *const v_bus_dr_;
    PChipTable<MOTOR_ENCODER_TABLE_LENGTH> motor_correction_table_;
    PChipTable<COGGING_TABLE_SIZE> cogging_correction_table_;
+   CStack<FastLoopStatus,2> status_;
    bool beep_ = false;
    uint32_t beep_end_ = 0;
    float phi_beep_ = 0;

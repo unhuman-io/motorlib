@@ -38,7 +38,7 @@ class MainLoop {
       timestamp_ = get_clock();
       dt_ = (timestamp_ - last_timestamp_) * (1.0f/CPU_FREQUENCY_HZ);
 
-      fast_loop_.get_status(&status_.fast_loop);
+      status_.fast_loop = fast_loop_.get_status();
 
       ReceiveData receive_data;
       int count_received = communication_.receive_data(&receive_data);
