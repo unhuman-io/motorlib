@@ -59,6 +59,8 @@ typedef struct {
         float gain;                                 // cogging table multiplier - 0 to disable, 1 for 1:1 ratio
     } cogging;
     float vbus_gain;                                // vbus sensor gain units V/count
+    float beep_frequency;                           // frequency hz for audio feedback
+    float beep_amplitude;                           // beep amplitude A
 } FastLoopParam;
 
 typedef struct {

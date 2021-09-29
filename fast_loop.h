@@ -75,6 +75,19 @@ class FastLoop {
          iq_des = tuning_bias_ + tuning_amplitude_ * (tuning_square_ ? fsignf(sincos.sin) : sincos.sin);
       }
 
+      if (beep_) {
+        if ((int32_t) (get_clock()-beep_end_) > 0) {
+          beep_ = false;
+        } else {
+          phi_beep_ += 2 * (float) M_PI * fabsf(param_.beep_frequency) * dt_;
+          if (phi_beep_ > 2 * (float) M_PI) {
+            phi_beep_ -= 2 * (float) M_PI;
+          }
+          Sincos sincos = sincos1(phi_beep_);
+          iq_ff += param_.beep_amplitude*fsignf(sincos.sin);
+        }
+      }
+
       // update FOC
       foc_command_.measured.motor_encoder = phase_mode_*(motor_enc_wrap_ - motor_electrical_zero_pos_)*(2*(float) M_PI  * inv_motor_encoder_cpr_);
       foc_command_.desired.i_q = iq_des_gain_ * (iq_des + iq_ff);
@@ -198,6 +211,13 @@ class FastLoop {
       phase_mode_desired_ = param_.phase_mode == 0 ? 1 : -1;
     }
     float get_rollover() const { return 2*M_PI*inv_motor_encoder_cpr_*param_.motor_encoder.rollover; }
+    void beep_on(float t_seconds = 1) {
+      beep_ = true;
+      beep_end_ = get_clock() + t_seconds*CPU_FREQUENCY_HZ;
+    }
+    void beep_off() {
+      beep_ = false;
+    }
  private:
     FastLoopParam param_;
     FOC *foc_;
@@ -255,6 +275,9 @@ class FastLoop {
    volatile uint32_t *const v_bus_dr_;
    PChipTable<MOTOR_ENCODER_TABLE_LENGTH> motor_correction_table_;
    PChipTable<COGGING_TABLE_SIZE> cogging_correction_table_;
+   bool beep_ = false;
+   uint32_t beep_end_ = 0;
+   float phi_beep_ = 0;
 
    friend class System;
 };
