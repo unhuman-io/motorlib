@@ -28,3 +28,17 @@ void GPIO::set_direction(Direction direction) {
         break;
     }
 }
+
+void GPIODebounce::update() {
+    uint8_t value = GPIO::get_value();
+    if (value != next_value_) {
+        debounce_count_ = 0;
+        next_value_ = value;
+    } else {
+        debounce_count_++;
+    }
+
+    if (debounce_count_ >= debounce_num_) {
+        value_ = next_value_;
+    }
+}
