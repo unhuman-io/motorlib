@@ -16,6 +16,9 @@ void system_init();
 void setup_sleep();
 void finish_sleep();
 
+class MainLoop;
+void load_send_data(const MainLoop &main_loop, SendData * const data);
+
 class MainLoop {
  public:
     MainLoop(FastLoop &fast_loop, PositionController &position_controller,  TorqueController &torque_controller, 
@@ -31,7 +34,7 @@ class MainLoop {
     void update() {
       count_++;
       output_encoder_.trigger();
-      SendData send_data;
+      
       torque_sensor_.trigger();
       
       last_timestamp_ = timestamp_;
@@ -181,17 +184,9 @@ class MainLoop {
 
       fast_loop_.set_iq_des(iq_des);
       fast_loop_.set_vq_des(vq_des);
-
-      send_data.iq = status_.fast_loop.foc_status.measured.i_q;
-      send_data.host_timestamp_received = receive_data_.host_timestamp;
-      send_data.mcu_timestamp = status_.fast_loop.timestamp;
-      send_data.motor_encoder = status_.fast_loop.motor_position.raw;
-      send_data.motor_position = status_.motor_position;
-      send_data.joint_position = status_.output_position;
-      send_data.torque = status_.torque;
-      send_data.reserved[0] = 0;
-      send_data.reserved[1] = *reinterpret_cast<float *>(reserved1_);
-      send_data.reserved[2] = *reinterpret_cast<float *>(reserved2_);
+      
+      SendData send_data;
+      load_send_data(*this, &send_data);
       communication_.send_data(send_data);
       status_stack_.push(status_);
       led_.update();
@@ -349,4 +344,20 @@ class MainLoop {
     friend class System;
     friend void system_init();
     friend void config_init();
+    friend void load_send_data(const MainLoop &main_loop, SendData *const data);
 };
+
+#ifndef CUSTOM_SENDDATA
+void load_send_data(const MainLoop &main_loop, SendData * const data) {
+    data->iq = main_loop.status_.fast_loop.foc_status.measured.i_q;
+    data->host_timestamp_received = main_loop.receive_data_.host_timestamp;
+    data->mcu_timestamp = main_loop.status_.fast_loop.timestamp;
+    data->motor_encoder = main_loop.status_.fast_loop.motor_position.raw;
+    data->motor_position = main_loop.status_.motor_position;
+    data->joint_position = main_loop.status_.output_position;
+    data->torque = main_loop.status_.torque;
+    data->reserved[0] = 0;
+    data->reserved[1] = *reinterpret_cast<float *>(main_loop.reserved1_);
+    data->reserved[2] = *reinterpret_cast<float *>(main_loop.reserved2_);
+}
+#endif
