@@ -28,10 +28,7 @@ class HRPWM final : public PWMBase {
          if (pwm3_mode_) {
             regs_.sTimerxRegs[ch].SETx2R = HRTIM_SET2R_SST;
          } else {
-            uint32_t deadprescale = 0;
-            uint32_t deadtime = deadtime_ns_ * count_per_ns_; // 9 bits at 170e6*32/4 gives 376 ns
-            regs_.sTimerxRegs[ch].OUTxR = HRTIM_OUTR_DTEN;
-            regs_.sTimerxRegs[ch].DTxR = (deadtime << HRTIM_DTR_DTF_Pos) | (deadtime << HRTIM_DTR_DTR_Pos) | (deadprescale << HRTIM_DTR_DTPRSC_Pos);
+            set_deadtime(ch, deadtime_ns_);
          }
          regs_.sTimerxRegs[ch].TIMxCR = HRTIM_TIMCR_PREEN | HRTIM_TIMCR_TRSTU | HRTIM_TIMCR_CONT;
       }
@@ -46,6 +43,12 @@ class HRPWM final : public PWMBase {
    void open_mode();
    void brake_mode();
    void voltage_mode();
+   void set_deadtime(uint8_t ch, uint16_t deadtime_ns) {
+      uint32_t deadprescale = 0;
+      uint32_t deadtime = deadtime_ns_ * count_per_ns_; // 9 bits at 170e6*32/4 gives 376 ns
+      regs_.sTimerxRegs[ch].OUTxR = HRTIM_OUTR_DTEN;
+      regs_.sTimerxRegs[ch].DTxR = (deadtime << HRTIM_DTR_DTF_Pos) | (deadtime << HRTIM_DTR_DTR_Pos) | (deadprescale << HRTIM_DTR_DTPRSC_Pos);
+   }
    void set_frequency_hz(uint32_t frequency_hz, uint16_t min_off_ns = 0, uint16_t min_on_ns = 0);
  private:
    uint16_t period_, half_period_;
