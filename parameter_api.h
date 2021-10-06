@@ -3,6 +3,9 @@
 
 #include <string>
 #include <map>
+#include <vector>
+#include "util.h"
+#include <algorithm>
 
 
 class APIVariable {
@@ -46,6 +49,20 @@ typedef APIInt<int32_t> APIInt32;
 typedef APIInt<int16_t> APIInt16;
 typedef APIInt<int8_t> APIInt8;
 
+template<class T>
+class APIHex : public APIInt<T> {
+ public:
+    APIHex(T *u) : APIInt<T>(u) {}
+    APIHex(const T *u) : APIInt<T>(u) {}
+    void set(std::string s) {
+      *this->value_ = std::stoi(s, nullptr, 16);
+    }
+    virtual std::string get() const { 
+      std::vector<char>bytes((char *) this->value_,(char *) this->value_+sizeof(T)); 
+      std::reverse(bytes.begin(),bytes.end());
+      return bytes_to_hex(bytes); }
+};
+
 #include <functional>
 
 class APICallback : public APIVariable {
@@ -79,6 +96,17 @@ class APICallbackUint32 : public APIVariable {
  private:
    std::function<uint32_t()> getfun_;
    std::function<void(uint32_t)> setfun_;
+};
+
+class APICallbackUint16 : public APIVariable {
+ public:
+   APICallbackUint16(std::function<uint16_t()> getfun , std::function<void(uint16_t)> setfun) : getfun_(getfun), setfun_(setfun) {}
+   APICallbackUint16(std::function<uint16_t()> getfun) : getfun_(getfun) {}
+   void set(std::string);
+   std::string get() const;
+ private:
+   std::function<uint16_t()> getfun_;
+   std::function<void(uint16_t)> setfun_;
 };
 
 // allows for setting variables through text commands

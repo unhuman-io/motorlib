@@ -80,3 +80,7 @@ void APICallbackUint32::set(std::string s) {
 std::string APICallbackUint32::get() const {
     return std::to_string(getfun_());
 }
+
+std::string APICallbackUint16::get() const {
+    return std::to_string(getfun_());
+}
