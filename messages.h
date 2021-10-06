@@ -4,7 +4,9 @@
 #include "motor_messages/motor_messages.h"
 
 typedef MotorCommand ReceiveData;
+#ifndef CUSTOM_SENDDATA
 typedef MotorStatus SendData;
+#endif
 typedef MotorMode MainControlMode;
 typedef uint32_t mcu_time;  // a timestamp in cpu cycles
 
