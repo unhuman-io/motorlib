@@ -81,6 +81,10 @@ std::string APICallbackUint32::get() const {
     return std::to_string(getfun_());
 }
 
+void APICallbackUint16::set(std::string s) {
+    setfun_(std::stoi(s));
+}
+
 std::string APICallbackUint16::get() const {
     return std::to_string(getfun_());
 }
