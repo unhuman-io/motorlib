@@ -23,11 +23,10 @@ const float FOC::Kc[2][3] = {{2.0/3, -1.0/3, -1.0/3},
                                {0,      1/SQRT3, -1/SQRT3}};
 
 FOCStatus * const FOC::step(const FOCCommand &command) {
-    status_.measured.position = command.measured.motor_encoder;
     status_.desired.i_d = command.desired.i_d;
     status_.desired.i_q = command.desired.i_q;
     float i_abc_measured[3] = {command.measured.i_a, command.measured.i_b, command.measured.i_c};
-    float electrical_angle = status_.measured.position * num_poles_;
+    float electrical_angle = command.measured.motor_encoder * num_poles_;
 
     //float sin_t = std::sin(electrical_angle);
     //float cos_t = std::cos(electrical_angle);
@@ -63,8 +62,6 @@ FOCStatus * const FOC::step(const FOCCommand &command) {
     status_.command.v_c = v_c_desired;
     status_.command.v_d = v_d_desired;
     status_.command.v_q = v_q_desired;
-    status_.measured.sin = sin_t;
-    status_.measured.cos = cos_t;
     status_.measured.i_d = i_d_measured;
     status_.measured.i_q = i_q_measured;
     status_.measured.i_0 = i_abc_measured[0] + i_abc_measured[1] + i_abc_measured[2];
