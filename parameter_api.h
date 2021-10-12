@@ -48,6 +48,7 @@ typedef APIInt<uint8_t> APIUint8;
 typedef APIInt<int32_t> APIInt32;
 typedef APIInt<int16_t> APIInt16;
 typedef APIInt<int8_t> APIInt8;
+typedef APIInt<bool> APIBool;
 
 template<class T>
 class APIHex : public APIInt<T> {
