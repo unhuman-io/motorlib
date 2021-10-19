@@ -2,8 +2,8 @@
 #define MOTOR_FOC_H
 
 #include "messages.h"
+#include "control_fun.h"
 
-class PIController;
 class FirstOrderLowPassFilter;
 
 class FOC {
@@ -24,7 +24,7 @@ public:
 private:
     uint16_t num_poles_ = 7;
     volatile float i_gain_ = 0;
-    PIController *pi_id_, *pi_iq_;
+    PIController pi_id_, pi_iq_;
     FOCStatus status_;
     static const float Kc[2][3];
     float dt_;

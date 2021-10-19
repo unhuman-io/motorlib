@@ -21,15 +21,13 @@ class FastLoop {
     FastLoop(int32_t frequency_hz, PWM &pwm, MotorEncoder &encoder, const FastLoopParam &param,
       volatile uint32_t *const i_a_dr, volatile uint32_t *const i_b_dr, volatile uint32_t *const i_c_dr, 
       volatile uint32_t *const v_bus_dr) 
-      : param_(param), pwm_(pwm), encoder_(encoder), i_a_dr_(i_a_dr), i_b_dr_(i_b_dr), i_c_dr_(i_c_dr), v_bus_dr_(v_bus_dr),
+      : param_(param), foc_(1.0f/frequency_hz), pwm_(pwm), encoder_(encoder), i_a_dr_(i_a_dr), i_b_dr_(i_b_dr), i_c_dr_(i_c_dr), v_bus_dr_(v_bus_dr),
         motor_correction_table_(param_.motor_encoder.table), cogging_correction_table_(param_.cogging.table) {
        frequency_hz_ = frequency_hz;
        float dt = 1.0f/frequency_hz;
-       foc_ = new FOC(dt);
        set_param(param);
     }
     ~FastLoop() {
-       delete foc_;
     }
     void update()  __attribute__((section (".ccmram"))) {
          // trigger encoder read
@@ -100,7 +98,7 @@ class FastLoop {
         stepper_position_ = wrap1(stepper_position_, 2*M_PI);
       }
       
-      FOCStatus *foc_status = foc_->step(foc_command_);
+      FOCStatus *foc_status = foc_.step(foc_command_);
 
       // output pwm
       pwm_.set_voltage(&foc_status->command.v_a);
@@ -148,7 +146,7 @@ class FastLoop {
       set_id_des(id);
       iq_des_gain_ = 0;
       pwm_.voltage_mode();
-      foc_->current_mode();
+      foc_.current_mode();
       mode_ = PHASE_LOCK_MODE;
     }
     void current_mode() {
@@ -156,7 +154,7 @@ class FastLoop {
       set_id_des(0);
       iq_des_gain_ = 1;
       pwm_.voltage_mode();
-      foc_->current_mode();
+      foc_.current_mode();
       mode_ = CURRENT_MODE;
     }
     void current_tuning_mode() {
@@ -167,28 +165,28 @@ class FastLoop {
     void voltage_mode() {
       phase_mode_ = phase_mode_desired_;
       pwm_.voltage_mode();
-      foc_->voltage_mode();
+      foc_.voltage_mode();
       mode_ = VOLTAGE_MODE;
     }
     void stepper_mode() {
       phase_mode_ = phase_mode_desired_;
       pwm_.voltage_mode();
-      foc_->voltage_mode();
+      foc_.voltage_mode();
       mode_ = STEPPER_TUNING_MODE;
     }
     void brake_mode() {
       pwm_.brake_mode();
-      foc_->voltage_mode();
+      foc_.voltage_mode();
       mode_ = BRAKE_MODE;
     }
     void open_mode() {
       pwm_.open_mode();
-      foc_->voltage_mode();
+      foc_.voltage_mode();
       mode_ = OPEN_MODE;
     }
     void set_param(const FastLoopParam &fast_loop_param) {
       param_ = fast_loop_param;
-      foc_->set_param(param_.foc_param);
+      foc_.set_param(param_.foc_param);
       set_phase_mode();
       inv_motor_encoder_cpr_ = param_.motor_encoder.cpr != 0 ? 1.f/param_.motor_encoder.cpr : 0;
     }
@@ -203,7 +201,7 @@ class FastLoop {
       s.timestamp = timestamp_;
       s.vbus = v_bus_;
       s.foc_command = foc_command_;
-      foc_->get_status(&s.foc_status);
+      foc_.get_status(&s.foc_status);
       status_.finish();
     }
 
@@ -225,7 +223,7 @@ class FastLoop {
     }
  private:
     FastLoopParam param_;
-    FOC *foc_;
+    FOC foc_;
     PWM &pwm_;
     enum {OPEN_MODE, BRAKE_MODE, CURRENT_MODE, PHASE_LOCK_MODE, VOLTAGE_MODE, CURRENT_TUNING_MODE, STEPPER_TUNING_MODE} mode_ = CURRENT_MODE;
 

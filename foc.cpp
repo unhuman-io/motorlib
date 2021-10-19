@@ -1,19 +1,14 @@
 #include "foc.h"
-#include "control_fun.h"
 #include "sincos.h"
 
 #include <cmath>
 
 FOC::FOC(float dt) : dt_(dt) {
-    pi_id_ = new PIController();
-    pi_iq_ = new PIController();
     id_filter_ = new FirstOrderLowPassFilter(dt);
     iq_filter_ = new FirstOrderLowPassFilter(dt);
 }
 
 FOC::~FOC() {
-    delete pi_id_;
-    delete pi_iq_;
     delete id_filter_;
     delete iq_filter_;
 }
@@ -47,8 +42,8 @@ FOCStatus * const FOC::step(const FOCCommand &command) {
     float i_d_measured_filtered = id_filter_->update(i_d_measured);
     float i_q_measured_filtered = iq_filter_->update(i_q_measured);
 
-    float v_d_desired = i_gain_*pi_id_->step(status_.desired.i_d, i_d_measured_filtered);
-    float v_q_desired = i_gain_*pi_iq_->step(status_.desired.i_q, i_q_measured_filtered) + command.desired.v_q;
+    float v_d_desired = i_gain_*pi_id_.step(status_.desired.i_d, i_d_measured_filtered);
+    float v_q_desired = i_gain_*pi_iq_.step(status_.desired.i_q, i_q_measured_filtered) + command.desired.v_q;
 
     float v_alpha_desired = cos_t * v_d_desired + sin_t * v_q_desired;
     float v_beta_desired = -sin_t * v_d_desired + cos_t * v_q_desired;
@@ -70,8 +65,8 @@ FOCStatus * const FOC::step(const FOCCommand &command) {
 
 void FOC::set_param(const FOCParam &param) {
     param_ = param;
-    pi_id_->set_param(param.pi_d);
-    pi_iq_->set_param(param.pi_q);
+    pi_id_.set_param(param.pi_d);
+    pi_iq_.set_param(param.pi_q);
     num_poles_ = param.num_poles;
     id_filter_->set_frequency(param.current_filter_frequency_hz);
     iq_filter_->set_frequency(param.current_filter_frequency_hz);

@@ -141,7 +141,11 @@ public:
     float step(float desired, float measured);
     void set_param(const PIParam &pi_param);
 private:
-    float kp_ = 0, ki_ = 0, ki_sum_ = 0, ki_limit_ = 0, command_max_ = 0;
+    float kp_ __attribute__((tuneable)) = 0;
+    float ki_ __attribute__((tuneable)) = 0;
+    float ki_sum_ = 0;
+    float ki_limit_ __attribute__((tuneable)) = 0;
+    float command_max_ __attribute__((tuneable)) = 0;
 
     friend class System;
 };
@@ -185,7 +189,12 @@ public:
     void set_rollover(float rollover) { rollover_ = rollover; }
 private:
     float error_ = 0, error_dot_ = 0;
-    float kp_ = 0, kd_ = 0, ki_ = 0, ki_sum_ = 0, ki_limit_ = 0, command_max_ = 0;
+    float kp_ __attribute__((tuneable)) = 0;
+    float kd_ __attribute__((tuneable))= 0;
+    float ki_ __attribute__((tuneable)) = 0; 
+    float ki_sum_ = 0;
+    float ki_limit_ __attribute__((tuneable)) = 0;
+    float command_max_ __attribute__((tuneable)) = 0;
     float error_last_ = 0;
     float last_desired_ = 0;
     float dt_;
