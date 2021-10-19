@@ -121,8 +121,13 @@ typedef struct {
     enum {
         ENCODER_ZERO, // motor encoder is 0 at startup plus any absolute offset
         ENCODER_BIAS, // motor encoder is set to bias at startup
-        ENCODER_BIAS_FROM_OUTPUT // motor encoder is set to 
+        ENCODER_BIAS_FROM_OUTPUT // motor encoder bias is set to 
                         // (output_encoder/cpr - output_encoder.bias)*gear_ratio+motor_encoder_bias
+                        // Note: this requires that output encoder and motor encoder both increment in the 
+                        // same direction, that is positive motor encoder is also positive output encoder
+        // ENCODER_BIAS_FROM_OUTPUT_WITH_MOTOR_CORRECTION  todo: should be able to use motor encoder absolute
+                        // reading to jump only in integer numbers of the gear ratio*motor_cpr. It will likely 
+                        // need to use calibrated output and motor encoder values to do this. 
     } motor_encoder_startup;
     float gear_ratio;   // gear ratio from input to output
     float motor_encoder_bias;   // bias to add to motor encoder
