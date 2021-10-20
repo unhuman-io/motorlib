@@ -6,6 +6,7 @@
 #include <vector>
 #include "util.h"
 #include <algorithm>
+#include "autocomplete.h"
 
 
 class APIVariable {
@@ -123,7 +124,7 @@ class ParameterAPI {
  private:
     std::map<std::string, APIVariable *> variable_map_;
     std::map<std::string, const APIVariable *> const_variable_map_;
-    std::string last_string_;
+    AutoComplete auto_complete_;
 };
 
 #endif
