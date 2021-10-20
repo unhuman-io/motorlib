@@ -199,47 +199,53 @@ void USB1::connect() {
     USB->BCDR |= USB_BCDR_DPPU; // device pull up
 }
 
+void USB1::cancel_transfer(uint8_t endpoint) {
+    // set NAK but it doesn't cancel any transfer in progress right now
+    while((USBEPR->EP[endpoint].EPR & USB_EPTX_STAT) != USB_EP_TX_NAK) {
+        epr_set_toggle(endpoint, USB_EP_TX_NAK, USB_EPTX_STAT);
+    }
+
+    // wait for any current transfer to complete, checking for activity on an EXTI pin 
+    // and checking for CTR_TX
+    // timeout of 50000 ns
+    EXTI->PR1 = EXTI_PR1_PIF10;
+    uint32_t t_start = get_clock();
+    uint16_t idle_count = 0;
+    while((get_clock() - t_start) < 50000/(uint16_t) (1e9/CPU_FREQUENCY_HZ)) {
+        if (EXTI->PR1 & EXTI_PR1_PIF10) {
+            EXTI->PR1 = EXTI_PR1_PIF10;
+            idle_count = 0;
+        } else {
+            idle_count++;
+        }
+        if (idle_count > 3) { 
+            // 3 gives about 2 us right now, usb pins must transition within 7 bits/.58 us
+            break;
+        }
+        if (USBEPR->EP[endpoint].EPR & USB_EP_CTR_TX) {
+            break;
+        }
+    }
+    // after making it through the endpoint may still be active (NAK was set, but a completed 
+    // tranfer will toggle a bit to thus reenable TX_VALID) so return to while(tx_active(endpoint)) 
+}
+
 // Wait will pause until last packet has been received, If wait is false, then a buffered packet
 // will be discarded. For wait being false the maximum transmission is USBD_BULK_SIZE (64) bytes.
-void USB1::send_data(uint8_t endpoint, const uint8_t *data, uint16_t length, bool wait) {
+void USB1::send_data(uint8_t endpoint, const uint8_t *data, uint16_t length, bool wait, uint32_t wait_timeout_us) {
+    auto t_start_wait = get_clock();
     while (tx_active(endpoint)) {
-        if (wait) {
+        if (wait && get_clock() - t_start_wait <= US_TO_CPU(wait_timeout_us)) {
+            // it wil force cancel on timeout
             continue;
         } else {
-            // set NAK but it doesn't cancel any transfer in progress right now
-            while((USBEPR->EP[endpoint].EPR & USB_EPTX_STAT) != USB_EP_TX_NAK) {
-                epr_set_toggle(endpoint, USB_EP_TX_NAK, USB_EPTX_STAT);
-            }
-
-            // wait for any current transfer to complete, checking for activity on an EXTI pin 
-            // and checking for CTR_TX
-            // timeout of 50000 ns
-            EXTI->PR1 = EXTI_PR1_PIF10;
-            uint32_t t_start = get_clock();
-            uint16_t idle_count = 0;
-            while((get_clock() - t_start) < 50000/(uint16_t) (1e9/CPU_FREQUENCY_HZ)) {
-                if (EXTI->PR1 & EXTI_PR1_PIF10) {
-                    EXTI->PR1 = EXTI_PR1_PIF10;
-                    idle_count = 0;
-                } else {
-                    idle_count++;
-                }
-                if (idle_count > 3) { 
-                    // 3 gives about 2 us right now, usb pins must transition within 7 bits/.58 us
-                    break;
-                }
-                if (USBEPR->EP[endpoint].EPR & USB_EP_CTR_TX) {
-                    break;
-                }
-            }
-            // after making it through the endpoint may still be active (NAK was set, but a completed 
-            // tranfer will toggle a bit to thus reenable TX_VALID) so return to while(tx_active(endpoint)) 
+            cancel_transfer(endpoint);
         }
     }
     
     if (wait && (length >= USBD_BULK_SIZE)) {
         _send_data(endpoint, data, USBD_BULK_SIZE);
-        send_data(endpoint, data+USBD_BULK_SIZE, length-USBD_BULK_SIZE);
+        send_data(endpoint, data+USBD_BULK_SIZE, length-USBD_BULK_SIZE, wait, wait_timeout_us);
     } else {
         _send_data(endpoint, data, length);
     }
