@@ -4,6 +4,7 @@
 #include "../st_device.h"
 #include "core_cm4.h"
 
+#define US_TO_CPU(t_us) (t_us*(CPU_FREQUENCY_HZ/1000000))
 extern volatile uint32_t * const cpu_clock;
 
 static inline volatile uint32_t get_clock() { return *cpu_clock; }

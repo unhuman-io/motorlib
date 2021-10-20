@@ -22,6 +22,8 @@ class USBCommunication : public CommunicationBase {
             std::min((uint16_t) MAX_API_DATA_SIZE, length), true);
        return true;
     }
+    bool send_string_active() const { return usb_.tx_active(1); }
+    void cancel_send_string() { usb_.cancel_transfer(1); }
     bool new_rx_data() { return usb_.new_rx_data(1) || usb_.new_rx_data(2); }
  private:
     USB1 &usb_;

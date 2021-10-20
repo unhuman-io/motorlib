@@ -11,7 +11,7 @@ class USB1 {
     USB1();
     void connect();
     // limited to 64 bytes
-    void send_data(uint8_t endpoint, const uint8_t * const data, uint16_t length, bool wait = true);
+    void send_data(uint8_t endpoint, const uint8_t * const data, uint16_t length, bool wait = true, uint32_t wait_timeout_us = 10000);
 
     // receive up to length bytes from endpoint, return number of bytes read
     int receive_data(uint8_t endpoint, uint8_t * const data, uint8_t length);
@@ -23,6 +23,8 @@ class USB1 {
     void interrupt();
 
     bool new_rx_data(uint8_t endpoint) const { return new_rx_data_[endpoint]; }
+
+    void cancel_transfer(uint8_t endpoint);
 
  private:
      // send tx stall
