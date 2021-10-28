@@ -91,6 +91,11 @@ Reset_Handler:
 	bne Original_Reset_Handler
 
 Reboot_Loader:
+	/* add a delay to help with usb reset detection on esp32, almost 1 second */
+	ldr		r0, =0x400000
+delay:
+	subs	r0, r0, #1
+	bne		delay
     ldr     r0, =RCC_APB2SMENR 
     ldr     r1, =#(1<<RCC_SYSCFGEN_POS) 
     str     r1, [r0]
