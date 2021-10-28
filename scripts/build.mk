@@ -3,8 +3,8 @@
 all::  
 	$(MAKE) clean 
 	$(MAKE) build_all 
-	 
-build_all: $(BUILD_DIR)/$(TARGET).elf $(BUILD_DIR)/$(TARGET).hex $(BUILD_DIR)/$(TARGET).bin $(BUILD_DIR)/$(TARGET).tgz 
+
+build_all: $(BUILD_DIR)/$(TARGET).elf $(BUILD_DIR)/$(TARGET).hex $(BUILD_DIR)/$(TARGET).bin $(BUILD_TGZ)
 
 #######################################
 # build the application
@@ -37,13 +37,17 @@ $(BUILD_DIR)/%.hex: $(BUILD_DIR)/%.elf | $(BUILD_DIR)
 include ../motorlib/scripts/firmware_installer.mk
 	
 $(BUILD_DIR):
-	mkdir $@
+	$(MKDIR) $@
+
+ifneq "$(OS)" "Windows_NT"
+BUILD_TGZ = $(BUILD_DIR)/$(TARGET).tgz
+endif
 
 #######################################
 # clean up
 #######################################
 clean:
-	-rm -fR $(BUILD_DIR)
+	-$(RM) $(BUILD_DIR)
 
 #######################################
 # dependencies

@@ -12,4 +12,4 @@ $(BUILD_DIR)/$(PARAM_FILE:c=bin): $(PARAM_FILE) $(PARAM_OVERRIDE) | $(BUILD_DIR)
 	$(CP) -O binary -S -j flash_param $(BUILD_DIR)/$(<:c=o) $@ 
 
 $(PARAM_BUILD_DIR):
-	mkdir -p $@
+	$(MKDIR) -p $@
