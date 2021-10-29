@@ -69,3 +69,13 @@ $(info gcc version $(GCC_VERSION))
 else
 $(error gcc version $(GCC_VERSION), 10 required)
 endif
+
+ifeq ($(OS),Windows_NT)
+$(info windows)
+RM=powershell -Command rm -r -fo
+MKDIR=powershell -Command mkdir -fo
+else
+RM=rm -rf
+MKDIR=mkdir -p
+$(info not windows)
+endif

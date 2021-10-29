@@ -89,12 +89,3 @@ ifdef PARAM_OVERRIDE
 PARAM_INCLUDE=-include $(PARAM_OVERRIDE)
 endif
 
-ifeq ($(OS),Windows_NT)
-$(info windows)
-RM=powershell -Command rm -r -fo
-MKDIR=powershell -Command mkdir -fo
-else
-RM=rm -rf
-MKDIR=mkdir -p
-$(info not windows)
-endif
