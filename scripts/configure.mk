@@ -94,7 +94,7 @@ $(info windows)
 RM=powershell -Command rm -r -fo
 MKDIR=powershell -Command mkdir -fo
 else
-RM=rm -rF
+RM=rm -rf
 MKDIR=mkdir -p
 $(info not windows)
 endif
