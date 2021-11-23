@@ -7,6 +7,8 @@
 #include <vector>
 #include "pin_config.h"
 
+extern "C" { void system_init(); }
+
 class HRPWM final : public PWMBase {
  public:
     HRPWM(uint32_t frequency_hz, HRTIM_TypeDef &regs, uint8_t ch_a, uint8_t ch_b, uint8_t ch_c, 
@@ -67,6 +69,7 @@ class HRPWM final : public PWMBase {
    const float count_per_ns_ = CPU_FREQUENCY_HZ * 32 / 4 / 1.e9; // Datasheet says /8 not /4, but /4 seems to give correct scale
 
    friend void config_init();
+   friend void system_init();
 };
 
 #endif
