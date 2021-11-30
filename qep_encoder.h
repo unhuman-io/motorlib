@@ -27,6 +27,10 @@ class QEPEncoder final : public EncoderBase {
        index_received_ = true;
        first_index_ = regs_.CCR3;
      }
+     if (regs_.SR & TIM_SR_CC3IF) {
+       regs_.CCMR2 &= TIM_CCMR2_IC3F;
+       index_count_++;
+     }
    }
    // TODO what happens in rollover?
    int32_t index_error(int32_t cpr) {
@@ -40,6 +44,8 @@ class QEPEncoder final : public EncoderBase {
    int32_t value_ = 0;
    bool index_received_ = false;
    int32_t first_index_ = 0;
+   uint32_t index_count_ = 0;
+   friend void config_init();
 };
 
 #endif
