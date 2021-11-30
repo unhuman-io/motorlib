@@ -25,10 +25,11 @@ class QEPEncoder final : public EncoderBase {
    void check_index() {
      if(!index_received_ && regs_.SR & TIM_SR_CC3IF) {
        index_received_ = true;
-       first_index_ = regs_.CCR3;
+       first_index_ = regs_.CCR3; // clears CC3IF flag
+       index_count_++;
      }
      if (regs_.SR & TIM_SR_CC3IF) {
-       regs_.CCMR2 &= TIM_CCMR2_IC3F;
+       regs_.SR &= ~TIM_SR_CC3IF;
        index_count_++;
      }
    }
