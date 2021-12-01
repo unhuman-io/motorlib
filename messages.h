@@ -32,6 +32,7 @@ typedef struct {
     PIParam pi_q;           // PIParam for q axis current
     float current_filter_frequency_hz;  // First order filter on current measurements
     float num_poles;        // number of motor pole pairs - i.e. number of motor magnets/2
+                            // for linear encoders set to poles per mm * 2 * pi
 } FOCParam;
 
 #define COGGING_TABLE_SIZE 512  // must be multiple of 2
@@ -49,6 +50,7 @@ typedef struct {
         uint8_t use_index_electrical_offset_pos;    // Set to 1 to enable using the index_electrical_offset_pos above, 0 to disable
                                                     // Allows for more repeatable commutation from a quadrature encoder with index or absolute encoder
         uint32_t cpr;                               // Counts/revolution for encoder, for quadrature encoders 4x lines per revolution
+                                                    // For linear encoders set to counts per mm * (2*pi) or similar
         float dir;                                  // Set to 1 for positive output, -1 for negative
         int32_t rollover;                           // Encoder counts will rollover from +rollover to -rollover when it reaches this value. 
                                                     // Position control will take the shortest route. Velocity control is continuous.
