@@ -105,12 +105,22 @@ class ICPZ : public EncoderBase {
     std::vector<uint8_t> read_register(uint8_t address, uint8_t length) {
         (*register_operation_)++;
         std::vector<uint8_t> data_out(length+3, 0);
-        data_out[0] = 0x81;
+        data_out[0] = read_register_opcode_;
         data_out[1] = address;
         uint8_t data_in[length+3];
-        spidma_.readwrite(data_out.data(), data_in, length+3);
-        (*register_operation_)--;
-        return std::vector<uint8_t>(&data_in[3], &data_in[3+length]);
+        
+        if (type_ == PZ) {
+          spidma_.readwrite(data_out.data(), data_in, length+3);
+          (*register_operation_)--;
+          return std::vector<uint8_t>(&data_in[3], &data_in[3+length]);
+        } else {
+          spidma_.readwrite(data_out.data(), data_in, 2);
+          data_out[0] = 0xad;
+          data_out[1] = 0;
+          spidma_.readwrite(data_out.data(), data_in, length+2);
+          (*register_operation_)--;
+          return std::vector<uint8_t>(&data_in[2], &data_in[2+length]);
+        }
     }
 
     // non interrupt context
@@ -118,16 +128,16 @@ class ICPZ : public EncoderBase {
         (*register_operation_)++;
         uint8_t data_in[std::max(value.size(),(std::size_t) 3)];
         if (bank != bank_) {
-          uint8_t data_out[] = {0xcf, 0x40, bank};
+          uint8_t data_out[] = {write_register_opcode_, 0x40, bank};
           spidma_.readwrite(data_out, data_in, 3);
           if (read_register(0x40, 1) != std::vector<uint8_t>{bank}) {
-            system_log("pz 0x40 " + std::to_string(read_register(0x40, 1)[0]) + " not " + std::to_string(bank));
+            system_log("ichaus bank " + std::to_string(read_register(0x40, 1)[0]) + " not " + std::to_string(bank));
             (*register_operation_)--;
             return false;
           }
           bank_ = bank;
         }
-        std::vector<uint8_t> data_out = {0xcf, address};
+        std::vector<uint8_t> data_out = {write_register_opcode_, address};
         data_out.insert(data_out.end(), value.begin(), value.end());
         spidma_.readwrite(data_out.data(), data_in, data_out.size());
         bool retval = read_register(address, value.size()) == value;
@@ -135,7 +145,7 @@ class ICPZ : public EncoderBase {
         return retval;
     }
 
- private:
+ protected:
     SPIDMA &spidma_;
     uint8_t command_[4] = {};
     uint8_t data_[4] = {};
@@ -145,4 +155,8 @@ class ICPZ : public EncoderBase {
     volatile int *register_operation_ = &register_operation_local_;
     uint8_t bank_ = 255;
     bool ongoing_read_ = false;
+    uint8_t read_register_opcode_ = 0x81;
+    uint8_t write_register_opcode_ = 0xcf;
+    enum {PZ, MU} type_ = PZ;
+
 };
