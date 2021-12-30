@@ -94,6 +94,13 @@ class MA732Encoder final : public SPIEncoder {
         set_register(0x6, value);
     }
 
+    // The MA732 encoder doesn't give magnetic field strength directly but allows 
+    // you to set high and low thresholds in the 0x6 MGT register, then you can read
+    // the 0x1B status register to determine if the field is within those thresholds 
+    // or not. The full range of the MGT register is 20 to 126 mT in 8 steps. Recommended
+    // min mT is 40 which is step 2 in MGT. I combine the two readings like this
+    // (mght << 0 | (uint16_t) mglt << 8), so the minimum recommended value is about
+    // 0x202 or 514.
     uint32_t get_magnetic_field_strength() {
         uint8_t original_mgt = read_register(0x6);
         uint8_t mght = 0, mglt = 0;
