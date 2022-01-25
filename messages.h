@@ -168,4 +168,6 @@ typedef struct {
     float torque;
     float output_position;
     float motor_position;
+    MotorMode mode;
+    MotorError error;
 } MainLoopStatus;

@@ -59,8 +59,10 @@ class MainLoop {
       } 
         
       if (param_.host_timeout && no_command_ > param_.host_timeout && started_) {
-          safe_mode_ = true;
-          set_mode(param_.safe_mode);
+        status_.error.sequence = 1;
+      }
+      if (status_.fast_loop.vbus < 5 || status_.fast_loop.vbus > 60) {
+        status_.error.system = 1;
       }
 
       // internal command, not recommended in conjunction with host_timeout or safe mode
@@ -94,6 +96,10 @@ class MainLoop {
           status_.motor_position < param_.encoder_limits.motor_hard_min ||
           status_.output_position > param_.encoder_limits.output_hard_max ||
           status_.output_position < param_.encoder_limits.output_hard_min) {
+          status_.error.sensor = 1;
+      }
+
+      if (*reinterpret_cast<uint8_t*>(&status_.error)) {
           safe_mode_ = true;
           set_mode(param_.safe_mode);
       }
@@ -224,10 +230,10 @@ class MainLoop {
     void set_started() { started_ = true; }
     void set_mode(MainControlMode mode) {
       if (mode != mode_) {
-        mode_ = mode;
         switch (mode) {
-          case OPEN:
           default:
+            mode = OPEN;
+          case OPEN:
             fast_loop_.open_mode();
             led_.set_color(LED::AZURE);
             break;
@@ -296,6 +302,8 @@ class MainLoop {
             break;
         }
       }
+      mode_ = mode;
+      status_.mode = mode;
       receive_data_.mode_desired = mode;
     }
 
@@ -359,5 +367,7 @@ void load_send_data(const MainLoop &main_loop, SendData * const data) {
     data->reserved[0] = 0;
     data->reserved[1] = *reinterpret_cast<float *>(main_loop.reserved1_);
     data->reserved[2] = *reinterpret_cast<float *>(main_loop.reserved2_);
+    data->flags.mode = main_loop.status_.mode;
+    data->flags.error = main_loop.status_.error;
 }
 #endif
