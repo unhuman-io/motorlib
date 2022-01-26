@@ -123,16 +123,23 @@ typedef struct {
     enum {
         ENCODER_ZERO, // motor encoder is 0 at startup plus any absolute offset
         ENCODER_BIAS, // motor encoder is set to bias at startup
-        ENCODER_BIAS_FROM_OUTPUT // motor encoder bias is set to 
+        ENCODER_BIAS_FROM_OUTPUT, // motor encoder bias is set to 
                         // (output_encoder/cpr - output_encoder.bias)*gear_ratio+motor_encoder_bias
                         // Note: this requires that output encoder and motor encoder both increment in the 
                         // same direction, that is positive motor encoder is also positive output encoder
-        // ENCODER_BIAS_FROM_OUTPUT_WITH_MOTOR_CORRECTION  todo: should be able to use motor encoder absolute
+        ENCODER_BIAS_FROM_OUTPUT_WITH_MOTOR_CORRECTION,  // use motor encoder absolute
                         // reading to jump only in integer numbers of the gear ratio*motor_cpr. It will likely 
                         // need to use calibrated output and motor encoder values to do this. 
+        ENCODER_BIAS_FROM_OUTPUT_WITH_TORQUE_AND_MOTOR_CORRECTION // as above but also use 
+                        // transmission stiffness to correct the output encoder measurement
+                        // 
     } motor_encoder_startup;
     float gear_ratio;   // gear ratio from input to output
-    float motor_encoder_bias;   // bias to add to motor encoder
+    float motor_encoder_bias;   // for ENCODER_BIAS and ENCODER_BIAS_FROM_OUTPUT: extra bias to add to motor encoder
+                                // for ENCODER_BIAS_*_WITH_MOTOR_CORRECTION: motor bias to give a desired motor zero position
+                                    // for example when output position = 0 if motor position is -1, then motor_encoder_bias = 1
+    float num_encoder_poles;    // if motor encoder is only absolute per revolution % num_encoder_poles
+    float transmission_stiffness; // also use transmission stiffness to help with motor bias setting
     MainControlMode startup_mode;
 } StartupParam;
 

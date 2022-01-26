@@ -198,7 +198,9 @@ class MainLoop {
       
       SendData send_data;
       load_send_data(*this, &send_data);
-      communication_.send_data(send_data);
+      if (started_) { // this will prevent sending bad values before calibration
+        communication_.send_data(send_data);
+      }
       status_stack_.push(status_);
       led_.update();
       last_receive_data_ = receive_data_;
@@ -316,7 +318,7 @@ class MainLoop {
       }
       mode_ = mode;
       status_.mode = mode;
-      receive_data_.mode_desired = mode;
+      receive_data_.mode_desired = mode; // todo: what is this for?
     }
 
     // use to set the command from another low priority source than communication, 
