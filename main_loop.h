@@ -8,6 +8,7 @@
 #include "led.h"
 #include "util.h"
 #include "torque_sensor.h"
+#include "hardware_brake.h"
 
 extern "C" {
 void system_init();
@@ -19,15 +20,19 @@ void finish_sleep();
 class MainLoop;
 void load_send_data(const MainLoop &main_loop, SendData * const data);
 
+#ifndef HARDWARE_BRAKE
+using HardwareBrake = HardwareBrakeBase;
+#endif
+
 class MainLoop {
  public:
     MainLoop(FastLoop &fast_loop, PositionController &position_controller,  TorqueController &torque_controller, 
         ImpedanceController &impedance_controller, VelocityController &velocity_controller, Communication &communication,
-        LED &led, OutputEncoder &output_encoder, TorqueSensor &torque, const MainLoopParam &param) : 
+        LED &led, OutputEncoder &output_encoder, TorqueSensor &torque, const MainLoopParam &param, HardwareBrake &brake=no_brake_) : 
           param_(param), fast_loop_(fast_loop), position_controller_(position_controller), torque_controller_(torque_controller), 
           impedance_controller_(impedance_controller), velocity_controller_(velocity_controller), 
           communication_(communication), led_(led), output_encoder_(output_encoder), torque_sensor_(torque),
-          output_encoder_correction_table_(param_.output_encoder.table) {
+          output_encoder_correction_table_(param_.output_encoder.table), brake_(brake) {
           set_param(param);
         }
     void init() {}
@@ -230,6 +235,9 @@ class MainLoop {
     void set_started() { started_ = true; }
     void set_mode(MainControlMode mode) {
       if (mode != mode_) {
+        if(mode_ == HARDWARE_BRAKE && mode != HARDWARE_BRAKE) {
+          brake_.off();
+        }
         switch (mode) {
           default:
             mode = OPEN;
@@ -274,6 +282,10 @@ class MainLoop {
           case PHASE_LOCK:
             fast_loop_.phase_lock_mode(0);
             led_.set_color(LED::YELLOW);
+            break;
+          case HARDWARE_BRAKE:
+            brake_.on();
+            led_.set_color(LED::ORANGE);
             break;
           case STEPPER_VELOCITY:
           case STEPPER_TUNING:
@@ -348,6 +360,8 @@ class MainLoop {
     PChipTable<OUTPUT_ENCODER_TABLE_LENGTH> output_encoder_correction_table_;
     CStack<MainLoopStatus,2> status_stack_;
     bool first_command_received_ = false;
+    HardwareBrake brake_;
+    static HardwareBrakeBase no_brake_;
 
     friend class System;
     friend void system_init();
