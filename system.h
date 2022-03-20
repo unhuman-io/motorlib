@@ -2,8 +2,7 @@
 
 #ifdef __cplusplus
 #include "parameter_api.h"
-#include <queue>
-#include <string>
+#include "logger.h"
 
 
 extern uint32_t t_exec_fastloop;
@@ -122,18 +121,12 @@ class System {
         actuator_.fast_loop_.update();
     }
     static void log(std::string str) {
-        if (log_queue_.size() < 10) {
-            log_queue_.push(str);
-        }
+        logger.log(str);
     }
     static std::string get_log() {
-        std::string str = "log end";
-        if (!log_queue_.empty()) {
-            str = log_queue_.front();
-            log_queue_.pop();
-        }
-        return str;
+        return logger.get_log();
     }
+
     static char *get_string() {
         static char buf[65];
         communication_.receive_string(buf);
@@ -142,7 +135,6 @@ class System {
 
     static Communication communication_;
     static Actuator actuator_;
-    static std::queue<std::string> log_queue_;
     static ParameterAPI api;
     static uint32_t count_;
 };
