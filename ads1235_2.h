@@ -1,5 +1,6 @@
 #pragma once
 #include "ads1235.h"
+#include "logger.h"
 
 class ADS1235_2 : public ADS1235 {
  public:
@@ -28,6 +29,16 @@ class ADS1235_2 : public ADS1235 {
           torque2_ = ADS1235::read();
           mux[1] = 0x34; // ain 0 & 1
         }
+        if (torque1_ == last_torque1_) {
+          error_count_++;
+          if (error_count_ > 10) {
+            auto a = init();
+            logger.log("torque_sensor_init: " + std::to_string(a));
+          }
+        } else {
+          error_count_ = 0;
+        }
+        last_torque1_ = torque1_;
         toggle_ ^= true;
         torque_diff_ = torque1_ - torque2_ + bias_;
         spidma_.readwrite(mux, data_, 2);
@@ -40,6 +51,8 @@ class ADS1235_2 : public ADS1235 {
     uint16_t decimation_ = 20;
     uint16_t count2_ = 0;
     uint8_t toggle_ = true;
+    uint8_t error_count_ = 0;
+    float last_torque1_ = 0;
 
     friend class System;
     friend void system_init();

@@ -49,6 +49,7 @@ class ADS1235 : public TorqueSensorBase {
     }
 
     // non interrupt context
+    // returns true for success
     bool set_register(uint8_t address, uint8_t value) {
         (*register_operation_)++;
         bool retval = true;
