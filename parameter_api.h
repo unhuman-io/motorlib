@@ -19,16 +19,18 @@ template<class T>
 class APIVariable2 : public APIVariable {
  public:
    APIVariable2(T *value) : value_(value) {};
+   APIVariable2(volatile T *value) : value_(value) {};
    APIVariable2(const T* value) : value_(const_cast<T*>(value)) {}
    virtual std::string get() const { return std::to_string(*value_); }
    virtual void set(std::string) = 0;
  protected:
-   T *value_;
+   volatile T *value_;
 };
 
 class APIFloat : public APIVariable2<float> {
  public:
    APIFloat(float *f) : APIVariable2(f) {}
+   APIFloat(volatile float *f) : APIVariable2(f) {}
    APIFloat(const  float *f) : APIVariable2(f) {}
    void set(std::string);
 };
