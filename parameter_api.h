@@ -39,6 +39,7 @@ template<class T>
 class APIInt : public APIVariable2<T> {
   public:
     APIInt(T *u) : APIVariable2<T>(u) {}
+    APIInt(volatile T *u) : APIVariable2<T>(u) {}
     APIInt(const T *u) : APIVariable2<T>(u) {}
     void set(std::string s) {
       *this->value_ = std::stoi(s);
