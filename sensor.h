@@ -9,4 +9,5 @@ class SensorBase {
     void trigger() {}
     int32_t get_index_pos() const { return 0; }
     bool index_received() const { return false; }
+    void reinit() {}
 };
