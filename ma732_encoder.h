@@ -14,9 +14,17 @@ class MA732Encoder : public SPIEncoder {
         } bits;
         uint16_t word;
     };
-    MA732Encoder(SPI_TypeDef &regs, GPIO &gpio_cs, uint8_t filter = 119, volatile int *register_operation = nullptr) : SPIEncoder(regs, gpio_cs), filter_(filter) {
+    MA732Encoder(SPI_TypeDef &regs, GPIO &gpio_cs, uint8_t filter = 119, volatile int *register_operation = nullptr) : SPIEncoder(regs, gpio_cs), filter_(filter), regs_(regs) {
         if (register_operation != nullptr) {
             register_operation_ = register_operation;
+        }
+        reinit();
+    }
+
+    void reinit() {
+        if (!*register_operation_) {    
+            regs_.CR2 = (15 << SPI_CR2_DS_Pos);   // 16 bit
+            regs_.CR1 = SPI_CR1_MSTR | (3 << SPI_CR1_BR_Pos) | SPI_CR1_SSI | SPI_CR1_SSM | SPI_CR1_SPE;    // baud = clock/16
         }
     }
 
@@ -39,6 +47,7 @@ class MA732Encoder : public SPIEncoder {
 
     // non interrupt context
     uint8_t read_register(uint8_t address) {
+        reinit(); // only really necessary if there are multiple users of the spi
         (*register_operation_)++;
         MA732reg reg = {};
         reg.bits.address = address;
@@ -52,6 +61,7 @@ class MA732Encoder : public SPIEncoder {
 
     // non interrupt context
     bool set_register(uint8_t address, uint8_t value) {
+        reinit();
         (*register_operation_)++;
         bool retval = true;
         if (read_register(address) != value) {
@@ -134,6 +144,7 @@ class MA732Encoder : public SPIEncoder {
 
  private:
     uint8_t filter_;
+    SPI_TypeDef &regs_;
     uint16_t last_data_ = 0;
     int32_t count_ = 0;
     volatile int register_operation_local_ = 0;
