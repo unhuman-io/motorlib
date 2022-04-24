@@ -92,27 +92,21 @@ class APICallbackFloat : public APIVariable {
    std::function<void(float)> setfun_;
 };
 
-class APICallbackUint32 : public APIVariable {
+template<class T>
+class APICallbackUint : public APIVariable {
  public:
-   APICallbackUint32(std::function<uint32_t()> getfun , std::function<void(uint32_t)> setfun) : getfun_(getfun), setfun_(setfun) {}
-   APICallbackUint32(std::function<uint32_t()> getfun) : getfun_(getfun) {}
-   void set(std::string);
-   std::string get() const;
+   APICallbackUint(std::function<T()> getfun , std::function<void(T)> setfun) : getfun_(getfun), setfun_(setfun) {}
+   APICallbackUint(std::function<T()> getfun) : getfun_(getfun) {}
+   void set(std::string s) { setfun_(std::stoi(s)); }
+   std::string get() const { return std::to_string(getfun_()); }
  private:
-   std::function<uint32_t()> getfun_;
-   std::function<void(uint32_t)> setfun_;
+   std::function<T()> getfun_;
+   std::function<void(T)> setfun_;
 };
 
-class APICallbackUint16 : public APIVariable {
- public:
-   APICallbackUint16(std::function<uint16_t()> getfun , std::function<void(uint16_t)> setfun) : getfun_(getfun), setfun_(setfun) {}
-   APICallbackUint16(std::function<uint16_t()> getfun) : getfun_(getfun) {}
-   void set(std::string);
-   std::string get() const;
- private:
-   std::function<uint16_t()> getfun_;
-   std::function<void(uint16_t)> setfun_;
-};
+typedef APICallbackUint<uint32_t> APICallbackUint32;
+typedef APICallbackUint<uint16_t> APICallbackUint16;
+typedef APICallbackUint<uint8_t> APICallbackUint8;
 
 // allows for setting variables through text commands
 class ParameterAPI {
