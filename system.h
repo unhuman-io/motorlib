@@ -98,7 +98,7 @@ class System {
         api.add_api_variable("beep", new APICallbackFloat([](){ return 0; }, [](float f){ actuator_.fast_loop_.beep_on(f); }));
         api.add_api_variable("help", new const APICallback([](){ return api.get_all_api_variables(); }));
 
-        uint32_t t_start;
+        uint32_t t_start = get_clock();
         while(1) {
             count_++;
             if (communication_.send_string_active() && get_clock() - t_start > US_TO_CPU(10000)) {
