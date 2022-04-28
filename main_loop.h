@@ -56,7 +56,10 @@ class MainLoop {
         receive_data_ = receive_data;
         command_received = true;
         first_command_received_ = true;
-        safe_mode_ = false;
+        if (safe_mode_  && (count_received && receive_data.mode_desired == param_.safe_mode)) {
+           safe_mode_ = false;
+           status_.error.all = 0;
+        }
       } else {
         no_command_++;
         if (no_command_ > 16000)
