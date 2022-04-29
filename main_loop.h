@@ -107,7 +107,7 @@ class MainLoop {
           status_.error.sensor = 1;
       }
 
-      if (*reinterpret_cast<uint8_t*>(&status_.error)) {
+      if (status_.error.all) {
           safe_mode_ = true;
           set_mode(param_.safe_mode);
       }
@@ -296,6 +296,10 @@ class MainLoop {
           case STEPPER_TUNING:
             fast_loop_.stepper_mode();
             led_.set_color(LED::CYAN);
+            break;
+          case FAULT:
+            status_.error.host_fault = 1;
+            // the main loop will detect this and set safe mode
             break;
           case SLEEP:
             led_.set_color(LED::WHITE);
