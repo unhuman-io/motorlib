@@ -18,7 +18,7 @@ class MAX31875 {
         uint8_t raw_val[2];
         i2c_.read(address_, 2, raw_val);
         value_ = ((raw_val[0] << 8 | raw_val[1])>>3) * (100.0/16);
-        return value_;
+        return get_temperature();
     }
     float get_temperature() const {
         return value_*0.01;
