@@ -30,7 +30,7 @@ class HRPWM final : public PWMBase {
          if (pwm3_mode_) {
             regs_.sTimerxRegs[ch].SETx2R = HRTIM_SET2R_SST;
          }
-         regs_.sTimerxRegs[ch].TIMxCR = HRTIM_TIMCR_PREEN | HRTIM_TIMCR_TRSTU | HRTIM_TIMCR_CONT;
+         regs_.sTimerxRegs[ch].TIMxCR |= HRTIM_TIMCR_PREEN | HRTIM_TIMCR_TRSTU | HRTIM_TIMCR_CONT;
       }
       if (!pwm3_mode_) {
          set_deadtime(deadtime_ns_);
@@ -66,7 +66,8 @@ class HRPWM final : public PWMBase {
    uint16_t deadtime_ns_;
    float pwm_min_ = 0;
    float pwm_max_;
-   const float count_per_ns_ = CPU_FREQUENCY_HZ * 32 / 4 / 1.e9; // Datasheet says /8 not /4, but /4 seems to give correct scale
+   int prescaler_ = 32;
+   float count_per_ns_;
 
    friend void config_init();
    friend void system_init();

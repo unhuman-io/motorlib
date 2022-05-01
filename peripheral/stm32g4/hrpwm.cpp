@@ -42,7 +42,23 @@ void HRPWM::voltage_mode() {
 
 // todo doesn't work at startup before regs exist
 void HRPWM::set_frequency_hz(uint32_t frequency_hz, uint16_t min_off_ns, uint16_t min_on_ns) {
-    period_ = (double) CPU_FREQUENCY_HZ*32/2/frequency_hz;
+    int desired_prescaler = frequency_hz*2/(CPU_FREQUENCY_HZ/65536);
+    int ckpsc;
+    if (desired_prescaler >= 32) {
+        prescaler_ = 32;
+        ckpsc = 0;
+    } else if (desired_prescaler >= 16) {
+        prescaler_ = 16;
+        ckpsc = 1;
+    } else {
+        prescaler_ = 8; // no slower than this
+        ckpsc = 2;
+    }
+    regs_.sTimerxRegs[ch_a_].TIMxCR |= ckpsc;
+    regs_.sTimerxRegs[ch_b_].TIMxCR |= ckpsc;
+    regs_.sTimerxRegs[ch_c_].TIMxCR |= ckpsc;
+    count_per_ns_ = CPU_FREQUENCY_HZ * prescaler_/ 4 / 1.e9; // Datasheet says /8 not /4, but /4 seems to give correct scale
+    period_ = (double) CPU_FREQUENCY_HZ*prescaler_/2/frequency_hz;
     regs_.sTimerxRegs[ch_a_].PERxR = period_;
     regs_.sTimerxRegs[ch_b_].PERxR = period_;
     regs_.sTimerxRegs[ch_c_].PERxR = period_;
