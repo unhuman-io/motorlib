@@ -51,20 +51,25 @@ class MainLoop {
       ReceiveData receive_data;
       int count_received = communication_.receive_data(&receive_data);
       bool command_received = false;
-      if (started_ && ((count_received && !safe_mode_) || (count_received && receive_data.mode_desired == param_.safe_mode))) {
-        no_command_ = 0;
-        receive_data_ = receive_data;
-        command_received = true;
-        first_command_received_ = true;
-        if (safe_mode_  && (count_received && receive_data.mode_desired == param_.safe_mode)) {
-           safe_mode_ = false;
-           status_.error.all = 0;
+      if (started_) {
+        if (count_received) {
+          no_command_ = 0;
+          first_command_received_ = true;
+          if (!safe_mode_) {
+            command_received = true;
+            receive_data_ = receive_data;
+          } else if (receive_data.mode_desired == param_.safe_mode) {
+              safe_mode_ = false;
+              status_.error.all = 0;
+          } else if (receive_data.mode_desired == BOARD_RESET) {
+              set_mode(BOARD_RESET);
+          }
+        } else {
+          no_command_++;
+          if (no_command_ > 16000)
+            no_command_ = 16000;
         }
-      } else {
-        no_command_++;
-        if (no_command_ > 16000)
-           no_command_ = 16000;
-      } 
+      }
         
       if (param_.host_timeout && no_command_ > param_.host_timeout && started_) {
         status_.error.sequence = 1;
