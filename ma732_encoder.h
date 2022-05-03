@@ -1,9 +1,10 @@
+#pragma once
 #include "peripheral/spi_encoder.h"
 #include "util.h"
 
 // Note MA732 encoder expects cpol 1, cpha 1, max 25 mbit
 // 80 ns cs start to sclk, 25 ns sclk end to cs end
-class MA732Encoder final : public SPIEncoder {
+class MA732Encoder : public SPIEncoder {
  public:
     union MA732reg {
         struct {
@@ -86,7 +87,7 @@ class MA732Encoder final : public SPIEncoder {
         return read_register(0xE);
     }
 
-    void set_filt(uint32_t value) {
+    virtual void set_filt(uint32_t value) {
         set_register(0xE, value);
     }
 
