@@ -87,6 +87,12 @@ typedef struct {
 } ImpedanceControllerParam;
 
 typedef struct {
+    float velocity_filter_frequency_hz;
+    float torque_filter_frequency_hz;
+    float torque_dot_filter_frequency_hz;
+} StateControllerParam;
+
+typedef struct {
     PIDParam velocity;
     float acceleration_limit;
 } VelocityControllerParam;

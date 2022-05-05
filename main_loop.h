@@ -27,10 +27,10 @@ using HardwareBrake = HardwareBrakeBase;
 class MainLoop {
  public:
     MainLoop(FastLoop &fast_loop, PositionController &position_controller,  TorqueController &torque_controller, 
-        ImpedanceController &impedance_controller, VelocityController &velocity_controller, Communication &communication,
+        ImpedanceController &impedance_controller, VelocityController &velocity_controller, StateController &state_controller, Communication &communication,
         LED &led, OutputEncoder &output_encoder, TorqueSensor &torque, const MainLoopParam &param, HardwareBrake &brake=no_brake_) : 
           param_(param), fast_loop_(fast_loop), position_controller_(position_controller), torque_controller_(torque_controller), 
-          impedance_controller_(impedance_controller), velocity_controller_(velocity_controller), 
+          impedance_controller_(impedance_controller), velocity_controller_(velocity_controller), state_controller_(state_controller),  
           communication_(communication), led_(led), output_encoder_(output_encoder), torque_sensor_(torque),
           output_encoder_correction_table_(param_.output_encoder.table), brake_(brake) {
           set_param(param);
@@ -134,6 +134,9 @@ class MainLoop {
           break;
         case VELOCITY:
           iq_des = velocity_controller_.step(receive_data_, status_);
+          break;
+        case STATE:
+          iq_des = state_controller_.step(receive_data_, status_);
           break;
         case STEPPER_VELOCITY:
           vq_des = receive_data_.stepper_velocity.voltage;
@@ -285,6 +288,10 @@ class MainLoop {
             torque_controller_.init(status_);
             led_.set_color(LED::ROSE);
             break;
+          case STATE:
+            fast_loop_.current_mode();
+            state_controller_.init(status_);
+            led_.set_color(LED::MAGENTA);
           case VOLTAGE:
             fast_loop_.voltage_mode();
             led_.set_color(LED::VIOLET);
@@ -349,6 +356,7 @@ class MainLoop {
     TorqueController &torque_controller_;
     ImpedanceController &impedance_controller_;
     VelocityController &velocity_controller_;
+    StateController &state_controller_;
     Communication &communication_;
     LED &led_;
     ReceiveData receive_data_ = {};
