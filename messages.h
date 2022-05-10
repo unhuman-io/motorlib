@@ -120,6 +120,8 @@ typedef struct {
     MainControlMode safe_mode;                 // goes to this mode and freeze command if error
                                                     // need to send reset from host to exit
     float torque_correction;
+    float vbus_min;
+    float vbus_max;
 } MainLoopParam;
 
 typedef struct {

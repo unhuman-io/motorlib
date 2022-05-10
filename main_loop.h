@@ -34,6 +34,12 @@ class MainLoop {
           communication_(communication), led_(led), output_encoder_(output_encoder), torque_sensor_(torque),
           output_encoder_correction_table_(param_.output_encoder.table), brake_(brake) {
           set_param(param);
+          if (param_.vbus_min == 0) {
+            param_.vbus_min = 5;  // defaults that can be overridden via api
+          }
+          if (param_.vbus_max == 0) {
+            param_.vbus_max = 60;
+          }
         }
     void init() {}
     void update() {
@@ -74,7 +80,7 @@ class MainLoop {
       if (param_.host_timeout && no_command_ > param_.host_timeout && started_) {
         status_.error.sequence = 1;
       }
-      if (status_.fast_loop.vbus < 5 || status_.fast_loop.vbus > 60) {
+      if (status_.fast_loop.vbus < param_.vbus_min || status_.fast_loop.vbus > param_.vbus_max) {
         status_.error.system = 1;
       }
 
