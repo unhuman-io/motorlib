@@ -7,6 +7,8 @@
 BUILD_DIR = build
 GIT_VERSION := $(shell git describe --dirty --always --tags)
 
+SELF_DIR := $(dir $(lastword $(MAKEFILE_LIST)))
+
 ifndef TARGET_MCU
 $(error need to define TARGET_MCU)
 endif
@@ -34,7 +36,7 @@ $(DRIVERS)/STM32G4xx_HAL_Driver/Src/stm32g4xx_hal_cortex.c \
 
 # ASM sources
 ASM_SOURCES =  \
-../motorlib/peripheral/stm32g4/startup_stm32g474xx.s
+$(SELF_DIR)../peripheral/stm32g4/startup_stm32g474xx.s
 
 
 # macros for gcc
@@ -63,21 +65,21 @@ C_INCLUDES =  \
 # LDFLAGS
 #######################################
 # link script
-LDSCRIPT = ../motorlib/peripheral/stm32g4/STM32G474RETx_FLASH.ld
+LDSCRIPT = $(SELF_DIR)../peripheral/stm32g4/STM32G474RETx_FLASH.ld
 
 DRIVERS = ../boost_g474/Drivers
 
 endif # MCU_TARGET
 
 CPP_SOURCES = \
-../motorlib/control_fun.cpp\
+$(SELF_DIR)../control_fun.cpp\
 foc.cpp\
 gpio.cpp\
 sincos.cpp\
 util.cpp\
 hall.cpp\
-../motorlib/peripheral/spi_encoder.cpp\
-../motorlib/peripheral/stm32g4/usb.cpp\
+$(SELF_DIR)../peripheral/spi_encoder.cpp\
+$(SELF_DIR)../peripheral/stm32g4/usb.cpp\
 hrpwm.cpp\
 ams_encoder.cpp\
 parameter_api.cpp\
