@@ -45,6 +45,7 @@ class HRPWM final : public PWMBase {
    void set_vbus(float vbus);
    void open_mode();
    void brake_mode();
+   void brake_mode_high_side();
    void voltage_mode();
    void set_deadtime(uint16_t deadtime_ns) {
       deadtime_ns_ = deadtime_ns;
