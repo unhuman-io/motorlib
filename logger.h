@@ -1,6 +1,7 @@
 #pragma once
 #include <string>
 #include <queue>
+#include <stdarg.h>
 
 class Logger {
  public:
@@ -21,6 +22,12 @@ class Logger {
             log_queue_.pop();
         }
         return str;
+    }
+    void log_printf(const char *s, ...) {
+        va_list args;
+        char sout[64];
+        vsnprintf(sout, 64, s, args);
+        log(sout);
     }
  private:
     std::queue<std::string> log_queue_ = {};
