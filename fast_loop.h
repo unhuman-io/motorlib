@@ -223,6 +223,7 @@ class FastLoop {
     void beep_off() {
       beep_ = false;
     }
+    bool motor_encoder_error() { return encoder_.error(); }
  private:
     FastLoopParam param_;
     FOC *foc_;

@@ -115,11 +115,13 @@ class MainLoop {
           status_.motor_position < param_.encoder_limits.motor_hard_min) {
         status_.error.motor_encoder_limit = 1;
       }
+      status_.error.motor_encoder = fast_loop_.motor_encoder_error();
       
       if (status_.output_position > param_.encoder_limits.output_hard_max ||
           status_.output_position < param_.encoder_limits.output_hard_min) {
           status_.error.output_encoder_limit = 1;
       }
+      status_.error.output_encoder = output_encoder_.error();
 
       if (status_.error.all) {
           safe_mode_ = true;
