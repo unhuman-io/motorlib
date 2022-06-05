@@ -81,8 +81,8 @@ class MainLoop {
         status_.error.sequence = 1;
       }
 
-      status_.error.bus_voltage_low = status_.fast_loop.vbus < param_.vbus_min;
-      status_.error.bus_voltage_high = status_.fast_loop.vbus > param_.vbus_max;
+      status_.error.bus_voltage_low |= status_.fast_loop.vbus < param_.vbus_min;
+      status_.error.bus_voltage_high |= status_.fast_loop.vbus > param_.vbus_max;
 
       // internal command, not recommended in conjunction with host_timeout or safe mode
       if (started_ && internal_command_received_) {
@@ -115,13 +115,13 @@ class MainLoop {
           status_.motor_position < param_.encoder_limits.motor_hard_min) {
         status_.error.motor_encoder_limit = 1;
       }
-      status_.error.motor_encoder = fast_loop_.motor_encoder_error();
+      status_.error.motor_encoder |= fast_loop_.motor_encoder_error();
       
       if (status_.output_position > param_.encoder_limits.output_hard_max ||
           status_.output_position < param_.encoder_limits.output_hard_min) {
           status_.error.output_encoder_limit = 1;
       }
-      status_.error.output_encoder = output_encoder_.error();
+      status_.error.output_encoder |= output_encoder_.error();
 
       if (status_.error.all) {
           safe_mode_ = true;
