@@ -1,10 +1,12 @@
 #pragma once
 
 #include "sensor.h"
+#include "torque_sensor.h"
 
 
-// alternates reads between two sensors. Calling SensorMultiplex functions return the primary sensor values
-// Calling the secondary sensor functions only returns values
+// alternates reads between two sensors. Calling SensorMultiplex functions alternate between 
+// triggering the primary and secondary reads. It returns the primary sensor values
+// Using secondary() returns a SecondarySensor functions only returns values
 template<class Sensor1, class Sensor2>
 class SensorMultiplex : public SensorBase {
  public:
@@ -26,14 +28,27 @@ class SensorMultiplex : public SensorBase {
                             toggle_ = !toggle_;
                             return primary_.get_value(); }
     int32_t get_value() const { return primary_.get_value(); }
-    void trigger() { if (toggle_) primary_.trigger(); else secondary_.trigger(); }
+    void trigger() { if (toggle_) { primary_.reinit(); primary_.trigger(); } else { secondary_.reinit(); secondary_.trigger(); }; }
     int32_t get_index_pos() const { return primary_.get_index_pos(); }
     bool index_received() const { return primary_.index_received(); }
     bool init() { return primary_.init(); }
 
- private:
+ protected:
     Sensor1 &primary_;
     Sensor2 &secondary_;
     SecondarySensor secondary_read_;
     bool toggle_ = false;
+};
+
+// Specialization for when a torque sensor is the primary sensor
+template<class Sensor1, class Sensor2>
+class TorqueSensorMultiplex : public SensorMultiplex<Sensor1, Sensor2>, public TorqueSensorBase {
+ public:
+   TorqueSensorMultiplex(Sensor1 &primary, Sensor2 &secondary) : SensorMultiplex<Sensor1, Sensor2>(primary, secondary) {}
+   using SensorMultiplex<Sensor1, Sensor2>::trigger;
+   using SensorMultiplex<Sensor1, Sensor2>::init;
+   float read() {if (this->toggle_) this->primary_.read(); else this->secondary_.read();  
+                        this->toggle_ = !this->toggle_;
+                        return this->primary_.get_value(); }
+   float get_value() const { return this->primary_.get_value(); }
 };
