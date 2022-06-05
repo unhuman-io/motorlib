@@ -22,9 +22,14 @@ class MA732Encoder : public SPIEncoder {
     }
 
     void reinit() {
-        if (!*register_operation_) {    
+        if (!*register_operation_) {
+#ifdef STM32F446xx
+            regs_.CR1 = SPI_CR1_MSTR | (3 << SPI_CR1_BR_Pos) | SPI_CR1_SSI | SPI_CR1_SSM | SPI_CR1_SPE | SPI_CR1_DFF;    // baud = clock/16, 16 bit
+#else    
             regs_.CR2 = (15 << SPI_CR2_DS_Pos);   // 16 bit
             regs_.CR1 = SPI_CR1_MSTR | (3 << SPI_CR1_BR_Pos) | SPI_CR1_SSI | SPI_CR1_SSM | SPI_CR1_SPE;    // baud = clock/16
+#endif
+            
         }
     }
 
