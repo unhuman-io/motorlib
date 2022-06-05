@@ -80,9 +80,9 @@ class MainLoop {
       if (param_.host_timeout && no_command_ > param_.host_timeout && started_) {
         status_.error.sequence = 1;
       }
-      if (status_.fast_loop.vbus < param_.vbus_min || status_.fast_loop.vbus > param_.vbus_max) {
-        status_.error.system = 1;
-      }
+
+      status_.error.bus_voltage_low = status_.fast_loop.vbus < param_.vbus_min;
+      status_.error.bus_voltage_high = status_.fast_loop.vbus > param_.vbus_max;
 
       // internal command, not recommended in conjunction with host_timeout or safe mode
       if (started_ && internal_command_received_) {
@@ -112,10 +112,13 @@ class MainLoop {
       status_.torque = torque_corrected;
 
       if (status_.motor_position > param_.encoder_limits.motor_hard_max ||
-          status_.motor_position < param_.encoder_limits.motor_hard_min ||
-          status_.output_position > param_.encoder_limits.output_hard_max ||
+          status_.motor_position < param_.encoder_limits.motor_hard_min) {
+        status_.error.motor_encoder_limit = 1;
+      }
+      
+      if (status_.output_position > param_.encoder_limits.output_hard_max ||
           status_.output_position < param_.encoder_limits.output_hard_min) {
-          status_.error.sensor = 1;
+          status_.error.output_encoder_limit = 1;
       }
 
       if (status_.error.all) {
