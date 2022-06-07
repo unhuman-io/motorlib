@@ -254,6 +254,7 @@ class MainLoop {
       impedance_controller_.set_rollover(rollover);
       velocity_controller_.set_rollover(rollover);
     }
+    void adjust_output_encoder(float adjustment) { param_.output_encoder.bias += adjustment; }
     void set_motor_encoder_bias(float bias) { motor_encoder_bias_ = bias; }
     const MainLoopStatus & get_status() const { return status_stack_.top(); }
     void set_started() { started_ = true; }
@@ -389,7 +390,6 @@ class MainLoop {
     uint32_t last_timestamp_ = 0;
     uint32_t *reserved1_ = &timestamp_;
     uint32_t *reserved2_ = &last_timestamp_;
-    float output_encoder_pos_;
     PChipTable<OUTPUT_ENCODER_TABLE_LENGTH> output_encoder_correction_table_;
     CStack<MainLoopStatus,2> status_stack_;
     bool first_command_received_ = false;
@@ -398,7 +398,9 @@ class MainLoop {
 
     friend class System;
     friend void system_init();
+    friend void system_maintenance();
     friend void config_init();
+    friend void config_maintenance();
     friend void load_send_data(const MainLoop &main_loop, SendData *const data);
 };
 

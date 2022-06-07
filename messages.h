@@ -75,6 +75,8 @@ typedef struct {
 
 typedef struct {
     PIDParam position;
+    float velocity_limit;
+    float desired_filter_hz;
 } PositionControllerParam;
 
 typedef struct {
@@ -148,6 +150,7 @@ typedef struct {
                                     // for example when output position = 0 if motor position is -1, then motor_encoder_bias = 1
     float num_encoder_poles;    // if motor encoder is only absolute per revolution % num_encoder_poles
     float transmission_stiffness; // also use transmission stiffness to help with motor bias setting
+    float output_encoder_rollover; // if the output encoder+bias is greater than this then output_encoder -= 2*pi
     MainControlMode startup_mode;
 } StartupParam;
 

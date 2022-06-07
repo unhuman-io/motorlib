@@ -33,6 +33,8 @@ class System {
         api.add_api_variable("ki", new APIFloat(&actuator_.main_loop_.position_controller_.controller_.ki_));
         api.add_api_variable("ki_limit", new APIFloat(&actuator_.main_loop_.position_controller_.controller_.ki_limit_));
         api.add_api_variable("max", new APIFloat(&actuator_.main_loop_.position_controller_.controller_.command_max_));
+        api.add_api_variable("vlimit", new APIFloat(&actuator_.main_loop_.position_controller_.velocity_limit_));
+        API_ADD_FILTER(desired_filter, SecondOrderLowPassFilter, actuator_.main_loop_.position_controller_.desired_filter_);
         api.add_api_variable("error", new const APIFloat(&actuator_.main_loop_.position_controller_.controller_.error_));
         API_ADD_FILTER(velocity_filter, SecondOrderLowPassFilter, actuator_.main_loop_.position_controller_.controller_.error_dot_filter_);
         API_ADD_FILTER(output_filter, FirstOrderLowPassFilter, actuator_.main_loop_.position_controller_.controller_.output_filter_);
