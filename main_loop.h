@@ -86,9 +86,11 @@ class MainLoop {
 
       // internal command, not recommended in conjunction with host_timeout or safe mode
       if (started_ && internal_command_received_) {
-        receive_data_ = internal_command_;
         internal_command_received_ = false;
-        command_received = true;
+        if (!safe_mode_) {
+          receive_data_ = internal_command_;
+          command_received = true;
+        }
       }
 
       if (command_received) {
