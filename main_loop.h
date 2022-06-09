@@ -35,7 +35,7 @@ class MainLoop {
           output_encoder_correction_table_(param_.output_encoder.table), brake_(brake) {
           set_param(param);
           if (param_.vbus_min == 0) {
-            param_.vbus_min = 5;  // defaults that can be overridden via api
+            param_.vbus_min = 9;  // defaults that can be overridden via api
           }
           if (param_.vbus_max == 0) {
             param_.vbus_max = 60;
@@ -388,6 +388,7 @@ class MainLoop {
     TrajectoryGenerator position_trajectory_generator_;
     uint32_t timestamp_ = 0;
     uint32_t last_timestamp_ = 0;
+    uint32_t *reserved0_ = &timestamp_;
     uint32_t *reserved1_ = &timestamp_;
     uint32_t *reserved2_ = &last_timestamp_;
     PChipTable<OUTPUT_ENCODER_TABLE_LENGTH> output_encoder_correction_table_;
@@ -413,7 +414,7 @@ void load_send_data(const MainLoop &main_loop, SendData * const data) {
     data->motor_position = main_loop.status_.motor_position;
     data->joint_position = main_loop.status_.output_position;
     data->torque = main_loop.status_.torque;
-    data->reserved[0] = 0;
+    data->reserved[0] = *reinterpret_cast<float *>(main_loop.reserved0_);
     data->reserved[1] = *reinterpret_cast<float *>(main_loop.reserved1_);
     data->reserved[2] = *reinterpret_cast<float *>(main_loop.reserved2_);
     data->flags.mode = main_loop.status_.mode;
