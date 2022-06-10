@@ -100,6 +100,7 @@ class System {
         api.add_api_variable("vbus_min", new APIFloat(&actuator_.main_loop_.param_.vbus_min));
         api.add_api_variable("vbus_max", new APIFloat(&actuator_.main_loop_.param_.vbus_min));
         api.add_api_variable("beep", new APICallbackFloat([](){ return 0; }, [](float f){ actuator_.fast_loop_.beep_on(f); }));
+        api.add_api_variable("disable_safe_mode", new APIUint8(&actuator_.main_loop_.param_.disable_safe_mode));
         api.add_api_variable("help", new const APICallback([](){ return api.get_all_api_variables(); }));
 
         uint32_t t_start = get_clock();

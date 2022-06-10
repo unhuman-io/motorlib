@@ -121,6 +121,7 @@ typedef struct {
     int16_t host_timeout;                             // 0 to disable, if no commands received before host timeout, go to safe_mode
     MainControlMode safe_mode;                 // goes to this mode and freeze command if error
                                                     // need to send reset from host to exit
+    uint8_t disable_safe_mode;                        // false to enable safe modes
     float torque_correction;
     float vbus_min;
     float vbus_max;

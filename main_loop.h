@@ -125,7 +125,7 @@ class MainLoop {
       }
       status_.error.output_encoder |= output_encoder_.error();
 
-      if (status_.error.all) {
+      if (!param_.disable_safe_mode && status_.error.all) {
           safe_mode_ = true;
           set_mode(param_.safe_mode);
       }
