@@ -26,4 +26,5 @@ class PositionController : public Controller {
     SecondOrderLowPassFilter desired_filter_;
 
     friend class System;
+    friend void config_init();
 };
