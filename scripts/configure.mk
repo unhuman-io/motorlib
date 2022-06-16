@@ -48,6 +48,13 @@ override C_DEFS +=  \
 -DGIT_VERSION=\"$(GIT_VERSION)\" \
 -DUSE_HAL_DRIVER \
 -DSTM32G474xx
+ifdef NOTES
+override C_DEFS += \
+-DNOTES=\"-$(NOTES)\"
+else
+override C_DEFS += \
+-DNOTES=
+endif
 
 # AS includes
 AS_INCLUDES = 
