@@ -53,7 +53,7 @@ override C_DEFS += \
 -DNOTES=\"-$(NOTES)\"
 else
 override C_DEFS += \
--DNOTES=
+-DNOTES=\"$(shell git branch --show-current)\"
 endif
 
 # AS includes
