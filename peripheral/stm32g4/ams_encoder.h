@@ -20,6 +20,7 @@ class AMSEncoder : public EncoderBase {
     GPIO &gpio_cs_;
     uint16_t last_data_ = 0;
     int32_t count_ = 0;
+    uint8_t error_count_ = 255;
 };
 
 #endif
