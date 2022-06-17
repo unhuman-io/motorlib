@@ -114,7 +114,7 @@ class SPITorque final : public TorqueSensorBase {
     uint32_t result0_ = 0;
     uint32_t result1_ = 0;
     uint32_t sum_;
-    float torque_ = 0;
+    //float torque_ = 0;
     uint8_t count_ = 0;
     uint8_t decimation_;
     volatile int register_operation_local_ = 0;
