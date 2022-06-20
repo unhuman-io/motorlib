@@ -26,9 +26,8 @@ class Actuator {
          fast_loop_.phase_lock_mode(startup_param_.phase_lock_current);
          ms_delay(1000*startup_param_.phase_lock_duration);
       }
-
-      fast_loop_.voltage_mode();
       fast_loop_.maintenance();  // TODO better way than calling this to update zero pos
+      fast_loop_.voltage_mode();
       main_loop_.set_mode(startup_param_.startup_mode);
       fast_loop_.set_iq_des(0);
       main_loop_.set_started();
