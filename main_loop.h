@@ -113,14 +113,14 @@ class MainLoop {
       //}
       status_.torque = torque_corrected;
 
-      if (status_.motor_position > param_.encoder_limits.motor_hard_max ||
-          status_.motor_position < param_.encoder_limits.motor_hard_min) {
+      if ((status_.motor_position > param_.encoder_limits.motor_hard_max ||
+          status_.motor_position < param_.encoder_limits.motor_hard_min) && started_) {
         status_.error.motor_encoder_limit = 1;
       }
       status_.error.motor_encoder |= fast_loop_.motor_encoder_error();
       
-      if (status_.output_position > param_.encoder_limits.output_hard_max ||
-          status_.output_position < param_.encoder_limits.output_hard_min) {
+      if ((status_.output_position > param_.encoder_limits.output_hard_max ||
+          status_.output_position < param_.encoder_limits.output_hard_min) && started_) {
           status_.error.output_encoder_limit = 1;
       }
       status_.error.output_encoder |= output_encoder_.error();
@@ -207,8 +207,8 @@ class MainLoop {
           break;
       }
 
-      if ((status_.motor_position > param_.encoder_limits.motor_controlled_max && iq_des >= 0) ||
-          (status_.motor_position < param_.encoder_limits.motor_controlled_min && iq_des <= 0)) {
+      if (((status_.motor_position > param_.encoder_limits.motor_controlled_max && iq_des >= 0) ||
+          (status_.motor_position < param_.encoder_limits.motor_controlled_min && iq_des <= 0)) && started_) {
           if (mode_ != VELOCITY && mode_ != param_.safe_mode) {
             set_mode(VELOCITY);
           }
