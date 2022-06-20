@@ -4,6 +4,7 @@
 #include <cstdint>
 #include "messages.h"
 #include "control_fun.h"
+#include "logger.h"
 
 // #include "fast_loop.h"
 #include "foc.h"
@@ -119,10 +120,15 @@ class FastLoop {
             motor_electrical_zero_pos_ = param_.motor_encoder.index_electrical_offset_pos + motor_index_pos_;
          }
          motor_index_pos_set_ = true;
-      }
+      }           
 
       if (mode_ == PHASE_LOCK_MODE) {
          motor_electrical_zero_pos_ = encoder_.get_value();
+         if (encoder_.index_received()) {
+           motor_index_pos_ = encoder_.get_index_pos();
+           motor_index_electrical_offset_measured_ = (motor_electrical_zero_pos_ - motor_index_pos_ + param_.motor_encoder.cpr) % 
+              (param_.motor_encoder.cpr/(uint8_t) param_.foc_param.num_poles);
+        }
       }
 
       v_bus_ = *v_bus_dr_*param_.vbus_gain;
@@ -251,6 +257,7 @@ class FastLoop {
     int32_t motor_index_pos_ = 0;
     bool motor_index_pos_set_ = false;
     int32_t motor_electrical_zero_pos_;
+    float motor_index_electrical_offset_measured_ = NAN;
     float inv_motor_encoder_cpr_;
     int32_t frequency_hz_ = 100000;
     volatile float ia_bias_ = 0;
