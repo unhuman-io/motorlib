@@ -75,6 +75,8 @@ typedef struct {
 
 typedef struct {
     PIDParam position;
+    float velocity_limit;
+    float desired_filter_hz;
 } PositionControllerParam;
 
 typedef struct {
@@ -119,6 +121,7 @@ typedef struct {
     int16_t host_timeout;                             // 0 to disable, if no commands received before host timeout, go to safe_mode
     MainControlMode safe_mode;                 // goes to this mode and freeze command if error
                                                     // need to send reset from host to exit
+    uint8_t disable_safe_mode;                        // false to enable safe modes
     float torque_correction;
     float vbus_min;
     float vbus_max;
@@ -148,6 +151,7 @@ typedef struct {
                                     // for example when output position = 0 if motor position is -1, then motor_encoder_bias = 1
     float num_encoder_poles;    // if motor encoder is only absolute per revolution % num_encoder_poles
     float transmission_stiffness; // also use transmission stiffness to help with motor bias setting
+    float output_encoder_rollover; // if the output encoder+bias is greater than this then output_encoder -= 2*pi
     MainControlMode startup_mode;
 } StartupParam;
 

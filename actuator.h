@@ -26,8 +26,8 @@ class Actuator {
          fast_loop_.phase_lock_mode(startup_param_.phase_lock_current);
          ms_delay(1000*startup_param_.phase_lock_duration);
       }
-
       fast_loop_.maintenance();  // TODO better way than calling this to update zero pos
+      fast_loop_.voltage_mode();
       main_loop_.set_mode(startup_param_.startup_mode);
       fast_loop_.set_iq_des(0);
       main_loop_.set_started();
@@ -36,24 +36,26 @@ class Actuator {
       fast_loop_.maintenance();
     }
     void set_bias() {
+      MainLoopStatus status = main_loop_.get_status();
+      if (status.output_position > startup_param_.output_encoder_rollover) {
+         main_loop_.adjust_output_encoder(-2*M_PI);
+         status.output_position -= 2*M_PI;
+      }
       switch(startup_param_.motor_encoder_startup) {
          default:
          case StartupParam::ENCODER_ZERO:
             break;
          case StartupParam::ENCODER_BIAS: {
-            MainLoopStatus status = main_loop_.get_status();
             main_loop_.set_motor_encoder_bias(-status.motor_position + startup_param_.motor_encoder_bias);
             break;
          }
          case StartupParam::ENCODER_BIAS_FROM_OUTPUT: {
-            MainLoopStatus status = main_loop_.get_status();
             main_loop_.set_motor_encoder_bias(status.output_position * startup_param_.gear_ratio 
               - status.fast_loop.motor_position.position + startup_param_.motor_encoder_bias);
             break;
          }
          case StartupParam::ENCODER_BIAS_FROM_OUTPUT_WITH_MOTOR_CORRECTION: {
             float round_by = 2*M_PI*(startup_param_.num_encoder_poles == 0 ? 1 : startup_param_.num_encoder_poles);
-            MainLoopStatus status = main_loop_.get_status();
             float motor_bias_from_output = status.output_position * startup_param_.gear_ratio 
               - (status.fast_loop.motor_position.position + startup_param_.motor_encoder_bias);
             float motor_bias_rounded = roundf(motor_bias_from_output*round_by)/(round_by);
@@ -62,7 +64,6 @@ class Actuator {
          }
          case StartupParam::ENCODER_BIAS_FROM_OUTPUT_WITH_TORQUE_AND_MOTOR_CORRECTION: {
             float round_by = 2*M_PI*(startup_param_.num_encoder_poles == 0 ? 1 : startup_param_.num_encoder_poles);
-            MainLoopStatus status = main_loop_.get_status();
             float motor_bias_from_output = (status.output_position - status.torque*startup_param_.transmission_stiffness) * startup_param_.gear_ratio 
               - (status.fast_loop.motor_position.position + startup_param_.motor_encoder_bias);
             float motor_bias_rounded = roundf(motor_bias_from_output*round_by)/(round_by);

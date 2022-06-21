@@ -25,8 +25,10 @@ class Logger {
     }
     void log_printf(const char *s, ...) {
         va_list args;
-        char sout[64];
-        vsnprintf(sout, 64, s, args);
+        char sout[MAX_API_DATA_SIZE];
+        va_start(args, s);
+        vsnprintf(sout, MAX_API_DATA_SIZE, s, args);
+        va_end(args);
         log(sout);
     }
  private:

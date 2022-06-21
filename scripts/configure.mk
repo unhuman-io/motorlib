@@ -74,7 +74,9 @@ C_INCLUDES =  \
 # link script
 LDSCRIPT = $(SELF_DIR)../peripheral/stm32g4/STM32G474RETx_FLASH.ld
 
+ifndef DRIVERS
 DRIVERS = ../boost_g474/Drivers
+endif
 
 endif # MCU_TARGET
 

@@ -196,6 +196,7 @@ private:
     FirstOrderLowPassFilter output_filter_;
 
     friend class System;
+    friend void config_init();
 };
 
 class PIDDeadbandController : public PIDController {

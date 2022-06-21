@@ -35,7 +35,7 @@ class MainLoop {
           output_encoder_correction_table_(param_.output_encoder.table), brake_(brake) {
           set_param(param);
           if (param_.vbus_min == 0) {
-            param_.vbus_min = 5;  // defaults that can be overridden via api
+            param_.vbus_min = 8;  // defaults that can be overridden via api
           }
           if (param_.vbus_max == 0) {
             param_.vbus_max = 60;
@@ -86,9 +86,11 @@ class MainLoop {
 
       // internal command, not recommended in conjunction with host_timeout or safe mode
       if (started_ && internal_command_received_) {
-        receive_data_ = internal_command_;
         internal_command_received_ = false;
-        command_received = true;
+        if (!safe_mode_) {
+          receive_data_ = internal_command_;
+          command_received = true;
+        }
       }
 
       if (command_received) {
@@ -111,19 +113,19 @@ class MainLoop {
       //}
       status_.torque = torque_corrected;
 
-      if (status_.motor_position > param_.encoder_limits.motor_hard_max ||
-          status_.motor_position < param_.encoder_limits.motor_hard_min) {
+      if ((status_.motor_position > param_.encoder_limits.motor_hard_max ||
+          status_.motor_position < param_.encoder_limits.motor_hard_min) && started_) {
         status_.error.motor_encoder_limit = 1;
       }
       status_.error.motor_encoder |= fast_loop_.motor_encoder_error();
       
-      if (status_.output_position > param_.encoder_limits.output_hard_max ||
-          status_.output_position < param_.encoder_limits.output_hard_min) {
+      if ((status_.output_position > param_.encoder_limits.output_hard_max ||
+          status_.output_position < param_.encoder_limits.output_hard_min) && started_) {
           status_.error.output_encoder_limit = 1;
       }
       status_.error.output_encoder |= output_encoder_.error();
 
-      if (status_.error.all) {
+      if (!param_.disable_safe_mode && status_.error.all) {
           safe_mode_ = true;
           set_mode(param_.safe_mode);
       }
@@ -205,8 +207,8 @@ class MainLoop {
           break;
       }
 
-      if ((status_.motor_position > param_.encoder_limits.motor_controlled_max && iq_des >= 0) ||
-          (status_.motor_position < param_.encoder_limits.motor_controlled_min && iq_des <= 0)) {
+      if (((status_.motor_position > param_.encoder_limits.motor_controlled_max && iq_des >= 0) ||
+          (status_.motor_position < param_.encoder_limits.motor_controlled_min && iq_des <= 0)) && started_) {
           if (mode_ != VELOCITY && mode_ != param_.safe_mode) {
             set_mode(VELOCITY);
           }
@@ -254,6 +256,7 @@ class MainLoop {
       impedance_controller_.set_rollover(rollover);
       velocity_controller_.set_rollover(rollover);
     }
+    void adjust_output_encoder(float adjustment) { param_.output_encoder.bias += adjustment; }
     void set_motor_encoder_bias(float bias) { motor_encoder_bias_ = bias; }
     const MainLoopStatus & get_status() const { return status_stack_.top(); }
     void set_started() { started_ = true; }
@@ -387,9 +390,9 @@ class MainLoop {
     TrajectoryGenerator position_trajectory_generator_;
     uint32_t timestamp_ = 0;
     uint32_t last_timestamp_ = 0;
+    uint32_t *reserved0_ = reinterpret_cast<uint32_t *>(&status_.fast_loop.vbus);
     uint32_t *reserved1_ = &timestamp_;
     uint32_t *reserved2_ = &last_timestamp_;
-    float output_encoder_pos_;
     PChipTable<OUTPUT_ENCODER_TABLE_LENGTH> output_encoder_correction_table_;
     CStack<MainLoopStatus,2> status_stack_;
     bool first_command_received_ = false;
@@ -398,7 +401,9 @@ class MainLoop {
 
     friend class System;
     friend void system_init();
+    friend void system_maintenance();
     friend void config_init();
+    friend void config_maintenance();
     friend void load_send_data(const MainLoop &main_loop, SendData *const data);
 };
 
@@ -411,7 +416,7 @@ void load_send_data(const MainLoop &main_loop, SendData * const data) {
     data->motor_position = main_loop.status_.motor_position;
     data->joint_position = main_loop.status_.output_position;
     data->torque = main_loop.status_.torque;
-    data->reserved[0] = 0;
+    data->reserved[0] = *reinterpret_cast<float *>(main_loop.reserved0_);
     data->reserved[1] = *reinterpret_cast<float *>(main_loop.reserved1_);
     data->reserved[2] = *reinterpret_cast<float *>(main_loop.reserved2_);
     data->flags.mode = main_loop.status_.mode;
