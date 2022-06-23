@@ -67,6 +67,8 @@ class MainLoop {
           } else if (receive_data.mode_desired == param_.safe_mode) {
               safe_mode_ = false;
               status_.error.all = 0;
+              command_received = true;
+              receive_data_ = receive_data;
           } else if (receive_data.mode_desired == BOARD_RESET) {
               set_mode(BOARD_RESET);
           }
@@ -94,7 +96,7 @@ class MainLoop {
       }
 
       if (command_received) {
-        if (mode_ != static_cast<MainControlMode>(receive_data_.mode_desired) || mode_ == SLEEP) {
+        if (mode_ != static_cast<MainControlMode>(receive_data_.mode_desired) || mode_ == SLEEP || mode_ == param_.safe_mode) {
           set_mode(static_cast<MainControlMode>(receive_data_.mode_desired));
         }
       }
@@ -261,7 +263,7 @@ class MainLoop {
     const MainLoopStatus & get_status() const { return status_stack_.top(); }
     void set_started() { started_ = true; }
     void set_mode(MainControlMode mode) {
-      if (mode != mode_) {
+      if (mode != mode_ || safe_mode_ != last_safe_mode_) {
         if(mode_ == HARDWARE_BRAKE && mode != HARDWARE_BRAKE) {
           brake_.off();
         }
@@ -348,8 +350,15 @@ class MainLoop {
             NVIC_SystemReset();
             break;
         }
+        if (safe_mode_) {
+          led_.set_color(LED::RED);
+          led_.set_rate(2);
+        } else {
+          led_.set_rate(1);
+        }
       }
       mode_ = mode;
+      last_safe_mode_ = safe_mode_;
       status_.mode = mode;
       receive_data_.mode_desired = mode; // todo: what is this for?
     }
@@ -380,6 +389,7 @@ class MainLoop {
     uint64_t count_ = 0;
     uint16_t no_command_ = 0;
     bool safe_mode_ = false;
+    bool last_safe_mode_ = false;
     bool started_ = false;
     MainLoopStatus status_ = {};
     MainControlMode mode_ = NO_MODE;
