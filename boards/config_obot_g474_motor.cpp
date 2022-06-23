@@ -132,6 +132,7 @@ float T = 0;
 
 void config_maintenance();
 void system_maintenance() {
+    static bool driver_fault = false;
     if (temp_rate.run()) {
         ADC1->CR |= ADC_CR_JADSTART;
         while(ADC1->CR & ADC_CR_JADSTART);
@@ -142,8 +143,9 @@ void system_maintenance() {
         }
     }
     if (!(GPIOC->IDR & 1<<14)) {
-        config::main_loop.status_.error.driver_fault = 1;
+        driver_fault = true;
     }
+    config::main_loop.status_.error.driver_fault = driver_fault;    // latch driver fault until reset
     index_mod = config::motor_encoder.index_error(param->fast_loop_param.motor_encoder.cpr);
     config_maintenance();
 }
