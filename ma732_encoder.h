@@ -1,9 +1,10 @@
+#pragma once
 #include "peripheral/spi_encoder.h"
 #include "util.h"
 
 // Note MA732 encoder expects cpol 1, cpha 1, max 25 mbit
 // 80 ns cs start to sclk, 25 ns sclk end to cs end
-class MA732Encoder final : public SPIEncoder {
+class MA732Encoder : public SPIEncoder {
  public:
     union MA732reg {
         struct {
@@ -13,9 +14,22 @@ class MA732Encoder final : public SPIEncoder {
         } bits;
         uint16_t word;
     };
-    MA732Encoder(SPI_TypeDef &regs, GPIO &gpio_cs, uint8_t filter = 119, volatile int *register_operation = nullptr) : SPIEncoder(regs, gpio_cs), filter_(filter) {
+    MA732Encoder(SPI_TypeDef &regs, GPIO &gpio_cs, uint8_t filter = 119, volatile int *register_operation = nullptr) : SPIEncoder(regs, gpio_cs), filter_(filter), regs_(regs) {
         if (register_operation != nullptr) {
             register_operation_ = register_operation;
+        }
+        reinit();
+    }
+
+    void reinit() {
+        if (!*register_operation_) {
+#ifdef STM32F446xx
+            regs_.CR1 = SPI_CR1_MSTR | (3 << SPI_CR1_BR_Pos) | SPI_CR1_SSI | SPI_CR1_SSM | SPI_CR1_SPE | SPI_CR1_DFF;    // baud = clock/16, 16 bit
+#else    
+            regs_.CR2 = (15 << SPI_CR2_DS_Pos);   // 16 bit
+            regs_.CR1 = SPI_CR1_MSTR | (3 << SPI_CR1_BR_Pos) | SPI_CR1_SSI | SPI_CR1_SSM | SPI_CR1_SPE;    // baud = clock/16
+#endif
+            
         }
     }
 
@@ -37,7 +51,8 @@ class MA732Encoder final : public SPIEncoder {
     }
 
     // non interrupt context
-    uint8_t read_register(uint8_t address) {
+    virtual uint8_t read_register(uint8_t address) {
+        reinit(); // only really necessary if there are multiple users of the spi
         (*register_operation_)++;
         MA732reg reg = {};
         reg.bits.address = address;
@@ -50,7 +65,8 @@ class MA732Encoder final : public SPIEncoder {
     }
 
     // non interrupt context
-    bool set_register(uint8_t address, uint8_t value) {
+    virtual bool set_register(uint8_t address, uint8_t value) {
+        reinit();
         (*register_operation_)++;
         bool retval = true;
         if (read_register(address) != value) {
@@ -82,10 +98,25 @@ class MA732Encoder final : public SPIEncoder {
         return read_register(0x3);
     }
 
+    uint32_t get_filt() {
+        return read_register(0xE);
+    }
+
+    virtual void set_filt(uint32_t value) {
+        set_register(0xE, value);
+    }
+
     void set_mgt(uint32_t value) {
         set_register(0x6, value);
     }
 
+    // The MA732 encoder doesn't give magnetic field strength directly but allows 
+    // you to set high and low thresholds in the 0x6 MGT register, then you can read
+    // the 0x1B status register to determine if the field is within those thresholds 
+    // or not. The full range of the MGT register is 20 to 126 mT in 8 steps. Recommended
+    // min mT is 40 which is step 2 in MGT. I combine the two readings like this
+    // (mght << 0 | (uint16_t) mglt << 8), so the minimum recommended value is about
+    // 0x202 or 514.
     uint32_t get_magnetic_field_strength() {
         uint8_t original_mgt = read_register(0x6);
         uint8_t mght = 0, mglt = 0;
@@ -116,8 +147,9 @@ class MA732Encoder final : public SPIEncoder {
         return success;
     }
 
- private:
+ protected:
     uint8_t filter_;
+    SPI_TypeDef &regs_;
     uint16_t last_data_ = 0;
     int32_t count_ = 0;
     volatile int register_operation_local_ = 0;

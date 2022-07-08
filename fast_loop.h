@@ -4,6 +4,7 @@
 #include <cstdint>
 #include "messages.h"
 #include "control_fun.h"
+#include "logger.h"
 
 // #include "fast_loop.h"
 #include "foc.h"
@@ -13,13 +14,16 @@
 // #include "encoder.h"
 // #include "../st_device.h"
 #include "sincos.h"
+#include "table_interp.h"
+#include "cstack.h"
 
 class FastLoop {
  public:
     FastLoop(int32_t frequency_hz, PWM &pwm, MotorEncoder &encoder, const FastLoopParam &param,
       volatile uint32_t *const i_a_dr, volatile uint32_t *const i_b_dr, volatile uint32_t *const i_c_dr, 
       volatile uint32_t *const v_bus_dr) 
-      : pwm_(pwm), encoder_(encoder), i_a_dr_(i_a_dr), i_b_dr_(i_b_dr), i_c_dr_(i_c_dr), v_bus_dr_(v_bus_dr) {
+      : param_(param), pwm_(pwm), encoder_(encoder), i_a_dr_(i_a_dr), i_b_dr_(i_b_dr), i_c_dr_(i_c_dr), v_bus_dr_(v_bus_dr),
+        motor_correction_table_(param_.motor_encoder.table), cogging_correction_table_(param_.cogging.table) {
        frequency_hz_ = frequency_hz;
        float dt = 1.0f/frequency_hz;
        foc_ = new FOC(dt);
@@ -46,21 +50,18 @@ class FastLoop {
       motor_enc = encoder_.read();
       int32_t motor_enc_diff = motor_enc-last_motor_enc;
       motor_enc_wrap_ = wrap1(motor_enc_wrap_ + motor_enc_diff, param_.motor_encoder.rollover);
+      motor_mechanical_position_ = (motor_enc_wrap_ - motor_index_pos_);
+      float motor_x = motor_mechanical_position_*inv_motor_encoder_cpr_;
 
-      motor_position_ = param_.motor_encoder.dir * 2 * (float) M_PI * inv_motor_encoder_cpr_ * motor_enc_wrap_;
-      motor_position_filtered_ = (1-alpha10)*motor_position_filtered_ + alpha10*motor_position_;
+      motor_position_ = param_.motor_encoder.dir * (2 * (float) M_PI * inv_motor_encoder_cpr_ * motor_enc_wrap_ 
+                          + motor_index_pos_set_*motor_correction_table_.table_interp(motor_x));
+      motor_position_filtered_ = motor_position_;//(1-alpha10)*motor_position_filtered_ + alpha10*motor_position_;
       motor_velocity =  param_.motor_encoder.dir * (motor_enc_diff)*(2*(float) M_PI * inv_motor_encoder_cpr_ * frequency_hz_);
       motor_velocity_filtered = (1-alpha)*motor_velocity_filtered + alpha*motor_velocity;
       last_motor_enc = motor_enc;
 
       // cogging compensation, interpolate in the table
-      motor_mechanical_position_ = (motor_enc - motor_index_pos_); 
-      float i_pos = motor_mechanical_position_*COGGING_TABLE_SIZE*inv_motor_encoder_cpr_;
-      uint16_t i = (int16_t) i_pos & (COGGING_TABLE_SIZE - 1);
-   //   float ifrac = i_pos - i;  // TODO fix for negative values
-      // Note (i+1) & (COGGING_TABLE_SIZE-1) allows wrap around, requires COGGING_TABLE_SIZE is multiple of 2
-   //   float iq_ff = param_.cogging.gain * (param_.cogging.table[i] + ifrac * (param_.cogging.table[(i+1) & (COGGING_TABLE_SIZE-1)] - param_.cogging.table[i]));
-      float iq_ff = param_.cogging.gain * param_.cogging.table[i];
+      float iq_ff = param_.cogging.gain * cogging_correction_table_.table_interp(motor_x);
 
       if (mode_ == CURRENT_TUNING_MODE) {
          // only works down to frequencies of .047 Hz, could use kahansum to go slower
@@ -73,7 +74,20 @@ class FastLoop {
          }
          Sincos sincos;
          sincos = sincos1(phi_);
-         iq_des = tuning_amplitude_ * (tuning_frequency_ > 0 ? sincos.sin : ((sincos.sin > 0) - (sincos.sin < 0)));
+         iq_des = tuning_bias_ + tuning_amplitude_ * (tuning_square_ ? fsignf(sincos.sin) : sincos.sin);
+      }
+
+      if (beep_) {
+        if ((int32_t) (get_clock()-beep_end_) > 0) {
+          beep_ = false;
+        } else {
+          phi_beep_ += 2 * (float) M_PI * fabsf(param_.beep_frequency) * dt_;
+          if (phi_beep_ > 2 * (float) M_PI) {
+            phi_beep_ -= 2 * (float) M_PI;
+          }
+          Sincos sincos = sincos1(phi_beep_);
+          iq_ff += param_.beep_amplitude*fsignf(sincos.sin);
+        }
       }
 
       // update FOC
@@ -82,9 +96,9 @@ class FastLoop {
 
       if (mode_ == STEPPER_TUNING_MODE) {
         foc_command_.measured.motor_encoder = stepper_position_;
-        motor_position_ = stepper_position_;
+        motor_position_filtered_ = stepper_position_;
         stepper_position_ += stepper_velocity_ * dt_;
-        stepper_position_ = wrap1(stepper_position_, 2*M_PI*1000);
+        stepper_position_ = wrap1(stepper_position_, 2*M_PI);
       }
       
       FOCStatus *foc_status = foc_->step(foc_command_);
@@ -94,25 +108,31 @@ class FastLoop {
 
       dt_ = (timestamp_ - last_timestamp_)*(float) (1.0f/CPU_FREQUENCY_HZ);
       last_timestamp_ = timestamp_;
-      t_seconds_.add(dt_);
+
+      store_status();
     }
     void maintenance() {
-      if (encoder_.index_received()) {
+      if (encoder_.index_received() && !motor_index_pos_set_) {
          motor_index_pos_ = encoder_.get_index_pos();
          if (param_.motor_encoder.use_index_electrical_offset_pos) {
             // motor_index_electrical_offset_pos is the value of an electrical zero minus the index position
             // motor_electrical_zero_pos is the offset to the initial encoder value
             motor_electrical_zero_pos_ = param_.motor_encoder.index_electrical_offset_pos + motor_index_pos_;
          }
-      }
+         motor_index_pos_set_ = true;
+      }           
 
       if (mode_ == PHASE_LOCK_MODE) {
          motor_electrical_zero_pos_ = encoder_.get_value();
+         if (encoder_.index_received()) {
+           motor_index_pos_ = encoder_.get_index_pos();
+           motor_index_electrical_offset_measured_ = (motor_electrical_zero_pos_ - motor_index_pos_ + param_.motor_encoder.cpr) % 
+              (param_.motor_encoder.cpr/(uint8_t) param_.foc_param.num_poles);
+        }
       }
 
       v_bus_ = *v_bus_dr_*param_.vbus_gain;
-      v_bus_ = fmaxf(10, v_bus_);
-      pwm_.set_vbus(v_bus_);
+      pwm_.set_vbus(fmaxf(7, v_bus_));
     }
     void set_id_des(float id) { foc_command_.desired.i_d = id; }
     void set_iq_des(float iq) { if (mode_ == CURRENT_MODE) iq_des = iq; }
@@ -124,6 +144,8 @@ class FastLoop {
       chirp_rate_ = chirp_rate; 
       chirp_frequency_.init(0);
     }
+    void set_tuning_bias(float bias) { tuning_bias_ = bias; }
+    void set_tuning_square(bool square = true) { tuning_square_ = square; }
     void set_stepper_position(float position) { stepper_position_ = position; }
     void set_stepper_velocity(float velocity) { stepper_velocity_ = velocity; }
     void set_reserved(float reserved) { reserved_ = reserved; }
@@ -149,11 +171,13 @@ class FastLoop {
       mode_ = CURRENT_TUNING_MODE;
     }
     void voltage_mode() {
+      phase_mode_ = phase_mode_desired_;
       pwm_.voltage_mode();
       foc_->voltage_mode();
       mode_ = VOLTAGE_MODE;
     }
     void stepper_mode() {
+      phase_mode_ = phase_mode_desired_;
       pwm_.voltage_mode();
       foc_->voltage_mode();
       mode_ = STEPPER_TUNING_MODE;
@@ -174,18 +198,21 @@ class FastLoop {
       set_phase_mode();
       inv_motor_encoder_cpr_ = param_.motor_encoder.cpr != 0 ? 1.f/param_.motor_encoder.cpr : 0;
     }
-    void get_status(FastLoopStatus *fast_loop_status) {
-      foc_->get_status(&(fast_loop_status->foc_status));
-      fast_loop_status->motor_mechanical_position = motor_mechanical_position_;
-      fast_loop_status->foc_command = foc_command_;
-      fast_loop_status->motor_position.position = motor_position_filtered_;
-      fast_loop_status->motor_position.velocity = motor_velocity_filtered;
-      fast_loop_status->motor_position.raw = motor_enc;
-      fast_loop_status->timestamp = timestamp_;
-      fast_loop_status->t_seconds = t_seconds_.value();
-      fast_loop_status->dt = dt_;
-      fast_loop_status->vbus = v_bus_;
+    const FastLoopStatus &get_status() const {
+      return status_.top();
     }
+    void store_status() {
+      FastLoopStatus &s = status_.next();
+      s.motor_mechanical_position = motor_mechanical_position_;
+      s.motor_position.position = motor_position_filtered_;
+      s.motor_position.raw = motor_enc;
+      s.timestamp = timestamp_;
+      s.vbus = v_bus_;
+      s.foc_command = foc_command_;
+      foc_->get_status(&s.foc_status);
+      status_.finish();
+    }
+
     void zero_current_sensors() {
       ia_bias_ = (1-alpha_zero_)*ia_bias_ + alpha_zero_* param_.adc1_gain*(adc1-param_.adc1_offset);
       ib_bias_ = (1-alpha_zero_)*ib_bias_ + alpha_zero_* param_.adc2_gain*(adc2-param_.adc2_offset);
@@ -195,6 +222,14 @@ class FastLoop {
       phase_mode_desired_ = param_.phase_mode == 0 ? 1 : -1;
     }
     float get_rollover() const { return 2*M_PI*inv_motor_encoder_cpr_*param_.motor_encoder.rollover; }
+    void beep_on(float t_seconds = 1) {
+      beep_ = true;
+      beep_end_ = get_clock() + t_seconds*CPU_FREQUENCY_HZ;
+    }
+    void beep_off() {
+      beep_ = false;
+    }
+    bool motor_encoder_error() { return encoder_.error(); }
  private:
     FastLoopParam param_;
     FOC *foc_;
@@ -220,7 +255,9 @@ class FastLoop {
     FOCCommand foc_command_ = {};
 
     int32_t motor_index_pos_ = 0;
+    bool motor_index_pos_set_ = false;
     int32_t motor_electrical_zero_pos_;
+    float motor_index_electrical_offset_measured_ = NAN;
     float inv_motor_encoder_cpr_;
     int32_t frequency_hz_ = 100000;
     volatile float ia_bias_ = 0;
@@ -231,12 +268,13 @@ class FastLoop {
     mcu_time timestamp_;
    MotorEncoder &encoder_;
    float reserved_ = 0;
-   KahanSum t_seconds_;
    mcu_time last_timestamp_ = 0;
    float dt_ = 0;
    float phi_ = 0;
    float tuning_amplitude_ = 0;
    float tuning_frequency_ = 0;
+   float tuning_bias_ = 0;
+   bool tuning_square_ = false;
    float chirp_rate_ = 0;
    bool current_tuning_chirp_ = false;
    KahanSum chirp_frequency_;
@@ -247,6 +285,12 @@ class FastLoop {
    volatile uint32_t *const i_b_dr_;
    volatile uint32_t *const i_c_dr_;
    volatile uint32_t *const v_bus_dr_;
+   PChipTable<MOTOR_ENCODER_TABLE_LENGTH> motor_correction_table_;
+   PChipTable<COGGING_TABLE_SIZE> cogging_correction_table_;
+   CStack<FastLoopStatus,2> status_;
+   bool beep_ = false;
+   uint32_t beep_end_ = 0;
+   float phi_beep_ = 0;
 
    friend class System;
 };

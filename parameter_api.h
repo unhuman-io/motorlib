@@ -3,6 +3,10 @@
 
 #include <string>
 #include <map>
+#include <vector>
+#include "util.h"
+#include <algorithm>
+#include "autocomplete.h"
 
 
 class APIVariable {
@@ -15,28 +19,53 @@ template<class T>
 class APIVariable2 : public APIVariable {
  public:
    APIVariable2(T *value) : value_(value) {};
+   APIVariable2(volatile T *value) : value_(value) {};
+   APIVariable2(const T* value) : value_(const_cast<T*>(value)) {}
    virtual std::string get() const { return std::to_string(*value_); }
    virtual void set(std::string) = 0;
  protected:
-   T *value_;
+   volatile T *value_;
 };
 
 class APIFloat : public APIVariable2<float> {
  public:
    APIFloat(float *f) : APIVariable2(f) {}
+   APIFloat(volatile float *f) : APIVariable2(f) {}
+   APIFloat(const  float *f) : APIVariable2(f) {}
    void set(std::string);
 };
 
-class APIUint32 : public APIVariable2<uint32_t> {
- public:
-   APIUint32(uint32_t *u) : APIVariable2(u) {}
-   void set(std::string);
+template<class T>
+class APIInt : public APIVariable2<T> {
+  public:
+    APIInt(T *u) : APIVariable2<T>(u) {}
+    APIInt(volatile T *u) : APIVariable2<T>(u) {}
+    APIInt(const T *u) : APIVariable2<T>(u) {}
+    void set(std::string s) {
+      *this->value_ = std::stoi(s);
+    }
 };
 
-class APIUint8 : public APIVariable2<uint8_t> {
+typedef APIInt<uint32_t> APIUint32;
+typedef APIInt<uint16_t> APIUint16;
+typedef APIInt<uint8_t> APIUint8;
+typedef APIInt<int32_t> APIInt32;
+typedef APIInt<int16_t> APIInt16;
+typedef APIInt<int8_t> APIInt8;
+typedef APIInt<bool> APIBool;
+
+template<class T>
+class APIHex : public APIInt<T> {
  public:
-   APIUint8(uint8_t *u) : APIVariable2(u) {}
-   void set(std::string);
+    APIHex(T *u) : APIInt<T>(u) {}
+    APIHex(const T *u) : APIInt<T>(u) {}
+    void set(std::string s) {
+      *this->value_ = std::stoi(s, nullptr, 16);
+    }
+    virtual std::string get() const { 
+      std::vector<char>bytes((char *) this->value_,(char *) this->value_+sizeof(T)); 
+      std::reverse(bytes.begin(),bytes.end());
+      return bytes_to_hex(bytes); }
 };
 
 #include <functional>
@@ -44,6 +73,7 @@ class APIUint8 : public APIVariable2<uint8_t> {
 class APICallback : public APIVariable {
  public:
   APICallback(std::function<std::string()> getfun, std::function<void(std::string)> setfun) : getfun_(getfun), setfun_(setfun) {}
+  APICallback(std::function<std::string()> getfun) : getfun_(getfun) {}
   void set(std::string s) { setfun_(s); }
   std::string get() const {return getfun_(); }
  private:
@@ -54,6 +84,7 @@ class APICallback : public APIVariable {
 class APICallbackFloat : public APIVariable {
  public:
    APICallbackFloat(std::function<float()> getfun , std::function<void(float)> setfun) : getfun_(getfun), setfun_(setfun) {}
+   APICallbackFloat(std::function<float()> getfun) : getfun_(getfun) {}
    void set(std::string s) { setfun_(stof(s)); }
    std::string get() const { return std::to_string(getfun_()); };
  private:
@@ -61,27 +92,36 @@ class APICallbackFloat : public APIVariable {
    std::function<void(float)> setfun_;
 };
 
-class APICallbackUint32 : public APIVariable {
+template<class T>
+class APICallbackUint : public APIVariable {
  public:
-   APICallbackUint32(std::function<uint32_t()> getfun , std::function<void(uint32_t)> setfun) : getfun_(getfun), setfun_(setfun) {}
-   void set(std::string);
-   std::string get() const;
+   APICallbackUint(std::function<T()> getfun , std::function<void(T)> setfun) : getfun_(getfun), setfun_(setfun) {}
+   APICallbackUint(std::function<T()> getfun) : getfun_(getfun) {}
+   void set(std::string s) { setfun_(std::stoi(s)); }
+   std::string get() const { return std::to_string(getfun_()); }
  private:
-   std::function<uint32_t()> getfun_;
-   std::function<void(uint32_t)> setfun_;
+   std::function<T()> getfun_;
+   std::function<void(T)> setfun_;
 };
+
+typedef APICallbackUint<uint32_t> APICallbackUint32;
+typedef APICallbackUint<uint16_t> APICallbackUint16;
+typedef APICallbackUint<uint8_t> APICallbackUint8;
 
 // allows for setting variables through text commands
 class ParameterAPI {
  public:
     // type is used by scanf to parse the string
     void add_api_variable(std::string name, APIVariable *variable);
+    void add_api_variable(std::string name, const APIVariable *variable);
     void set_api_variable(std::string name, std::string value);
     std::string get_api_variable(std::string name);
     std::string parse_string(std::string);
+    std::string get_all_api_variables() const;
  private:
     std::map<std::string, APIVariable *> variable_map_;
-    std::string last_string_;
+    std::map<std::string, const APIVariable *> const_variable_map_;
+    AutoComplete auto_complete_;
 };
 
 #endif

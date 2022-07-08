@@ -17,7 +17,16 @@ class Hysteresis {
     float hysteresis_ = 0;
 };
 
+inline float fsat2(float a, float min, float max) {
+    float b = a>max ? max : a;
+    b = b<min ? min : b;
+    return b;
+}
+
 float fsignf(float a);
+inline int32_t sign(int32_t a) {
+    return a > 0 ? 1 : (a < 0 ? -1 : 0);
+}
 
 class KahanSum {
  public:
@@ -67,7 +76,7 @@ public:
         }
     }
     float get_frequency() const {
-        return 0;
+        return alpha_/(2*M_PI*dt_*(1-alpha_));
     }
 private:
     float value_ = 0, last_value_ = 0;
@@ -91,7 +100,7 @@ class SecondOrderLowPassFilter {
         low_pass_2_.set_frequency(frequency_hz);
     }
     float get_frequency() const {
-        return 0;
+        return low_pass_1_.get_frequency();
     }
  private:
     FirstOrderLowPassFilter low_pass_1_, low_pass_2_;
@@ -139,7 +148,7 @@ private:
 
 class RateLimiter {
  public:
-    void set_limit(float limit) { limit_ = limit; }
+    void set_limit(float limit) { limit_ = (limit == 0 ? INFINITY : limit); }
     void init(float value, float velocity = 0) { last_value_ = value; velocity_ = velocity;}
     float step(float value) {
         float out_value = value;
@@ -157,6 +166,7 @@ class RateLimiter {
         last_value_ = out_value;
         return out_value;
     }
+    float get_value() const { return last_value_; }
     float get_velocity() const { return velocity_; }
  private:
     float limit_ = INFINITY;
@@ -166,14 +176,16 @@ class RateLimiter {
 
 class PIDController {
 public:
-    PIDController(float dt) : dt_(dt), error_dot_filter_(dt), output_filter_(dt) {}
+    PIDController(float dt) : dt_(dt), velocity_filter_(dt), output_filter_(dt) {}
     virtual ~PIDController() {}
-    void init(float measured) { rate_limit_.init(measured), error_last_ = 0; error_dot_filter_.init(0); output_filter_.init(0); } // todo init to current output 
+    void init(float measured) { rate_limit_.init(measured), ki_sum_ = 0; measured_last_ = measured; velocity_filter_.init(0); output_filter_.init(0); } // todo init to current output 
     virtual float step(float desired, float velocity_desired, float measured, float velocity_limit = INFINITY);
     void set_param(const PIDParam &param);
     float get_error() const { return error_last_; }
     void set_rollover(float rollover) { rollover_ = rollover; }
-private:
+protected:
+    float error_ = 0, velocity_measured_ = 0;
+    float measured_last_ = 0;
     float kp_ = 0, kd_ = 0, ki_ = 0, ki_sum_ = 0, ki_limit_ = 0, command_max_ = 0;
     float error_last_ = 0;
     float last_desired_ = 0;
@@ -181,10 +193,16 @@ private:
     float rollover_ = 0;
     Hysteresis hysteresis_;
     RateLimiter rate_limit_;
-    SecondOrderLowPassFilter error_dot_filter_;
+    SecondOrderLowPassFilter velocity_filter_;
     FirstOrderLowPassFilter output_filter_;
 
     friend class System;
+    friend void config_init();
+};
+
+class PIDWrapController : public PIDController {
+ public:
+    virtual float step(float desired, float velocity_desired, float measured, float velocity_limit = INFINITY);
 };
 
 class PIDDeadbandController : public PIDController {
@@ -211,55 +229,42 @@ class TrajectoryGenerator {
     struct TrajectoryValue {
         float value, value_dot;
     };
-        // frequency | amplitude | trajectory
-        // +         | +         | sin
-        // -         | +         | square
-        // +         | -         | chirp
-        // -         | -         | triangle
-    void set_frequency(float frequency) { frequency_ = frequency; set_mode(); }
-    void set_amplitude(float amplitude) { amplitude_ = amplitude; set_mode(); }
-    void set_mode() {
-        if (frequency_ > 0) {
-            if (amplitude_ > 0) {
-                mode_ = SIN;
-            } else {
-                mode_ = SQUARE;
-            }
-        } else {
-            if (amplitude_ > 0) {
-                mode_ = CHIRP;                
+    void set_frequency(float frequency) { frequency_ = frequency; }
+    void set_amplitude(float amplitude) { amplitude_ = amplitude; }
+    void set_mode(TuningMode mode) {
+        if (mode <= TuningMode::CHIRP) {
+            mode_ = mode;
+            if (mode == TuningMode::CHIRP) {
                 chirp_rate_ = frequency_;
                 frequency_ = 0;
                 chirp_frequency_.init();
-            } else {
-                mode_ = TRIANGLE;
             }
         }
     }
 
     TrajectoryValue &step(float dt) {
         // phi_ is a radian counter at the command frequency doesn't get larger than 2*pi
-        if (mode_ == CHIRP) {
+        if (mode_ == TuningMode::CHIRP) {
            frequency_ = chirp_frequency_.add(chirp_rate_ * dt);
         }
         // KahanSum allows for and summing of dt allows for low frequencies without losing resolution
         phi_.add(2 * (float) M_PI * fabsf(frequency_) * dt);
-        if (phi_.value() > 2 * (float) M_PI) {
+        if (phi_.value() > 2 * (float) M_PI) {  
             phi_.add(-2 * (float) M_PI);
         }
         Sincos sincos;
         sincos = sincos1(phi_.value());
         switch(mode_) {
-            case SIN:
-            case CHIRP:
+            case TuningMode::SINE:
+            case TuningMode::CHIRP:
                 trajectory_value_.value = amplitude_ * sincos.sin;
                 trajectory_value_.value_dot = 2 * (float) M_PI * frequency_ * amplitude_ * sincos.cos;
                 break;
-            case SQUARE:
+            case TuningMode::SQUARE:
                 trajectory_value_.value = amplitude_ * fsignf(sincos.sin);
                 trajectory_value_.value_dot = 0;
                 break;
-            case TRIANGLE:
+            case TuningMode::TRIANGLE:
                 if (phi_.value() < M_PI) {
                     trajectory_value_.value = amplitude_ * (2 * phi_.value() * (1/M_PI) - 1);
                     trajectory_value_.value_dot = 4 * amplitude_ * frequency_;
@@ -272,7 +277,7 @@ class TrajectoryGenerator {
         return trajectory_value_;
     }
  private:
-    enum Mode {SIN, SQUARE, CHIRP, TRIANGLE} mode_ = SIN;
+    TuningMode mode_ = TuningMode::SINE;
     float frequency_, amplitude_;
     TrajectoryValue trajectory_value_;
     KahanSum phi_, chirp_frequency_;

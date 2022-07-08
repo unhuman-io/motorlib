@@ -22,7 +22,7 @@ public:
     static void calculate_vdq0(Vdq0 *const, float cos, float sin, float va, float vb, float vc);
 
 private:
-    uint16_t num_poles_ = 7;
+    float num_poles_ = 7;
     volatile float i_gain_ = 0;
     PIController *pi_id_, *pi_iq_;
     FOCStatus status_;

@@ -93,7 +93,7 @@ static const uint8_t USB_CONFIGURATION_DESCRIPTOR[] =
   0x01,   /* bConfigurationValue: Configuration value */
   0x04,   /* iConfiguration: Index of string descriptor describing the configuration */
   0xC0,   /* bmAttributes: self powered */
-  0x32,   /* MaxPower 0 mA */
+  0x32,   /* MaxPower 100 mA */
   
   /*---------------------------------------------------------------------------*/
   
@@ -171,6 +171,14 @@ static const uint8_t USB_CONFIGURATION_DESCRIPTOR[] =
   0x01
 };
 
+struct usb_control_request {
+    uint8_t bRequestType;
+    uint8_t bRequest;
+    uint16_t wValue;    // little endian
+    uint16_t wIndex;
+    uint16_t wLength;
+} __attribute__ ((packed));
+
 // special function due to difficulty of toggle bits and clear bits;
 // hopefully hardware doesn't change values during this function
 static void epr_set_toggle(uint8_t endpoint, uint16_t set_bits, uint16_t set_mask);
@@ -183,47 +191,61 @@ bool USB1::tx_active(uint8_t endpoint) {
     return (USBEPR->EP[endpoint].EPR & USB_EPTX_STAT) == USB_EP_TX_VALID;
 }
 
+USB1::USB1() {
+    USB->CNTR = USB_CNTR_L1REQM | USB_CNTR_RESETM | USB_CNTR_SUSPM | USB_CNTR_WKUPM | USB_CNTR_ERRM | USB_CNTR_CTRM;
+}
+
+void USB1::connect() {
+    USB->BCDR |= USB_BCDR_DPPU; // device pull up
+}
+
+void USB1::cancel_transfer(uint8_t endpoint) {
+    // set NAK but it doesn't cancel any transfer in progress right now
+    while((USBEPR->EP[endpoint].EPR & USB_EPTX_STAT) != USB_EP_TX_NAK) {
+        epr_set_toggle(endpoint, USB_EP_TX_NAK, USB_EPTX_STAT);
+    }
+
+    // wait for any current transfer to complete, checking for activity on an EXTI pin 
+    // and checking for CTR_TX
+    // timeout of 50000 ns
+    EXTI->PR1 = EXTI_PR1_PIF10;
+    uint32_t t_start = get_clock();
+    uint16_t idle_count = 0;
+    while((get_clock() - t_start) < 50000/(uint16_t) (1e9/CPU_FREQUENCY_HZ)) {
+        if (EXTI->PR1 & EXTI_PR1_PIF10) {
+            EXTI->PR1 = EXTI_PR1_PIF10;
+            idle_count = 0;
+        } else {
+            idle_count++;
+        }
+        if (idle_count > 3) { 
+            // 3 gives about 2 us right now, usb pins must transition within 7 bits/.58 us
+            break;
+        }
+        if (USBEPR->EP[endpoint].EPR & USB_EP_CTR_TX) {
+            break;
+        }
+    }
+    // after making it through the endpoint may still be active (NAK was set, but a completed 
+    // tranfer will toggle a bit to thus reenable TX_VALID) so return to while(tx_active(endpoint)) 
+}
+
 // Wait will pause until last packet has been received, If wait is false, then a buffered packet
 // will be discarded. For wait being false the maximum transmission is USBD_BULK_SIZE (64) bytes.
-void USB1::send_data(uint8_t endpoint, const uint8_t *data, uint8_t length, bool wait) {
+void USB1::send_data(uint8_t endpoint, const uint8_t *data, uint16_t length, bool wait, uint32_t wait_timeout_us) {
+    auto t_start_wait = get_clock();
     while (tx_active(endpoint)) {
-        if (wait) {
+        if (wait && get_clock() - t_start_wait <= US_TO_CPU(wait_timeout_us)) {
+            // it wil force cancel on timeout
             continue;
         } else {
-            // set NAK but it doesn't cancel any transfer in progress right now
-            while((USBEPR->EP[endpoint].EPR & USB_EPTX_STAT) != USB_EP_TX_NAK) {
-                epr_set_toggle(endpoint, USB_EP_TX_NAK, USB_EPTX_STAT);
-            }
-
-            // wait for any current transfer to complete, checking for activity on an EXTI pin 
-            // and checking for CTR_TX
-            // timeout of 50000 ns
-            EXTI->PR1 = EXTI_PR1_PIF10;
-            uint32_t t_start = get_clock();
-            uint16_t idle_count = 0;
-            while((get_clock() - t_start) < 50000/(uint16_t) (1e9/CPU_FREQUENCY_HZ)) {
-                if (EXTI->PR1 & EXTI_PR1_PIF10) {
-                    EXTI->PR1 = EXTI_PR1_PIF10;
-                    idle_count = 0;
-                } else {
-                    idle_count++;
-                }
-                if (idle_count > 3) { 
-                    // 3 gives about 2 us right now, usb pins must transition within 7 bits/.58 us
-                    break;
-                }
-                if (USBEPR->EP[endpoint].EPR & USB_EP_CTR_TX) {
-                    break;
-                }
-            }
-            // after making it through the endpoint may still be active (NAK was set, but a completed 
-            // tranfer will toggle a bit to thus reenable TX_VALID) so return to while(tx_active(endpoint)) 
+            cancel_transfer(endpoint);
         }
     }
     
-    if (wait && (length > USBD_BULK_SIZE)) {
+    if (wait && (length >= USBD_BULK_SIZE)) {
         _send_data(endpoint, data, USBD_BULK_SIZE);
-        send_data(endpoint, data+USBD_BULK_SIZE, length-USBD_BULK_SIZE);
+        send_data(endpoint, data+USBD_BULK_SIZE, length-USBD_BULK_SIZE, wait, wait_timeout_us);
     } else {
         _send_data(endpoint, data, length);
     }
@@ -333,7 +355,7 @@ void USB1::interrupt() {
                         uint8_t buffer[64];
                         uint8_t byte_count = USBPMA->btable[0].COUNT_RX & USB_COUNT0_RX_COUNT0_RX;
                         read_pma(byte_count, USBPMA->buffer[0].EP_RX, buffer);
-                        handle_setup_packet(buffer);
+                        handle_setup_packet(reinterpret_cast<usb_control_request *>(buffer));
                     }
                     // clear CTR
                     USB->EP0R = (USB_EP_CTR_TX | (USB->EP0R & USB_EPREG_MASK)) & ~USB_EP_CTR_RX;
@@ -376,32 +398,32 @@ void USB1::interrupt() {
         }
     }
 
-    if (USB->ISTR & USB_ISTR_ERR) {
+    if (USB->ISTR & (USB_ISTR_ERR | USB_ISTR_ESOF)) {
         error_count_++;
-        USB->ISTR &= ~USB_ISTR_ERR;
+        USB->ISTR &= ~(USB_ISTR_ERR | USB_ISTR_ESOF);
     }
 
     // clear anything remaining
     //USB->ISTR = 0;
 }
 
- void USB1::handle_setup_packet(uint8_t *setup_data) {
-    switch(setup_data[0]) {
+ void USB1::handle_setup_packet(usb_control_request *setup_data) {
+    switch(setup_data->bRequestType) {
         case 0x80:  // standard request get
-            switch (setup_data[1]) {
+            switch (setup_data->bRequest) {
                 case 0x00:  // get status
-                    send_data(0, reinterpret_cast<const uint8_t *>("\x1\x0"), 2);  // self powered
+                    send_data(0, reinterpret_cast<const uint8_t *>("\x0\x0"), 2);  // not self powered or remote wakeup
                     break;
                 case 0x06:  // get descriptor
-                    switch (setup_data[3]) {
+                    switch (setup_data->wValue >> 8) {
                         case 0x01:   // device descriptor
-                            send_data(0, USB_DEVICE_DESCIPTOR, std::min(static_cast<size_t>(setup_data[6]),sizeof(USB_DEVICE_DESCIPTOR)));
+                            send_data(0, USB_DEVICE_DESCIPTOR, std::min(static_cast<size_t>(setup_data->wLength),sizeof(USB_DEVICE_DESCIPTOR)));
                             break;
                         case 0x02:   // configuration descriptor
-                            send_data(0, USB_CONFIGURATION_DESCRIPTOR, std::min(static_cast<size_t>(setup_data[6]),sizeof(USB_CONFIGURATION_DESCRIPTOR)));
+                            send_data(0, USB_CONFIGURATION_DESCRIPTOR, std::min(static_cast<size_t>(setup_data->wLength),sizeof(USB_CONFIGURATION_DESCRIPTOR)));
                             break;
                         case 0x03:  // string descriptor
-                            switch (setup_data[2]) {
+                            switch (setup_data->wValue & 0xFF) {
                                 case 0x00: // language descriptor
                                     send_data(0, reinterpret_cast<const uint8_t *>("\x4\x3\x9\x4"), 4); // english
                                     break;
@@ -419,7 +441,6 @@ void USB1::interrupt() {
                                     break;
                                 }
                                 case 0x04:
-                                    //send_string(0, "abc", std::strlen("abc"));
                                     send_string(0, GIT_HASH " " BUILD_DATETIME, std::strlen(GIT_HASH " " BUILD_DATETIME));
                                     break;
                                 case 0x05:
@@ -444,9 +465,9 @@ void USB1::interrupt() {
             }
             break;
         case 0x00:  // standard request set
-            switch (setup_data[1]) {
+            switch (setup_data->bRequest) {
                 case 0x05:  // set address
-                    device_address_ = setup_data[2];
+                    device_address_ = setup_data->wValue;
                     send_data(0,0,0);
                     // set device address after acknowledge
                     while((USB->EP0R & USB_EPTX_STAT) == USB_EP_TX_VALID);
@@ -486,22 +507,22 @@ void USB1::interrupt() {
             }
             break;
         case 0x01:  // interface request set
-            if (setup_data[1] == 11) { // set inteface request
-                interface_ = setup_data[4];
+            if (setup_data->bRequest == 11) { // set inteface request
+                interface_ = setup_data->wIndex;
                 send_data(0,0,0);
             } else {
                 send_stall(0);
             }
             break;
         case 0xa1:  // interface class get
-            if ((setup_data[1] == 3) && (interface_ == DFU_INTERFACE_NUMBER)) { // dfu get_status
+            if ((setup_data->bRequest == 3) && (interface_ == DFU_INTERFACE_NUMBER)) { // dfu get_status
                 send_data(0,reinterpret_cast<const uint8_t *>("\x00\x00\x00\x00\x00\x00"), 6);
             } else {
                 send_stall(0);
             }
             break;
         case 0x21:  // interface class request
-            if ((setup_data[1] == 0) && (interface_ == DFU_INTERFACE_NUMBER)) { // dfu detach
+            if ((setup_data->bRequest == 0) && (interface_ == DFU_INTERFACE_NUMBER)) { // dfu detach
                 send_data(0,0,0);
                 while ((USB->EP0R & USB_EPTX_STAT) == USB_EP_TX_VALID); // wait for packet to go through
                 ms_delay(10);

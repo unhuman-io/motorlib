@@ -1,10 +1,11 @@
 
 #include "hrpwm.h"
+#include "../../control_fun.h"
 
 void HRPWM::set_voltage(float v_abc[3]) {
-    pwm_a_ = v_abc[0] * v_to_pwm_ + half_period_;
-    pwm_b_ = v_abc[1] * v_to_pwm_ + half_period_;
-    pwm_c_ = v_abc[2] * v_to_pwm_ + half_period_;
+    pwm_a_ = fsat2(v_abc[0] * v_to_pwm_ + half_period_, pwm_min_, pwm_max_);
+    pwm_b_ = fsat2(v_abc[1] * v_to_pwm_ + half_period_, pwm_min_, pwm_max_);
+    pwm_c_ = fsat2(v_abc[2] * v_to_pwm_ + half_period_, pwm_min_, pwm_max_);
 }
 
 void HRPWM::set_vbus(float vbus) {
@@ -40,10 +41,28 @@ void HRPWM::voltage_mode() {
 }
 
 // todo doesn't work at startup before regs exist
-void HRPWM::set_frequency_hz(uint32_t frequency_hz) {
-    period_ = CPU_FREQUENCY_HZ*32/frequency_hz;
+void HRPWM::set_frequency_hz(uint32_t frequency_hz, uint16_t min_off_ns, uint16_t min_on_ns) {
+    int desired_prescaler = frequency_hz*2/(CPU_FREQUENCY_HZ/65536);
+    int ckpsc;
+    if (desired_prescaler >= 32) {
+        prescaler_ = 32;
+        ckpsc = 0;
+    } else if (desired_prescaler >= 16) {
+        prescaler_ = 16;
+        ckpsc = 1;
+    } else {
+        prescaler_ = 8; // no slower than this
+        ckpsc = 2;
+    }
+    regs_.sTimerxRegs[ch_a_].TIMxCR |= ckpsc;
+    regs_.sTimerxRegs[ch_b_].TIMxCR |= ckpsc;
+    regs_.sTimerxRegs[ch_c_].TIMxCR |= ckpsc;
+    count_per_ns_ = CPU_FREQUENCY_HZ * prescaler_/ 4 / 1.e9; // Datasheet says /8 not /4, but /4 seems to give correct scale
+    period_ = (double) CPU_FREQUENCY_HZ*prescaler_/2/frequency_hz;
     regs_.sTimerxRegs[ch_a_].PERxR = period_;
     regs_.sTimerxRegs[ch_b_].PERxR = period_;
     regs_.sTimerxRegs[ch_c_].PERxR = period_;
     half_period_ = period_/2; 
+    pwm_max_ = period_ - fmaxf(2*min_on_ns*count_per_ns_, 65); // seems to require at least 64 to not glitch and go high when should be low
+    pwm_min_ = 2*min_off_ns*count_per_ns_;
 }

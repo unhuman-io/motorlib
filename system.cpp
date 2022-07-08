@@ -15,3 +15,7 @@ void fast_loop_interrupt() {
 void system_log(std::string s) {
     System::log(s);
 }
+
+Logger logger;
+uint32_t System::count_ = 0;
+ParameterAPI System::api = {};

@@ -17,15 +17,17 @@ class USBCommunication : public CommunicationBase {
        string[count] = 0;
        return count;
     }
-    bool send_string(const char * const string, uint8_t length) {
-       if (!usb_.tx_active(1)) {
-         usb_.send_data(1, (const uint8_t * const) string, length, false);
-         return true;
-       }
-       return false;
+    bool send_string(const char * const string, uint16_t length) {
+       usb_.send_data(1, (const uint8_t * const) string, 
+            std::min((uint16_t) MAX_API_DATA_SIZE, length), true);
+       return true;
     }
+    bool send_string_active() const { return usb_.tx_active(1); }
+    void cancel_send_string() { usb_.cancel_transfer(1); }
+    bool new_rx_data() { return usb_.new_rx_data(2); }
  private:
     USB1 &usb_;
+    friend class System;
 };
 
 #endif

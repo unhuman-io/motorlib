@@ -6,12 +6,15 @@
 
 class SPIDMA {
  public:
-    SPIDMA(SPI_TypeDef &regs, GPIO &gpio_cs, DMA_Channel_TypeDef &tx_dma, DMA_Channel_TypeDef &rx_dma) : 
+    SPIDMA(SPI_TypeDef &regs, GPIO &gpio_cs, DMA_Channel_TypeDef &tx_dma, DMA_Channel_TypeDef &rx_dma, 
+        uint16_t start_cs_delay_ns = 100, uint16_t end_cs_delay_ns = 100) : 
         regs_(regs), gpio_cs_(gpio_cs),
-        tx_dma_(tx_dma), rx_dma_(rx_dma) {
+        tx_dma_(tx_dma), rx_dma_(rx_dma),
+        start_cs_delay_ns_(start_cs_delay_ns), end_cs_delay_ns_(end_cs_delay_ns) {
             regs_.CR2 |= SPI_CR2_RXDMAEN | SPI_CR2_TXDMAEN;
             tx_dma_.CPAR = (uint32_t) &regs_.DR;
             rx_dma_.CPAR = (uint32_t) &regs_.DR;
+            regs_.CR1 |= SPI_CR1_SPE; // enable
     }
 
     void readwrite(const uint8_t * const data_out, uint8_t * const data_in, uint8_t length) {
@@ -42,8 +45,8 @@ class SPIDMA {
     SPI_TypeDef &regs_;
     GPIO &gpio_cs_;
     DMA_Channel_TypeDef &tx_dma_, &rx_dma_;
-    uint16_t start_cs_delay_ns_ = 100;
-    uint16_t end_cs_delay_ns_ = 100;
+    uint16_t start_cs_delay_ns_;
+    uint16_t end_cs_delay_ns_;
 
     friend class System;
 };

@@ -5,10 +5,10 @@ class TorqueController : public Controller {
  public:
     TorqueController(float dt) : Controller(dt), controller_(dt) {}
     void init(const MainLoopStatus &status) {
-        controller_.init(status.torque_filtered);
+        controller_.init(status.torque);
     }
     float step(const MotorCommand &command, const MainLoopStatus &status) {
-        float iq_des = controller_.step(command.torque_desired, 0, status.torque_filtered) + \
+        float iq_des = controller_.step(command.torque_desired, 0, status.torque) + \
                   command.current_desired;
         return iq_des;
     }

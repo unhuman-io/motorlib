@@ -15,7 +15,7 @@ extern uint8_t go_to_bootloader;
 class USB_OTG {
  public:
 
-    void send_data(uint8_t endpoint, const uint8_t *data, uint8_t length, bool wait=true) {
+    void send_data(uint8_t endpoint, const uint8_t *data, uint16_t length, bool wait=true) {
         send_data32(endpoint, (uint32_t *) data, (length+3)/4, length);
     }
 
@@ -199,6 +199,9 @@ class USB_OTG {
         return USBx_INEP(ep_num)->DIEPCTL & USB_OTG_DIEPCTL_EPENA;
     }
 
+    bool new_rx_data(uint8_t endpoint) const { return new_rx_data_[endpoint]; }
+    void cancel_transfer(uint8_t endpoint) {} // todo implement if useful
+
 private:
     uint8_t device_address_ = 0;
     uint8_t setup_data[64];
@@ -207,4 +210,7 @@ private:
     int sending_=0;
     bool new_rx_data_[4] = {};
     uint8_t count_rx_[4] = {};
+    uint32_t error_count_ = 0;
+
+    friend class System;
 };
