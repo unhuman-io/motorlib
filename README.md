@@ -4,6 +4,10 @@ Motorlib is a library for embedded motor control. It is designed to run an actua
 ![loop diagram](doc/motor_loop_diagram.svg#gh-light-mode-only)
 ![loop diagram](doc/motor_loop_diagram_dark.svg#gh-dark-mode-only)
 
+The main loop is intended to run several different several different options for main loop controllers that are identified by different modes. There is a minimal amount of state related to switching controllers and the controller mode is set in the realtime packet. That is that the controller can generally be switched instanenously with no intermediate state machine transition steps. The expection is when a fault occurs. A fault will cause the library to be forced into `safe_mode` which is configurable to any of the controller mode options. In order to exit the chosen safe mode first the host must explicitly send a command requesting that safe mode. This will clear the fault bits and then as long as faults remain cleared, the host can then transition to any other mode. A diagram of this logic is shown below.
+![state diagram](doc/obot_controller_state_diagram.svg#gh-light-mode-only)
+![state diagram](doc/obot_controller_state_diagram_dark.svg#gh-dark-mode-only)
+
 Motorlib has support for several different sensors and driver configurations. It is designed to be statically compiled for the specific hardware configuration including microcontroller, sensors, driver, and communication method. It is configured by means of the headers that you include and by typedefs. For example the `MainLoop` requires a `MotorEncoder` to operate. If your motor encoder is of type `MA732Encoder` you would configure as follows:
 ```c
 #include "ma732_encoder.h"
