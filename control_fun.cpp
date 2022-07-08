@@ -76,12 +76,36 @@ void PIDController::set_param(const PIDParam &param) {
     ki_limit_ = param.ki_limit;
     kd_ = param.kd;
     command_max_ = param.command_max;
-    error_dot_filter_.set_frequency(param.velocity_filter_frequency_hz);
+    velocity_filter_.set_frequency(param.velocity_filter_frequency_hz);
     output_filter_.set_frequency(param.output_filter_frequency_hz);
     hysteresis_.set_hysteresis(command_max_/kp_);
 }
 
 float PIDController::step(float desired, float velocity_desired, float measured, float velocity_limit) {
+    // PID controller with formula
+    // out = (ki/s + kp + kd*s) * error
+    // with s*error given by velocity_desired - velocity measured from measured with internal 2nd order filter
+    // with saturation on ki/s * error: ki_limit
+    // saturation on out: command_max
+    // output filter is first order filter for lead controller option
+    // velocity limit: velocity_limit on command - not if not tracking velocity can exceed this
+
+    rate_limit_.set_limit(fabsf(velocity_limit*dt_));
+    
+    // proxy is a prefix for a limited desired value
+    float proxy_desired = rate_limit_.step(desired);
+    float proxy_velocity_desired = fsat(velocity_desired, velocity_limit);
+    error_ = proxy_desired - measured;
+    velocity_measured_ = velocity_filter_.update((measured - measured_last_)/dt_);
+    float error_dot = proxy_velocity_desired - velocity_measured_;
+    measured_last_ = measured;
+    ki_sum_ += ki_ * dt_ * error_;
+    ki_sum_ = fsat(ki_sum_, ki_limit_);
+    float filtered_out = output_filter_.update(kp_*error_ + ki_sum_ + kd_*error_dot);
+    return fsat(filtered_out, command_max_);
+}
+
+float PIDWrapController::step(float desired, float velocity_desired, float measured, float velocity_limit) {
     // PID controller with formula
     // out = (ki/s + kp + kd*s) * error
     // with s*error given by velocity_desired - velocity measured from measured with internal 2nd order filter
@@ -106,11 +130,11 @@ float PIDController::step(float desired, float velocity_desired, float measured,
     //rate_limit_.init(proxy_wrap, rate_limit_.get_velocity());
    // float proxy_dot_desired = fsat(velocity_desired, fabsf(rate_limit_.get_velocity()/dt_));
     error_ = wrap1_diff(proxy_desired, measured, rollover_);
-    error_dot_ = error_dot_filter_.update((error_ - error_last_)/dt_);
+    float error_dot = velocity_filter_.update((error_ - error_last_)/dt_);
     error_last_ = error_;
     ki_sum_ += ki_ * dt_ * error_;
     ki_sum_ = fsat(ki_sum_, ki_limit_);
-    float filtered_out = output_filter_.update(kp_*error_ + ki_sum_ + kd_*error_dot_);
+    float filtered_out = output_filter_.update(kp_*error_ + ki_sum_ + kd_*error_dot);
     return fsat(filtered_out, command_max_);
 }
 
