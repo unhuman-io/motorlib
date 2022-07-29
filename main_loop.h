@@ -69,8 +69,11 @@ class MainLoop {
               status_.error.all = 0;
               command_received = true;
               receive_data_ = receive_data;
-          } else if (receive_data.mode_desired == BOARD_RESET) {
-              set_mode(BOARD_RESET);
+          } else if (receive_data.mode_desired == BOARD_RESET ||
+                     receive_data.mode_desired == CRASH ||
+                     receive_data.mode_desired == SLEEP ||
+                     receive_data.mode_desired == FAULT) {
+              set_mode(static_cast<MainControlMode>(receive_data.mode_desired));
           }
         } else {
           no_command_++;
