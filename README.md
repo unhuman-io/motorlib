@@ -17,3 +17,11 @@ using MotorEncoder = MA732Encoder;
 Prior to settling on static/typedef configuration I considered several means for configuration including virtual functions and templates. Virtual functions tended to cause difficulty with execution speed and also added difficulty to optimization. A key embedded optimization is to place the fast loop is a specific place in memory called CCM_RAM. By using headers to configure, only one memory section statement is required. Templates can also solve the problem but they lead to more difficult to read, debug, and configure code. So the static/typedef approach currently seems to be the best method for easy configurability and maintainability.
 
 Examples using this library are found in the adjacent `obot-controller` repository.
+
+## Install/setup
+
+The prefered compiler is gcc for the arm-none-eabi 32 bit target. It can be installed to the `gcc` dir of this directory by running: 
+```console
+scripts/install_gcc.sh
+```
+Using the included build script `configure_gcc.mk` this compiler location is automatically reference. 
