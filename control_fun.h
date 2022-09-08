@@ -186,7 +186,7 @@ public:
 protected:
     float error_ = 0, velocity_measured_ = 0;
     float measured_last_ = 0;
-    float kp_ = 0, kd_ = 0, ki_ = 0, ki_sum_ = 0, ki_limit_ = 0, command_max_ = 0;
+    float kp_ __attribute((tuneable)) = 1.1, kd_ __attribute((tuneable)) = 0, ki_ = 0, ki_sum_ = 0, ki_limit_ = 0, command_max_ = 0;
     float error_last_ = 0;
     float last_desired_ = 0;
     float dt_;
