@@ -21,9 +21,18 @@ uint16_t drv_regs_error = 0;
 #include "pin_config_obot_g474_motor.h"
 #include "../peripheral/stm32g4/temp_sensor.h"
 
+#ifdef R3
+#define HAS_MAX31875
+#include "../peripheral/stm32g4/max31875.h"
+#endif
+
 namespace config {
     static_assert(((double) CPU_FREQUENCY_HZ * 8 / 2) / pwm_frequency < 65535);    // check pwm frequency
     TempSensor temp_sensor;
+#ifdef HAS_MAX31875
+    I2C i2c1(*I2C1, 1000);
+    MAX31875 board_temperature(i2c1);
+#endif
     HRPWM motor_pwm = {pwm_frequency, *HRTIM1, 3, 5, 4, false, 200, 1000, 0};
     USB1 usb;
     FastLoop fast_loop = {(int32_t) pwm_frequency, motor_pwm, motor_encoder, param->fast_loop_param, &I_A_DR, &I_B_DR, &I_C_DR, &V_BUS_DR};
@@ -72,6 +81,9 @@ void system_init() {
     std::function<float()> get_t = std::bind(&TempSensor::get_value, &config::temp_sensor);
     std::function<void(float)> set_t = std::bind(&TempSensor::set_value, &config::temp_sensor, std::placeholders::_1);
     System::api.add_api_variable("T", new APICallbackFloat(get_t, set_t));
+#ifdef HAS_MAX31875
+    System::api.add_api_variable("Tboard", new const APICallbackFloat([](){ return config::board_temperature.get_temperature(); }));
+#endif
     System::api.add_api_variable("index_mod", new APIInt32(&index_mod));
     System::api.add_api_variable("drv_err", new const APICallbackUint32(get_drv_status));
     System::api.add_api_variable("drv_reset", new const APICallback(drv_reset));
@@ -141,6 +153,12 @@ void system_maintenance() {
         if (T > 100) {
             config::main_loop.status_.error.microcontroller_temperature = 1;
         }
+#ifdef HAS_MAX31875
+        config::board_temperature.read();
+        if (config::board_temperature.get_temperature() > 100) {
+            config::main_loop.status_.error.board_temperature = 1;
+        }
+#endif
     }
     if (!(GPIOC->IDR & 1<<14)) {
         driver_fault = true;
