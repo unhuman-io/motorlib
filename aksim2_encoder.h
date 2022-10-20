@@ -1,6 +1,7 @@
 #pragma once
 
 #include "encoder.h"
+#include <cmath>
 
 uint8_t CRC_BiSS_43_24bit(uint32_t w_InputData);
 
@@ -34,7 +35,6 @@ class Aksim2Encoder : public EncoderBase {
         // 17+20+2+6 = 45 -> 6 bytes
         // currently only 12 leading bits instead of 17, don't know why
         uint32_t raw_value = (data_in_[1] & 0xF) << 24 | data_in_[2] << 16 | data_in_[3] << 8 | data_in_[4];
-        value_ = raw_value >> (28 - nbits_);
         Diag diag;
         diag.word = (raw_value >> (20 - nbits_)) & 0xFF;
         diag_.err = diag.err;
@@ -50,6 +50,14 @@ class Aksim2Encoder : public EncoderBase {
         if (!diag_.crc6) {
             crc_err_count_++;
         }
+
+        if (diag_.crc6 && diag_.err) {
+            uint32_t shift_value = (raw_value >> (28 - nbits_)) << (32 - nbits_);
+            int32_t diff = (int32_t) (shift_value - last_shift_value_) >> (32 - nbits_);
+            last_shift_value_ = shift_value;
+            value_ += diff;
+        }
+
         diag_raw_ = diag;
         return get_value();
     }
@@ -69,7 +77,8 @@ class Aksim2Encoder : public EncoderBase {
     uint8_t data_out_[length_] = {};
     uint8_t data_in_[length_] = {};
     int32_t value_ = 0;
-    uint8_t nbits_ = 18;
+    static const uint8_t nbits_ = 18;
+    uint32_t last_shift_value_ = 0;
 };
 
 
