@@ -5,6 +5,7 @@
 
 uint8_t CRC_BiSS_43_24bit(uint32_t w_InputData);
 
+template<uint8_t nbits_>
 class Aksim2Encoder : public EncoderBase {
  public:
     union Diag {
@@ -78,7 +79,6 @@ class Aksim2Encoder : public EncoderBase {
     uint8_t data_out_[length_] = {};
     uint8_t data_in_[length_] = {};
     int32_t value_ = 0;
-    static const uint8_t nbits_ = 18;
     uint32_t last_shift_value_ = 0;
 };
 
