@@ -33,13 +33,13 @@ class Aksim2Encoder : public EncoderBase {
         spi_dma_.finish_readwrite();
         // 17 bits of nothing, then number of data bits 18-20, then error bit, warn bit, and crc6
         // 17+20+2+6 = 45 -> 6 bytes
-        // currently only 12 leading bits instead of 17, don't know why
-        uint32_t raw_value = (data_in_[1] & 0xF) << 24 | data_in_[2] << 16 | data_in_[3] << 8 | data_in_[4];
+        // raw value will be 31 bits with a leading zero
+        raw_value_ = data_in_[2] << 24 | data_in_[3] << 16 | data_in_[4] << 8 | data_in_[5];
         Diag diag;
-        diag.word = (raw_value >> (20 - nbits_)) & 0xFF;
+        diag.word = (raw_value_ >> (31 - 8 - nbits_)) & 0xFF;
         diag_.err = diag.err;
         diag_.warn = diag.warn;
-        crc_calc_ = ~CRC_BiSS_43_24bit(raw_value >> (26 - nbits_)) & 0x3F;
+        crc_calc_ = ~CRC_BiSS_43_24bit(raw_value_ >> (31 - 2 - nbits_)) & 0x3F; // crc of data plus 2 status bits
         diag_.crc6 = crc_calc_ == diag.crc6;
         if (!diag_.err) {
             diag_err_count_++;
@@ -52,7 +52,7 @@ class Aksim2Encoder : public EncoderBase {
         }
 
         if (diag_.crc6 && diag_.err) {
-            uint32_t shift_value = (raw_value >> (28 - nbits_)) << (32 - nbits_);
+            uint32_t shift_value = (raw_value_ >> (31 - nbits_)) << (32 - nbits_);
             int32_t diff = (int32_t) (shift_value - last_shift_value_) >> (32 - nbits_);
             last_shift_value_ = shift_value;
             value_ += diff;
@@ -69,6 +69,7 @@ class Aksim2Encoder : public EncoderBase {
     uint32_t crc_err_count_ = 0;
     uint32_t diag_err_count_ = 0;
     uint32_t diag_warn_count_ = 0;
+    uint32_t raw_value_ = 0;
 
 
  private:
