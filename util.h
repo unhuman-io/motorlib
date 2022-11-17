@@ -13,6 +13,7 @@ static inline uint8_t get_lsu_count() { return DWT->LSUCNT; }
 
 
 void ms_delay(uint16_t ms);
+void us_delay(uint16_t us);
 void ns_delay(uint16_t ns);
 
 extern char _estack;
