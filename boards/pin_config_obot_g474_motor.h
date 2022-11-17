@@ -208,6 +208,9 @@ void pin_config_obot_g474_motor_r0() {
         SPI1->CR2 = (15 << SPI_CR2_DS_Pos) | SPI_CR2_FRF;   // 16 bit TI mode
         // ORDER DEPENDANCE SPE set last
         SPI1->CR1 = SPI_CR1_MSTR | (5 << SPI_CR1_BR_Pos) | SPI_CR1_SPE;    // baud = clock/64
+
+        // SPI1 CS2
+        GPIO_SETL(C, 3, GPIO::OUTPUT, GPIO_SPEED::MEDIUM, 0);
         drv_enable();
 
         // I2C1
