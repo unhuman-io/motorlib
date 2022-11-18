@@ -204,6 +204,11 @@ void pin_config_obot_g474_motor_r0() {
         NVIC_SetPriority(USB_LP_IRQn, NVIC_EncodePriority(NVIC_GetPriorityGrouping(), 2, 0));
         NVIC_EnableIRQ(USB_LP_IRQn);
 
+#if defined(R4)
+        GPIO_SETL(C, 4, GPIO::OUTPUT, GPIO_SPEED::LOW, 0);        // imu cs
+        GPIOC->BSRR |= GPIO_BSRR_BS4; // set imu cs
+#endif
+
         // SPI1 DRV8323RS        
         SPI1->CR2 = (15 << SPI_CR2_DS_Pos) | SPI_CR2_FRF;   // 16 bit TI mode
         // ORDER DEPENDANCE SPE set last
