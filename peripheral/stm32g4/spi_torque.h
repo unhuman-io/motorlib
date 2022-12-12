@@ -105,6 +105,7 @@ class SPITorque final : public TorqueSensorBase {
     uint32_t reset2() {
         return 0;
     }
+    volatile int *register_operation_ = &register_operation_local_;
  private:
     SPI_TypeDef &regs_;
     GPIO &gpio_cs_;
@@ -118,7 +119,7 @@ class SPITorque final : public TorqueSensorBase {
     uint8_t count_ = 0;
     uint8_t decimation_;
     volatile int register_operation_local_ = 0;
-    volatile int *register_operation_ = &register_operation_local_;
+    
 
     friend class System;
     friend void system_init();

@@ -80,6 +80,8 @@ class Aksim2Encoder : public EncoderBase {
     uint8_t data_in_[length_] = {};
     int32_t value_ = 0;
     uint32_t last_shift_value_ = 0;
+
+    friend void config_init();
 };
 
 

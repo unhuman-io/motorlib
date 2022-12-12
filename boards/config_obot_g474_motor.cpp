@@ -20,6 +20,7 @@ uint16_t drv_regs_error = 0;
 #include "../system.h"
 #include "pin_config_obot_g474_motor.h"
 #include "../peripheral/stm32g4/temp_sensor.h"
+#include "../peripheral/stm32g4/drv8323s.h"
 
 #if defined(R3) || defined(R4)
 #define HAS_MAX31875
@@ -28,6 +29,11 @@ uint16_t drv_regs_error = 0;
 
 namespace config {
     static_assert(((double) CPU_FREQUENCY_HZ * 8 / 2) / pwm_frequency < 65535);    // check pwm frequency
+#ifdef SPI1_REINIT_CALLBACK
+    DRV8323S drv(*SPI1, nullptr, spi1_reinit_callback);
+#else
+    DRV8323S drv(*SPI1);
+#endif
     TempSensor temp_sensor;
 #ifdef HAS_MAX31875
     I2C i2c1(*I2C1, 1000);
@@ -85,8 +91,8 @@ void system_init() {
     System::api.add_api_variable("Tboard", new const APICallbackFloat([](){ return config::board_temperature.get_temperature(); }));
 #endif
     System::api.add_api_variable("index_mod", new APIInt32(&index_mod));
-    System::api.add_api_variable("drv_err", new const APICallbackUint32(get_drv_status));
-    System::api.add_api_variable("drv_reset", new const APICallback(drv_reset));
+    System::api.add_api_variable("drv_err", new const APICallbackUint32([](){ return config::drv.get_drv_status(); }));
+    System::api.add_api_variable("drv_reset", new const APICallback([](){ return config::drv.drv_reset(); }));
     System::api.add_api_variable("A1", new const APICallbackFloat([](){ return A1_DR; }));
     System::api.add_api_variable("A2", new const APICallbackFloat([](){ return A2_DR; }));
     System::api.add_api_variable("A3", new const APICallbackFloat([](){ return A3_DR; }));
@@ -166,6 +172,25 @@ void system_maintenance() {
     config::main_loop.status_.error.driver_fault = driver_fault;    // latch driver fault until reset
     index_mod = config::motor_encoder.index_error(param->fast_loop_param.motor_encoder.cpr);
     config_maintenance();
+}
+
+void setup_sleep() {
+    NVIC_DisableIRQ(TIM1_UP_TIM16_IRQn);
+    NVIC_DisableIRQ(ADC5_IRQn);
+    config::drv.drv_disable();
+    NVIC_SetPriority(USB_LP_IRQn, NVIC_EncodePriority(NVIC_GetPriorityGrouping(), 0, 1));
+    NVIC_EnableIRQ(RTC_WKUP_IRQn);
+    MASK_SET(RCC->CFGR, RCC_CFGR_SW, 2); // HSE is system clock source
+    RTC->SCR = RTC_SCR_CWUTF;
+}
+
+void finish_sleep() {
+    MASK_SET(RCC->CFGR, RCC_CFGR_SW, 3); // PLL is system clock source
+    config::drv.drv_enable();
+    NVIC_DisableIRQ(RTC_WKUP_IRQn);
+    NVIC_SetPriority(USB_LP_IRQn, NVIC_EncodePriority(NVIC_GetPriorityGrouping(), 2, 0));
+    NVIC_EnableIRQ(TIM1_UP_TIM16_IRQn);
+    NVIC_EnableIRQ(ADC5_IRQn);
 }
 
 
