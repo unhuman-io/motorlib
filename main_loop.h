@@ -64,7 +64,7 @@ class MainLoop {
           if (!safe_mode_) {
             command_received = true;
             receive_data_ = receive_data;
-          } else if (receive_data.mode_desired == param_.safe_mode) {
+          } else if (receive_data.mode_desired == CLEAR_FAULTS) {
               safe_mode_ = false;
               status_.error.all = 0;
               command_received = true;
@@ -99,7 +99,7 @@ class MainLoop {
       }
 
       if (command_received) {
-        if (mode_ != static_cast<MainControlMode>(receive_data_.mode_desired) || mode_ == SLEEP || mode_ == param_.safe_mode) {
+        if (mode_ != static_cast<MainControlMode>(receive_data_.mode_desired) || mode_ == SLEEP) {
           set_mode(static_cast<MainControlMode>(receive_data_.mode_desired));
         }
       }
