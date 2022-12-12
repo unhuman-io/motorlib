@@ -174,5 +174,24 @@ void system_maintenance() {
     config_maintenance();
 }
 
+void setup_sleep() {
+    NVIC_DisableIRQ(TIM1_UP_TIM16_IRQn);
+    NVIC_DisableIRQ(ADC5_IRQn);
+    config::drv.drv_disable();
+    NVIC_SetPriority(USB_LP_IRQn, NVIC_EncodePriority(NVIC_GetPriorityGrouping(), 0, 1));
+    NVIC_EnableIRQ(RTC_WKUP_IRQn);
+    MASK_SET(RCC->CFGR, RCC_CFGR_SW, 2); // HSE is system clock source
+    RTC->SCR = RTC_SCR_CWUTF;
+}
+
+void finish_sleep() {
+    MASK_SET(RCC->CFGR, RCC_CFGR_SW, 3); // PLL is system clock source
+    config::drv.drv_enable();
+    NVIC_DisableIRQ(RTC_WKUP_IRQn);
+    NVIC_SetPriority(USB_LP_IRQn, NVIC_EncodePriority(NVIC_GetPriorityGrouping(), 2, 0));
+    NVIC_EnableIRQ(TIM1_UP_TIM16_IRQn);
+    NVIC_EnableIRQ(ADC5_IRQn);
+}
+
 
 #include "../../motorlib/system.cpp"

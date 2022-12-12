@@ -198,22 +198,3 @@ extern "C" void RTC_WKUP_IRQHandler() {
     EXTI->PR1 = EXTI_PR1_PIF20;
     RTC->SCR = RTC_SCR_CWUTF;
 }
-
-void setup_sleep() {
-    NVIC_DisableIRQ(TIM1_UP_TIM16_IRQn);
-    NVIC_DisableIRQ(ADC5_IRQn);
-   // drv_disable();
-    NVIC_SetPriority(USB_LP_IRQn, NVIC_EncodePriority(NVIC_GetPriorityGrouping(), 0, 1));
-    NVIC_EnableIRQ(RTC_WKUP_IRQn);
-    MASK_SET(RCC->CFGR, RCC_CFGR_SW, 2); // HSE is system clock source
-    RTC->SCR = RTC_SCR_CWUTF;
-}
-
-void finish_sleep() {
-    MASK_SET(RCC->CFGR, RCC_CFGR_SW, 3); // PLL is system clock source
-  //  drv_enable();
-    NVIC_DisableIRQ(RTC_WKUP_IRQn);
-    NVIC_SetPriority(USB_LP_IRQn, NVIC_EncodePriority(NVIC_GetPriorityGrouping(), 2, 0));
-    NVIC_EnableIRQ(TIM1_UP_TIM16_IRQn);
-    NVIC_EnableIRQ(ADC5_IRQn);
-}
