@@ -3,6 +3,10 @@
 #include <stdint.h>
 #include "motor_messages/motor_messages.h"
 
+#ifdef __cplusplus
+using namespace obot;
+#endif
+
 typedef MotorCommand ReceiveData;
 #ifndef CUSTOM_SENDDATA
 typedef MotorStatus SendData;
