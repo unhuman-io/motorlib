@@ -20,6 +20,7 @@ uint16_t drv_regs_error = 0;
 #include "../system.h"
 #include "pin_config_obot_g474_motor.h"
 #include "../peripheral/stm32g4/temp_sensor.h"
+#include "../peripheral/stm32g4/drv8323s.h"
 
 #if defined(R3) || defined(R4)
 #define HAS_MAX31875
@@ -28,6 +29,11 @@ uint16_t drv_regs_error = 0;
 
 namespace config {
     static_assert(((double) CPU_FREQUENCY_HZ * 8 / 2) / pwm_frequency < 65535);    // check pwm frequency
+#ifdef SPI1_REINIT_CALLBACK
+    DRV8323S drv(*SPI1, nullptr, spi1_reinit_callback);
+#else
+    DRV8323S drv(*SPI1);
+#endif
     TempSensor temp_sensor;
 #ifdef HAS_MAX31875
     I2C i2c1(*I2C1, 1000);
@@ -85,8 +91,8 @@ void system_init() {
     System::api.add_api_variable("Tboard", new const APICallbackFloat([](){ return config::board_temperature.get_temperature(); }));
 #endif
     System::api.add_api_variable("index_mod", new APIInt32(&index_mod));
-    System::api.add_api_variable("drv_err", new const APICallbackUint32(get_drv_status));
-    System::api.add_api_variable("drv_reset", new const APICallback(drv_reset));
+    System::api.add_api_variable("drv_err", new const APICallbackUint32([](){ return config::drv.get_drv_status(); }));
+    System::api.add_api_variable("drv_reset", new const APICallback([](){ return config::drv.drv_reset(); }));
     System::api.add_api_variable("A1", new const APICallbackFloat([](){ return A1_DR; }));
     System::api.add_api_variable("A2", new const APICallbackFloat([](){ return A2_DR; }));
     System::api.add_api_variable("A3", new const APICallbackFloat([](){ return A3_DR; }));
