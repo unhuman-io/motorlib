@@ -68,6 +68,7 @@ class MainLoop {
               safe_mode_ = false;
               status_.error.all = 0;
               command_received = true;
+              first_command_received_ = false;
               receive_data_ = receive_data;
           } else if (receive_data.mode_desired == BOARD_RESET ||
                      receive_data.mode_desired == CRASH ||
@@ -82,7 +83,7 @@ class MainLoop {
         }
       }
         
-      if (param_.host_timeout && no_command_ > param_.host_timeout && started_) {
+      if (param_.host_timeout && no_command_ > param_.host_timeout && started_ && first_command_received_) {
         status_.error.sequence = 1;
       }
 
