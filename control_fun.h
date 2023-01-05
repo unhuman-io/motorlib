@@ -140,6 +140,7 @@ public:
     ~PIController() {}
     float step(float desired, float measured);
     void set_param(const PIParam &pi_param);
+    void initialize() { ki_sum_ = 0; }
 private:
     float kp_ = 0, ki_ = 0, ki_sum_ = 0, ki_limit_ = 0, command_max_ = 0;
 

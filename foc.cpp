@@ -82,7 +82,10 @@ void FOC::voltage_mode() {
 }
 
 void FOC::current_mode() {
+    pi_id_->initialize();
+    pi_iq_->initialize();
     i_gain_ = 1;
+
 }
 
 void FOC::calculate_vdq0(Vdq0 *const vdq0, float cos, float sin, float va, float vb, float vc) {
