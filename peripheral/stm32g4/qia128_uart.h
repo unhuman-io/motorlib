@@ -116,8 +116,8 @@ class QIA128_UART : public TorqueSensorBase {
                 if (regs_.ISR & USART_ISR_RXNE) {
                     read_len_++;
                     crc_read_ = regs_.RDR;
-                    if (crc8(raw_bytes_, 3) != crc_read_) {
-                        crc_calc_ = crc8(raw_bytes_, 3);
+                    if (crc8(raw_bytes_) != crc_read_) {
+                        crc_calc_ = crc8(raw_bytes_);
                         crc_error_++;
                     }
                 } else {
