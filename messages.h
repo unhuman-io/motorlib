@@ -157,6 +157,8 @@ typedef struct {
     float transmission_stiffness; // also use transmission stiffness to help with motor bias setting
     float output_encoder_rollover; // if the output encoder+bias is greater than this then output_encoder -= 2*pi
     MainControlMode startup_mode;
+    uint8_t no_zero_current_sensors;   // default of 0 will zero current sensors for 2 seconds on startup
+                                       // 1 to disable and use fast_loop_param.i*_bias
 } StartupParam;
 
 typedef struct {

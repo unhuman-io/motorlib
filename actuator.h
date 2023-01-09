@@ -12,12 +12,18 @@ class Actuator {
  public:
     Actuator(FastLoop &fast_loop, MainLoop &main_loop, const volatile StartupParam &startup_param) : fast_loop_(fast_loop), main_loop_(main_loop), startup_param_(startup_param) {}
     void start() {
-      // zero current sensors in voltage mode to try to eliminate bias from pwm noise, could also do open mode
-      fast_loop_.voltage_mode();
+      
       main_loop_.set_rollover(fast_loop_.get_rollover());
-      uint32_t t_start = get_clock();
-      while ((get_clock() - t_start)/CPU_FREQUENCY_HZ < 2) {
-         fast_loop_.zero_current_sensors();
+      if (!startup_param_.no_zero_current_sensors) {
+         // zero current sensors in voltage mode to try to eliminate bias from pwm noise, could also do open mode
+         fast_loop_.voltage_mode();
+         uint32_t t_start = get_clock();
+         while ((get_clock() - t_start)/CPU_FREQUENCY_HZ < 2) {
+            fast_loop_.zero_current_sensors();
+         }
+      } else {
+         // needs some time to measure bus voltage
+         ms_delay(10);
       }
       set_bias();
 
