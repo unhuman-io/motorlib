@@ -42,9 +42,9 @@ class FastLoop {
       adc1 = *i_a_dr_;
       adc2 = *i_b_dr_;
       adc3 = *i_c_dr_;
-      foc_command_.measured.i_a = param_.adc1_gain*(adc1-param_.adc1_offset) - ia_bias_;
-      foc_command_.measured.i_b = param_.adc2_gain*(adc2-param_.adc2_offset) - ib_bias_;
-      foc_command_.measured.i_c = param_.adc3_gain*(adc3-param_.adc3_offset) - ic_bias_;
+      foc_command_.measured.i_a = param_.adc1_gain*(adc1-2048) - param_.ia_bias;
+      foc_command_.measured.i_b = param_.adc2_gain*(adc2-2048) - param_.ib_bias;
+      foc_command_.measured.i_c = param_.adc3_gain*(adc3-2048) - param_.ic_bias;
       
       // get encoder value, may wait a little
       motor_enc = encoder_.read();
@@ -214,9 +214,9 @@ class FastLoop {
     }
 
     void zero_current_sensors() {
-      ia_bias_ = (1-alpha_zero_)*ia_bias_ + alpha_zero_* param_.adc1_gain*(adc1-param_.adc1_offset);
-      ib_bias_ = (1-alpha_zero_)*ib_bias_ + alpha_zero_* param_.adc2_gain*(adc2-param_.adc2_offset);
-      ic_bias_ = (1-alpha_zero_)*ic_bias_ + alpha_zero_* param_.adc3_gain*(adc3-param_.adc3_offset);
+      param_.ia_bias = (1-alpha_zero_)*param_.ia_bias + alpha_zero_* param_.adc1_gain*(adc1-2048);
+      param_.ib_bias = (1-alpha_zero_)*param_.ib_bias + alpha_zero_* param_.adc2_gain*(adc2-2048);
+      param_.ic_bias = (1-alpha_zero_)*param_.ic_bias + alpha_zero_* param_.adc3_gain*(adc3-2048);
     }
     void set_phase_mode() {
       phase_mode_desired_ = param_.phase_mode == 0 ? 1 : -1;
@@ -260,9 +260,6 @@ class FastLoop {
     float motor_index_electrical_offset_measured_ = NAN;
     float inv_motor_encoder_cpr_;
     int32_t frequency_hz_ = 100000;
-    volatile float ia_bias_ = 0;
-    volatile float ib_bias_ = 0;
-    volatile float ic_bias_ = 0;
     float alpha_zero_ = 0.001;
     float v_bus_ = 12;
     mcu_time timestamp_;

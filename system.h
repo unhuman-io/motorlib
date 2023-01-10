@@ -101,6 +101,9 @@ class System {
         api.add_api_variable("heap_used", new const APICallbackUint32(get_heap_used));
         api.add_api_variable("vbus_min", new APIFloat(&actuator_.main_loop_.param_.vbus_min));
         api.add_api_variable("vbus_max", new APIFloat(&actuator_.main_loop_.param_.vbus_min));
+        api.add_api_variable("ia_bias", new const APIFloat(&actuator_.fast_loop_.param_.ia_bias));
+        api.add_api_variable("ib_bias", new const APIFloat(&actuator_.fast_loop_.param_.ib_bias));
+        api.add_api_variable("ic_bias", new const APIFloat(&actuator_.fast_loop_.param_.ic_bias));
         api.add_api_variable("beep", new APICallbackFloat([](){ return 0; }, [](float f){ actuator_.fast_loop_.beep_on(f); }));
         api.add_api_variable("disable_safe_mode", new APIUint8(&actuator_.main_loop_.param_.disable_safe_mode));
         api.add_api_variable("help", new const APICallback([](){ return api.get_all_api_variables(); }));
