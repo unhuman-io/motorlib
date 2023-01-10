@@ -148,6 +148,9 @@ void system_init() {
     System::api.add_api_variable("A1", new const APICallbackFloat([](){ return A1_DR; }));
     System::api.add_api_variable("A2", new const APICallbackFloat([](){ return A2_DR; }));
     System::api.add_api_variable("A3", new const APICallbackFloat([](){ return A3_DR; }));
+    System::api.add_api_variable("ia0", new const APIUint32(&ADC3->DR));
+    System::api.add_api_variable("ib0", new const APIUint32(&ADC4->DR));
+    System::api.add_api_variable("ic0", new const APIUint32(&ADC5->DR));
     System::api.add_api_variable("shutdown", new const APICallback([](){
         // requires power cycle to return 
         setup_sleep();
@@ -185,10 +188,10 @@ void system_init() {
     ADC1->CFGR2 |= ADC_CFGR2_GCOMP;
     ADC1->CR |= ADC_CR_ADSTART;
     ADC2->CR |= ADC_CR_JADSTART;
-    ADC5->CR |= ADC_CR_JADSTART;
+    ADC5->CR |= ADC_CR_JADSTART | ADC_CR_ADSTART;
     ADC5->IER |= ADC_IER_JEOSIE;
-    ADC4->CR |= ADC_CR_JADSTART;
-    ADC3->CR |= ADC_CR_JADSTART;
+    ADC4->CR |= ADC_CR_JADSTART | ADC_CR_ADSTART;
+    ADC3->CR |= ADC_CR_JADSTART | ADC_CR_ADSTART;
 
     config_init();
 

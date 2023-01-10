@@ -179,6 +179,12 @@ void pin_config_obot_g474_motor_r0() {
         ADC3->JSQR = 2 << ADC_JSQR_JL_Pos | 1 << ADC_JSQR_JEXTEN_Pos | 27 << ADC_JSQR_JEXTSEL_Pos | 13 << ADC_JSQR_JSQ1_Pos | 1 << ADC_JSQR_JSQ2_Pos | 13 << ADC_JSQR_JSQ3_Pos; // trig 27 hrtim adc_trig1 (injected)
         ADC4->JSQR = 1 << ADC_JSQR_JEXTEN_Pos | 27 << ADC_JSQR_JEXTSEL_Pos | 17 << ADC_JSQR_JSQ1_Pos; // trig 27 hrtim adc_trig1 (injected)
         ADC5->JSQR = 2 << ADC_JSQR_JL_Pos | 1 << ADC_JSQR_JEXTEN_Pos | 27 << ADC_JSQR_JEXTSEL_Pos | 5 << ADC_JSQR_JSQ1_Pos | 1 << ADC_JSQR_JSQ2_Pos | 5 << ADC_JSQR_JSQ3_Pos;;  // trig 27 hrtim adc_trig1 (injected)
+        ADC3->CFGR = ADC_CFGR_JQDIS | ADC_CFGR_OVRMOD | 1 << ADC_CFGR_EXTEN_Pos | 22 << ADC_CFGR_EXTSEL_Pos; // trig 22 hrtim_adc_trig3 (regular)
+        ADC4->CFGR = ADC_CFGR_JQDIS | ADC_CFGR_OVRMOD | 1 << ADC_CFGR_EXTEN_Pos | 22 << ADC_CFGR_EXTSEL_Pos; // trig 22 hrtim_adc_trig3 (regular)
+        ADC5->CFGR = ADC_CFGR_JQDIS | ADC_CFGR_OVRMOD | 1 << ADC_CFGR_EXTEN_Pos | 22 << ADC_CFGR_EXTSEL_Pos; // trig 22 hrtim_adc_trig3 (regular)
+        ADC3->SQR1 = 13 << ADC_SQR1_SQ1_Pos;
+        ADC4->SQR1 = 17 << ADC_SQR1_SQ1_Pos;
+        ADC5->SQR1 = 5 << ADC_SQR1_SQ1_Pos;
         NVIC_SetPriority(ADC5_IRQn, NVIC_EncodePriority(NVIC_GetPriorityGrouping(), 0, 0));
         NVIC_EnableIRQ(ADC5_IRQn);
 
