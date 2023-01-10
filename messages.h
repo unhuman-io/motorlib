@@ -43,7 +43,7 @@ typedef struct {
 #define MOTOR_ENCODER_TABLE_LENGTH  512
 #define OUTPUT_ENCODER_TABLE_LENGTH  128
 typedef struct {
-    float adc1_offset, adc2_offset, adc3_offset;    // initial guess at current sensor bias in counts - default 2048
+    float ia_bias, ib_bias, ic_bias;                // initial guess at current sensor bias in amps
     float adc1_gain, adc2_gain, adc3_gain;          // current sensor linear gain units A/count
     FOCParam foc_param;
     uint8_t phase_mode;     // two possible motor wiring states: 0: standard, 1: reverse (i.e. two motor leads flipped)
