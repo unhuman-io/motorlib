@@ -1,4 +1,5 @@
 #include "gpio.h"
+#include "peripheral/pin_config.h"
 
 GPIO::GPIO(GPIO_TypeDef &regs, uint8_t pin, Direction direction) :
     regs_(regs), mask_(1<<pin), pin_(pin) {
@@ -17,6 +18,9 @@ uint8_t GPIO::get_value() const {
     return (regs_.IDR & mask_) >> pin_;
 }
 
+void GPIO::set_value(uint8_t value) {
+    regs_.ODR |= value << pin_;
+}
 
 // TODO
 void GPIO::set_direction(Direction direction) {

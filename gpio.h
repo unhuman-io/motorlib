@@ -11,6 +11,7 @@ class GPIO {
     void set();
     void clear();
     uint8_t get_value() const;
+    void set_value(uint8_t value);
     bool is_set() const { return get_value(); }
     bool is_clear() const { return !get_value(); }
     void set_direction(Direction);
