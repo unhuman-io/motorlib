@@ -4,6 +4,7 @@ import subprocess
 import yaml
 import sys
 import os
+import shutil
 
 def run():
     if len(sys.argv) != 2:
@@ -25,6 +26,7 @@ def run():
             subprocess.call(["make", "-j", "CONFIG=" + typ, "C_DEFS=-D"+c_defs, "PARAM_OVERRIDE="+param])
             
             os.rename(os.path.join("build", typ), os.path.join("package", typ + "-" + name + "-" + sn))
+    shutil.copy(os.path.join(os.path.dirname(__file__), "load.sh"), "package")
 
             
 
