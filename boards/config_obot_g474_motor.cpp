@@ -2,11 +2,20 @@
 #include "../usb_communication.h"
 #include "../peripheral/stm32g4/hrpwm.h"
 #include "../util.h"
+#include "../peripheral/stm32g4/pin_config.h"
 
 using PWM = HRPWM;
 using Communication = USBCommunication;
 volatile uint32_t * const cpu_clock = &DWT->CYCCNT;
-uint16_t drv_regs_error = 0;  
+uint16_t drv_regs_error = 0;
+
+#ifndef GPIO_OUT
+#define GPIO_OUT (reinterpret_cast<volatile gpio_bits*>(&GPIOA->ODR)->bit1)
+#endif
+
+#ifndef GPIO_IN
+#define GPIO_IN ((GPIOA->IDR & (1 << 2)) ? 1 : 0)
+#endif
 
 #include "../led.h"
 #include "../controller/position_controller.h"

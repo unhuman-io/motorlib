@@ -28,12 +28,12 @@ class MainLoop {
  public:
     MainLoop(FastLoop &fast_loop, PositionController &position_controller,  TorqueController &torque_controller, 
         ImpedanceController &impedance_controller, VelocityController &velocity_controller, StateController &state_controller, Communication &communication,
-        LED &led, OutputEncoder &output_encoder, TorqueSensor &torque, const MainLoopParam &param, GPIO &gpio_in=no_gpio_, GPIO &gpio_out=no_gpio_,
+        LED &led, OutputEncoder &output_encoder, TorqueSensor &torque, const MainLoopParam &param,
         HardwareBrake &brake=no_brake_) : 
           param_(param), fast_loop_(fast_loop), position_controller_(position_controller), torque_controller_(torque_controller), 
           impedance_controller_(impedance_controller), velocity_controller_(velocity_controller), state_controller_(state_controller),  
           communication_(communication), led_(led), output_encoder_(output_encoder), torque_sensor_(torque),
-          output_encoder_correction_table_(param_.output_encoder.table), brake_(brake), gpio_in_(gpio_in), gpio_out_(gpio_out) {
+          output_encoder_correction_table_(param_.output_encoder.table), brake_(brake) {
           set_param(param);
           if (param_.vbus_min == 0) {
             param_.vbus_min = 8;  // defaults that can be overridden via api
@@ -60,7 +60,9 @@ class MainLoop {
       bool command_received = false;
       if (started_) {
         if (count_received) {
-          gpio_out_.set_value(receive_data.mode_misc.gpio);
+#ifdef GPIO_OUT
+          GPIO_OUT = receive_data.misc.gpio;
+#endif
           no_command_ = 0;
           first_command_received_ = true;
           if (!safe_mode_) {
@@ -415,9 +417,6 @@ class MainLoop {
     HardwareBrake brake_;
     static HardwareBrakeBase no_brake_;
 
-    GPIO &gpio_in_, &gpio_out_;
-    static GPIO no_gpio;
-
 
     friend class System;
     friend void system_init();
@@ -441,6 +440,9 @@ void load_send_data(const MainLoop &main_loop, SendData * const data) {
     data->reserved[2] = *reinterpret_cast<float *>(main_loop.reserved2_);
     data->flags.mode = main_loop.status_.mode;
     data->flags.error = main_loop.status_.error;
-    data->flags.misc = main_loop.gpio_in_.get_value();
+    data->flags.misc.byte = 0;
+#ifdef GPIO_IN
+    data->flags.misc.gpio = GPIO_IN;
+#endif
 }
 #endif

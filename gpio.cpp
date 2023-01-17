@@ -1,5 +1,4 @@
 #include "gpio.h"
-#include "peripheral/pin_config.h"
 
 GPIO::GPIO(GPIO_TypeDef &regs, uint8_t pin, Direction direction) :
     regs_(regs), mask_(1<<pin), pin_(pin) {
