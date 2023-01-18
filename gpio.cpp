@@ -17,6 +17,9 @@ uint8_t GPIO::get_value() const {
     return (regs_.IDR & mask_) >> pin_;
 }
 
+void GPIO::set_value(uint8_t value) {
+    regs_.ODR |= value << pin_;
+}
 
 // TODO
 void GPIO::set_direction(Direction direction) {
