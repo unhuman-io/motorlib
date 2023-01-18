@@ -19,6 +19,7 @@ for (( i=0 ; i<$len ; i++)); do
     echo ${name[i]}
     ./${type_name_sn[i]}/load_${type[i]}.sh -S ${sn[i]} &
     pids+=($!)
+    sleep 1 # usb enumerating too many devices at onces causes this to fail
 done
 
 for (( i=0 ; i<$len ; i++)); do
