@@ -2,9 +2,11 @@
 #include "../usb_communication.h"
 #include "../peripheral/stm32g4/hrpwm.h"
 #include "../util.h"
+#include "../driver_mps.h"
 
 using PWM = HRPWM;
 using Communication = USBCommunication;
+using Driver = DriverMPS;
 volatile uint32_t * const cpu_clock = &DWT->CYCCNT;
 
 #include "../led.h"
@@ -26,6 +28,7 @@ namespace config {
     TempSensor temp_sensor;
     I2C i2c1(*I2C1, 1000);
     MAX31875 board_temperature(i2c1);
+    DriverMPS driver;
 
 <<<<<<< develop
 <<<<<<< develop
@@ -46,7 +49,7 @@ namespace config {
     ImpedanceController impedance_controller = {(float) (1.0/main_loop_frequency)};
     VelocityController velocity_controller = {(float) (1.0/main_loop_frequency)};
     StateController state_controller = {(float) (1.0/main_loop_frequency)};
-    MainLoop main_loop = {fast_loop, position_controller, torque_controller, impedance_controller, velocity_controller, state_controller, System::communication_, led, output_encoder, torque_sensor, param->main_loop_param};
+    MainLoop main_loop(fast_loop, position_controller, torque_controller, impedance_controller, velocity_controller, state_controller, System::communication_, led, output_encoder, torque_sensor, driver, param->main_loop_param);
 };
 
 Communication System::communication_ = {config::usb};
@@ -80,7 +83,7 @@ void system_init() {
     System::api.add_api_variable("T", new APICallbackFloat(get_t, set_t));
     System::api.add_api_variable("Tboard", new const APICallbackFloat([](){ return config::board_temperature.get_temperature(); }));
     System::api.add_api_variable("index_mod", new APIInt32(&index_mod));
-    System::api.add_api_variable("drv_reset", new const APICallback(drv_reset));
+    System::api.add_api_variable("drv_reset", new const APICallback([](){ return config::driver.reset(); }));
     System::api.add_api_variable("shutdown", new const APICallback([](){
         // requires power cycle to return 
         setup_sleep();
@@ -157,5 +160,23 @@ void system_maintenance() {
     config_maintenance();
 }
 
+void setup_sleep() {
+    NVIC_DisableIRQ(TIM1_UP_TIM16_IRQn);
+    NVIC_DisableIRQ(ADC5_IRQn);
+    config::driver.disable();
+    NVIC_SetPriority(USB_LP_IRQn, NVIC_EncodePriority(NVIC_GetPriorityGrouping(), 0, 1));
+    NVIC_EnableIRQ(RTC_WKUP_IRQn);
+    MASK_SET(RCC->CFGR, RCC_CFGR_SW, 2); // HSE is system clock source
+    RTC->SCR = RTC_SCR_CWUTF;
+}
+
+void finish_sleep() {
+    MASK_SET(RCC->CFGR, RCC_CFGR_SW, 3); // PLL is system clock source
+    config::driver.enable();
+    NVIC_DisableIRQ(RTC_WKUP_IRQn);
+    NVIC_SetPriority(USB_LP_IRQn, NVIC_EncodePriority(NVIC_GetPriorityGrouping(), 2, 0));
+    NVIC_EnableIRQ(TIM1_UP_TIM16_IRQn);
+    NVIC_EnableIRQ(ADC5_IRQn);
+}
 
 #include "../../motorlib/system.cpp"

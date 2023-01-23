@@ -1,13 +1,15 @@
 #pragma once
+#include "../../driver.h"
 
-class DRV8323S {
+extern uint16_t drv_regs_error;
+
+class DRV8323S : public DriverBase {
  public:
     DRV8323S(SPI_TypeDef &regs, volatile int* register_operation = nullptr, void (*spi_reinit_callback)() = nullptr)
         : regs_(regs), spi_reinit_callback_(spi_reinit_callback) {
         if (register_operation != nullptr) {
             register_operation_ = register_operation;
         }
-        drv_enable();
     }
 
     void drv_spi_start() {
@@ -30,11 +32,12 @@ class DRV8323S {
         }
     }
 
-    void drv_disable() {
+    void disable() {
         GPIOC->BSRR = GPIO_BSRR_BR13; // drv disable
+        DriverBase::disable();
     }
 
-    void drv_enable() {
+    void enable() {
         GPIOC->BSRR = GPIO_BSRR_BS13; // drv enable
         ms_delay(10);
 
@@ -51,12 +54,13 @@ class DRV8323S {
         }
 
         drv_spi_end();
+        DriverBase::enable();
     }
 
     std::string drv_reset() {
-        drv_disable();
+        disable();
         ms_delay(10);
-        drv_enable();
+        enable();
         return "ok";
     }
 

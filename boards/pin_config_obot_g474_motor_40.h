@@ -15,21 +15,6 @@
 #define TIM_B TIM4->CCR3
 
 
-void drv_disable() {
-    GPIOC->BSRR = GPIO_BSRR_BR13; // drv disable
-}
-
-void drv_enable() {
-    GPIOC->BSRR = GPIO_BSRR_BS13; // drv enable
-}
-
-std::string drv_reset() {
-    drv_disable();
-    ms_delay(10);
-    drv_enable();
-    return "ok";
-}
-
 void pin_config_obot_g474_motor_40() {
      // Peripheral clock enable
         RCC->APB1ENR1 = RCC_APB1ENR1_SPI3EN | RCC_APB1ENR1_TIM2EN |  RCC_APB1ENR1_TIM4EN | RCC_APB1ENR1_TIM5EN | RCC_APB1ENR1_USBEN | RCC_APB1ENR1_I2C1EN | RCC_APB1ENR1_RTCAPBEN | RCC_APB1ENR1_PWREN;
@@ -215,6 +200,7 @@ void pin_config_obot_g474_motor_40() {
         SPI3->CR2 = (7 << SPI_CR2_DS_Pos) | SPI_CR2_FRXTH;    // 8 bit
 
 <<<<<<< develop
+<<<<<<< develop
 =======
         // SPI1 DRV8323RS        
         SPI1->CR2 = (15 << SPI_CR2_DS_Pos) | SPI_CR2_FRF;   // 16 bit TI mode
@@ -227,6 +213,8 @@ void pin_config_obot_g474_motor_40() {
 >>>>>>> pz work
         drv_enable();
 
+=======
+>>>>>>> Add driver plus enable disable modes
         // I2C1
         GPIO_SETH(A, 15, GPIO_MODE::ALT_FUN, GPIO_SPEED::LOW, 4);   // i2c1 scl
         GPIO_SETH(B, 9, GPIO_MODE::ALT_FUN, GPIO_SPEED::LOW, 4);   // i2c1 sda
@@ -253,23 +241,4 @@ extern "C" void RTC_WKUP_IRQHandler() {
     count++;
     EXTI->PR1 = EXTI_PR1_PIF20;
     RTC->SCR = RTC_SCR_CWUTF;
-}
-
-void setup_sleep() {
-    NVIC_DisableIRQ(TIM1_UP_TIM16_IRQn);
-    NVIC_DisableIRQ(ADC5_IRQn);
-    drv_disable();
-    NVIC_SetPriority(USB_LP_IRQn, NVIC_EncodePriority(NVIC_GetPriorityGrouping(), 0, 1));
-    NVIC_EnableIRQ(RTC_WKUP_IRQn);
-    MASK_SET(RCC->CFGR, RCC_CFGR_SW, 2); // HSE is system clock source
-    RTC->SCR = RTC_SCR_CWUTF;
-}
-
-void finish_sleep() {
-    MASK_SET(RCC->CFGR, RCC_CFGR_SW, 3); // PLL is system clock source
-    drv_enable();
-    NVIC_DisableIRQ(RTC_WKUP_IRQn);
-    NVIC_SetPriority(USB_LP_IRQn, NVIC_EncodePriority(NVIC_GetPriorityGrouping(), 2, 0));
-    NVIC_EnableIRQ(TIM1_UP_TIM16_IRQn);
-    NVIC_EnableIRQ(ADC5_IRQn);
 }
