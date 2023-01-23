@@ -171,6 +171,12 @@ void pin_config_obot_g474_motor_40() {
         NVIC_SetPriority(USB_LP_IRQn, NVIC_EncodePriority(NVIC_GetPriorityGrouping(), 2, 0));
         NVIC_EnableIRQ(USB_LP_IRQn);
 
+        //SPI3 PZ
+        DMAMUX1_Channel0->CCR =  DMA_REQUEST_SPI3_TX;
+        DMAMUX1_Channel1->CCR =  DMA_REQUEST_SPI3_RX;
+        SPI3->CR1 = SPI_CR1_MSTR | (3 << SPI_CR1_BR_Pos) | SPI_CR1_SSI | SPI_CR1_SSM;    // baud = clock/16 spi mode 0
+        SPI3->CR2 = (7 << SPI_CR2_DS_Pos) | SPI_CR2_FRXTH;    // 8 bit
+
         drv_enable();
 
         // I2C1
