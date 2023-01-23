@@ -15,6 +15,7 @@ class Actuator {
       if (!startup_param_.no_driver_enable) {
          main_loop_.driver_.enable();
       }
+      main_loop_.status_.error.all = 0;
       main_loop_.set_rollover(fast_loop_.get_rollover());
       if (!startup_param_.no_zero_current_sensors) {
          // zero current sensors in voltage mode to try to eliminate bias from pwm noise, could also do open mode

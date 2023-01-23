@@ -13,6 +13,7 @@ class DRV8323S : public DriverBase {
     }
 
     void drv_spi_start() {
+        (*register_operation_)++;
         GPIO_SETL(A, 4, 2, 3, 5); // pin A4 NSS
         regs_.CR1 = 0; // clear SPE
         regs_.CR2 = (15 << SPI_CR2_DS_Pos) | SPI_CR2_FRF;   // 16 bit TI mode
@@ -30,6 +31,7 @@ class DRV8323S : public DriverBase {
         if (spi_reinit_callback_ != nullptr) {
             spi_reinit_callback_();
         }
+        (*register_operation_)--;
     }
 
     void disable() {
@@ -65,21 +67,17 @@ class DRV8323S : public DriverBase {
     }
 
     uint16_t write_reg(uint16_t reg_out) {
-        (*register_operation_)++;
         regs_.DR = reg_out;
         while(!(regs_.SR & SPI_SR_RXNE));
         uint16_t reg_in = regs_.DR;
-        (*register_operation_)--;
         return reg_in;
     }
 
     uint16_t read_reg(uint8_t address) {
-        (*register_operation_)++;
         uint16_t out_value = 1<<15 | address<<11;
         regs_.DR = out_value;
         while(!(regs_.SR & SPI_SR_RXNE));
         uint16_t value = regs_.DR;
-        (*register_operation_)--;
         return value;
     }
 
