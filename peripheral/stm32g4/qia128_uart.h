@@ -13,6 +13,11 @@ class QIA128_UART : public TorqueSensorBase {
         //uart_tx({0, 5, 0, 1, 0xE}); // check for loopback on this value
 
         //ms_delay(100);
+        for (int i=0; i<1; i++) {
+            // takes a while for this sensor to turn on
+            ms_delay(200);
+            IWDG->KR = 0xAAAA;
+        }
         uart_tx({0, 6, 0, 0x0c, 0, 0x3c}); // set stream state off
 
         ms_delay(100);
@@ -34,7 +39,7 @@ class QIA128_UART : public TorqueSensorBase {
             uart_rx_uint32();
             uint32_t tmp = uart_rx_uint32();
             uart_rx_uint8();
-            logger.log_printf("cal%d: %d",i, tmp);
+            logger.log_printf("qia128 cal%d: %d",i, tmp);
             ms_delay(10);
             IWDG->KR = 0xAAAA;
         }        
@@ -61,11 +66,11 @@ class QIA128_UART : public TorqueSensorBase {
 
 
 
-        // for (int i; i<4; i++) {
-        //     while(!(regs_.ISR & USART_ISR_RXNE));
-        //     offset_ |= regs_.RDR << 8*(3-i);
-        // }
-        return true;
+        if ((int32_t) offset_ > 0 && (int32_t) full_scale_ > 0) {
+            return true;
+        } else {
+            return false;
+        }
     }
 
     // fifo size 8 bytes
