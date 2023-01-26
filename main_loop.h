@@ -339,8 +339,7 @@ class MainLoop {
             led_.set_color(LED::ORANGE);
             break;
           case DRIVER_ENABLE:
-            driver_.enable();
-            //status_.error.driver_not_enabled = false;
+            driver_enable_triggered_ = true;
             led_.set_color(LED::AZURE);
             break;
           case DRIVER_DISABLE:
@@ -397,6 +396,13 @@ class MainLoop {
       status_.mode = mode;
       receive_data_.mode_desired = mode; // todo: what is this for?
     }
+    bool driver_enable_triggered() {
+      if (driver_enable_triggered_) {
+        driver_enable_triggered_ = false;
+        return true;
+      }
+      return false;
+    }
 
     // use to set the command from another low priority source than communication, 
     // such as from the System or Actuator classes
@@ -444,6 +450,7 @@ class MainLoop {
     Driver &driver_;
     HardwareBrake brake_;
     static HardwareBrakeBase no_brake_;
+    bool driver_enable_triggered_ = false;
 
 
     friend class System;

@@ -13,8 +13,7 @@ class Actuator {
     Actuator(FastLoop &fast_loop, MainLoop &main_loop, const volatile StartupParam &startup_param) : fast_loop_(fast_loop), main_loop_(main_loop), startup_param_(startup_param) {}
     void start() {
       if (!startup_param_.no_driver_enable) {
-         main_loop_.set_mode(DRIVER_ENABLE);      
-         main_loop_.set_mode(CLEAR_FAULTS); 
+         enable_driver();
       }
 
       main_loop_.set_rollover(fast_loop_.get_rollover());
@@ -42,8 +41,15 @@ class Actuator {
       fast_loop_.set_iq_des(0);
       main_loop_.set_started();
     }
+    void enable_driver() {
+         main_loop_.driver_.enable();     
+         main_loop_.set_mode(CLEAR_FAULTS); 
+    }
     void maintenance() {
       fast_loop_.maintenance();
+      if (main_loop_.driver_enable_triggered()) {
+         enable_driver();
+      }
     }
     void set_bias() {
       MainLoopStatus status = main_loop_.get_status();
