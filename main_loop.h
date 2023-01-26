@@ -139,6 +139,7 @@ class MainLoop {
       status_.error.driver_fault |= driver_.is_faulted();
 
       if (status_.error.all & param_.error_mask.all) {
+          status_.error.fault = 1;
           safe_mode_ = true;
           set_mode(param_.safe_mode);
       }

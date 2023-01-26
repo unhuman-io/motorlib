@@ -13,9 +13,10 @@ class Actuator {
     Actuator(FastLoop &fast_loop, MainLoop &main_loop, const volatile StartupParam &startup_param) : fast_loop_(fast_loop), main_loop_(main_loop), startup_param_(startup_param) {}
     void start() {
       if (!startup_param_.no_driver_enable) {
-         main_loop_.driver_.enable();
+         main_loop_.set_mode(DRIVER_ENABLE);      
+         main_loop_.set_mode(CLEAR_FAULTS); 
       }
-      main_loop_.status_.error.all = 0;
+
       main_loop_.set_rollover(fast_loop_.get_rollover());
       if (!startup_param_.no_zero_current_sensors) {
          // zero current sensors in voltage mode to try to eliminate bias from pwm noise, could also do open mode
