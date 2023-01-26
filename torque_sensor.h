@@ -3,7 +3,7 @@
 
 class TorqueSensorBase : public SensorBase {
  public:
-    void init() {}
+    bool init() { return true; }
     void trigger() {}
     float read() { return bias_; }
     void set_param(const TorqueSensorParam &param) {
