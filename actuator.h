@@ -48,7 +48,7 @@ class Actuator {
     void maintenance() {
       fast_loop_.maintenance();
       if (main_loop_.driver_enable_triggered()) {
-         enable_driver();
+         main_loop_.driver_.enable(); 
       }
     }
     void set_bias() {

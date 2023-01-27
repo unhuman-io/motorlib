@@ -450,7 +450,7 @@ class MainLoop {
     Driver &driver_;
     HardwareBrake brake_;
     static HardwareBrakeBase no_brake_;
-    bool driver_enable_triggered_ = false;
+    volatile bool driver_enable_triggered_ = false;
 
 
     friend class System;
