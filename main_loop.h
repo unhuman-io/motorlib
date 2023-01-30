@@ -9,6 +9,7 @@
 #include "util.h"
 #include "torque_sensor.h"
 #include "hardware_brake.h"
+#include "round_robin_logger.h"
 
 extern "C" {
 void system_init();
@@ -230,6 +231,9 @@ class MainLoop {
       fast_loop_.set_iq_des(iq_des);
       fast_loop_.set_vq_des(vq_des);
       
+      if (communication_.tx_data_ack()) {
+        round_robin_logger.get_next_data(&status_.rr_data);
+      }
       SendData send_data;
       load_send_data(*this, &send_data);
       if (started_) { // this will prevent sending bad values before calibration
@@ -435,9 +439,8 @@ void load_send_data(const MainLoop &main_loop, SendData * const data) {
     data->motor_position = main_loop.status_.motor_position;
     data->joint_position = main_loop.status_.output_position;
     data->torque = main_loop.status_.torque;
-    data->reserved[0] = *reinterpret_cast<float *>(main_loop.reserved0_);
-    data->reserved[1] = *reinterpret_cast<float *>(main_loop.reserved1_);
-    data->reserved[2] = *reinterpret_cast<float *>(main_loop.reserved2_);
+    data->rr_data = main_loop.status_.rr_data;
+    data->reserved = *reinterpret_cast<float *>(main_loop.reserved0_);
     data->flags.mode = main_loop.status_.mode;
     data->flags.error = main_loop.status_.error;
     data->flags.misc.byte = 0;

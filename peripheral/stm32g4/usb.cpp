@@ -377,6 +377,7 @@ void USB1::interrupt() {
                     epr_set_toggle(2, USB_EP_RX_VALID, USB_EPRX_STAT);
                 }
                 if (USB->EP2R & USB_EP_CTR_TX) {
+                    tx_data_ack_[2] = true;
                     // clear CTR_TX
                     USB->EP2R = (USB_EP_CTR_RX | (USB->EP2R & USB_EPREG_MASK)) & ~USB_EP_CTR_TX;
                 }
@@ -391,6 +392,7 @@ void USB1::interrupt() {
                     epr_set_toggle(1, USB_EP_RX_VALID, USB_EPRX_STAT);
                 }
                 if (USB->EP1R & USB_EP_CTR_TX) {
+                    tx_data_ack_[1] = true;
                      // clear CTR_TX
                     USB->EP1R = (USB_EP_CTR_RX | (USB->EP1R & USB_EPREG_MASK)) & ~USB_EP_CTR_TX;
                 }
