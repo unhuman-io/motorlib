@@ -195,4 +195,5 @@ typedef struct {
     float motor_position;
     MotorMode mode;
     MotorError error;
+    RoundRobinData rr_data;
 } MainLoopStatus;

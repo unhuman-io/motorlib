@@ -3,6 +3,7 @@
 #ifdef __cplusplus
 #include "parameter_api.h"
 #include "logger.h"
+#include "round_robin_logger.h"
 
 
 extern uint32_t t_exec_fastloop;
