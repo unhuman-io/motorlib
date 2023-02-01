@@ -14,6 +14,7 @@ class Actuator {
     void start() {
       if (!startup_param_.no_driver_enable) {
          enable_driver();
+         main_loop_.set_mode(CLEAR_FAULTS); 
       }
 
       main_loop_.set_rollover(fast_loop_.get_rollover());
@@ -42,13 +43,16 @@ class Actuator {
       main_loop_.set_started();
     }
     void enable_driver() {
-         main_loop_.driver_.enable();     
-         main_loop_.set_mode(CLEAR_FAULTS); 
+         if (main_loop_.status_.fast_loop.vbus > main_loop_.param_.vbus_min && 
+            main_loop_.status_.fast_loop.vbus < main_loop_.param_.vbus_max) {
+            main_loop_.driver_.enable();
+         }
+         main_loop_.set_mode(CLEAR_FAULTS);
     }
     void maintenance() {
       fast_loop_.maintenance();
       if (main_loop_.driver_enable_triggered()) {
-         main_loop_.driver_.enable(); 
+         enable_driver();
       }
     }
     void set_bias() {

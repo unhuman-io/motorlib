@@ -66,6 +66,7 @@ class MainLoop {
 #endif
           no_command_ = 0;
           first_command_received_ = true;
+          host_timestamp_ = receive_data.host_timestamp;
           if (!safe_mode_) {
             command_received = true;
             receive_data_ = receive_data;
@@ -424,6 +425,7 @@ class MainLoop {
     Communication &communication_;
     LED &led_;
     ReceiveData receive_data_ = {};
+    mcu_time host_timestamp_ = {};
     ReceiveData last_receive_data_ = {};
     MotorCommand internal_command_;
     bool internal_command_received_ = false;
@@ -465,7 +467,7 @@ class MainLoop {
 #ifndef CUSTOM_SENDDATA
 void load_send_data(const MainLoop &main_loop, SendData * const data) {
     data->iq = main_loop.status_.fast_loop.foc_status.measured.i_q;
-    data->host_timestamp_received = main_loop.receive_data_.host_timestamp;
+    data->host_timestamp_received = main_loop.host_timestamp_;
     data->mcu_timestamp = main_loop.status_.fast_loop.timestamp;
     data->motor_encoder = main_loop.status_.fast_loop.motor_position.raw;
     data->motor_position = main_loop.status_.motor_position;

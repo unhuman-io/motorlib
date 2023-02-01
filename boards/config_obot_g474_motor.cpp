@@ -183,8 +183,10 @@ void system_maintenance() {
     }
     if (!(GPIOC->IDR & 1<<14)) {
         driver_fault = true;
+    } else if (param->main_loop_param.no_latch_driver_fault) {
+        driver_fault = false;
     }
-    config::main_loop.status_.error.driver_fault = driver_fault;    // latch driver fault until reset
+    config::main_loop.status_.error.driver_fault |= driver_fault;    // maybe latch driver fault until reset
     index_mod = config::motor_encoder.index_error(param->fast_loop_param.motor_encoder.cpr);
     config_maintenance();
 }

@@ -130,6 +130,7 @@ typedef struct {
     float vbus_max;
     MotorError error_mask;              // can set to ERROR_MASK_ALL or ERROR_MASK_NONE or others
     uint8_t safe_mode_driver_disable;   // driver is disabled in safe mode
+    uint8_t no_latch_driver_fault;      // 1 allows for the driver_fault to be reset by software
 } MainLoopParam;
 
 typedef struct {
