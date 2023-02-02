@@ -54,6 +54,10 @@ class Actuator {
       if (main_loop_.driver_enable_triggered()) {
          enable_driver();
       }
+      if (main_loop_.driver_disable_triggered()) {
+         ms_delay(10);
+         main_loop_.driver_.disable();
+      }
     }
     void set_bias() {
       MainLoopStatus status = main_loop_.get_status();

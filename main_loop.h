@@ -344,7 +344,7 @@ class MainLoop {
             led_.set_color(LED::AZURE);
             break;
           case DRIVER_DISABLE:
-            driver_.disable();
+            driver_disable_triggered_ = true;
             led_.set_color(LED::WHITE);
             break;
           case CLEAR_FAULTS:
@@ -405,6 +405,14 @@ class MainLoop {
       return false;
     }
 
+    bool driver_disable_triggered() {
+      if (driver_disable_triggered_) {
+        driver_disable_triggered_ = false;
+        return true;
+      }
+      return false;
+    }
+
     // use to set the command from another low priority source than communication, 
     // such as from the System or Actuator classes
     void set_command(const MotorCommand &command) {
@@ -453,7 +461,7 @@ class MainLoop {
     HardwareBrake brake_;
     static HardwareBrakeBase no_brake_;
     volatile bool driver_enable_triggered_ = false;
-
+    volatile bool driver_disable_triggered_ = false;
 
     friend class System;
     friend class Actuator;
