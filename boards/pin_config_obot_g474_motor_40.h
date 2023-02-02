@@ -44,14 +44,6 @@ void pin_config_obot_g474_motor_40() {
         GPIO_SETL(A, 7, GPIO_MODE::ALT_FUN, GPIO_SPEED::HIGH, 5);   // SPI1 MOSI
         MASK_SET(GPIOA->PUPDR, GPIO_PUPDR_PUPD6, 1); // MISO pull up
 
-        // GPIO configure
-        GPIO_SETL(A, 0, GPIO_MODE::ALT_FUN, GPIO_SPEED::VERY_HIGH, 1);   // QEPA TIM2
-        GPIO_SETL(A, 1, GPIO_MODE::ALT_FUN, GPIO_SPEED::VERY_HIGH, 1);   // QEPB TIM2
-        GPIO_SETL(A, 2, GPIO_MODE::ALT_FUN, GPIO_SPEED::VERY_HIGH, 1);   // QEPI TIM2
-        MASK_SET(GPIOA->PUPDR, GPIO_PUPDR_PUPD0, GPIO_PULL::DOWN);       // reject noise with pull down
-        MASK_SET(GPIOA->PUPDR, GPIO_PUPDR_PUPD1, GPIO_PULL::DOWN);
-        MASK_SET(GPIOA->PUPDR, GPIO_PUPDR_PUPD2, GPIO_PULL::DOWN);
-
         GPIO_SETH(B, 14, GPIO_MODE::ALT_FUN, GPIO_SPEED::VERY_HIGH, 13); // hrtim1 chd1
         GPIO_SETH(B, 15, GPIO_MODE::ALT_FUN, GPIO_SPEED::VERY_HIGH, 13); // hrtim1 chd2 
         GPIO_SETL(C, 6, GPIO_MODE::ALT_FUN, GPIO_SPEED::VERY_HIGH, 13);  // hrtim1 chf1
@@ -169,11 +161,6 @@ void pin_config_obot_g474_motor_40() {
         DMAMUX1_Channel1->CCR =  DMA_REQUEST_SPI3_RX;
         SPI3->CR1 = SPI_CR1_MSTR | (3 << SPI_CR1_BR_Pos) | SPI_CR1_SSI | SPI_CR1_SSM;    // baud = clock/16 spi mode 0
         SPI3->CR2 = (7 << SPI_CR2_DS_Pos) | SPI_CR2_FRXTH;    // 8 bit
-
-        // SPI1 DRV8323RS        
-        SPI1->CR2 = (15 << SPI_CR2_DS_Pos) | SPI_CR2_FRF;   // 16 bit TI mode
-        // ORDER DEPENDANCE SPE set last
-        SPI1->CR1 = SPI_CR1_MSTR | (5 << SPI_CR1_BR_Pos) | SPI_CR1_SPE;    // baud = clock/64
 
         // I2C1
         GPIO_SETH(A, 15, GPIO_MODE::ALT_FUN, GPIO_SPEED::LOW, 4);   // i2c1 scl
