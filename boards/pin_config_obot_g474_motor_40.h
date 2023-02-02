@@ -36,11 +36,6 @@ void pin_config_obot_g474_motor_40() {
 
         FLASH->ACR |= FLASH_ACR_PRFTEN;
         MASK_SET(FLASH->ACR, FLASH_ACR_LATENCY, 4);
-
-<<<<<<< develop
-<<<<<<< develop
-=======
->>>>>>> spi1 on motor40
  
         // SPI1
         GPIO_SETL(A, 4, GPIO_MODE::OUTPUT, GPIO_SPEED::HIGH, 0);    // SPI1 CS1
@@ -48,8 +43,7 @@ void pin_config_obot_g474_motor_40() {
         GPIO_SETL(A, 6, GPIO_MODE::ALT_FUN, GPIO_SPEED::HIGH, 5);   // SPI1 MISO
         GPIO_SETL(A, 7, GPIO_MODE::ALT_FUN, GPIO_SPEED::HIGH, 5);   // SPI1 MOSI
         MASK_SET(GPIOA->PUPDR, GPIO_PUPDR_PUPD6, 1); // MISO pull up
-<<<<<<< develop
-=======
+
         // GPIO configure
         GPIO_SETL(A, 0, GPIO_MODE::ALT_FUN, GPIO_SPEED::VERY_HIGH, 1);   // QEPA TIM2
         GPIO_SETL(A, 1, GPIO_MODE::ALT_FUN, GPIO_SPEED::VERY_HIGH, 1);   // QEPB TIM2
@@ -57,15 +51,6 @@ void pin_config_obot_g474_motor_40() {
         MASK_SET(GPIOA->PUPDR, GPIO_PUPDR_PUPD0, GPIO_PULL::DOWN);       // reject noise with pull down
         MASK_SET(GPIOA->PUPDR, GPIO_PUPDR_PUPD1, GPIO_PULL::DOWN);
         MASK_SET(GPIOA->PUPDR, GPIO_PUPDR_PUPD2, GPIO_PULL::DOWN);
-        //GPIO_SETL(A, 0, 1, 3, 0);   // SPI1 CS on QEPA pin
-        GPIO_SETL(A, 4, GPIO_MODE::ALT_FUN, GPIO_SPEED::VERY_HIGH, 5);   // SPI1 CS drv8323s
-        GPIO_SETL(A, 5, GPIO_MODE::ALT_FUN, GPIO_SPEED::VERY_HIGH, 5);   // SPI1 CLK drv8323s
-        GPIO_SETL(A, 6, GPIO_MODE::ALT_FUN, GPIO_SPEED::VERY_HIGH, 5);   // SPI1 HIDO (host in device out) drv8323s
-        GPIO_SETL(A, 7, GPIO_MODE::ALT_FUN, GPIO_SPEED::VERY_HIGH, 5);   // SPI1 HODI drv8323s
-        MASK_SET(GPIOA->PUPDR, GPIO_PUPDR_PUPD6, 1); // HIDO pull up
->>>>>>> motor 40
-=======
->>>>>>> spi1 on motor40
 
         GPIO_SETH(B, 14, GPIO_MODE::ALT_FUN, GPIO_SPEED::VERY_HIGH, 13); // hrtim1 chd1
         GPIO_SETH(B, 15, GPIO_MODE::ALT_FUN, GPIO_SPEED::VERY_HIGH, 13); // hrtim1 chd2 
@@ -99,18 +84,8 @@ void pin_config_obot_g474_motor_40() {
 
         GPIO_SETL(D, 2, GPIO_MODE::OUTPUT, GPIO_SPEED::VERY_HIGH, 0);   // spi3 cs
 
-<<<<<<< develop
-<<<<<<< develop
         GPIO_SETH(C, 13, 1, 0, 0);  // drv enable
         GPIO_SETH(C, 14, GPIO_MODE::INPUT, GPIO_SPEED::LOW, 0);  // drv fault
-=======
-        GPIO_SETH(C, 13, 1, 0, 0);  // Boostxl enable
-        GPIO_SETH(C, 14, GPIO_MODE::INPUT, GPIO_SPEED::LOW, 0);  // Boostxl fault
->>>>>>> motor 40
-=======
-        GPIO_SETH(C, 13, 1, 0, 0);  // drv enable
-        GPIO_SETH(C, 14, GPIO_MODE::INPUT, GPIO_SPEED::LOW, 0);  // drv fault
->>>>>>> spi1 on motor40
         MASK_SET(GPIOC->PUPDR, GPIO_PUPDR_PUPD14, GPIO_PULL::UP);
 
         // TIM1 main loop interrupt        
@@ -188,33 +163,18 @@ void pin_config_obot_g474_motor_40() {
         NVIC_SetPriority(USB_LP_IRQn, NVIC_EncodePriority(NVIC_GetPriorityGrouping(), 2, 0));
         NVIC_EnableIRQ(USB_LP_IRQn);
 
-<<<<<<< develop
-<<<<<<< develop
-<<<<<<< develop
-=======
->>>>>>> pz work
+
         //SPI3 PZ
         DMAMUX1_Channel0->CCR =  DMA_REQUEST_SPI3_TX;
         DMAMUX1_Channel1->CCR =  DMA_REQUEST_SPI3_RX;
         SPI3->CR1 = SPI_CR1_MSTR | (3 << SPI_CR1_BR_Pos) | SPI_CR1_SSI | SPI_CR1_SSM;    // baud = clock/16 spi mode 0
         SPI3->CR2 = (7 << SPI_CR2_DS_Pos) | SPI_CR2_FRXTH;    // 8 bit
 
-<<<<<<< develop
-<<<<<<< develop
-=======
         // SPI1 DRV8323RS        
         SPI1->CR2 = (15 << SPI_CR2_DS_Pos) | SPI_CR2_FRF;   // 16 bit TI mode
         // ORDER DEPENDANCE SPE set last
         SPI1->CR1 = SPI_CR1_MSTR | (5 << SPI_CR1_BR_Pos) | SPI_CR1_SPE;    // baud = clock/64
->>>>>>> motor 40
-=======
->>>>>>> spi1 on motor40
-=======
->>>>>>> pz work
-        drv_enable();
 
-=======
->>>>>>> Add driver plus enable disable modes
         // I2C1
         GPIO_SETH(A, 15, GPIO_MODE::ALT_FUN, GPIO_SPEED::LOW, 4);   // i2c1 scl
         GPIO_SETH(B, 9, GPIO_MODE::ALT_FUN, GPIO_SPEED::LOW, 4);   // i2c1 sda
@@ -223,16 +183,6 @@ void pin_config_obot_g474_motor_40() {
         MASK_SET(GPIOA->OTYPER, GPIO_OTYPER_OT15, 1);       // open drain
         MASK_SET(GPIOB->OTYPER, GPIO_OTYPER_OT9, 1);
         SYSCFG->CFGR1 |= SYSCFG_CFGR1_I2C1_FMP | SYSCFG_CFGR1_I2C2_FMP | SYSCFG_CFGR1_I2C_PB9_FMP;  // fast mode plus (1 MHz)
-
-<<<<<<< develop
-<<<<<<< develop
-=======
-
-
-
->>>>>>> motor 40
-=======
->>>>>>> spi1 on motor40
 }
 
 extern "C" void RTC_WKUP_IRQHandler() {
