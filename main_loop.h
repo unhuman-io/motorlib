@@ -29,12 +29,12 @@ class MainLoop {
  public:
     MainLoop(FastLoop &fast_loop, PositionController &position_controller,  TorqueController &torque_controller, 
         ImpedanceController &impedance_controller, VelocityController &velocity_controller, StateController &state_controller, Communication &communication,
-        LED &led, OutputEncoder &output_encoder, TorqueSensor &torque, const MainLoopParam &param,
+        LED &led, OutputEncoder &output_encoder, TorqueSensor &torque, Driver &driver, const MainLoopParam &param,
         HardwareBrake &brake=no_brake_) : 
           param_(param), fast_loop_(fast_loop), position_controller_(position_controller), torque_controller_(torque_controller), 
           impedance_controller_(impedance_controller), velocity_controller_(velocity_controller), state_controller_(state_controller),  
           communication_(communication), led_(led), output_encoder_(output_encoder), torque_sensor_(torque),
-          output_encoder_correction_table_(param_.output_encoder.table), brake_(brake) {
+          output_encoder_correction_table_(param_.output_encoder.table), driver_(driver), brake_(brake) {
           set_param(param);
           if (param_.vbus_min == 0) {
             param_.vbus_min = 8;  // defaults that can be overridden via api
@@ -66,19 +66,20 @@ class MainLoop {
 #endif
           no_command_ = 0;
           first_command_received_ = true;
+          host_timestamp_ = receive_data.host_timestamp;
           if (!safe_mode_) {
             command_received = true;
             receive_data_ = receive_data;
-          } else if (receive_data.mode_desired == CLEAR_FAULTS) {
-              safe_mode_ = false;
-              status_.error.all = 0;
+          } else if (receive_data.mode_desired == CLEAR_FAULTS ||
+                     receive_data.mode_desired == DRIVER_ENABLE) {
               command_received = true;
               first_command_received_ = false;
               receive_data_ = receive_data;
           } else if (receive_data.mode_desired == BOARD_RESET ||
                      receive_data.mode_desired == CRASH ||
                      receive_data.mode_desired == SLEEP ||
-                     receive_data.mode_desired == FAULT) {
+                     receive_data.mode_desired == FAULT ||
+                     receive_data.mode_desired == DRIVER_DISABLE) {
               set_mode(static_cast<MainControlMode>(receive_data.mode_desired));
           }
         } else {
@@ -88,13 +89,6 @@ class MainLoop {
         }
       }
         
-      if (param_.host_timeout && no_command_ > param_.host_timeout && started_ && first_command_received_) {
-        status_.error.sequence = 1;
-      }
-
-      status_.error.bus_voltage_low |= status_.fast_loop.vbus < param_.vbus_min;
-      status_.error.bus_voltage_high |= status_.fast_loop.vbus > param_.vbus_max;
-
       // internal command, not recommended in conjunction with host_timeout or safe mode
       if (started_ && internal_command_received_) {
         internal_command_received_ = false;
@@ -109,6 +103,13 @@ class MainLoop {
           set_mode(static_cast<MainControlMode>(receive_data_.mode_desired));
         }
       }
+
+      if (param_.host_timeout && no_command_ > param_.host_timeout && started_ && first_command_received_) {
+        status_.error.sequence = 1;
+      }
+
+      status_.error.bus_voltage_low |= status_.fast_loop.vbus < param_.vbus_min;
+      status_.error.bus_voltage_high |= status_.fast_loop.vbus > param_.vbus_max;
 
       int32_t output_encoder_raw = output_encoder_.read();
       float output_encoder_x = (output_encoder_raw % (int32_t) param_.output_encoder.cpr) / (float) param_.output_encoder.cpr;
@@ -135,8 +136,11 @@ class MainLoop {
           status_.error.output_encoder_limit = 1;
       }
       status_.error.output_encoder |= output_encoder_.error();
+      status_.error.driver_not_enabled |= !driver_.is_enabled();
+      status_.error.driver_fault |= driver_.is_faulted();
 
-      if (!param_.disable_safe_mode && status_.error.all) {
+      if (status_.error.all & param_.error_mask.all) {
+          status_.error.fault = 1;
           safe_mode_ = true;
           set_mode(param_.safe_mode);
       }
@@ -264,6 +268,9 @@ class MainLoop {
         param_.encoder_limits.output_hard_max = INFINITY;
         param_.encoder_limits.output_hard_min = -INFINITY;
       }
+      if (param_.error_mask.all == 0) {
+        param_.error_mask.all = ERROR_MASK_ALL;
+      }
     }
     void set_rollover(float rollover) {
       position_controller_.set_rollover(rollover);
@@ -332,6 +339,19 @@ class MainLoop {
             brake_.on();
             led_.set_color(LED::ORANGE);
             break;
+          case DRIVER_ENABLE:
+            driver_enable_triggered_ = true;
+            led_.set_color(LED::AZURE);
+            break;
+          case DRIVER_DISABLE:
+            driver_disable_triggered_ = true;
+            led_.set_color(LED::WHITE);
+            break;
+          case CLEAR_FAULTS:
+            safe_mode_ = false;
+            status_.error.all = 0;
+            led_.set_color(LED::AZURE);
+            break;
           case STEPPER_VELOCITY:
           case STEPPER_TUNING:
             fast_loop_.stepper_mode();
@@ -365,6 +385,9 @@ class MainLoop {
         if (safe_mode_) {
           led_.set_color(LED::RED);
           led_.set_rate(2);
+          if (param_.safe_mode_driver_disable) {
+            driver_.disable();
+          }
         } else {
           led_.set_rate(1);
         }
@@ -373,6 +396,21 @@ class MainLoop {
       last_safe_mode_ = safe_mode_;
       status_.mode = mode;
       receive_data_.mode_desired = mode; // todo: what is this for?
+    }
+    bool driver_enable_triggered() {
+      if (driver_enable_triggered_) {
+        driver_enable_triggered_ = false;
+        return true;
+      }
+      return false;
+    }
+
+    bool driver_disable_triggered() {
+      if (driver_disable_triggered_) {
+        driver_disable_triggered_ = false;
+        return true;
+      }
+      return false;
     }
 
     // use to set the command from another low priority source than communication, 
@@ -395,6 +433,7 @@ class MainLoop {
     Communication &communication_;
     LED &led_;
     ReceiveData receive_data_ = {};
+    mcu_time host_timestamp_ = {};
     ReceiveData last_receive_data_ = {};
     MotorCommand internal_command_;
     bool internal_command_received_ = false;
@@ -418,11 +457,14 @@ class MainLoop {
     PChipTable<OUTPUT_ENCODER_TABLE_LENGTH> output_encoder_correction_table_;
     CStack<MainLoopStatus,2> status_stack_;
     bool first_command_received_ = false;
+    Driver &driver_;
     HardwareBrake brake_;
     static HardwareBrakeBase no_brake_;
-
+    volatile bool driver_enable_triggered_ = false;
+    volatile bool driver_disable_triggered_ = false;
 
     friend class System;
+    friend class Actuator;
     friend void system_init();
     friend void system_maintenance();
     friend void config_init();
@@ -433,7 +475,7 @@ class MainLoop {
 #ifndef CUSTOM_SENDDATA
 void load_send_data(const MainLoop &main_loop, SendData * const data) {
     data->iq = main_loop.status_.fast_loop.foc_status.measured.i_q;
-    data->host_timestamp_received = main_loop.receive_data_.host_timestamp;
+    data->host_timestamp_received = main_loop.host_timestamp_;
     data->mcu_timestamp = main_loop.status_.fast_loop.timestamp;
     data->motor_encoder = main_loop.status_.fast_loop.motor_position.raw;
     data->motor_position = main_loop.status_.motor_position;

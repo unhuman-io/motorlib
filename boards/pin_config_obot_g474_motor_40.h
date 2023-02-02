@@ -15,21 +15,6 @@
 #define TIM_B TIM4->CCR3
 
 
-void drv_disable() {
-    GPIOC->BSRR = GPIO_BSRR_BR13; // drv disable
-}
-
-void drv_enable() {
-    GPIOC->BSRR = GPIO_BSRR_BS13; // drv enable
-}
-
-std::string drv_reset() {
-    drv_disable();
-    ms_delay(10);
-    drv_enable();
-    return "ok";
-}
-
 void pin_config_obot_g474_motor_40() {
      // Peripheral clock enable
         RCC->APB1ENR1 = RCC_APB1ENR1_SPI3EN | RCC_APB1ENR1_TIM2EN |  RCC_APB1ENR1_TIM4EN | RCC_APB1ENR1_TIM5EN | RCC_APB1ENR1_USBEN | RCC_APB1ENR1_I2C1EN | RCC_APB1ENR1_RTCAPBEN | RCC_APB1ENR1_PWREN;
@@ -51,7 +36,6 @@ void pin_config_obot_g474_motor_40() {
 
         FLASH->ACR |= FLASH_ACR_PRFTEN;
         MASK_SET(FLASH->ACR, FLASH_ACR_LATENCY, 4);
-
  
         // SPI1
         GPIO_SETL(A, 4, GPIO_MODE::OUTPUT, GPIO_SPEED::HIGH, 0);    // SPI1 CS1
@@ -171,13 +155,12 @@ void pin_config_obot_g474_motor_40() {
         NVIC_SetPriority(USB_LP_IRQn, NVIC_EncodePriority(NVIC_GetPriorityGrouping(), 2, 0));
         NVIC_EnableIRQ(USB_LP_IRQn);
 
+
         //SPI3 PZ
         DMAMUX1_Channel0->CCR =  DMA_REQUEST_SPI3_TX;
         DMAMUX1_Channel1->CCR =  DMA_REQUEST_SPI3_RX;
         SPI3->CR1 = SPI_CR1_MSTR | (3 << SPI_CR1_BR_Pos) | SPI_CR1_SSI | SPI_CR1_SSM;    // baud = clock/16 spi mode 0
         SPI3->CR2 = (7 << SPI_CR2_DS_Pos) | SPI_CR2_FRXTH;    // 8 bit
-
-        drv_enable();
 
         // I2C1
         GPIO_SETH(A, 15, GPIO_MODE::ALT_FUN, GPIO_SPEED::LOW, 4);   // i2c1 scl
@@ -187,7 +170,6 @@ void pin_config_obot_g474_motor_40() {
         MASK_SET(GPIOA->OTYPER, GPIO_OTYPER_OT15, 1);       // open drain
         MASK_SET(GPIOB->OTYPER, GPIO_OTYPER_OT9, 1);
         SYSCFG->CFGR1 |= SYSCFG_CFGR1_I2C1_FMP | SYSCFG_CFGR1_I2C2_FMP | SYSCFG_CFGR1_I2C_PB9_FMP;  // fast mode plus (1 MHz)
-
 }
 
 extern "C" void RTC_WKUP_IRQHandler() {
@@ -196,23 +178,4 @@ extern "C" void RTC_WKUP_IRQHandler() {
     count++;
     EXTI->PR1 = EXTI_PR1_PIF20;
     RTC->SCR = RTC_SCR_CWUTF;
-}
-
-void setup_sleep() {
-    NVIC_DisableIRQ(TIM1_UP_TIM16_IRQn);
-    NVIC_DisableIRQ(ADC5_IRQn);
-    drv_disable();
-    NVIC_SetPriority(USB_LP_IRQn, NVIC_EncodePriority(NVIC_GetPriorityGrouping(), 0, 1));
-    NVIC_EnableIRQ(RTC_WKUP_IRQn);
-    MASK_SET(RCC->CFGR, RCC_CFGR_SW, 2); // HSE is system clock source
-    RTC->SCR = RTC_SCR_CWUTF;
-}
-
-void finish_sleep() {
-    MASK_SET(RCC->CFGR, RCC_CFGR_SW, 3); // PLL is system clock source
-    drv_enable();
-    NVIC_DisableIRQ(RTC_WKUP_IRQn);
-    NVIC_SetPriority(USB_LP_IRQn, NVIC_EncodePriority(NVIC_GetPriorityGrouping(), 2, 0));
-    NVIC_EnableIRQ(TIM1_UP_TIM16_IRQn);
-    NVIC_EnableIRQ(ADC5_IRQn);
 }

@@ -109,6 +109,11 @@ inline std::string u16_to_hex(const uint16_t w) {
     return byte_to_hex((uint8_t) (w>>8)) + byte_to_hex((uint8_t) (w & 0xFF));
 }
 
+inline std::string u32_to_hex(const uint32_t w) {
+    return byte_to_hex((uint8_t) (w>>24)) + byte_to_hex((uint8_t) ((w>>16) & 0xFF)) +
+            byte_to_hex((uint8_t) ((w>>8) & 0xFF)) + byte_to_hex((uint8_t) (w & 0xFF));
+}
+
 inline std::string bytes_to_hex(const std::vector<char>& bytes) { 
     std::string s;   
     for (uint8_t b : bytes) {

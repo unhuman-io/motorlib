@@ -109,6 +109,14 @@ class FastLoop {
       dt_ = (timestamp_ - last_timestamp_)*(float) (1.0f/CPU_FREQUENCY_HZ);
       last_timestamp_ = timestamp_;
 
+      if (zero_current_sensors_) {
+        if ((int32_t) (get_clock()-zero_current_sensors_end_) > 0) {
+          zero_current_sensors_ = false;
+        } else {
+          zero_current_sensors();
+        }
+
+      }
       store_status();
     }
     void maintenance() {
@@ -229,6 +237,14 @@ class FastLoop {
     void beep_off() {
       beep_ = false;
     }
+
+    void zero_current_sensors_on(float t_seconds = 1) {
+      zero_current_sensors_ = true;
+      zero_current_sensors_end_ = get_clock() + t_seconds*CPU_FREQUENCY_HZ;
+    }
+    void zero_current_sensors_off() {
+      zero_current_sensors_ = false;
+    }
     bool motor_encoder_error() { return encoder_.error(); }
  private:
     FastLoopParam param_;
@@ -287,6 +303,8 @@ class FastLoop {
    CStack<FastLoopStatus,2> status_;
    bool beep_ = false;
    uint32_t beep_end_ = 0;
+   bool zero_current_sensors_ = false;
+   uint32_t zero_current_sensors_end_ = 0;
    float phi_beep_ = 0;
 
    friend class System;

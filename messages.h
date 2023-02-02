@@ -125,10 +125,12 @@ typedef struct {
     int16_t host_timeout;                             // 0 to disable, if no commands received before host timeout, go to safe_mode
     MainControlMode safe_mode;                 // goes to this mode and freeze command if error
                                                     // need to send reset from host to exit
-    uint8_t disable_safe_mode;                        // false to enable safe modes
     float torque_correction;
     float vbus_min;
     float vbus_max;
+    MotorError error_mask;              // can set to ERROR_MASK_ALL or ERROR_MASK_NONE or others
+    uint8_t safe_mode_driver_disable;   // driver is disabled in safe mode
+    uint8_t no_latch_driver_fault;      // 1 allows for the driver_fault to be reset by software
 } MainLoopParam;
 
 typedef struct {
@@ -159,6 +161,7 @@ typedef struct {
     MainControlMode startup_mode;
     uint8_t no_zero_current_sensors;   // default of 0 will zero current sensors for 2 seconds on startup
                                        // 1 to disable and use fast_loop_param.i*_bias
+    uint8_t no_driver_enable;       // 1 to require sending driver_enable mode and clear faults to enable the driver
 } StartupParam;
 
 typedef struct {

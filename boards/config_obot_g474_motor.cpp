@@ -3,9 +3,11 @@
 #include "../peripheral/stm32g4/hrpwm.h"
 #include "../util.h"
 #include "../peripheral/stm32g4/pin_config.h"
+#include "../peripheral/stm32g4/drv8323s.h"
 
 using PWM = HRPWM;
 using Communication = USBCommunication;
+using Driver = DRV8323S;
 volatile uint32_t * const cpu_clock = &DWT->CYCCNT;
 uint16_t drv_regs_error = 0;
 
@@ -29,7 +31,7 @@ uint16_t drv_regs_error = 0;
 #include "../system.h"
 #include "pin_config_obot_g474_motor.h"
 #include "../peripheral/stm32g4/temp_sensor.h"
-#include "../peripheral/stm32g4/drv8323s.h"
+
 
 #if defined(R3) || defined(R4)
 #define HAS_MAX31875
@@ -39,7 +41,7 @@ uint16_t drv_regs_error = 0;
 namespace config {
     static_assert(((double) CPU_FREQUENCY_HZ * 8 / 2) / pwm_frequency < 65535);    // check pwm frequency
 #ifdef SPI1_REINIT_CALLBACK
-    DRV8323S drv(*SPI1, nullptr, spi1_reinit_callback);
+    DRV8323S drv(*SPI1, spi1_dma.register_operation_, spi1_reinit_callback);
 #else
     DRV8323S drv(*SPI1);
 #endif
@@ -59,7 +61,7 @@ namespace config {
     ImpedanceController impedance_controller = {(float) (1.0/main_loop_frequency)};
     VelocityController velocity_controller = {(float) (1.0/main_loop_frequency)};
     StateController state_controller = {(float) (1.0/main_loop_frequency)};
-    MainLoop main_loop = {fast_loop, position_controller, torque_controller, impedance_controller, velocity_controller, state_controller, System::communication_, led, output_encoder, torque_sensor, param->main_loop_param};
+    MainLoop main_loop = {fast_loop, position_controller, torque_controller, impedance_controller, velocity_controller, state_controller, System::communication_, led, output_encoder, torque_sensor, drv, param->main_loop_param};
 };
 
 Communication System::communication_ = {config::usb};
@@ -181,8 +183,10 @@ void system_maintenance() {
     }
     if (!(GPIOC->IDR & 1<<14)) {
         driver_fault = true;
+    } else if (param->main_loop_param.no_latch_driver_fault) {
+        driver_fault = false;
     }
-    config::main_loop.status_.error.driver_fault = driver_fault;    // latch driver fault until reset
+    config::main_loop.status_.error.driver_fault |= driver_fault;    // maybe latch driver fault until reset
     index_mod = config::motor_encoder.index_error(param->fast_loop_param.motor_encoder.cpr);
     config_maintenance();
 }
@@ -190,7 +194,7 @@ void system_maintenance() {
 void setup_sleep() {
     NVIC_DisableIRQ(TIM1_UP_TIM16_IRQn);
     NVIC_DisableIRQ(ADC5_IRQn);
-    config::drv.drv_disable();
+    config::drv.disable();
     NVIC_SetPriority(USB_LP_IRQn, NVIC_EncodePriority(NVIC_GetPriorityGrouping(), 0, 1));
     NVIC_EnableIRQ(RTC_WKUP_IRQn);
     MASK_SET(RCC->CFGR, RCC_CFGR_SW, 2); // HSE is system clock source
@@ -199,7 +203,7 @@ void setup_sleep() {
 
 void finish_sleep() {
     MASK_SET(RCC->CFGR, RCC_CFGR_SW, 3); // PLL is system clock source
-    config::drv.drv_enable();
+    config::drv.enable();
     NVIC_DisableIRQ(RTC_WKUP_IRQn);
     NVIC_SetPriority(USB_LP_IRQn, NVIC_EncodePriority(NVIC_GetPriorityGrouping(), 2, 0));
     NVIC_EnableIRQ(TIM1_UP_TIM16_IRQn);
