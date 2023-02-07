@@ -4,7 +4,11 @@
 class MAX31875 {
  public:
     MAX31875(I2C &i2c, uint8_t address = 0x48) : i2c_(i2c), address_(address) {
-
+        if (address_ < 0x48) {
+            // address can either be given as 0 through 7 or 
+            // as 0x48 + 0 through 7
+            address_ += 0x48;
+        }
     }
     float read() {
         if (first_read_) {
