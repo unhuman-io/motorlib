@@ -229,6 +229,13 @@ class FastLoop {
     void set_phase_mode() {
       phase_mode_desired_ = param_.phase_mode == 0 ? 1 : -1;
     }
+    void set_phase_mode(uint8_t phase_mode) {
+      param_.phase_mode = phase_mode;
+      set_phase_mode();
+    }
+    uint8_t get_phase_mode() {
+      return param_.phase_mode;
+    }
     float get_rollover() const { return 2*M_PI*inv_motor_encoder_cpr_*param_.motor_encoder.rollover; }
     void beep_on(float t_seconds = 1) {
       beep_ = true;
