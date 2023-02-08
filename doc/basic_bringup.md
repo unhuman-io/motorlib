@@ -42,13 +42,21 @@ motor_util set --mode phase_lock --current CONTINUOUS_MOTOR_CURRENT_IN_A
 sleep 2
 motor_util set --mode current --current ABOVE_STARTING_MOTOR_CURRENT_IN_A
 ```
-If the motor spins with the above commands then commutation is correct. If it does not spin and instead tends to lock to specific positions, then `phase_mode` is incorrect. Just toggle the value in the param file (0 becomes 1 or 1 becomes 0), recompile and reload firmware, then try the above steps again. If the motor still does not spin then the problem is more fundamental and `num_poles`, `motor_encoder_cpr`, the correct param and config files, and sensor signals should be checked.
+If the motor spins with the above commands then commutation is correct. If it does not spin and instead tends to lock to specific positions, then `phase_mode` is incorrect. Just toggle the value in the param file (0 becomes 1 or 1 becomes 0), recompile and reload firmware, then try the above steps again (or set `phase_mode` via the debug api). If the motor still does not spin then the problem is more fundamental and `num_poles`, `motor_encoder_cpr`, the correct param and config files, and sensor signals should be checked.
 
 Next the current direction, motor/output encoder directions, and the torque sensor direction should be determined. It is important that positive current creates positive motion in the preferred direction and positive signals on the motor and output encoders. It the output is held fixed then positive current should also produce a positive torque signal as measured by the torque sensor if equipped. By running the above current, and observing the sensors signals the following variables will change the sensor signal or current directions.
-- `current_direction`: Direction of rotation effected by a positive current command
+- `motor_util set --mode phase_lock --current -CONTINUOUS_MOTOR_CURRENT_IN_A`: Note the negative current. Direction of rotation effected by a positive current command
 - `motor_encoder_dir`: Positive direction of the motor encoder that affects position, velocity, and all other controllers
 - `output_encoder_dir`: Positive direction of the output encoder that affects the output reading and encoder bias zeroing at startup
 - `torque_sensor_gain`: Lumped parameter may be positive or negative that sets the gain and direction of the torque sensor
 These values may be changed in the parameters file. Recompile and reload to test their affect.
 
 An additional parameter that is necessary if continuous output rotation is desired is `rollover`. Since the internal and communicated variable `motor_position` is a float value in radians, it will eventually lose precision when the motor rotates past 2^23 motor encoder noise free counts. It should be set to an integer multiple of the encoder cpr and will cause the the motor position to wrap at this value when converted to radians. For example for a 100,000 cpr effective encoder a good choice for rollover is `100*100,000`, which would cause the motor position to wrap at `2*pi*100` radians to `-2*pi*100`.
+
+After proper commutation is determined, if the motor encoder is absolute or has an index pulse, then commutation can be determined at startup without the additonal `phase_lock` step. To determine the correct offset parameter, first ensure that the encoder has passed the index pulse if applicable then enter:
+```console
+motor_util set --mode phase_lock --current (+/-)CONTINUOUS_MOTOR_CURRENT_IN_A
+sleep 2
+motor_util --set-api index_offset_measured
+```
+This will return the `fast_loop_param.motor_encoder.index_electrical_offset_pos` that can be entered into the parameter file. To make `index_offset_measured` active, also set `fast_loop_param.motor_encoder.use_index_electrical_offset_pos = 1` in the parameter file as well.
