@@ -33,7 +33,7 @@ uint16_t drv_regs_error = 0;
 #include "../peripheral/stm32g4/temp_sensor.h"
 
 
-#if defined(R3) || defined(R4)
+#if defined(R3) || defined(R4) || defined(MR0)
 #define HAS_MAX31875
 #include "../peripheral/stm32g4/max31875.h"
 #endif

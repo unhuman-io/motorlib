@@ -283,7 +283,7 @@ class FastLoop {
     float motor_index_electrical_offset_measured_ = NAN;
     float inv_motor_encoder_cpr_;
     int32_t frequency_hz_ = 100000;
-    float alpha_zero_ = 0.001;
+    float alpha_zero_ = 0.0002;
     float v_bus_ = 12;
     mcu_time timestamp_;
    MotorEncoder &encoder_;
