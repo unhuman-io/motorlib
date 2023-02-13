@@ -57,6 +57,9 @@ class DRV8323S : public DriverBase {
 
         drv_spi_end();
         DriverBase::enable();
+        if(!drv_regs_error) {
+            logger.log("drv8323s configure success");
+        }
     }
 
     std::string drv_reset() {
