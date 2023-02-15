@@ -119,6 +119,7 @@ class System {
                     status.foc_status.command.v_b,
                     status.foc_status.command.v_c,
                     status.vbus);
+                actuator_.fast_loop_.status_log_.finish();
             }
             return "ok"; }));
         api.add_api_variable("beep", new APICallbackFloat([](){ return 0; }, [](float f){ actuator_.fast_loop_.beep_on(f); }));

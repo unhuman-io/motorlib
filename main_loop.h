@@ -383,7 +383,7 @@ class MainLoop {
             break;
         }
         if (safe_mode_) {
-          fast_loop_.store_status();
+          fast_loop_.trigger_status_log();
           led_.set_color(LED::RED);
           led_.set_rate(2);
           if (param_.safe_mode_driver_disable) {
