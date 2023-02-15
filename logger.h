@@ -6,7 +6,7 @@
 class Logger {
  public:
     void log(std::string str) {
-        if (log_queue_.size() < 20) {
+        if (log_queue_.size() < 103) {
             log_queue_.push(str);
         }
     }
