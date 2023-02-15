@@ -1,5 +1,6 @@
 #pragma once
 #include "../../driver.h"
+#include "../../logger.h"
 
 extern uint16_t drv_regs_error;
 
@@ -35,6 +36,8 @@ class DRV8323S : public DriverBase {
     }
 
     void disable() {
+        uint32_t status = get_drv_status();
+        logger.log_printf("drv8323 disabled, status: %04x", status);
         GPIOC->BSRR = GPIO_BSRR_BR13; // drv disable
         DriverBase::disable();
     }
