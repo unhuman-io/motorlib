@@ -188,6 +188,8 @@ typedef struct {
     } motor_position;
     float motor_mechanical_position;    // counts referenced to index
     FOCCommand foc_command;
+    float power;                        // estimated power in W
+    uint32_t energy_uJ;                  // rolling over sum of micro Joules (rollover at 4000J/1.1 Wh)
     float vbus;                         // bus voltage V
 } FastLoopStatus; // 22*4 bytes
 
@@ -199,4 +201,5 @@ typedef struct {
     MotorMode mode;
     MotorError error;
     RoundRobinData rr_data;
+    float power;
 } MainLoopStatus;
