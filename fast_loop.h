@@ -253,6 +253,9 @@ class FastLoop {
       zero_current_sensors_ = false;
     }
     bool motor_encoder_error() { return encoder_.error(); }
+    void trigger_status_log() {
+      status_log_.copy(status_);
+    }
  private:
     FastLoopParam param_;
     FOC *foc_;
@@ -307,7 +310,8 @@ class FastLoop {
    volatile uint32_t *const v_bus_dr_;
    PChipTable<MOTOR_ENCODER_TABLE_LENGTH> motor_correction_table_;
    PChipTable<COGGING_TABLE_SIZE> cogging_correction_table_;
-   CStack<FastLoopStatus,2> status_;
+   CStack<FastLoopStatus,100> status_;
+   CStack<FastLoopStatus,100> status_log_;
    bool beep_ = false;
    uint32_t beep_end_ = 0;
    bool zero_current_sensors_ = false;

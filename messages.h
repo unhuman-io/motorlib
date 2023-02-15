@@ -189,7 +189,7 @@ typedef struct {
     float motor_mechanical_position;    // counts referenced to index
     FOCCommand foc_command;
     float vbus;                         // bus voltage V
-} FastLoopStatus;
+} FastLoopStatus; // 22*4 bytes
 
 typedef struct {
     FastLoopStatus fast_loop;

@@ -6,6 +6,14 @@
 template <class T, int size=100>
 class CStack {
  public:
+	CStack() = default;
+	void copy(const CStack &stack) {
+		pos_ = stack.pos_.load(std::memory_order_acquire);
+		for(int i=0;i<size;i++) {
+			data_[i] = stack.data_[i];
+		}
+		future_pos_ = stack.future_pos_;
+	}
     void push(T const &t) {
 		next() = t;
 		finish();	
