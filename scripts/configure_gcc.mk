@@ -5,7 +5,7 @@
 DEBUG = 1
 # optimization
 OPT = -Og -fsingle-precision-constant -O3 
-LTO = -flto
+LTO = -flto=auto
 
 #######################################
 # binaries
@@ -61,15 +61,15 @@ CPPFLAGS = $(CFLAGS)
 # libraries
 LIBS = -lc -lm -lnosys 
 LIBDIR = 
-LDFLAGS = $(MCU) -specs=nosys.specs -specs=nano.specs -T$(LDSCRIPT) $(LIBDIR) $(LIBS) -Wl,-Map=$(BUILD_DIR)/$(TARGET).map,--cref -Wl,--gc-sections -u _printf_float
+LDFLAGS = $(MCU) -specs=rdimon.specs -specs=nosys.specs -specs=nano.specs -T$(LDSCRIPT) $(LIBDIR) $(LIBS) -Wl,-Map=$(BUILD_DIR)/$(TARGET).map,--cref -Wl,--gc-sections -u _printf_float
 	
 GCC_VERSION := $(shell $(CC) -dumpversion)
 GCC_MAJOR_VERSION := $(word 1, $(subst ., ,$(GCC_VERSION)))
 
-ifeq ($(GCC_MAJOR_VERSION), $(filter $(GCC_MAJOR_VERSION),10 11))
+ifeq ($(GCC_MAJOR_VERSION), $(filter $(GCC_MAJOR_VERSION),10 11 12))
 $(info gcc version $(GCC_VERSION))
 else
-$(error gcc version $(GCC_VERSION), 10 or 11 required)
+$(error gcc version $(GCC_VERSION), 10, 11, or 12 required)
 endif
 
 ifeq ($(OS),Windows_NT)
