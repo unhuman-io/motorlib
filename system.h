@@ -107,11 +107,12 @@ class System {
         api.add_api_variable("ib_bias", new APIFloat(&actuator_.fast_loop_.param_.ib_bias));
         api.add_api_variable("ic_bias", new APIFloat(&actuator_.fast_loop_.param_.ic_bias));
         api.add_api_variable("fast_log", new const APICallback([](){
-            logger.log_printf("ia, ib, ic, va, vb, vc, vbus");
+            logger.log_printf("timestamp, position, ia, ib, ic, va, vb, vc, vbus");
             for(int i=0; i<100; i++) {
                 FastLoopStatus &status = actuator_.fast_loop_.status_log_.next();
-                logger.log_printf("%d, %f, %f, %f, %f, %f, %f, %f", 
+                logger.log_printf("%d, %f, %f, %f, %f, %f, %f, %f, %f", 
                     status.timestamp,
+                    status.foc_command.measured.motor_encoder,
                     status.foc_command.measured.i_a,
                     status.foc_command.measured.i_b,
                     status.foc_command.measured.i_c,
