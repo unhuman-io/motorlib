@@ -28,13 +28,19 @@ class FastLoop {
        float dt = 1.0f/frequency_hz;
        foc_ = new FOC(dt);
        set_param(param);
+#ifdef END_TRIGGER_MOTOR_ENCODER
+       encoder_.trigger();
+#endif
     }
     ~FastLoop() {
        delete foc_;
     }
     void update()  __attribute__((section (".ccmram"))) {
          // trigger encoder read
+#ifndef END_TRIGGER_MOTOR_ENCODER
+      // probably don't use end trigger on a shared spi bus
       encoder_.trigger();
+#endif
 
       timestamp_ = get_clock();
 
@@ -118,6 +124,9 @@ class FastLoop {
 
       }
       store_status();
+#ifdef END_TRIGGER_MOTOR_ENCODER
+      encoder_.trigger();
+#endif
     }
     void maintenance() {
       if (encoder_.index_received() && !motor_index_pos_set_) {
