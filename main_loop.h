@@ -232,6 +232,16 @@ class MainLoop {
           iq_des = velocity_controller_.step(tmp_receive_data, status_);
       }
 
+      if (((status_.torque > param_.torque_limits.controlled_max && iq_des >= 0) ||
+          (status_.torque < param_.torque_limits.controlled_min && iq_des <= 0)) && started_) {
+          if (mode_ != TORQUE && mode_ != param_.safe_mode) {
+            set_mode(TORQUE);
+          }
+          MotorCommand tmp_receive_data = receive_data_;
+          tmp_receive_data.torque_desired = 0;
+          iq_des = torque_controller_.step(tmp_receive_data, status_);
+      }
+
       fast_loop_.set_iq_des(iq_des);
       fast_loop_.set_vq_des(vq_des);
       
@@ -272,6 +282,10 @@ class MainLoop {
       if (param_.encoder_limits.output_hard_max == param_.encoder_limits.output_hard_min) {
         param_.encoder_limits.output_hard_max = INFINITY;
         param_.encoder_limits.output_hard_min = -INFINITY;
+      }
+      if (param_.torque_limits.controlled_max == param_.torque_limits.controlled_min) {
+        param_.torque_limits.controlled_max = INFINITY;
+        param_.torque_limits.controlled_min = -INFINITY;
       }
       if (param_.error_mask.all == 0) {
         param_.error_mask.all = ERROR_MASK_ALL;
