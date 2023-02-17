@@ -225,21 +225,27 @@ class MainLoop {
       if (((status_.motor_position > param_.encoder_limits.motor_controlled_max && iq_des >= 0) ||
           (status_.motor_position < param_.encoder_limits.motor_controlled_min && iq_des <= 0)) && started_) {
           if (mode_ != VELOCITY && mode_ != param_.safe_mode) {
-            set_mode(VELOCITY);
+            set_mode(VELOCITY, !motor_controlled_limit_);
           }
+          motor_controlled_limit_ = true;
           MotorCommand tmp_receive_data = receive_data_;
           tmp_receive_data.velocity_desired = 0;
           iq_des = velocity_controller_.step(tmp_receive_data, status_);
+      } else {
+        motor_controlled_limit_ = false;
       }
 
       if (((status_.torque > param_.torque_limits.controlled_max && iq_des >= 0) ||
           (status_.torque < param_.torque_limits.controlled_min && iq_des <= 0)) && started_) {
           if (mode_ != TORQUE && mode_ != param_.safe_mode) {
-            set_mode(TORQUE);
+            set_mode(TORQUE, !torque_controlled_limit_);
           }
+          torque_controlled_limit_ = true;
           MotorCommand tmp_receive_data = receive_data_;
           tmp_receive_data.torque_desired = 0;
           iq_des = torque_controller_.step(tmp_receive_data, status_);
+      } else {
+        torque_controlled_limit_ = false;
       }
 
       fast_loop_.set_iq_des(iq_des);
@@ -300,7 +306,7 @@ class MainLoop {
     void set_motor_encoder_bias(float bias) { motor_encoder_bias_ = bias; }
     const MainLoopStatus & get_status() const { return status_stack_.top(); }
     void set_started() { started_ = true; }
-    void set_mode(MainControlMode mode) {
+    void set_mode(MainControlMode mode, bool init = true) {
       if (mode != mode_ || safe_mode_ != last_safe_mode_) {
         if(mode_ == HARDWARE_BRAKE && mode != HARDWARE_BRAKE) {
           brake_.off();
@@ -329,25 +335,35 @@ class MainLoop {
             // note: get_status() will return the previous iteration status
             // It is useful to init on this so that the first control iteration
             // will be able to calculate 1st order derivatives
-            position_controller_.init(get_status());
+            if (init) {
+              position_controller_.init(get_status());
+            }
           case VELOCITY:
             fast_loop_.current_mode();
-            velocity_controller_.init(get_status());
+            if (init) {
+              velocity_controller_.init(get_status());
+            }
             led_.set_color(LED::BLUE);
             break;
           case IMPEDANCE:
             fast_loop_.current_mode();
-            impedance_controller_.init(get_status());
+            if (init) {
+              impedance_controller_.init(get_status());
+            }
             led_.set_color(LED::CHARTREUSE);
             break;
           case TORQUE:
             fast_loop_.current_mode();
-            torque_controller_.init(get_status());
+            if (init) {
+              torque_controller_.init(get_status());
+            }
             led_.set_color(LED::ROSE);
             break;
           case STATE:
             fast_loop_.current_mode();
-            state_controller_.init(get_status());
+            if (init) {
+              state_controller_.init(get_status());
+            }
             led_.set_color(LED::MAGENTA);
           case VOLTAGE:
             fast_loop_.voltage_mode();
@@ -489,6 +505,8 @@ class MainLoop {
     volatile bool driver_enable_triggered_ = false;
     volatile bool driver_disable_triggered_ = false;
     uint32_t last_energy_uJ_ = 0;
+    bool motor_controlled_limit_ = false;
+    bool torque_controlled_limit_ = false;
 
     friend class System;
     friend class Actuator;
