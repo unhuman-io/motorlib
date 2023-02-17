@@ -1,5 +1,6 @@
 #pragma once
 #include "../../driver.h"
+#include "../../logger.h"
 
 extern uint16_t drv_regs_error;
 
@@ -18,7 +19,7 @@ class DRV8323S : public DriverBase {
         regs_.CR1 = 0; // clear SPE
         regs_.CR2 = (15 << SPI_CR2_DS_Pos) | SPI_CR2_FRF;   // 16 bit TI mode
         // ORDER DEPENDANCE SPE set last
-        regs_.CR1 = SPI_CR1_MSTR | (5 << SPI_CR1_BR_Pos) | SPI_CR1_SPE;    // baud = clock/64
+        regs_.CR1 = SPI_CR1_MSTR | (6 << SPI_CR1_BR_Pos) | SPI_CR1_SPE;    // baud = clock/64
     }
 
     void drv_spi_end() {
@@ -35,6 +36,9 @@ class DRV8323S : public DriverBase {
     }
 
     void disable() {
+        uint32_t status = get_drv_status();
+        logger.log_printf("drv8323 disabled, status: %04x", status);
+        logger.log("drv disable");
         GPIOC->BSRR = GPIO_BSRR_BR13; // drv disable
         DriverBase::disable();
     }
@@ -44,19 +48,26 @@ class DRV8323S : public DriverBase {
         ms_delay(10);
 
         drv_spi_start();
-        
+        drv_regs_error = 0;
         for (uint8_t i=0; i<sizeof(param->drv_regs)/sizeof(uint16_t); i++) {
             uint16_t reg_out = param->drv_regs[i];
             uint16_t reg_in = 0;
             write_reg(reg_out);
-            reg_in = read_reg(reg_out);
+            uint8_t address = param->drv_regs[i]>>11;
+            reg_in = read_reg(address);
             if ((reg_in & 0x7FF) != (reg_out & 0x7FF)) {
                 drv_regs_error |= 1 << i;
             }
+            logger.log_printf("address: %d, reg_out: %x, reg_in: %x", address, reg_out, reg_in);
         }
 
         drv_spi_end();
         DriverBase::enable();
+        if(!drv_regs_error) {
+            logger.log("drv8323s configure success");
+        } else {
+            logger.log_printf("drv8323s configure error: %02x", drv_regs_error);
+        }
     }
 
     std::string drv_reset() {

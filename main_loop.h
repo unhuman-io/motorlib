@@ -139,7 +139,7 @@ class MainLoop {
       status_.error.driver_not_enabled |= !driver_.is_enabled();
       status_.error.driver_fault |= driver_.is_faulted();
 
-      if (status_.error.all & param_.error_mask.all) {
+      if (status_.error.all & param_.error_mask.all && !(receive_data_.mode_desired == DRIVER_ENABLE)) {
           status_.error.fault = 1;
           safe_mode_ = true;
           set_mode(param_.safe_mode);
@@ -340,10 +340,12 @@ class MainLoop {
             led_.set_color(LED::ORANGE);
             break;
           case DRIVER_ENABLE:
+            fast_loop_.open_mode();
             driver_enable_triggered_ = true;
             led_.set_color(LED::AZURE);
             break;
           case DRIVER_DISABLE:
+            fast_loop_.open_mode();
             driver_disable_triggered_ = true;
             led_.set_color(LED::WHITE);
             break;
@@ -386,7 +388,8 @@ class MainLoop {
           fast_loop_.trigger_status_log();
           led_.set_color(LED::RED);
           led_.set_rate(2);
-          if (param_.safe_mode_driver_disable) {
+          if (param_.safe_mode_driver_disable && !(mode == DRIVER_ENABLE)) {
+            logger.log_printf("safe mode driver disable, mode: %d", mode);
             driver_.disable();
           }
         } else {

@@ -67,7 +67,11 @@ void system_init() {
     } else {
         System::log("Output encoder init failure");
     }
-    config::torque_sensor.init();
+    if (config::torque_sensor.init()) {
+        System::log("Torque sensor init success");
+    } else {
+        System::log("Torque sensor init failure");
+    }
 
     System::api.add_api_variable("3v3", new APIFloat(&v3v3));
     std::function<float()> get_t = std::bind(&TempSensor::get_value, &config::temp_sensor);
