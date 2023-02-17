@@ -106,6 +106,9 @@ class System {
         api.add_api_variable("ia_bias", new APIFloat(&actuator_.fast_loop_.param_.ia_bias));
         api.add_api_variable("ib_bias", new APIFloat(&actuator_.fast_loop_.param_.ib_bias));
         api.add_api_variable("ic_bias", new APIFloat(&actuator_.fast_loop_.param_.ic_bias));
+        api.add_api_variable("power", new const APIFloat(&actuator_.main_loop_.status_.fast_loop.power));
+        api.add_api_variable("power_avg", new const APIFloat(&actuator_.main_loop_.status_.power));
+        api.add_api_variable("energy", new const APIUint32(&actuator_.main_loop_.status_.fast_loop.energy_uJ));
         api.add_api_variable("fast_log", new const APICallback([](){
             logger.log_printf("timestamp, position, ia, ib, ic, va, vb, vc, vbus");
             for(int i=0; i<100; i++) {

@@ -226,6 +226,11 @@ class FastLoop {
       s.timestamp = timestamp_;
       s.vbus = v_bus_;
       s.foc_command = foc_command_;
+      s.power = s.foc_status.command.v_d * s.foc_status.measured.i_d + 
+                s.foc_status.command.v_q * s.foc_status.measured.i_q;
+      int32_t energy =  s.power * dt_ * 1e6;
+      energy_uJ_ += (uint32_t) energy;
+      s.energy_uJ = energy_uJ_;
       foc_->get_status(&s.foc_status);
       status_.finish();
     }
@@ -326,6 +331,7 @@ class FastLoop {
    bool zero_current_sensors_ = false;
    uint32_t zero_current_sensors_end_ = 0;
    float phi_beep_ = 0;
+   uint32_t energy_uJ_ = 0;
 
    friend class System;
 };

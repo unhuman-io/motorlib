@@ -238,6 +238,11 @@ class MainLoop {
       if (communication_.tx_data_ack()) {
         round_robin_logger.get_next_data(&status_.rr_data);
       }
+
+      uint32_t current_energy = status_.fast_loop.energy_uJ;
+      status_.power = (int32_t) (current_energy - last_energy_uJ_)*1e-6/dt_;
+      last_energy_uJ_ = current_energy;
+
       SendData send_data;
       load_send_data(*this, &send_data);
       if (started_) { // this will prevent sending bad values before calibration
@@ -466,6 +471,7 @@ class MainLoop {
     static HardwareBrakeBase no_brake_;
     volatile bool driver_enable_triggered_ = false;
     volatile bool driver_disable_triggered_ = false;
+    uint32_t last_energy_uJ_ = 0;
 
     friend class System;
     friend class Actuator;
