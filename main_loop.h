@@ -326,25 +326,28 @@ class MainLoop {
             break;
           case POSITION_TUNING:
           case POSITION:
-            position_controller_.init(status_);
+            // note: get_status() will return the previous iteration status
+            // It is useful to init on this so that the first control iteration
+            // will be able to calculate 1st order derivatives
+            position_controller_.init(get_status());
           case VELOCITY:
             fast_loop_.current_mode();
-            velocity_controller_.init(status_);
+            velocity_controller_.init(get_status());
             led_.set_color(LED::BLUE);
             break;
           case IMPEDANCE:
             fast_loop_.current_mode();
-            impedance_controller_.init(status_);
+            impedance_controller_.init(get_status());
             led_.set_color(LED::CHARTREUSE);
             break;
           case TORQUE:
             fast_loop_.current_mode();
-            torque_controller_.init(status_);
+            torque_controller_.init(get_status());
             led_.set_color(LED::ROSE);
             break;
           case STATE:
             fast_loop_.current_mode();
-            state_controller_.init(status_);
+            state_controller_.init(get_status());
             led_.set_color(LED::MAGENTA);
           case VOLTAGE:
             fast_loop_.voltage_mode();
