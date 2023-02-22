@@ -109,6 +109,7 @@ class System {
         api.add_api_variable("power", new const APIFloat(&actuator_.main_loop_.status_.fast_loop.power));
         api.add_api_variable("power_avg", new const APIFloat(&actuator_.main_loop_.status_.power));
         api.add_api_variable("energy", new const APIUint32(&actuator_.main_loop_.status_.fast_loop.energy_uJ));
+        api.add_api_variable("tlimit_max", new APIFloat(&actuator_.main_loop_.param_.torque_limits.controlled_max));
         api.add_api_variable("fast_log", new const APICallback([](){
             logger.log_printf("timestamp, position, ia, ib, ic, va, vb, vc, vbus");
             for(int i=0; i<100; i++) {

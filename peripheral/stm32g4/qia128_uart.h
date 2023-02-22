@@ -127,6 +127,7 @@ class QIA128_UART : public TorqueSensorBase {
                     raw_bytes_[i] = regs_.RDR;
                 }
                 raw_ = raw_bytes_[0] << 16 | raw_bytes_[1] << 8 | raw_bytes_[2];
+                bool read_error = false;
                 if (regs_.ISR & USART_ISR_RXNE) {
                     read_len_++;
                     crc_read_ = regs_.RDR;
@@ -134,9 +135,11 @@ class QIA128_UART : public TorqueSensorBase {
                     if (crc8(raw_bytes_) != crc_read_) {
                         crc_calc_ = crc8(raw_bytes_);
                         crc_error_++;
+                        read_error = true;
                     }
                 } else {
                     read_error_++;
+                    read_error = true;
                 }
                 while (regs_.ISR & USART_ISR_RXNE) {
                         read_error_++;
@@ -145,7 +148,9 @@ class QIA128_UART : public TorqueSensorBase {
                 }
                 regs_.RQR = USART_RQR_RXFRQ;
                 regs_.ISR &= ~USART_ISR_RXFT;
-                torque_ = (float) ((int32_t) raw_- (int32_t) offset_)/(full_scale_ - offset_)*gain_ + bias_;
+                if (!read_error) {
+                    torque_ = (float) ((int32_t) raw_- (int32_t) offset_)/(full_scale_ - offset_)*gain_ + bias_;
+                }
                 state_ = WAIT;
             }
         }
