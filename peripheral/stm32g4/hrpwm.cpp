@@ -2,11 +2,22 @@
 #include "hrpwm.h"
 #include "../../control_fun.h"
 
+#define PWM_SVM
+
+#ifdef PWM_SVM
+void HRPWM::set_voltage(float v_abc[3]) {
+    float vmin = fmin(fmin(v_abc[0],v_abc[1]), v_abc[2]);
+    pwm_a_ = fsat2(v_abc[0] - vmin, pwm_min_, pwm_max_);
+    pwm_b_ = fsat2(v_abc[1] - vmin, pwm_min_, pwm_max_);
+    pwm_c_ = fsat2(v_abc[2] - vmin, pwm_min_, pwm_max_);
+}
+#else
 void HRPWM::set_voltage(float v_abc[3]) {
     pwm_a_ = fsat2(v_abc[0] * v_to_pwm_ + half_period_, pwm_min_, pwm_max_);
     pwm_b_ = fsat2(v_abc[1] * v_to_pwm_ + half_period_, pwm_min_, pwm_max_);
     pwm_c_ = fsat2(v_abc[2] * v_to_pwm_ + half_period_, pwm_min_, pwm_max_);
 }
+#endif
 
 void HRPWM::set_vbus(float vbus) {
     v_to_pwm_ = period_/vbus;

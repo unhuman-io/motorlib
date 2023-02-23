@@ -23,6 +23,10 @@ inline float fsat2(float a, float min, float max) {
     return b;
 }
 
+inline float fmin(float a, float b) {
+    return a<b ? a : b;
+}
+
 float fsignf(float a);
 inline int32_t sign(int32_t a) {
     return a > 0 ? 1 : (a < 0 ? -1 : 0);
