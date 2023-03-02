@@ -85,6 +85,7 @@ class System {
         api.add_api_variable("tmax", new APIFloat(&actuator_.main_loop_.torque_controller_.controller_.command_max_));
         api.add_api_variable("tgain", new APIFloat(&actuator_.main_loop_.torque_sensor_.gain_));
         api.add_api_variable("tbias", new APIFloat(&actuator_.main_loop_.torque_sensor_.bias_));
+        api.add_api_variable("obias", new APIFloat(&actuator_.main_loop_.param_.output_encoder.bias));
         api.add_api_variable("torque", new const APIFloat(&actuator_.main_loop_.torque_sensor_.torque_));
         api.add_api_variable("t_i_correction", new APIFloat(&actuator_.main_loop_.param_.torque_correction));
         api.add_api_variable("log", new APICallback(get_log, log));
@@ -128,7 +129,7 @@ class System {
             return "ok"; }));
         api.add_api_variable("beep", new APICallbackFloat([](){ return 0; }, [](float f){ actuator_.fast_loop_.beep_on(f); }));
         api.add_api_variable("zero_current_sensors", new APICallbackFloat([](){ return 0; }, [](float f){ actuator_.fast_loop_.zero_current_sensors_on(f); }));
-        api.add_api_variable("disable_safe_mode", new const APICallback([](){ actuator_.main_loop_.param_.error_mask.all = ERROR_MASK_ALL; return "ok"; }));
+        api.add_api_variable("disable_safe_mode", new APICallback([](){ return "no"; }, [](std::string s){ actuator_.main_loop_.param_.error_mask.all = ERROR_MASK_NONE; } ));
         api.add_api_variable("error_mask", new const APICallback([](){ return u32_to_hex(param->main_loop_param.error_mask.all); }));
         api.add_api_variable("help", new const APICallback([](){ return api.get_all_api_variables(); }));
 

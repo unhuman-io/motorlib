@@ -151,10 +151,15 @@ typedef struct {
                         // transmission stiffness to correct the output encoder measurement
                         // 
     } motor_encoder_startup;
+    enum {
+        OUTPUT_ENCODER_NORMAL,  // raw output reading after rollover correction
+        OUTPUT_ENCODER_BIAS     // set encoder to output_encoder_bias at startup
+    } output_encoder_startup;
     float gear_ratio;   // gear ratio from input to output
     float motor_encoder_bias;   // for ENCODER_BIAS and ENCODER_BIAS_FROM_OUTPUT: extra bias to add to motor encoder
                                 // for ENCODER_BIAS_*_WITH_MOTOR_CORRECTION: motor bias to give a desired motor zero position
                                     // for example when output position = 0 if motor position is -1, then motor_encoder_bias = 1
+    float output_encoder_bias;  // If output_encoder_startup == OUTPUT_ENCODER_BIAS, set the startup value of output_encoder to this value
     float num_encoder_poles;    // if motor encoder is only absolute per revolution % num_encoder_poles
     float transmission_stiffness; // also use transmission stiffness to help with motor bias setting
     float output_encoder_rollover; // if the output encoder+bias is greater than this then output_encoder -= 2*pi

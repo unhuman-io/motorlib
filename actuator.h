@@ -59,6 +59,9 @@ class Actuator {
     }
     void set_bias() {
       MainLoopStatus status = main_loop_.get_status();
+      if (startup_param_.output_encoder_startup == StartupParam::OUTPUT_ENCODER_BIAS) {
+         main_loop_.set_output_encoder_bias(-status.output_position + startup_param_.output_encoder_bias);
+      }
       if (status.output_position > startup_param_.output_encoder_rollover) {
          main_loop_.adjust_output_encoder(-2*M_PI);
          status.output_position -= 2*M_PI;

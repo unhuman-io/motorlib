@@ -284,6 +284,7 @@ class MainLoop {
     }
     void adjust_output_encoder(float adjustment) { param_.output_encoder.bias += adjustment; }
     void set_motor_encoder_bias(float bias) { motor_encoder_bias_ = bias; }
+    void set_output_encoder_bias(float bias) { param_.output_encoder.bias = bias; }
     const MainLoopStatus & get_status() const { return status_stack_.top(); }
     void set_started() { started_ = true; }
     void set_mode(MainControlMode mode) {
