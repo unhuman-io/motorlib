@@ -96,6 +96,9 @@ typedef struct {
     float velocity_filter_frequency_hz;
     float torque_filter_frequency_hz;
     float torque_dot_filter_frequency_hz;
+    float output_filter_frequency_hz;
+    float ff_tau;
+    float command_max;
 } StateControllerParam;
 
 typedef struct {

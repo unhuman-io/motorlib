@@ -17,6 +17,8 @@ class Hysteresis {
     float hysteresis_ = 0;
 };
 
+float fsat(float a, float sat);
+
 inline float fsat2(float a, float min, float max) {
     float b = a>max ? max : a;
     b = b<min ? min : b;
