@@ -262,6 +262,7 @@ class MainLoop {
       torque_controller_.set_param(param.torque_controller_param);
       impedance_controller_.set_param(param.impedance_controller_param);
       velocity_controller_.set_param(param.velocity_controller_param);
+      state_controller_.set_param(param.state_controller_param);
       joint_position_controller_.set_param(param.joint_position_controller_param);
       torque_sensor_.set_param(param.torque_sensor);
       if (param_.encoder_limits.motor_hard_max == param_.encoder_limits.motor_hard_min) {
@@ -335,6 +336,7 @@ class MainLoop {
             fast_loop_.current_mode();
             state_controller_.init(status_);
             led_.set_color(LED::MAGENTA);
+            break;
           case VOLTAGE:
             fast_loop_.voltage_mode();
             led_.set_color(LED::VIOLET);

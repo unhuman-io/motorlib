@@ -50,4 +50,5 @@ class StateController : public Controller {
     FirstOrderLowPassFilter output_filter_;
     StateControllerParam param_ = {};
     friend class System;
+    friend void config_init();
 };

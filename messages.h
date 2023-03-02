@@ -116,6 +116,7 @@ typedef struct {
     TorqueControllerParam torque_controller_param;
     ImpedanceControllerParam impedance_controller_param;
     VelocityControllerParam velocity_controller_param;
+    StateControllerParam state_controller_param;
     JointPositionControllerParam joint_position_controller_param;
     struct {
         float table[OUTPUT_ENCODER_TABLE_LENGTH][4];
