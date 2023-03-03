@@ -1,3 +1,5 @@
+#pragma once
+
 #include "controller.h"
 #include "../control_fun.h"
 

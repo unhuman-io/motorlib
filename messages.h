@@ -104,10 +104,16 @@ typedef struct {
 } VelocityControllerParam;
 
 typedef struct {
+    VelocityControllerParam velocity;       // inner velocity controller
+    float kpj;                              // outer loop gain on joint position (motor rad/s)/(joint rad)
+} JointPositionControllerParam;
+
+typedef struct {
     PositionControllerParam position_controller_param;
     TorqueControllerParam torque_controller_param;
     ImpedanceControllerParam impedance_controller_param;
     VelocityControllerParam velocity_controller_param;
+    JointPositionControllerParam joint_position_controller_param;
     struct {
         float table[OUTPUT_ENCODER_TABLE_LENGTH][4];
         float cpr;                                  // output encoder cpr \sa FastLoopParam.motor_encoder.cpr
