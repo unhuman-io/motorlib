@@ -102,6 +102,12 @@ class System {
         api.add_api_variable("stack_used", new const APICallbackUint32(get_stack_used));
         api.add_api_variable("heap_free", new const APICallbackUint32(get_heap_free));
         api.add_api_variable("heap_used", new const APICallbackUint32(get_heap_used));
+        api.add_api_variable("state_command_max", new APIFloat(&actuator_.main_loop_.state_controller_.param_.command_max));
+        api.add_api_variable("state_ff_tau", new APIFloat(&actuator_.main_loop_.state_controller_.param_.ff_tau));
+        API_ADD_FILTER(state_output_filter, FirstOrderLowPassFilter, actuator_.main_loop_.state_controller_.output_filter_);
+        API_ADD_FILTER(state_velocity_error_filter, FirstOrderLowPassFilter, actuator_.main_loop_.state_controller_.velocity_error_filter_);
+        API_ADD_FILTER(state_torque_error_filter, FirstOrderLowPassFilter, actuator_.main_loop_.state_controller_.torque_error_filter_);
+        API_ADD_FILTER(state_torque_dot_error_filter, FirstOrderLowPassFilter, actuator_.main_loop_.state_controller_.torque_dot_error_filter_);
         api.add_api_variable("vbus_min", new APIFloat(&actuator_.main_loop_.param_.vbus_min));
         api.add_api_variable("vbus_max", new APIFloat(&actuator_.main_loop_.param_.vbus_min));
         api.add_api_variable("ia_bias", new APIFloat(&actuator_.fast_loop_.param_.ia_bias));

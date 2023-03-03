@@ -96,6 +96,9 @@ typedef struct {
     float velocity_filter_frequency_hz;
     float torque_filter_frequency_hz;
     float torque_dot_filter_frequency_hz;
+    float output_filter_frequency_hz;
+    float ff_tau;
+    float command_max;
 } StateControllerParam;
 
 typedef struct {
@@ -113,6 +116,7 @@ typedef struct {
     TorqueControllerParam torque_controller_param;
     ImpedanceControllerParam impedance_controller_param;
     VelocityControllerParam velocity_controller_param;
+    StateControllerParam state_controller_param;
     JointPositionControllerParam joint_position_controller_param;
     struct {
         float table[OUTPUT_ENCODER_TABLE_LENGTH][4];
