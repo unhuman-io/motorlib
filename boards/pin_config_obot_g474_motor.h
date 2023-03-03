@@ -16,7 +16,7 @@
 #define TIM_R TIM4->CCR1
 #define TIM_G TIM4->CCR2
 #define TIM_B TIM4->CCR3
-#if defined(R0) || defined (R4)
+#if defined(R0) || defined (R4) | defined (MR0P)
     #undef TIM_R
     #undef TIM_G
     #undef TIM_B
