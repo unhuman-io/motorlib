@@ -15,6 +15,7 @@ volatile uint32_t * const cpu_clock = &DWT->CYCCNT;
 #include "../controller/impedance_controller.h"
 #include "../controller/velocity_controller.h"
 #include "../controller/state_controller.h"
+#include "../controller/joint_position_controller.h"
 #include "../fast_loop.h"
 #include "../main_loop.h"
 #include "../actuator.h"
@@ -41,7 +42,8 @@ namespace config {
     ImpedanceController impedance_controller = {(float) (1.0/main_loop_frequency)};
     VelocityController velocity_controller = {(float) (1.0/main_loop_frequency)};
     StateController state_controller = {(float) (1.0/main_loop_frequency)};
-    MainLoop main_loop(fast_loop, position_controller, torque_controller, impedance_controller, velocity_controller, state_controller, System::communication_, led, output_encoder, torque_sensor, driver, param->main_loop_param);
+    JointPositionController joint_position_controller(1.0/main_loop_frequency);
+    MainLoop main_loop(fast_loop, position_controller, torque_controller, impedance_controller, velocity_controller, state_controller, joint_position_controller, System::communication_, led, output_encoder, torque_sensor, driver, param->main_loop_param);
 };
 
 Communication System::communication_ = {config::usb};

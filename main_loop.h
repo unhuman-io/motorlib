@@ -28,11 +28,13 @@ using HardwareBrake = HardwareBrakeBase;
 class MainLoop {
  public:
     MainLoop(FastLoop &fast_loop, PositionController &position_controller,  TorqueController &torque_controller, 
-        ImpedanceController &impedance_controller, VelocityController &velocity_controller, StateController &state_controller, Communication &communication,
+        ImpedanceController &impedance_controller, VelocityController &velocity_controller, StateController &state_controller, 
+        JointPositionController &joint_position_controller, Communication &communication,
         LED &led, OutputEncoder &output_encoder, TorqueSensor &torque, Driver &driver, const MainLoopParam &param,
         HardwareBrake &brake=no_brake_) : 
           param_(param), fast_loop_(fast_loop), position_controller_(position_controller), torque_controller_(torque_controller), 
           impedance_controller_(impedance_controller), velocity_controller_(velocity_controller), state_controller_(state_controller),  
+          joint_position_controller_(joint_position_controller), 
           communication_(communication), led_(led), output_encoder_(output_encoder), torque_sensor_(torque),
           output_encoder_correction_table_(param_.output_encoder.table), driver_(driver), brake_(brake) {
           set_param(param);
@@ -260,6 +262,7 @@ class MainLoop {
       torque_controller_.set_param(param.torque_controller_param);
       impedance_controller_.set_param(param.impedance_controller_param);
       velocity_controller_.set_param(param.velocity_controller_param);
+      joint_position_controller_.set_param(param.joint_position_controller_param);
       torque_sensor_.set_param(param.torque_sensor);
       if (param_.encoder_limits.motor_hard_max == param_.encoder_limits.motor_hard_min) {
         param_.encoder_limits.motor_hard_max = INFINITY;
@@ -343,6 +346,11 @@ class MainLoop {
           case HARDWARE_BRAKE:
             brake_.on();
             led_.set_color(LED::ORANGE);
+            break;
+          case JOINT_POSITION:
+            fast_loop_.current_mode();
+            joint_position_controller_.init(status_);
+            led_.set_color(LED::BLUE);
             break;
           case DRIVER_ENABLE:
             fast_loop_.open_mode();
@@ -439,6 +447,7 @@ class MainLoop {
     ImpedanceController &impedance_controller_;
     VelocityController &velocity_controller_;
     StateController &state_controller_;
+    JointPositionController &joint_position_controller_;
     Communication &communication_;
     LED &led_;
     ReceiveData receive_data_ = {};
