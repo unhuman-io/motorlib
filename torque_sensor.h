@@ -1,5 +1,6 @@
 #pragma once
 #include "messages.h"
+#include "sensor.h"
 
 class TorqueSensorBase : public SensorBase {
  public:
