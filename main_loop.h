@@ -223,6 +223,13 @@ class MainLoop {
             } else {
               fast_loop_.set_tuning_chirp(false, 0);
             }
+
+            if (current_tuning_rate_limiter_.run()) {
+              if (status_stack_.top().fast_loop.foc_command.desired.i_q < 0 &&
+                  status_.fast_loop.foc_command.desired.i_q > 0) {
+                fast_loop_.trigger_status_log();
+              }
+            }
           }
           break;
         case VOLTAGE:
@@ -533,6 +540,7 @@ class MainLoop {
     OutputEncoder &output_encoder_;
     float motor_encoder_bias_ = 0;
     TorqueSensor &torque_sensor_;
+    FrequencyLimiter current_tuning_rate_limiter_ = {10};
     float dt_ = 0;
     TrajectoryGenerator position_trajectory_generator_;
     uint32_t timestamp_ = 0;
