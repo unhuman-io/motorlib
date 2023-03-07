@@ -41,18 +41,23 @@ void HRPWM::voltage_mode() {
 }
 
 // todo doesn't work at startup before regs exist
-void HRPWM::set_frequency_hz(uint32_t frequency_hz, uint16_t min_off_ns, uint16_t min_on_ns) {
-    int desired_prescaler = frequency_hz*2/(CPU_FREQUENCY_HZ/65536);
-    int ckpsc;
-    if (desired_prescaler >= 32) {
-        prescaler_ = 32;
-        ckpsc = 0;
-    } else if (desired_prescaler >= 16) {
-        prescaler_ = 16;
-        ckpsc = 1;
-    } else {
-        prescaler_ = 8; // no slower than this
-        ckpsc = 2;
+void HRPWM::set_frequency_hz(uint32_t frequency_hz, uint16_t min_off_ns, uint16_t min_on_ns, bool keep_prescaler) {
+    if (!keep_prescaler) {
+        int desired_prescaler = frequency_hz*2/(CPU_FREQUENCY_HZ/65536);
+        int ckpsc;
+        if (desired_prescaler >= 32) {
+            prescaler_ = 32;
+            ckpsc = 0;
+        } else if (desired_prescaler >= 16) {
+            prescaler_ = 16;
+            ckpsc = 1;
+        } else {
+            prescaler_ = 8; // no slower than this
+            ckpsc = 2;
+        }
+        regs_.sTimerxRegs[ch_a_].TIMxCR |= ckpsc;
+        regs_.sTimerxRegs[ch_b_].TIMxCR |= ckpsc;
+        regs_.sTimerxRegs[ch_c_].TIMxCR |= ckpsc;
     }
     regs_.sTimerxRegs[ch_a_].TIMxCR |= ckpsc;
     regs_.sTimerxRegs[ch_b_].TIMxCR |= ckpsc;
@@ -67,6 +72,31 @@ void HRPWM::set_frequency_hz(uint32_t frequency_hz, uint16_t min_off_ns, uint16_
     half_period_ = period_/2; 
     pwm_max_ = period_ - fmaxf(2*min_on_ns*count_per_ns_, 65); // seems to require at least 64 to not glitch and go high when should be low
     pwm_min_ = 2*min_off_ns*count_per_ns_;
+    current_frequency_hz_ = frequency_hz;
+}
+
+void HRPWM::set_frequency_multiplier(FrequencyMultiplier multiplier) {
+    uint8_t multiplier_int = multiplier;
+    HRTIM1->sCommonRegs.ADCPS1 = multiplier_int << HRTIM_ADCPS1_AD1PSC_Pos | multiplier_int << HRTIM_ADCPS1_AD2PSC_Pos;
+    uint32_t frequency_hz = base_frequency_hz_;
+    switch (multiplier) {
+        default:
+        case MULT_1:
+            break;
+        case MULT_2:
+            frequency_hz *= 2;
+            break;
+        case MULT_4:
+            frequency_hz *= 4;
+            break;
+    }
+    set_frequency_hz(frequency_hz, min_off_ns_, min_on_ns_, true);
+
+
+}
+
+uint8_t HRPWM::get_frequency_multiplier() const {
+    return current_frequency_hz_/base_frequency_hz_;
 }
 
 void HRPWM3::voltage_mode() {
