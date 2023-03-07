@@ -109,7 +109,7 @@ class System {
         API_ADD_FILTER(state_torque_error_filter, FirstOrderLowPassFilter, actuator_.main_loop_.state_controller_.torque_error_filter_);
         API_ADD_FILTER(state_torque_dot_error_filter, FirstOrderLowPassFilter, actuator_.main_loop_.state_controller_.torque_dot_error_filter_);
         api.add_api_variable("vbus_min", new APIFloat(&actuator_.main_loop_.param_.vbus_min));
-        api.add_api_variable("vbus_max", new APIFloat(&actuator_.main_loop_.param_.vbus_min));
+        api.add_api_variable("vbus_max", new APIFloat(&actuator_.main_loop_.param_.vbus_max));
         api.add_api_variable("ia_bias", new APIFloat(&actuator_.fast_loop_.param_.ia_bias));
         api.add_api_variable("ib_bias", new APIFloat(&actuator_.fast_loop_.param_.ib_bias));
         api.add_api_variable("ic_bias", new APIFloat(&actuator_.fast_loop_.param_.ic_bias));
