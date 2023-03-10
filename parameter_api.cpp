@@ -53,8 +53,12 @@ std::string ParameterAPI::parse_string(std::string s) {
     if (equal_pos != std::string::npos) {
         auto variable = trim(s.substr(0,equal_pos));
         auto value = trim(s.substr(equal_pos+1));
-        set_api_variable(variable, value);
-        out = variable + " set " + value;
+        if (variable == "api_name") {
+            out = get_api_variable_name(std::stoi(value));
+        } else {
+            set_api_variable(variable, value);
+            out = variable + " set " + value;
+        }
     } else {
         out = get_api_variable(s);
     }
@@ -76,6 +80,26 @@ std::string ParameterAPI::get_all_api_variables() const {
         s += m.first + "\n";
     }
     return s;
+}
+
+uint16_t ParameterAPI::get_api_length() const {
+    return variable_map_.size() + const_variable_map_.size();
+}
+
+std::string ParameterAPI::get_api_variable_name(uint16_t index) const {
+    std::string retval = "";
+    if (index < get_api_length()) {
+        if (index >= variable_map_.size()) {
+            auto it = const_variable_map_.begin();
+            std::advance(it, index - variable_map_.size());
+            retval = it->first;
+        } else {
+            auto it = variable_map_.begin();
+            std::advance(it, index);
+            retval = it->first;
+        }
+    }
+    return retval;
 }
 
 void APIFloat::set(std::string s) {

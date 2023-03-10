@@ -138,6 +138,7 @@ class System {
         api.add_api_variable("disable_safe_mode", new const APICallback([](){ actuator_.main_loop_.param_.error_mask.all = ERROR_MASK_NONE; return "ok"; }));
         api.add_api_variable("error_mask", new const APICallback([](){ return u32_to_hex(param->main_loop_param.error_mask.all); }));
         api.add_api_variable("help", new const APICallback([](){ return api.get_all_api_variables(); }));
+        api.add_api_variable("api_length", new const APICallbackUint16([](){ return api.get_api_length(); }));
 
         uint32_t t_start = get_clock();
         while(1) {
