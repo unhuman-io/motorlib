@@ -57,11 +57,13 @@ void HRPWM::set_frequency_hz(uint32_t frequency_hz, uint16_t min_off_ns, uint16_
     regs_.sTimerxRegs[ch_a_].TIMxCR |= ckpsc;
     regs_.sTimerxRegs[ch_b_].TIMxCR |= ckpsc;
     regs_.sTimerxRegs[ch_c_].TIMxCR |= ckpsc;
+    regs_.sTimerxRegs[5].TIMxCR |= ckpsc;
     count_per_ns_ = CPU_FREQUENCY_HZ * prescaler_/ 4 / 1.e9; // Datasheet says /8 not /4, but /4 seems to give correct scale
     period_ = (double) CPU_FREQUENCY_HZ*prescaler_/2/frequency_hz;
     regs_.sTimerxRegs[ch_a_].PERxR = period_;
     regs_.sTimerxRegs[ch_b_].PERxR = period_;
     regs_.sTimerxRegs[ch_c_].PERxR = period_;
+    regs_.sTimerxRegs[5].PERxR = period_;
     half_period_ = period_/2; 
     pwm_max_ = period_ - fmaxf(2*min_on_ns*count_per_ns_, 65); // seems to require at least 64 to not glitch and go high when should be low
     pwm_min_ = 2*min_off_ns*count_per_ns_;

@@ -20,6 +20,9 @@ class HRPWM final : public PWMBase {
          ch_a_(ch_a), ch_b_(ch_b), ch_c_(ch_c),
          pwm3_mode_(pwm3_mode),
          deadtime_ns_(deadtime_ns) {
+      if (ch_b == ch_a) {
+         pwm_b_ = regs.sTimerxRegs[ch_b].CMP2xR;
+      }
       set_frequency_hz(frequency_hz, min_off_ns, min_on_ns);
       set_vbus(12);
       init();
@@ -35,6 +38,8 @@ class HRPWM final : public PWMBase {
       if (!pwm3_mode_) {
          set_deadtime(deadtime_ns_);
       }
+      regs_.sTimerxRegs[5].TIMxCR2 = HRTIM_TIMCR2_UDM;
+      regs_.sTimerxRegs[5].TIMxCR |= HRTIM_TIMCR_PREEN | HRTIM_TIMCR_TRSTU | HRTIM_TIMCR_CONT;
       MASK_SET(regs_.sTimerxRegs[5].TIMxCR2, HRTIM_TIMCR2_ADROM, 1);   // adc event generated at 0 on F
       regs_.sCommonRegs.DLLCR = HRTIM_DLLCR_CALEN | (3 << HRTIM_DLLCR_CALRTE_Pos); // periodic calibration at 2048*hrtim = 12us
       regs_.sCommonRegs.ADC1R = HRTIM_ADC1R_AD1TFPER; // TODO coded only to F
