@@ -2,6 +2,7 @@
 #include "encoder.h"
 #include "util.h"
 #include <vector>
+#include "logger.h"
 
 class ICPZ : public EncoderBase {
  public:
@@ -23,6 +24,7 @@ class ICPZ : public EncoderBase {
       success = set_register(0, 0xF, {0}) ? success : false; // 0x00 ran_fld = 0 -> never update position based on absolute track after initial
 
       if (disk_ == PZ03S) {
+        logger.log("setting pz03s");
         success = set_register(2, 2, {0, 1}) ? success : false; // fcl = 256
         success = set_register(0, 7, {8 << 4}) ? success : false; // sys_ovr = 8 (don't really need this 8 is default for 2656),
         success = set_register(1, 0xB, {9}) ? success : false; // ai_scale = 9 (1.0048),
@@ -157,6 +159,7 @@ class ICPZ : public EncoderBase {
         return retval;
     }
 
+    volatile int *register_operation_ = &register_operation_local_;
  protected:
     SPIDMA &spidma_;
     Disk disk_;
@@ -165,7 +168,6 @@ class ICPZ : public EncoderBase {
     int32_t pos_ = 0;
     uint32_t last_data_ = 0;
     volatile int register_operation_local_ = 0;
-    volatile int *register_operation_ = &register_operation_local_;
     uint8_t bank_ = 255;
     bool ongoing_read_ = false;
     uint8_t read_register_opcode_ = 0x81;
