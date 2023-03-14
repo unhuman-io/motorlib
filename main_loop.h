@@ -36,7 +36,8 @@ class MainLoop {
           impedance_controller_(impedance_controller), velocity_controller_(velocity_controller), state_controller_(state_controller),  
           joint_position_controller_(joint_position_controller), 
           communication_(communication), led_(led), output_encoder_(output_encoder), torque_sensor_(torque),
-          output_encoder_correction_table_(param_.output_encoder.table), driver_(driver), brake_(brake) {
+          output_encoder_correction_table_(param_.output_encoder.table), driver_(driver), brake_(brake),
+          iq_filter_(1.0/10000, 1) {
           set_param(param);
           if (param_.vbus_min == 0) {
             param_.vbus_min = 8;  // defaults that can be overridden via api
@@ -141,6 +142,8 @@ class MainLoop {
       status_.error.driver_not_enabled |= !driver_.is_enabled();
       status_.error.driver_fault |= driver_.is_faulted();
 
+      iq_filter_.update(status_.fast_loop.foc_status.measured.i_q);
+
       if (status_.error.all & param_.error_mask.all && !(receive_data_.mode_desired == DRIVER_ENABLE)) {
           status_.error.fault = 1;
           safe_mode_ = true;
@@ -226,7 +229,7 @@ class MainLoop {
           switch (find_limits_state_) {
             case FIND_FIRST_LIMIT:
               command.velocity_desired = receive_data_.velocity_desired;
-              if (status_.fast_loop.foc_status.measured.i_q > receive_data_.current_desired) {
+              if (iq_filter_.get_value() > receive_data_.current_desired) {
                 find_limits_state_ = FIND_SECOND_LIMIT;
                 // record positive limit
               }
@@ -234,7 +237,17 @@ class MainLoop {
               break;
             case FIND_SECOND_LIMIT:
               command.velocity_desired = -receive_data_.velocity_desired;
-              if (status_.fast_loop.foc_status.measured.i_q < receive_data_.current_desired) {
+              if (iq_filter_.get_value() < -receive_data_.current_desired) {
+                find_limits_state_ = VELOCITY_TO_POSITION;
+                // record negative limit
+                // change encoder biases around
+                position_controller_.init(status_);
+              }
+              iq_des = velocity_controller_.step(command, status_);
+              break;
+            case VELOCITY_TO_POSITION:
+              command.velocity_desired = receive_data_.velocity_desired;
+              if (status_.motor_position >= receive_data_.position_desired) {
                 find_limits_state_ = GOTO_POSITION;
                 // record negative limit
                 // change encoder biases around
@@ -519,7 +532,8 @@ class MainLoop {
     volatile bool driver_enable_triggered_ = false;
     volatile bool driver_disable_triggered_ = false;
     uint32_t last_energy_uJ_ = 0;
-    enum FindLimitsState {FIND_FIRST_LIMIT, FIND_SECOND_LIMIT, GOTO_POSITION} find_limits_state_;
+    enum FindLimitsState {FIND_FIRST_LIMIT, FIND_SECOND_LIMIT, VELOCITY_TO_POSITION, GOTO_POSITION} find_limits_state_;
+    FirstOrderLowPassFilter iq_filter_;
 
     friend class System;
     friend class Actuator;
