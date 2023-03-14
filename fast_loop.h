@@ -143,8 +143,15 @@ class FastLoop {
          motor_electrical_zero_pos_ = encoder_.get_value();
          if (encoder_.index_received()) {
            motor_index_pos_ = encoder_.get_index_pos();
-           motor_index_electrical_offset_measured_ = (motor_electrical_zero_pos_ - motor_index_pos_ + param_.motor_encoder.cpr) % 
+           int32_t index_offset = motor_electrical_zero_pos_ - motor_index_pos_;
+           if (index_offset >= 0) {
+            motor_index_electrical_offset_measured_ = index_offset % 
               (param_.motor_encoder.cpr/(uint8_t) param_.foc_param.num_poles);
+           } else {
+            int32_t m = (param_.motor_encoder.cpr/(uint8_t) param_.foc_param.num_poles);
+            motor_index_electrical_offset_measured_ = index_offset -
+               m * ((index_offset/m)-1);
+           }
         }
       }
 
