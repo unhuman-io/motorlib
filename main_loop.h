@@ -220,6 +220,36 @@ class MainLoop {
         case PHASE_LOCK:
           fast_loop_.phase_lock_mode(receive_data_.current_desired);
           break;
+        case FIND_LIMITS:
+        {
+          ReceiveData command = {};
+          switch (find_limits_state_) {
+            case FIND_FIRST_LIMIT:
+              command.velocity_desired = receive_data_.velocity_desired;
+              if (status_.fast_loop.foc_status.measured.i_q > receive_data_.current_desired) {
+                find_limits_state_ = FIND_SECOND_LIMIT;
+                // record positive limit
+              }
+              iq_des = velocity_controller_.step(command, status_);
+              break;
+            case FIND_SECOND_LIMIT:
+              command.velocity_desired = -receive_data_.velocity_desired;
+              if (status_.fast_loop.foc_status.measured.i_q < receive_data_.current_desired) {
+                find_limits_state_ = GOTO_POSITION;
+                // record negative limit
+                // change encoder biases around
+                position_controller_.init(status_);
+              }
+              iq_des = velocity_controller_.step(command, status_);
+              break;
+            case GOTO_POSITION:
+              command.position_desired = receive_data_.position_desired;
+              iq_des = position_controller_.step(command, status_);
+              break;
+          }
+          
+          break;
+        }
         default:
           break;
       }
@@ -354,6 +384,12 @@ class MainLoop {
             joint_position_controller_.init(status_);
             led_.set_color(LED::BLUE);
             break;
+          case FIND_LIMITS:
+            fast_loop_.current_mode();
+            find_limits_state_ = FIND_FIRST_LIMIT;
+            velocity_controller_.init(status_);
+            led_.set_color(LED::BLUE);
+            break;
           case DRIVER_ENABLE:
             fast_loop_.open_mode();
             driver_enable_triggered_ = true;
@@ -483,6 +519,7 @@ class MainLoop {
     volatile bool driver_enable_triggered_ = false;
     volatile bool driver_disable_triggered_ = false;
     uint32_t last_energy_uJ_ = 0;
+    enum FindLimitsState {FIND_FIRST_LIMIT, FIND_SECOND_LIMIT, GOTO_POSITION} find_limits_state_;
 
     friend class System;
     friend class Actuator;
