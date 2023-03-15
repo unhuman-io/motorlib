@@ -1,5 +1,5 @@
-#ifndef GPIO_H
-#define GPIO_H
+#ifndef UNHUMAN_MOTORLIB_GPIO_H_
+#define UNHUMAN_MOTORLIB_GPIO_H_
 
 #include <cstdint>
 #include "../st_device.h"    //TODO remove
@@ -38,4 +38,4 @@ class GPIODebounce : public GPIO {
    uint8_t next_value_;
 };
 
-#endif
+#endif  // UNHUMAN_MOTORLIB_GPIO_H_

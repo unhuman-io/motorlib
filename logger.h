@@ -1,4 +1,6 @@
-#pragma once
+#ifndef UNHUMAN_MOTORLIB_LOGGER_H_
+#define UNHUMAN_MOTORLIB_LOGGER_H_
+
 #include <string>
 #include <queue>
 #include <stdarg.h>
@@ -36,3 +38,5 @@ class Logger {
 };
 
 extern Logger logger;
+
+#endif  // UNHUMAN_MOTORLIB_LOGGER_H_

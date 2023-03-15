@@ -1,4 +1,5 @@
-#pragma once
+#ifndef UNHUMAN_MOTORLIB_CSTACK_H_
+#define UNHUMAN_MOTORLIB_CSTACK_H_
 
 #include <atomic>
 
@@ -36,3 +37,5 @@ class CStack {
 	std::atomic<int> pos_ = {0};
 	int future_pos_ = {0};
 };
+
+#endif  // UNHUMAN_MOTORLIB_CSTACK_H_

@@ -1,4 +1,5 @@
-#pragma once
+#ifndef UNHUMAN_MOTORLIB_DRIVER_H_
+#define UNHUMAN_MOTORLIB_DRIVER_H_
 
 class DriverBase {
  public:
@@ -9,3 +10,5 @@ class DriverBase {
  private:
     bool enabled_ = false;
 };
+
+#endif  // UNHUMAN_MOTORLIB_DRIVER_H_

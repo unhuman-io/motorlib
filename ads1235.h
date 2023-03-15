@@ -1,4 +1,6 @@
-#pragma once
+#ifndef UNHUMAN_MOTORLIB_ADS1235_H_
+#define UNHUMAN_MOTORLIB_ADS1235_H_
+
 #include "torque_sensor.h"
 #include "util.h"
 
@@ -78,3 +80,5 @@ class ADS1235 : public TorqueSensorBase {
     friend class System;
     friend void system_init();
 };
+
+#endif  // UNHUMAN_MOTORLIB_ADS1235_H_

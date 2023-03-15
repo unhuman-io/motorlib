@@ -1,3 +1,5 @@
+#ifndef UNHUMAN_MOTORLIB_LED_H_
+#define UNHUMAN_MOTORLIB_LED_H_
 
 
 #ifndef LED_H
@@ -52,3 +54,5 @@ class LED {
 };
 
 #endif
+
+#endif  // UNHUMAN_MOTORLIB_LED_H_

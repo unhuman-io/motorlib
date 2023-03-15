@@ -1,5 +1,5 @@
-#ifndef COMMUNICATION_H
-#define COMMUNICATION_H
+#ifndef UNHUMAN_MOTORLIB_COMMUNICATION_H_
+#define UNHUMAN_MOTORLIB_COMMUNICATION_H_
 
 #include "messages.h"
 
@@ -9,4 +9,4 @@ class CommunicationBase {
     void send_data(const SendData &data) {}
 };
 
-#endif
+#endif  // UNHUMAN_MOTORLIB_COMMUNICATION_H_

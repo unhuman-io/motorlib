@@ -1,4 +1,5 @@
-#pragma once
+#ifndef UNHUMAN_MOTORLIB_MAIN_LOOP_H_
+#define UNHUMAN_MOTORLIB_MAIN_LOOP_H_
 
 #include "messages.h"
 
@@ -512,3 +513,5 @@ void load_send_data(const MainLoop &main_loop, SendData * const data) {
 #endif
 }
 #endif
+
+#endif  // UNHUMAN_MOTORLIB_MAIN_LOOP_H_

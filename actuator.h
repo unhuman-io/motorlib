@@ -1,4 +1,5 @@
-#pragma once
+#ifndef UNHUMAN_MOTORLIB_ACTUATOR_H_
+#define UNHUMAN_MOTORLIB_ACTUATOR_H_
 
 #include "messages.h"
 
@@ -103,3 +104,5 @@ private:
     friend void system_init();
     friend void config_init();
 };
+
+#endif  // UNHUMAN_MOTORLIB_ACTUATOR_H_

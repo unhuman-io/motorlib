@@ -1,4 +1,6 @@
-#pragma once
+#ifndef UNHUMAN_MOTORLIB_MA732_ENCODER_H_
+#define UNHUMAN_MOTORLIB_MA732_ENCODER_H_
+
 #include "peripheral/spi_encoder.h"
 #include "util.h"
 
@@ -156,3 +158,5 @@ class MA732Encoder : public SPIEncoder {
     volatile int *register_operation_ = &register_operation_local_;
     uint32_t tmp;
 };
+
+#endif  // UNHUMAN_MOTORLIB_MA732_ENCODER_H_

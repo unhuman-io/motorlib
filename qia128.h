@@ -1,4 +1,5 @@
-#pragma once
+#ifndef UNHUMAN_MOTORLIB_QIA128_H_
+#define UNHUMAN_MOTORLIB_QIA128_H_
 
 #include "torque_sensor.h"
 #include "logger.h"
@@ -102,3 +103,5 @@ uint8_t crc8(uint8_t *p, uint8_t len){
     }
     return crc & 0xFF;
 }
+
+#endif  // UNHUMAN_MOTORLIB_QIA128_H_

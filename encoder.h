@@ -1,4 +1,6 @@
-#pragma once
+#ifndef UNHUMAN_MOTORLIB_ENCODER_H_
+#define UNHUMAN_MOTORLIB_ENCODER_H_
+
 #include "sensor.h"
 
 // Base class for encoders, which by default are used as position sensors for both
@@ -47,3 +49,5 @@ class EncoderBase : public SensorBase {
     // useful error check information.
     int32_t index_error(int32_t cpr) { return 0; }
 };
+
+#endif  // UNHUMAN_MOTORLIB_ENCODER_H_

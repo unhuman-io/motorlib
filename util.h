@@ -1,5 +1,5 @@
-#ifndef UTIL_H
-#define UTIL_H
+#ifndef UNHUMAN_MOTORLIB_UTIL_H_
+#define UNHUMAN_MOTORLIB_UTIL_H_
 
 #include "../st_device.h"
 #include "core_cm4.h"
@@ -122,6 +122,5 @@ inline std::string bytes_to_hex(const std::vector<char>& bytes) {
     return s;
 }
 
-#endif
-
-#endif
+#endif  // __cplusplus
+#endif  // UNHUMAN_MOTORLIB_UTIL_H_

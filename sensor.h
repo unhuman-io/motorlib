@@ -1,4 +1,5 @@
-#pragma once
+#ifndef UNHUMAN_MOTORLIB_SENSOR_H_
+#define UNHUMAN_MOTORLIB_SENSOR_H_
 
 #include <cstdint>
 
@@ -12,3 +13,5 @@ class SensorBase {
     void reinit() {}
     bool error() { return false; }
 };
+
+#endif  // UNHUMAN_MOTORLIB_SENSOR_H_

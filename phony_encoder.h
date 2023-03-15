@@ -1,4 +1,5 @@
-#pragma once
+#ifndef UNHUMAN_MOTORLIB_PHONY_ENCODER_H_
+#define UNHUMAN_MOTORLIB_PHONY_ENCODER_H_
 
 #include <cstdint>
 #include "encoder.h"
@@ -24,3 +25,5 @@ class PhonyEncoder final : public EncoderBase {
     uint32_t last_clock_;
 
 };
+
+#endif  // UNHUMAN_MOTORLIB_PHONY_ENCODER_H_

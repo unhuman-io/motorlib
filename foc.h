@@ -1,5 +1,5 @@
-#ifndef MOTOR_FOC_H
-#define MOTOR_FOC_H
+#ifndef UNHUMAN_MOTORLIB_FOC_H_
+#define UNHUMAN_MOTORLIB_FOC_H_
 
 #include "messages.h"
 
@@ -34,5 +34,4 @@ private:
     friend class System;
 };
 
-
-#endif //MOTOR_FOC_H
+#endif  // UNHUMAN_MOTORLIB_FOC_H_

@@ -1,4 +1,6 @@
-#pragma once
+#ifndef UNHUMAN_MOTORLIB_ICPZ_H_
+#define UNHUMAN_MOTORLIB_ICPZ_H_
+
 #include "encoder.h"
 #include "util.h"
 #include <vector>
@@ -173,3 +175,5 @@ class ICPZ : public EncoderBase {
     enum {PZ, MU} type_ = PZ;
 
 };
+
+#endif  // UNHUMAN_MOTORLIB_ICPZ_H_
