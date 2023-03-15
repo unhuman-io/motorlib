@@ -31,6 +31,4 @@ class USBCommunication : public CommunicationBase {
     friend class System;
 };
 
-#endif
-
 #endif  // UNHUMAN_MOTORLIB_USB_COMMUNICATION_H_

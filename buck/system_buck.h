@@ -26,7 +26,7 @@ class SystemBuck {
 };
 
 extern "C" {
-#endif // __cplusplus
+#endif  // __cplusplus
 
 void system_run();
 void main_loop_interrupt();
@@ -35,6 +35,6 @@ void usb_interrupt();
 
 #ifdef __cplusplus
 }
-#endif
+#endif  // __cplusplus
 
 #endif  // UNHUMAN_MOTORLIB_BUCK_SYSTEM_BUCK_H_

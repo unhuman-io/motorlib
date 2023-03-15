@@ -24,7 +24,7 @@ void load_send_data(const MainLoop &main_loop, SendData * const data);
 
 #ifndef HARDWARE_BRAKE
 using HardwareBrake = HardwareBrakeBase;
-#endif
+#endif  // HARDWARE_BRAKE
 
 class MainLoop {
  public:
@@ -66,7 +66,7 @@ class MainLoop {
         if (count_received) {
 #ifdef GPIO_OUT
           GPIO_OUT = receive_data.misc.gpio;
-#endif
+#endif  // GPIO_OUT
           no_command_ = 0;
           first_command_received_ = true;
           host_timestamp_ = receive_data.host_timestamp;
@@ -510,8 +510,8 @@ void load_send_data(const MainLoop &main_loop, SendData * const data) {
     data->flags.misc.byte = 0;
 #ifdef GPIO_IN
     data->flags.misc.gpio = GPIO_IN;
-#endif
+#endif  // GPIO_IN
 }
-#endif
+#endif  // CUSTOM_SENDDATA
 
 #endif  // UNHUMAN_MOTORLIB_MAIN_LOOP_H_
