@@ -1,4 +1,6 @@
-#pragma once
+#ifndef UNHUMAN_MOTORLIB_BUCK_FAST_LOOP_BUCK_H_
+#define UNHUMAN_MOTORLIB_BUCK_FAST_LOOP_BUCK_H_
+
 #include "buck.h"
 #include "st_device.h"
 
@@ -65,3 +67,5 @@ class FastLoopBuck {
     float current_desired_ = 0;
     FastLoopBuckParam param_;
 };
+
+#endif  // UNHUMAN_MOTORLIB_BUCK_FAST_LOOP_BUCK_H_

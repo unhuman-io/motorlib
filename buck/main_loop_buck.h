@@ -1,4 +1,6 @@
-#pragma once
+#ifndef UNHUMAN_MOTORLIB_BUCK_MAIN_LOOP_BUCK_H_
+#define UNHUMAN_MOTORLIB_BUCK_MAIN_LOOP_BUCK_H_
+
 #include "messages_buck.h"
 
 class Communication;
@@ -60,3 +62,5 @@ class MainLoopBuck {
     int count_start_ = 0;
     int count_end_ = 0;
 };
+
+#endif  // UNHUMAN_MOTORLIB_BUCK_MAIN_LOOP_BUCK_H_

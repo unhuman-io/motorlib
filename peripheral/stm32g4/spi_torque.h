@@ -1,4 +1,6 @@
-#pragma once
+#ifndef UNHUMAN_MOTORLIB_PERIPHERAL_STM32G4_SPI_TORQUE_H_
+#define UNHUMAN_MOTORLIB_PERIPHERAL_STM32G4_SPI_TORQUE_H_
+
 #include <cstdint>
 #include "../st_device.h"
 #include "../../gpio.h"
@@ -125,3 +127,5 @@ class SPITorque final : public TorqueSensorBase {
     friend void system_init();
     friend void config_init();
 };
+
+#endif  // UNHUMAN_MOTORLIB_PERIPHERAL_STM32G4_SPI_TORQUE_H_

@@ -1,4 +1,5 @@
-#pragma once
+#ifndef UNHUMAN_MOTORLIB_PERIPHERAL_STM32F4_OTG_USB_H_
+#define UNHUMAN_MOTORLIB_PERIPHERAL_STM32F4_OTG_USB_H_
 
 #include "../st_device.h"
 #include <cstdint>
@@ -215,3 +216,5 @@ private:
 
     friend class System;
 };
+
+#endif  // UNHUMAN_MOTORLIB_PERIPHERAL_STM32F4_OTG_USB_H_

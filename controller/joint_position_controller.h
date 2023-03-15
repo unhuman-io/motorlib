@@ -1,4 +1,5 @@
-#pragma once
+#ifndef UNHUMAN_MOTORLIB_CONTROLLER_JOINT_POSITION_CONTROLLER_H_
+#define UNHUMAN_MOTORLIB_CONTROLLER_JOINT_POSITION_CONTROLLER_H_
 
 #include "controller.h"
 #include "../control_fun.h"
@@ -28,3 +29,5 @@ class JointPositionController : public Controller {
 
     friend class System;
 };
+
+#endif  // UNHUMAN_MOTORLIB_CONTROLLER_JOINT_POSITION_CONTROLLER_H_

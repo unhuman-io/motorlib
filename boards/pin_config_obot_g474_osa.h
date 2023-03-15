@@ -1,4 +1,5 @@
-#pragma once
+#ifndef UNHUMAN_MOTORLIB_BOARDS_PIN_CONFIG_OBOT_G474_OSA_H_
+#define UNHUMAN_MOTORLIB_BOARDS_PIN_CONFIG_OBOT_G474_OSA_H_
 
 #include "stm32g474xx.h"
 #include "../peripheral/stm32g4/pin_config.h"
@@ -227,3 +228,5 @@ void finish_sleep() {
     NVIC_EnableIRQ(TIM1_UP_TIM16_IRQn);
     NVIC_EnableIRQ(ADC5_IRQn);
 }
+
+#endif  // UNHUMAN_MOTORLIB_BOARDS_PIN_CONFIG_OBOT_G474_OSA_H_

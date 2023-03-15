@@ -1,4 +1,6 @@
-#pragma once
+#ifndef UNHUMAN_MOTORLIB_CONTROLLER_CONTROLLER_H_
+#define UNHUMAN_MOTORLIB_CONTROLLER_CONTROLLER_H_
+
 #include "../messages.h"
 typedef ReceiveData MotorCommand;
 
@@ -9,3 +11,5 @@ class Controller {
  protected:
     float dt_;
 };
+
+#endif  // UNHUMAN_MOTORLIB_CONTROLLER_CONTROLLER_H_

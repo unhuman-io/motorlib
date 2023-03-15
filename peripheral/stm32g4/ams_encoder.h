@@ -1,5 +1,5 @@
-#ifndef AMS_ENCODER
-#define AMS_ENCODER
+#ifndef UNHUMAN_MOTORLIB_PERIPHERAL_STM32G4_AMS_ENCODER_H_
+#define UNHUMAN_MOTORLIB_PERIPHERAL_STM32G4_AMS_ENCODER_H_
 
 #include "../../encoder.h"
 #include "../st_device.h"
@@ -23,4 +23,4 @@ class AMSEncoder : public EncoderBase {
     uint8_t error_count_ = 255;
 };
 
-#endif
+#endif  // UNHUMAN_MOTORLIB_PERIPHERAL_STM32G4_AMS_ENCODER_H_

@@ -1,3 +1,6 @@
+#ifndef UNHUMAN_MOTORLIB_CONTROLLER_STATE_CONTROLLER_H_
+#define UNHUMAN_MOTORLIB_CONTROLLER_STATE_CONTROLLER_H_
+
 #include "controller.h"
 #include "../control_fun.h"
 
@@ -52,3 +55,5 @@ class StateController : public Controller {
     friend class System;
     friend void config_init();
 };
+
+#endif  // UNHUMAN_MOTORLIB_CONTROLLER_STATE_CONTROLLER_H_

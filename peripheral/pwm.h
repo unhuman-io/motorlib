@@ -1,5 +1,5 @@
-#ifndef PWM_H
-#define PWM_H
+#ifndef UNHUMAN_MOTORLIB_PERIPHERAL_PWM_H_
+#define UNHUMAN_MOTORLIB_PERIPHERAL_PWM_H_
 
 #include <cstdint>
 
@@ -13,4 +13,4 @@ class PWMBase {
    void set_frequency_hz(uint32_t frequency_hz) {}
 };
 
-#endif
+#endif  // UNHUMAN_MOTORLIB_PERIPHERAL_PWM_H_

@@ -1,4 +1,6 @@
-#pragma once
+#ifndef UNHUMAN_MOTORLIB_BUCK_MESSAGES_BUCK_H_
+#define UNHUMAN_MOTORLIB_BUCK_MESSAGES_BUCK_H_
+
 #include "../messages.h"
 
 struct BuckStatus {
@@ -14,3 +16,5 @@ struct FastLoopBuckParam {
     float v_out_v_per_count;
     PIParam pi_param;
 };
+
+#endif  // UNHUMAN_MOTORLIB_BUCK_MESSAGES_BUCK_H_

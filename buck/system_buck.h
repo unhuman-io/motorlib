@@ -1,4 +1,5 @@
-#pragma once
+#ifndef UNHUMAN_MOTORLIB_BUCK_SYSTEM_BUCK_H_
+#define UNHUMAN_MOTORLIB_BUCK_SYSTEM_BUCK_H_
 
 #ifdef __cplusplus
 template<typename FastLoop, typename MainLoop, typename USB>
@@ -35,3 +36,5 @@ void usb_interrupt();
 #ifdef __cplusplus
 }
 #endif
+
+#endif  // UNHUMAN_MOTORLIB_BUCK_SYSTEM_BUCK_H_

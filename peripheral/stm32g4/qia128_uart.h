@@ -1,4 +1,6 @@
-#pragma once
+#ifndef UNHUMAN_MOTORLIB_PERIPHERAL_STM32G4_QIA128_UART_H_
+#define UNHUMAN_MOTORLIB_PERIPHERAL_STM32G4_QIA128_UART_H_
+
 #include "../../torque_sensor.h"
 #include "../../logger.h"
 #include <initializer_list>
@@ -175,3 +177,5 @@ class QIA128_UART : public TorqueSensorBase {
 uint8_t crc8(uint8_t *p) {
     return p[0]*1 + p[1]*2 + p[2]*3;
 }
+
+#endif  // UNHUMAN_MOTORLIB_PERIPHERAL_STM32G4_QIA128_UART_H_

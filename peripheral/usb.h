@@ -1,5 +1,5 @@
-#ifndef USB_H
-#define USB_H
+#ifndef UNHUMAN_MOTORLIB_PERIPHERAL_USB_H_
+#define UNHUMAN_MOTORLIB_PERIPHERAL_USB_H_
 
 #include <cstdint>
 
@@ -43,4 +43,4 @@ class USB1 {
     friend class System;
 };
 
-#endif
+#endif  // UNHUMAN_MOTORLIB_PERIPHERAL_USB_H_
