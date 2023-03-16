@@ -17,6 +17,10 @@ $(info target is $(TARGET_MCU))
 
 ifeq "$(TARGET_MCU)" "stm32g474"
 
+ifndef DRIVERS
+DRIVERS = ../boost_g474/Drivers
+endif
+
 ######################################
 # source
 ######################################
@@ -31,8 +35,6 @@ $(DRIVERS)/STM32G4xx_HAL_Driver/Src/stm32g4xx_hal_rcc_ex.c \
 $(DRIVERS)/STM32G4xx_HAL_Driver/Src/stm32g4xx_hal_pwr.c \
 $(DRIVERS)/STM32G4xx_HAL_Driver/Src/stm32g4xx_hal_pwr_ex.c \
 $(DRIVERS)/STM32G4xx_HAL_Driver/Src/stm32g4xx_hal_cortex.c \
-
-
 
 # ASM sources
 ASM_SOURCES =  \
@@ -73,12 +75,7 @@ C_INCLUDES =  \
 #######################################
 # link script
 LDSCRIPT = $(SELF_DIR)../peripheral/stm32g4/STM32G474RETx_FLASH.ld
-
-ifndef DRIVERS
-DRIVERS = ../boost_g474/Drivers
-endif
-
-endif # MCU_TARGET
+endif # TARGET_MCU
 
 CPP_SOURCES = \
 $(SELF_DIR)../control_fun.cpp\
