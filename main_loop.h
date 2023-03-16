@@ -173,6 +173,9 @@ class MainLoop {
         case STATE:
           iq_des = state_controller_.step(receive_data_, status_);
           break;
+        case JOINT_POSITION:
+          iq_des = joint_position_controller_.step(receive_data_, status_);
+          break;
         case STEPPER_VELOCITY:
           vq_des = receive_data_.stepper_velocity.voltage;
           fast_loop_.set_stepper_velocity(receive_data_.stepper_velocity.velocity);

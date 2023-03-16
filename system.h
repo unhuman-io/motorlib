@@ -140,7 +140,8 @@ class System {
         api.add_api_variable("help", new const APICallback([](){ return api.get_all_api_variables(); }));
         api.add_api_variable("api_length", new const APICallbackUint16([](){ return api.get_api_length(); }));
         api.add_api_variable("disable_position_limits", new APIBool(&actuator_.main_loop_.position_limits_disable_));
-        
+        api.add_api_variable("jkpj", new APIFloat(&actuator_.main_loop_.joint_position_controller_.param_.kpj));
+
         uint32_t t_start = get_clock();
         while(1) {
             count_++;
