@@ -112,6 +112,11 @@ typedef struct {
 } JointPositionControllerParam;
 
 typedef struct {
+
+} FindLimitsControllerParam;                // note uses the velocity_controller_param of the velocity controller
+                                            // and position_controller_param of the position controller
+
+typedef struct {
     PositionControllerParam position_controller_param;
     TorqueControllerParam torque_controller_param;
     ImpedanceControllerParam impedance_controller_param;

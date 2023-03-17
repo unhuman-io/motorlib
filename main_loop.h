@@ -36,7 +36,8 @@ class MainLoop {
           impedance_controller_(impedance_controller), velocity_controller_(velocity_controller), state_controller_(state_controller),  
           joint_position_controller_(joint_position_controller), 
           communication_(communication), led_(led), output_encoder_(output_encoder), torque_sensor_(torque),
-          output_encoder_correction_table_(param_.output_encoder.table), driver_(driver), brake_(brake) {
+          output_encoder_correction_table_(param_.output_encoder.table), driver_(driver), brake_(brake),
+          iq_filter_(1.0/10000, 1) {
           set_param(param);
           if (param_.vbus_min == 0) {
             param_.vbus_min = 8;  // defaults that can be overridden via api
@@ -127,19 +128,23 @@ class MainLoop {
       //}
       status_.torque = torque_corrected;
 
-      if ((status_.motor_position > param_.encoder_limits.motor_hard_max ||
-          status_.motor_position < param_.encoder_limits.motor_hard_min) && started_) {
-        status_.error.motor_encoder_limit = 1;
+      if (!position_limits_disable_) {
+        if ((status_.motor_position > param_.encoder_limits.motor_hard_max ||
+            status_.motor_position < param_.encoder_limits.motor_hard_min) && started_) {
+          status_.error.motor_encoder_limit = 1;
+        }
+        status_.error.motor_encoder |= fast_loop_.motor_encoder_error();
+        
+        if ((status_.output_position > param_.encoder_limits.output_hard_max ||
+            status_.output_position < param_.encoder_limits.output_hard_min) && started_) {
+            status_.error.output_encoder_limit = 1;
+        }
+        status_.error.output_encoder |= output_encoder_.error();
       }
-      status_.error.motor_encoder |= fast_loop_.motor_encoder_error();
-      
-      if ((status_.output_position > param_.encoder_limits.output_hard_max ||
-          status_.output_position < param_.encoder_limits.output_hard_min) && started_) {
-          status_.error.output_encoder_limit = 1;
-      }
-      status_.error.output_encoder |= output_encoder_.error();
       status_.error.driver_not_enabled |= !driver_.is_enabled();
       status_.error.driver_fault |= driver_.is_faulted();
+
+      iq_filter_.update(status_.fast_loop.foc_status.measured.i_q);
 
       if (status_.error.all & param_.error_mask.all && !(receive_data_.mode_desired == DRIVER_ENABLE)) {
           status_.error.fault = 1;
@@ -220,18 +225,65 @@ class MainLoop {
         case PHASE_LOCK:
           fast_loop_.phase_lock_mode(receive_data_.current_desired);
           break;
+        case FIND_LIMITS:
+        {
+          ReceiveData command = {};
+          switch (find_limits_state_) {
+            case FIND_FIRST_LIMIT:
+              command.velocity_desired = receive_data_.velocity_desired;
+              if (iq_filter_.get_value() > receive_data_.current_desired) {
+                find_limits_state_ = FIND_SECOND_LIMIT;
+                // record positive limit
+                //motor_positive_limit_ = status_.motor_position;
+                //output_positive_limit_ = status_.output_position;
+              }
+              iq_des = velocity_controller_.step(command, status_);
+              break;
+            case FIND_SECOND_LIMIT:
+              command.velocity_desired = -receive_data_.velocity_desired;
+              if (iq_filter_.get_value() < -receive_data_.current_desired) {
+                find_limits_state_ = VELOCITY_TO_POSITION;
+                // record negative limit
+                // change encoder biases around
+                adjust_output_encoder(-(status_.output_position - param_.encoder_limits.output_hard_min));
+                adjust_motor_encoder(-(status_.motor_position - param_.encoder_limits.motor_hard_min));
+                velocity_controller_.init(status_);
+              }
+              iq_des = velocity_controller_.step(command, status_);
+              break;
+            case VELOCITY_TO_POSITION:
+              command.velocity_desired = receive_data_.velocity_desired;
+              if (status_.motor_position >= receive_data_.position_desired) {
+                find_limits_state_ = GOTO_POSITION;
+                // record negative limit
+                // change encoder biases around
+                position_controller_.init(status_);
+              }
+              iq_des = velocity_controller_.step(command, status_);
+              break;
+            case GOTO_POSITION:
+              position_limits_disable_ = false;
+              command.position_desired = receive_data_.position_desired;
+              iq_des = position_controller_.step(command, status_);
+              break;
+          }
+          
+          break;
+        }
         default:
           break;
       }
 
-      if (((status_.motor_position > param_.encoder_limits.motor_controlled_max && iq_des >= 0) ||
-          (status_.motor_position < param_.encoder_limits.motor_controlled_min && iq_des <= 0)) && started_) {
-          if (mode_ != VELOCITY && mode_ != param_.safe_mode) {
-            set_mode(VELOCITY);
-          }
-          MotorCommand tmp_receive_data = receive_data_;
-          tmp_receive_data.velocity_desired = 0;
-          iq_des = velocity_controller_.step(tmp_receive_data, status_);
+      if (!position_limits_disable_) {
+        if (((status_.motor_position > param_.encoder_limits.motor_controlled_max && iq_des >= 0) ||
+            (status_.motor_position < param_.encoder_limits.motor_controlled_min && iq_des <= 0)) && started_) {
+            if (mode_ != VELOCITY && mode_ != param_.safe_mode) {
+              set_mode(VELOCITY);
+            }
+            MotorCommand tmp_receive_data = receive_data_;
+            tmp_receive_data.velocity_desired = 0;
+            iq_des = velocity_controller_.step(tmp_receive_data, status_);
+        }
       }
 
       fast_loop_.set_iq_des(iq_des);
@@ -288,6 +340,7 @@ class MainLoop {
     }
     void adjust_output_encoder(float adjustment) { param_.output_encoder.bias += adjustment; }
     void set_motor_encoder_bias(float bias) { motor_encoder_bias_ = bias; }
+    void adjust_motor_encoder(float adjustment) { motor_encoder_bias_ += adjustment; }
     const MainLoopStatus & get_status() const { return status_stack_.top(); }
     void set_started() { started_ = true; }
     void set_mode(MainControlMode mode) {
@@ -352,6 +405,13 @@ class MainLoop {
           case JOINT_POSITION:
             fast_loop_.current_mode();
             joint_position_controller_.init(status_);
+            led_.set_color(LED::BLUE);
+            break;
+          case FIND_LIMITS:
+            fast_loop_.current_mode();
+            position_limits_disable_ = true;
+            find_limits_state_ = FIND_FIRST_LIMIT;
+            velocity_controller_.init(status_);
             led_.set_color(LED::BLUE);
             break;
           case DRIVER_ENABLE:
@@ -483,6 +543,9 @@ class MainLoop {
     volatile bool driver_enable_triggered_ = false;
     volatile bool driver_disable_triggered_ = false;
     uint32_t last_energy_uJ_ = 0;
+    enum FindLimitsState {FIND_FIRST_LIMIT, FIND_SECOND_LIMIT, VELOCITY_TO_POSITION, GOTO_POSITION} find_limits_state_;
+    FirstOrderLowPassFilter iq_filter_;
+    bool position_limits_disable_ = false;
 
     friend class System;
     friend class Actuator;
