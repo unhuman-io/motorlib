@@ -42,6 +42,8 @@ typedef struct {
 #define COGGING_TABLE_SIZE 512  // must be multiple of 2
 #define MOTOR_ENCODER_TABLE_LENGTH  512
 #define OUTPUT_ENCODER_TABLE_LENGTH  128
+#define TORQUE_TABLE_LENGTH  512
+
 typedef struct {
     float ia_bias, ib_bias, ic_bias;                // initial guess at current sensor bias in amps
     float adc1_gain, adc2_gain, adc3_gain;          // current sensor linear gain units A/count
@@ -75,6 +77,8 @@ typedef struct {
     float gain;
     float bias;
     float k_temp;
+    float table[TORQUE_TABLE_LENGTH][4];
+    float table_gain;
 } TorqueSensorParam;
 
 typedef struct {

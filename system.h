@@ -144,6 +144,7 @@ class System {
         api.add_api_variable("motor_position_raw", new const APIFloat(&actuator_.fast_loop_.motor_position_));
         api.add_api_variable("obias", new APIFloat(&actuator_.main_loop_.param_.output_encoder.bias));
         api.add_api_variable("mbias", new APIFloat(&actuator_.main_loop_.motor_encoder_bias_));
+        api.add_api_variable("ttgain", new APIFloat(&actuator_.main_loop_.param_.torque_sensor.table_gain));
 
         uint32_t t_start = get_clock();
         while(1) {
