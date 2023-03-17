@@ -220,6 +220,9 @@ class FastLoop {
       param_ = fast_loop_param;
       foc_->set_param(param_.foc_param);
       set_phase_mode();
+      if (param_.motor_encoder.dir == 0) {
+        param_.motor_encoder.dir = 1;
+      }
       inv_motor_encoder_cpr_ = param_.motor_encoder.cpr != 0 ? 1.f/param_.motor_encoder.cpr : 0;
     }
     const FastLoopStatus &get_status() const {
