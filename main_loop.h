@@ -36,7 +36,8 @@ class MainLoop {
           impedance_controller_(impedance_controller), velocity_controller_(velocity_controller), state_controller_(state_controller),  
           joint_position_controller_(joint_position_controller), 
           communication_(communication), led_(led), output_encoder_(output_encoder), torque_sensor_(torque),
-          output_encoder_correction_table_(param_.output_encoder.table), driver_(driver), brake_(brake),
+          output_encoder_correction_table_(param_.output_encoder.table), 
+          torque_correction_table_(param_.torque_sensor.table), driver_(driver), brake_(brake),
           iq_filter_(1.0/10000, 1) {
           set_param(param);
           if (param_.vbus_min == 0) {
@@ -126,7 +127,8 @@ class MainLoop {
       //if (torque_corrected != status_.torque) {
         torque_corrected += param_.torque_correction*status_.fast_loop.foc_status.measured.i_q;
       //}
-      status_.torque = torque_corrected;
+      float torque_calibrated = torque_corrected + param_.torque_sensor.table_gain*torque_correction_table_.table_interp(output_encoder_x+param_.output_encoder.bias*(1.0/(2*M_PI)));
+      status_.torque = torque_calibrated;
 
       if (!position_limits_disable_) {
         if ((status_.motor_position > param_.encoder_limits.motor_hard_max ||
@@ -538,6 +540,7 @@ class MainLoop {
     uint32_t *reserved1_ = &timestamp_;
     uint32_t *reserved2_ = &last_timestamp_;
     PChipTable<OUTPUT_ENCODER_TABLE_LENGTH> output_encoder_correction_table_;
+    PChipTable<TORQUE_TABLE_LENGTH> torque_correction_table_;
     CStack<MainLoopStatus,2> status_stack_;
     bool first_command_received_ = false;
     Driver &driver_;
