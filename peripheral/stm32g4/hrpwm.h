@@ -9,8 +9,10 @@
 
 extern "C" { void system_init(); }
 
-class HRPWM final : public PWMBase {
+class HRPWM : public PWMBase {
  public:
+    HRPWM(HRTIM_TypeDef &regs, volatile uint32_t &pwm_a, volatile uint32_t &pwm_b, volatile uint32_t &pwm_c) : 
+      regs_(regs), pwm_a_(pwm_a), pwm_b_(pwm_b), pwm_c_(pwm_c) {}
     HRPWM(uint32_t frequency_hz, HRTIM_TypeDef &regs, uint8_t ch_a, uint8_t ch_b, uint8_t ch_c, 
       bool pwm3_mode = false, uint16_t deadtime_ns = 50, uint16_t min_off_ns = 0, uint16_t min_on_ns = 0) : 
          regs_(regs),
@@ -20,9 +22,6 @@ class HRPWM final : public PWMBase {
          ch_a_(ch_a), ch_b_(ch_b), ch_c_(ch_c),
          pwm3_mode_(pwm3_mode),
          deadtime_ns_(deadtime_ns) {
-      if (ch_b == ch_a) {
-         pwm_b_ = regs.sTimerxRegs[ch_b].CMP2xR;
-      }
       set_frequency_hz(frequency_hz, min_off_ns, min_on_ns);
       set_vbus(12);
       init();
@@ -61,7 +60,7 @@ class HRPWM final : public PWMBase {
       }
    }
    void set_frequency_hz(uint32_t frequency_hz, uint16_t min_off_ns = 0, uint16_t min_on_ns = 0);
- private:
+
    uint16_t period_, half_period_;
    HRTIM_TypeDef &regs_;
    volatile uint32_t &pwm_a_, &pwm_b_, &pwm_c_;
@@ -73,9 +72,23 @@ class HRPWM final : public PWMBase {
    float pwm_max_;
    int prescaler_ = 32;
    float count_per_ns_;
+};
 
-   friend void config_init();
-   friend void system_init();
+class HRPWM3 : public HRPWM {
+ public:
+   HRPWM3(uint32_t frequency_hz, HRTIM_TypeDef &regs, uint8_t ch_a, uint8_t ch_b, uint8_t ch_c, 
+      uint16_t min_off_ns = 0, uint16_t min_on_ns = 0) : 
+         HRPWM(regs, regs.sTimerxRegs[ch_a].CMP1xR, regs.sTimerxRegs[ch_b].CMP2xR, regs.sTimerxRegs[ch_c].CMP1xR) {
+      ch_a_ = ch_a;
+      ch_b_ = ch_b;
+      ch_c_ = ch_c;
+      pwm3_mode_ = true;
+      set_frequency_hz(frequency_hz, min_off_ns, min_on_ns);
+      set_vbus(12);
+      init();
+   }
+   void brake_mode();
+   void voltage_mode();
 };
 
 #endif  // UNHUMAN_MOTORLIB_PERIPHERAL_STM32G4_HRPWM_H_
