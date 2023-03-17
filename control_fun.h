@@ -31,22 +31,9 @@ inline int32_t sign(int32_t a) { return a > 0 ? 1 : (a < 0 ? -1 : 0); }
 
 class KahanSum {
  public:
-  float add(float input)  //__attribute__((section (".ccmram")))
-  {
-    float y = input - c_;
-    float t = sum_ + y;
-    c_ = (t - sum_) - y;
-    sum_ = t;
-    return sum_;
-  }
-  float value() const  //__attribute__((section (".ccmram")))
-  {
-    return sum_;
-  }
-  void init(float value = 0) {
-    sum_ = value;
-    c_ = 0;
-  }
+  float add(float input);  //__attribute__((section (".ccmram")))
+  float value() const;     //__attribute__((section (".ccmram")))
+  void init(float value = 0);
 
  private:
   float sum_ = 0;
@@ -55,89 +42,49 @@ class KahanSum {
 
 class FirstOrderLowPassFilter {
  public:
-  FirstOrderLowPassFilter(float dt, float frequency_hz = 0) {
-    dt_ = dt;
-    set_frequency(frequency_hz);
-  }
-  void init(float value) {
-    value_ = value;
-    last_value_ = value;
-  }
-  float update(float value) {
-    value_ = alpha_ * value + (1 - alpha_) * last_value_;
-    last_value_ = value_;
-    return get_value();
-  }
-  float get_value() const { return value_; }
-  void set_frequency(float frequency_hz) {
-    if (frequency_hz == 0) {
-      alpha_ = 1;
-    } else {
-      alpha_ =
-          2 * M_PI * dt_ * frequency_hz / (2 * M_PI * dt_ * frequency_hz + 1);
-    }
-  }
-  float get_frequency() const {
-    return alpha_ / (2 * M_PI * dt_ * (1 - alpha_));
-  }
+  FirstOrderLowPassFilter(float dt, float frequency_hz = 0);
+  void init(float value);
+  float update(float value);
+  float get_value() const;
+  void set_frequency(float frequency_hz);
+  float get_frequency() const;
 
  private:
-  float value_ = 0, last_value_ = 0;
-  float alpha_, dt_;
+  float value_ = 0;
+  float last_value_ = 0;
+  float alpha_ = 0;
+  float dt_ = 0;
 };
 
 class SecondOrderLowPassFilter {
  public:
   SecondOrderLowPassFilter(float dt, float frequency_hz = 0)
       : low_pass_1_(dt, frequency_hz), low_pass_2_(dt, frequency_hz) {}
-  void init(float value) {
-    low_pass_1_.init(value);
-    low_pass_2_.init(value);
-  }
-  float update(float value) {
-    return low_pass_2_.update(low_pass_1_.update(value));
-  }
-  float get_value() const { return low_pass_2_.get_value(); }
-  void set_frequency(float frequency_hz) {
-    low_pass_1_.set_frequency(frequency_hz);
-    low_pass_2_.set_frequency(frequency_hz);
-  }
-  float get_frequency() const { return low_pass_1_.get_frequency(); }
+  void init(float value);
+  float update(float value);
+  float get_value() const;
+  void set_frequency(float frequency_hz);
+  float get_frequency() const;
 
  private:
-  FirstOrderLowPassFilter low_pass_1_, low_pass_2_;
+  FirstOrderLowPassFilter low_pass_1_;
+  FirstOrderLowPassFilter low_pass_2_;
 };
 
-#define IIRSIZE 4
+constexpr int kIirSize = 4;
 class IIRFilter {
  public:
-  float update(float value) {
-    for (int i = IIRSIZE - 1; i > 0; i--) {
-      x_[i] = x_[i - 1];
-      y_[i] = y_[i - 1];
-    }
-    x_[0] = value;
-
-    float v = 0;
-    for (int i = 0; i < IIRSIZE; i++) {
-      v += x_[i] * b_[i];
-    }
-    float n = 0;
-    for (int i = 1; i < IIRSIZE; i++) {
-      n += y_[i] * a_[i];
-    }
-    y_[0] = v - n;
-    return y_[0];
-  }
+  float update(float value);
 
  private:
-  float x_[IIRSIZE] = {};
-  float y_[IIRSIZE] = {};
+  float x_[kIirSize] = {};
+  float y_[kIirSize] = {};
   // note a_[0] ignored
-  float a_[IIRSIZE] = {1, -2.87435689267748, 2.7564831952257,
-                       -0.881893130592486};
-  float b_[IIRSIZE] = {2.91464944656705e-05, 8.74394833970116e-05,
-                       8.74394833970116e-05, 2.91464944656705e-05};
+  static constexpr float a_[kIirSize] = {1, -2.87435689267748, 2.7564831952257,
+                                         -0.881893130592486};
+  static constexpr float b_[kIirSize] = {
+      2.91464944656705e-05, 8.74394833970116e-05, 8.74394833970116e-05,
+      2.91464944656705e-05};
 };
 
 class PIController {
@@ -148,36 +95,22 @@ class PIController {
   void initialize() { ki_sum_ = 0; }
 
  private:
-  float kp_ = 0, ki_ = 0, ki_sum_ = 0, ki_limit_ = 0, command_max_ = 0;
+  float kp_ = 0;
+  float ki_ = 0;
+  float ki_sum_ = 0;
+  float ki_limit_ = 0;
+  float command_max_ = 0;
 
   friend class System;
 };
 
 class RateLimiter {
  public:
-  void set_limit(float limit) { limit_ = (limit == 0 ? INFINITY : limit); }
-  void init(float value, float velocity = 0) {
-    last_value_ = value;
-    velocity_ = velocity;
-  }
-  float step(float value) {
-    float out_value = value;
-    if (value > (last_value_ + limit_)) {
-      out_value = last_value_ + limit_;
-      velocity_ = limit_;
-    } else if (value < (last_value_ - limit_)) {
-      out_value = last_value_ - limit_;
-      velocity_ = -limit_;
-    } else {
-      out_value = value;
-      velocity_ = value - last_value_;
-    }
-
-    last_value_ = out_value;
-    return out_value;
-  }
-  float get_value() const { return last_value_; }
-  float get_velocity() const { return velocity_; }
+  void set_limit(float limit);
+  void init(float value, float velocity = 0);
+  float step(float value);
+  float get_value() const;
+  float get_velocity() const;
 
  private:
   float limit_ = INFINITY;
@@ -189,12 +122,7 @@ class PIDController {
  public:
   PIDController(float dt) : dt_(dt), velocity_filter_(dt), output_filter_(dt) {}
   virtual ~PIDController() {}
-  void init(float measured) {
-    rate_limit_.init(measured), ki_sum_ = 0;
-    measured_last_ = measured;
-    velocity_filter_.init(0);
-    output_filter_.init(0);
-  }  // todo init to current output
+  void init(float measured);
   virtual float step(float desired, float velocity_desired, float measured,
                      float velocity_limit = INFINITY);
   void set_param(const PIDParam &param);
@@ -202,12 +130,18 @@ class PIDController {
   void set_rollover(float rollover) { rollover_ = rollover; }
 
  protected:
-  float error_ = 0, velocity_measured_ = 0;
+  float error_ = 0;
+  float velocity_measured_ = 0;
   float measured_last_ = 0;
-  float kp_ = 0, kd_ = 0, ki_ = 0, ki_sum_ = 0, ki_limit_ = 0, command_max_ = 0;
+  float kp_ = 0;
+  float kd_ = 0;
+  float ki_ = 0;
+  float ki_sum_ = 0;
+  float ki_limit_ = 0;
+  float command_max_ = 0;
   float error_last_ = 0;
   float last_desired_ = 0;
-  float dt_;
+  float dt_ = 0;
   float rollover_ = 0;
   Hysteresis hysteresis_;
   RateLimiter rate_limit_;
@@ -245,72 +179,29 @@ class PIDInterpolateController : public PIDController {
   }
 
  private:
-  FirstOrderLowPassFilter filt1_, filt2_;
+  FirstOrderLowPassFilter filt1_;
+  FirstOrderLowPassFilter filt2_;
 };
 
 class TrajectoryGenerator {
  public:
   struct TrajectoryValue {
-    float value, value_dot;
+    float value;
+    float value_dot;
   };
-  void set_frequency(float frequency) { frequency_ = frequency; }
-  void set_amplitude(float amplitude) { amplitude_ = amplitude; }
-  void set_mode(TuningMode mode) {
-    if (mode <= TuningMode::CHIRP) {
-      mode_ = mode;
-      if (mode == TuningMode::CHIRP) {
-        chirp_rate_ = frequency_;
-        frequency_ = 0;
-        chirp_frequency_.init();
-      }
-    }
-  }
+  void set_frequency(float frequency);
+  void set_amplitude(float amplitude);
+  void set_mode(TuningMode mode);
 
-  TrajectoryValue &step(float dt) {
-    // phi_ is a radian counter at the command frequency doesn't get larger than
-    // 2*pi
-    if (mode_ == TuningMode::CHIRP) {
-      frequency_ = chirp_frequency_.add(chirp_rate_ * dt);
-    }
-    // KahanSum allows for and summing of dt allows for low frequencies without
-    // losing resolution
-    phi_.add(2 * (float)M_PI * fabsf(frequency_) * dt);
-    if (phi_.value() > 2 * (float)M_PI) {
-      phi_.add(-2 * (float)M_PI);
-    }
-    Sincos sincos;
-    sincos = sincos1(phi_.value());
-    switch (mode_) {
-      case TuningMode::SINE:
-      case TuningMode::CHIRP:
-        trajectory_value_.value = amplitude_ * sincos.sin;
-        trajectory_value_.value_dot =
-            2 * (float)M_PI * frequency_ * amplitude_ * sincos.cos;
-        break;
-      case TuningMode::SQUARE:
-        trajectory_value_.value = amplitude_ * fsignf(sincos.sin);
-        trajectory_value_.value_dot = 0;
-        break;
-      case TuningMode::TRIANGLE:
-        if (phi_.value() < M_PI) {
-          trajectory_value_.value =
-              amplitude_ * (2 * phi_.value() * (1 / M_PI) - 1);
-          trajectory_value_.value_dot = 4 * amplitude_ * frequency_;
-        } else {
-          trajectory_value_.value =
-              amplitude_ * (3 - 2 * phi_.value() * (1 / M_PI));
-          trajectory_value_.value_dot = -4 * amplitude_ * frequency_;
-        }
-        break;
-    }
-    return trajectory_value_;
-  }
+  TrajectoryValue &step(float dt);
 
  private:
   TuningMode mode_ = TuningMode::SINE;
-  float frequency_, amplitude_;
+  float frequency_;
+  float amplitude_;
   TrajectoryValue trajectory_value_;
-  KahanSum phi_, chirp_frequency_;
+  KahanSum phi_;
+  KahanSum chirp_frequency_;
   float chirp_rate_;
 };
 
