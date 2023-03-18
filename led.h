@@ -1,10 +1,8 @@
 #ifndef UNHUMAN_MOTORLIB_LED_H_
 #define UNHUMAN_MOTORLIB_LED_H_
 
-#ifndef LED_H
-#define LED_H
-
 #include <cstdint>
+
 // A tricolor led for status, pwm compare registers required
 class LED {
  public:
@@ -77,7 +75,5 @@ class LED {
   uint16_t count_max_;
   uint16_t update_frequency_hz_;
 };
-
-#endif
 
 #endif  // UNHUMAN_MOTORLIB_LED_H_
