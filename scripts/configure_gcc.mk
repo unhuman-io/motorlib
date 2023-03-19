@@ -13,7 +13,7 @@ LTO = -flto=auto
 PREFIX = arm-none-eabi-
 # The gcc compiler bin path can be either defined in make command via GCC_PATH variable (> make GCC_PATH=xxx)
 # either it can be added to the PATH environment variable.
-GCC_PATH=$(dir $(lastword $(MAKEFILE_LIST)))/../gcc/bin
+GCC_PATH := $(dir $(lastword $(MAKEFILE_LIST)))../gcc/bin
 ifdef GCC_PATH
 CC = $(GCC_PATH)/$(PREFIX)gcc
 AS = $(GCC_PATH)/$(PREFIX)gcc -x assembler-with-cpp
@@ -27,6 +27,14 @@ CP = $(PREFIX)objcopy
 SZ = $(PREFIX)size
 CXX = $(PREFIX)g++
 endif
+
+ifdef CLANG
+CC = clang
+AS = clang -x assembler-with-cpp
+CXX = clang++
+LD = ld.lld
+endif
+
 HEX = $(CP) -O ihex
 BIN = $(CP) -O binary -S
  
@@ -45,10 +53,15 @@ FLOAT-ABI = -mfloat-abi=hard
 # mcu
 MCU = $(CPU) -mthumb $(FPU) $(FLOAT-ABI)
 
-# compile gcc flags
 ASFLAGS = $(MCU) $(AS_DEFS) $(AS_INCLUDES) $(OPT) -Wall -fdata-sections -ffunction-sections $(LTO)
-
+# compile gcc flags
+ifdef CLANG
+SYSROOT := $(GCC_PATH)/../arm-none-eabi
+CFLAGS = -target thumbv7em-none-eabi --sysroot $(SYSROOT) $(MCU) $(C_DEFS) $(C_INCLUDES) $(OPT) -Wall -fdata-sections -ffunction-sections $(LTO)
+CFLAGS += -Wno-deprecated-register
+else
 CFLAGS = $(MCU) $(C_DEFS) $(C_INCLUDES) $(OPT) -Wall -fdata-sections -ffunction-sections $(LTO)
+endif # CLANG
 
 ifeq ($(DEBUG), 1)
 CFLAGS += -g -gdwarf-2
@@ -56,13 +69,29 @@ endif
 
 # Generate dependency information
 CFLAGS += -MMD -MP -MF"$(@:%.o=%.d)"
-CPPFLAGS = $(CFLAGS)
+CPPFLAGS = $(CFLAGS) 
+ifdef CLANG
+
+CPPFLAGS += -I$(SYSROOT)/include/c++/12.2.1/arm-none-eabi/thumb/v7e-m+fp/hard/ -I$(SYSROOT)/include/c++/12.2.1/
+endif
 
 # libraries
+ifndef CLANG
 LIBS = -lc -lm -lnosys 
 LIBDIR = 
 LDFLAGS = $(MCU) -specs=rdimon.specs -specs=nosys.specs -specs=nano.specs -T$(LDSCRIPT) $(LIBDIR) $(LIBS) -Wl,-Map=$(BUILD_DIR)/$(TARGET).map,--cref -Wl,--gc-sections -u _printf_float
-	
+else
+LIBS = -lc_nano -lm -lnosys -lrdimon_nano -lstdc++_nano -lg_nano -lgcc
+LIBDIR = 
+LDFLAGS := --Bstatic --sysroot /opt/gcc-arm-none-eabi/arm-none-eabi/
+LDFLAGS += --build-id
+LDFLAGS += --gc-sections
+LDFLAGS += --Map $(BUILD_DIR)/$(TARGET).map
+LDFLAGS += --script $(LDSCRIPT) --build-id=none --gc-sections
+LDFLAGS += -Llib -L$(SYSROOT)/lib/thumb/v7e-m+fp/hard/ -L$(SYSROOT)/../lib/gcc/arm-none-eabi/12.2.1/thumb/v7e-m+fp/hard/ $(LIBS)
+endif
+
+ifndef CLANG	
 GCC_VERSION := $(shell $(CC) -dumpversion)
 GCC_MAJOR_VERSION := $(word 1, $(subst ., ,$(GCC_VERSION)))
 
@@ -81,3 +110,4 @@ RM=rm -rf
 MKDIR=mkdir -p
 $(info not windows)
 endif
+endif #CLANG
