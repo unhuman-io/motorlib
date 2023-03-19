@@ -1,4 +1,6 @@
-#pragma once
+#ifndef UNHUMAN_MOTORLIB_ROUND_ROBIN_LOGGER_H_
+#define UNHUMAN_MOTORLIB_ROUND_ROBIN_LOGGER_H_
+
 #include "messages.h"
 
 #define RR_DATA_LENGTH  20
@@ -27,3 +29,5 @@ class RoundRobinLogger {
 };
 
 extern RoundRobinLogger round_robin_logger;
+
+#endif  // UNHUMAN_MOTORLIB_ROUND_ROBIN_LOGGER_H_

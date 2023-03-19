@@ -1,4 +1,6 @@
-#pragma once
+#ifndef UNHUMAN_MOTORLIB_AUTOCOMPLETE_H_
+#define UNHUMAN_MOTORLIB_AUTOCOMPLETE_H_
+
 #include <string>
 #include <vector>
 #include <algorithm>
@@ -79,3 +81,5 @@ class AutoComplete {
     std::string str_, last_str_;
     std::vector<std::string> strs_;
 };
+
+#endif  // UNHUMAN_MOTORLIB_AUTOCOMPLETE_H_

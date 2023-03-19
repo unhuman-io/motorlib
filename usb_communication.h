@@ -1,5 +1,5 @@
-#ifndef USB_COMMUNICATION_H
-#define USB_COMMUNICATION_H
+#ifndef UNHUMAN_MOTORLIB_USB_COMMUNICATION_H_
+#define UNHUMAN_MOTORLIB_USB_COMMUNICATION_H_
 
 #include "communication.h"
 
@@ -31,4 +31,4 @@ class USBCommunication : public CommunicationBase {
     friend class System;
 };
 
-#endif
+#endif  // UNHUMAN_MOTORLIB_USB_COMMUNICATION_H_

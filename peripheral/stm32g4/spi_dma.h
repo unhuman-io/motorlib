@@ -1,4 +1,6 @@
-#pragma once
+#ifndef UNHUMAN_MOTORLIB_PERIPHERAL_STM32G4_SPI_DMA_H_
+#define UNHUMAN_MOTORLIB_PERIPHERAL_STM32G4_SPI_DMA_H_
+
 #include <cstdint>
 #include "../st_device.h"
 #include "../../gpio.h"
@@ -62,3 +64,5 @@ class SPIDMA {
 
     friend class System;
 };
+
+#endif  // UNHUMAN_MOTORLIB_PERIPHERAL_STM32G4_SPI_DMA_H_

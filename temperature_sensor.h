@@ -1,4 +1,5 @@
-#pragma once
+#ifndef UNHUMAN_MOTORLIB_TEMPERATURE_SENSOR_H_
+#define UNHUMAN_MOTORLIB_TEMPERATURE_SENSOR_H_
 
 class TemperatureSensor {
  public:
@@ -21,3 +22,5 @@ class PT1000 : public TemperatureSensor {
     volatile uint32_t& adc_;
     float temperature_ = 0;
 };
+
+#endif  // UNHUMAN_MOTORLIB_TEMPERATURE_SENSOR_H_

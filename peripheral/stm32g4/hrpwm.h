@@ -1,5 +1,5 @@
-#ifndef HRPWM_H
-#define HRPWM_H
+#ifndef UNHUMAN_MOTORLIB_PERIPHERAL_STM32G4_HRPWM_H_
+#define UNHUMAN_MOTORLIB_PERIPHERAL_STM32G4_HRPWM_H_
 
 #include "../pwm.h"
 #include <cstdint>
@@ -73,4 +73,4 @@ class HRPWM final : public PWMBase {
    friend void system_init();
 };
 
-#endif
+#endif  // UNHUMAN_MOTORLIB_PERIPHERAL_STM32G4_HRPWM_H_

@@ -1,4 +1,5 @@
-#pragma once
+#ifndef UNHUMAN_MOTORLIB_MESSAGES_H_
+#define UNHUMAN_MOTORLIB_MESSAGES_H_
 
 #include <stdint.h>
 #include "motor_messages/motor_messages.h"
@@ -222,3 +223,5 @@ typedef struct {
     RoundRobinData rr_data;
     float power;
 } MainLoopStatus;
+
+#endif  // UNHUMAN_MOTORLIB_MESSAGES_H_

@@ -1,3 +1,6 @@
+#ifndef UNHUMAN_MOTORLIB_CONTROLLER_TORQUE_CONTROLLER_H_
+#define UNHUMAN_MOTORLIB_CONTROLLER_TORQUE_CONTROLLER_H_
+
 #include "controller.h"
 #include "../control_fun.h"
 
@@ -20,3 +23,5 @@ class TorqueController : public Controller {
 
     friend class System;
 };
+
+#endif  // UNHUMAN_MOTORLIB_CONTROLLER_TORQUE_CONTROLLER_H_

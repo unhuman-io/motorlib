@@ -1,4 +1,5 @@
-#pragma once
+#ifndef UNHUMAN_MOTORLIB_PERIPHERAL_SPI_ENCODER_H_
+#define UNHUMAN_MOTORLIB_PERIPHERAL_SPI_ENCODER_H_
 
 #include "../encoder.h"
 #include "../st_device.h"
@@ -25,3 +26,5 @@ class SPIEncoder : public EncoderBase {
     uint16_t start_cs_delay_ns_ = 80;
     uint16_t end_cs_delay_ns_ = 25;
 };
+
+#endif  // UNHUMAN_MOTORLIB_PERIPHERAL_SPI_ENCODER_H_

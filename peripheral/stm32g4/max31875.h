@@ -1,4 +1,6 @@
-#pragma once
+#ifndef UNHUMAN_MOTORLIB_PERIPHERAL_STM32G4_MAX31875_H_
+#define UNHUMAN_MOTORLIB_PERIPHERAL_STM32G4_MAX31875_H_
+
 #include "i2c.h"
 
 class MAX31875 {
@@ -35,3 +37,5 @@ class MAX31875 {
 
     friend class System;
 };
+
+#endif  // UNHUMAN_MOTORLIB_PERIPHERAL_STM32G4_MAX31875_H_

@@ -1,4 +1,5 @@
-#pragma once
+#ifndef UNHUMAN_MOTORLIB_PERIPHERAL_STM32G4_PIN_CONFIG_H_
+#define UNHUMAN_MOTORLIB_PERIPHERAL_STM32G4_PIN_CONFIG_H_
 
 
 #define MASK_SET(var, item, val) var = (var & ~item##_Msk) | (val << item##_Pos)
@@ -54,3 +55,5 @@ union gpio_bits {
     };
     volatile uint32_t word;
 };
+
+#endif  // UNHUMAN_MOTORLIB_PERIPHERAL_STM32G4_PIN_CONFIG_H_

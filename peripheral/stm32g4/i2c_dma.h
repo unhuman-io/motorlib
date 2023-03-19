@@ -1,4 +1,6 @@
-#pragma once
+#ifndef UNHUMAN_MOTORLIB_PERIPHERAL_STM32G4_I2C_DMA_H_
+#define UNHUMAN_MOTORLIB_PERIPHERAL_STM32G4_I2C_DMA_H_
+
 #include "stm32g474xx.h"
 #include "../../util.h"
 
@@ -156,3 +158,5 @@ class I2C_DMA {
     I2C_TypeDef &regs_;
     DMA_Channel_TypeDef &tx_dma_, &rx_dma_;
 };
+
+#endif  // UNHUMAN_MOTORLIB_PERIPHERAL_STM32G4_I2C_DMA_H_

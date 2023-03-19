@@ -1,5 +1,5 @@
-#ifndef PARAMETER_API_H
-#define PARAMETER_API_H
+#ifndef UNHUMAN_MOTORLIB_PARAMETER_API_H_
+#define UNHUMAN_MOTORLIB_PARAMETER_API_H_
 
 #include <string>
 #include <map>
@@ -126,4 +126,4 @@ class ParameterAPI {
     AutoComplete auto_complete_;
 };
 
-#endif
+#endif  // UNHUMAN_MOTORLIB_PARAMETER_API_H_

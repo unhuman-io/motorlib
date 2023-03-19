@@ -1,4 +1,5 @@
-#pragma once
+#ifndef UNHUMAN_MOTORLIB_BOARDS_PIN_CONFIG_OBOT_G474_MOTOR_40_H_
+#define UNHUMAN_MOTORLIB_BOARDS_PIN_CONFIG_OBOT_G474_MOTOR_40_H_
 
 #include "stm32g474xx.h"
 #include "../peripheral/stm32g4/pin_config.h"
@@ -179,3 +180,5 @@ extern "C" void RTC_WKUP_IRQHandler() {
     EXTI->PR1 = EXTI_PR1_PIF20;
     RTC->SCR = RTC_SCR_CWUTF;
 }
+
+#endif  // UNHUMAN_MOTORLIB_BOARDS_PIN_CONFIG_OBOT_G474_MOTOR_40_H_

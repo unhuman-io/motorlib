@@ -1,4 +1,5 @@
-#pragma once
+#ifndef UNHUMAN_MOTORLIB_SYSTEM_H_
+#define UNHUMAN_MOTORLIB_SYSTEM_H_
 
 #ifdef __cplusplus
 #include "parameter_api.h"
@@ -199,3 +200,5 @@ void usb_interrupt();
 #ifdef __cplusplus
 }
 #endif
+
+#endif  // UNHUMAN_MOTORLIB_SYSTEM_H_

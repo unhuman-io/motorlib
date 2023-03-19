@@ -1,4 +1,5 @@
-#pragma once
+#ifndef UNHUMAN_MOTORLIB_BUCK_BUCK_H_
+#define UNHUMAN_MOTORLIB_BUCK_BUCK_H_
 #include "messages_buck.h"
 
 class PIController;
@@ -13,3 +14,5 @@ class BuckController {
  private:
     PIController *controller_;
 };
+
+#endif  // UNHUMAN_MOTORLIB_BUCK_BUCK_H_

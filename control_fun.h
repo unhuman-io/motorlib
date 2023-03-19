@@ -1,5 +1,5 @@
-#ifndef MOTOR_CONTROL_FUN_H
-#define MOTOR_CONTROL_FUN_H
+#ifndef UNHUMAN_MOTORLIB_CONTROL_FUN_H_
+#define UNHUMAN_MOTORLIB_CONTROL_FUN_H_
 
 #include "messages.h"
 #undef _DEFAULT_SOURCE
@@ -326,4 +326,5 @@ inline T wrap1_diff(T value, T value2, T rollover) {
 }
 
 
-#endif //MOTOR_CONTROL_FUN_H
+
+#endif  // UNHUMAN_MOTORLIB_CONTROL_FUN_H_

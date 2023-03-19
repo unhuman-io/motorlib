@@ -1,4 +1,5 @@
-#pragma once
+#ifndef UNHUMAN_MOTORLIB_AKSIM2_ENCODER_H_
+#define UNHUMAN_MOTORLIB_AKSIM2_ENCODER_H_
 
 #include "encoder.h"
 #include <cmath>
@@ -116,3 +117,5 @@ uint8_t CRC_BiSS_43_24bit (uint32_t w_InputData)
 
  return b_CRC;
 } 
+
+#endif  // UNHUMAN_MOTORLIB_AKSIM2_ENCODER_H_

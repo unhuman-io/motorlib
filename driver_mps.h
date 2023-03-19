@@ -1,4 +1,6 @@
-#pragma once
+#ifndef UNHUMAN_MOTORLIB_DRIVER_MPS_H_
+#define UNHUMAN_MOTORLIB_DRIVER_MPS_H_
+
 #include "driver.h"
 
 class DriverMPS : public DriverBase {
@@ -23,3 +25,5 @@ class DriverMPS : public DriverBase {
     }
 
 };
+
+#endif  // UNHUMAN_MOTORLIB_DRIVER_MPS_H_

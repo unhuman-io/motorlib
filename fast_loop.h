@@ -1,5 +1,5 @@
-#ifndef FAST_LOOP_H
-#define FAST_LOOP_H
+#ifndef UNHUMAN_MOTORLIB_FAST_LOOP_H_
+#define UNHUMAN_MOTORLIB_FAST_LOOP_H_
 
 #include <cstdint>
 #include "messages.h"
@@ -346,4 +346,4 @@ class FastLoop {
    friend class System;
 };
 
-#endif
+#endif  // UNHUMAN_MOTORLIB_FAST_LOOP_H_

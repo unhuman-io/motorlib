@@ -1,4 +1,5 @@
-#pragma once
+#ifndef UNHUMAN_MOTORLIB_PERIPHERAL_STM32G4_TEMP_SENSOR_H_
+#define UNHUMAN_MOTORLIB_PERIPHERAL_STM32G4_TEMP_SENSOR_H_
 
 extern "C" {
     void system_init();
@@ -28,3 +29,5 @@ class TempSensor {
 
     friend void system_init();
 };
+
+#endif  // UNHUMAN_MOTORLIB_PERIPHERAL_STM32G4_TEMP_SENSOR_H_

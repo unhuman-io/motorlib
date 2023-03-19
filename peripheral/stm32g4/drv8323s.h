@@ -1,4 +1,6 @@
-#pragma once
+#ifndef UNHUMAN_MOTORLIB_PERIPHERAL_STM32G4_DRV8323S_H_
+#define UNHUMAN_MOTORLIB_PERIPHERAL_STM32G4_DRV8323S_H_
+
 #include "../../driver.h"
 #include "../../logger.h"
 
@@ -107,3 +109,5 @@ class DRV8323S : public DriverBase {
     volatile int register_operation_local_ = 0;
     void (*spi_reinit_callback_)();
 };
+
+#endif  // UNHUMAN_MOTORLIB_PERIPHERAL_STM32G4_DRV8323S_H_
