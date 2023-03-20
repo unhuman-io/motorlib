@@ -29,6 +29,8 @@ class QEPEncoder final : public EncoderBase {
   __attribute__((section(".ccmram")));
   void trigger() {}
   __attribute__((section(".ccmram")));
+  // TODO: Consider fixing get_index_pos and index_received to be const like in
+  // the base class.
   int32_t get_index_pos() {
     check_index();
     return regs_.CCR3;

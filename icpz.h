@@ -64,10 +64,13 @@ class ICPZ : public EncoderBase {
     //  spidma_.readwrite(command, data_in, 3);
     //  command[0] = 0xcf;
     //  command[1] = 0x0F;
-    //  command[2] = 0x00;     // 0x00 ran_fld = 0 -> never update position
-    //  based on absolute track after initial spidma_.readwrite(command,
-    //  data_in, 3); command[0] = 0xcf; command[1] = 0x40; command[2] = 0x01; //
-    //  memory bank 1 spidma_.readwrite(command, data_in, 3); command[0] = 0xcf;
+    //  command[2] = 0x00;     // 0x00 ran_fld = 0 -> never update position based on absolute track after initial
+    //  spidma_.readwrite(command, data_in, 3);
+    //  command[0] = 0xcf;
+    //  command[1] = 0x40;
+    //  command[2] = 0x01;     // memory bank 1
+    //  spidma_.readwrite(command, data_in, 3);
+    //  command[0] = 0xcf;
     //  command[1] = 0x08;
     //  command[2] = 0xc0;     // ai_phase
     //  command[3] = 0xd1;
@@ -103,14 +106,12 @@ class ICPZ : public EncoderBase {
       uint32_t data = ((data_[1] << 16) | (data_[2] << 8) | data_[3]) << 8;
       int32_t diff = (data - last_data_);  // rollover summing
       pos_ += diff / 256;
-      // pos_ = data/256;
       last_data_ = data;
       ongoing_read_ = false;
     }
     return get_value();
   }
   int32_t get_value() const { return pos_; }
-  bool index_received() const { return true; }
 
   void set_register_operation() { (*register_operation_)++; }
   void clear_register_operation() { (*register_operation_)--; }

@@ -15,8 +15,8 @@
 // this wrap does not cause a control discontinuity. It should never be updated
 // in a way that causes a discontinuity after the first read. That is, the first
 // read can return any integer value, such as in the case of an absolute
-// encoder, but additonal reads should be incrementally accurate. The
-// index_received() function is used to indicate precense of an index pulse
+// encoder, but additional reads should be incrementally accurate. The
+// index_received() function is used to indicate presence of an index pulse
 // received for an incremental encoder. It should be set to always true for an
 // absolute encoder.
 class EncoderBase : public SensorBase {
@@ -27,10 +27,10 @@ class EncoderBase : public SensorBase {
   bool init() { return false; }
 
   // Always called before read. One trigger and one read per control loop cycle.
-  // Trigger sould be called at a fixed frequency, ideally with little jitter.
+  // Trigger should be called at a fixed frequency, ideally with no jitter.
   void trigger() {}
 
-  // Reap the results of the encoder measurement after calling trigger. It will
+  // Read the results of the encoder measurement after calling trigger. It will
   // be called somewhat after trigger, possibly with some jitter.
   int32_t read() { return get_value(); }
 

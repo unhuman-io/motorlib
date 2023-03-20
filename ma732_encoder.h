@@ -57,7 +57,7 @@ class MA732Encoder : public SPIEncoder {
   }
 
   // non interrupt context
-  virtual uint8_t read_register(uint8_t address) {
+  uint8_t read_register(uint8_t address) {
     reinit();  // only really necessary if there are multiple users of the spi
     (*register_operation_)++;
     MA732reg reg = {};
@@ -71,7 +71,7 @@ class MA732Encoder : public SPIEncoder {
   }
 
   // non interrupt context
-  virtual bool set_register(uint8_t address, uint8_t value) {
+  bool set_register(uint8_t address, uint8_t value) {
     reinit();
     (*register_operation_)++;
     bool retval = true;
@@ -98,7 +98,7 @@ class MA732Encoder : public SPIEncoder {
 
   uint32_t get_filt() { return read_register(0xE); }
 
-  virtual void set_filt(uint32_t value) { set_register(0xE, value); }
+  void set_filt(uint32_t value) { set_register(0xE, value); }
 
   void set_mgt(uint32_t value) { set_register(0x6, value); }
 
