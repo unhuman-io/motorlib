@@ -3,6 +3,70 @@
 
 #include "../../control_fun.h"
 #include "../../logger.h"
+#include "pin_config.h"
+
+HRPWM::HRPWM(HRTIM_TypeDef &regs, volatile uint32_t &pwm_a,
+             volatile uint32_t &pwm_b, volatile uint32_t &pwm_c)
+    : regs_(regs), pwm_a_(pwm_a), pwm_b_(pwm_b), pwm_c_(pwm_c) {}
+
+HRPWM::HRPWM(uint32_t frequency_hz, HRTIM_TypeDef &regs, uint8_t ch_a,
+             uint8_t ch_b, uint8_t ch_c, bool pwm3_mode, uint16_t deadtime_ns,
+             uint16_t min_off_ns, uint16_t min_on_ns)
+    : regs_(regs),
+      pwm_a_(regs.sTimerxRegs[ch_a].CMP1xR),
+      pwm_b_(regs.sTimerxRegs[ch_b].CMP1xR),
+      pwm_c_(regs.sTimerxRegs[ch_c].CMP1xR),
+      ch_a_(ch_a),
+      ch_b_(ch_b),
+      ch_c_(ch_c),
+      pwm3_mode_(pwm3_mode),
+      deadtime_ns_(deadtime_ns) {
+  base_frequency_hz_ = frequency_hz;
+  min_off_ns_ = min_off_ns;
+  min_on_ns_ = min_on_ns;
+  set_frequency_hz(frequency_hz, min_off_ns, min_on_ns,
+                   /*keep_prescaler=*/false);
+  set_vbus(12);
+  init();
+}
+
+void HRPWM::init() {
+  for (auto ch : std::vector<uint8_t>{ch_a_, ch_b_, ch_c_}) {
+    regs_.sTimerxRegs[ch].TIMxCR2 = HRTIM_TIMCR2_UDM;
+    if (pwm3_mode_) {
+      regs_.sTimerxRegs[ch].SETx2R = HRTIM_SET2R_SST;
+    }
+    regs_.sTimerxRegs[ch].TIMxCR |=
+        HRTIM_TIMCR_PREEN | HRTIM_TIMCR_TRSTU | HRTIM_TIMCR_CONT;
+  }
+  if (!pwm3_mode_) {
+    set_deadtime(deadtime_ns_);
+  }
+  regs_.sTimerxRegs[5].TIMxCR2 = HRTIM_TIMCR2_UDM;
+  regs_.sTimerxRegs[5].TIMxCR |=
+      HRTIM_TIMCR_PREEN | HRTIM_TIMCR_TRSTU | HRTIM_TIMCR_CONT;
+  MASK_SET(regs_.sTimerxRegs[5].TIMxCR2, HRTIM_TIMCR2_ADROM,
+           1);  // adc event generated at 0 on F
+  regs_.sCommonRegs.DLLCR =
+      HRTIM_DLLCR_CALEN |
+      (3 << HRTIM_DLLCR_CALRTE_Pos);  // periodic calibration at 2048*hrtim =
+                                      // 12us
+  regs_.sCommonRegs.ADC1R = HRTIM_ADC1R_AD1TFPER;  // TODO coded only to F
+  regs_.sCommonRegs.ADC2R = HRTIM_ADC2R_AD2TFPER;  // also hrtim trig 2
+}
+
+void HRPWM::set_deadtime(uint16_t deadtime_ns) {
+  deadtime_ns_ = deadtime_ns;
+  uint32_t deadprescale = 0;
+  uint32_t deadtime =
+      deadtime_ns_ * count_per_ns_;  // 9 bits at 170e6*32/4 gives 376 ns
+  for (auto ch : std::vector<uint8_t>{ch_a_, ch_b_, ch_c_}) {
+    regs_.sTimerxRegs[ch].OUTxR = HRTIM_OUTR_DTEN;
+    regs_.sTimerxRegs[ch].DTxR = (deadtime << HRTIM_DTR_DTF_Pos) |
+                                 (deadtime << HRTIM_DTR_DTR_Pos) |
+                                 (deadprescale << HRTIM_DTR_DTPRSC_Pos);
+  }
+}
 
 void HRPWM::set_voltage(float v_abc[3]) {
   pwm_a_ = fsat2(v_abc[0] * v_to_pwm_ + half_period_, pwm_min_, pwm_max_);
@@ -40,7 +104,7 @@ void HRPWM::voltage_mode() {
   regs_.sCommonRegs.OENR = 0xFFF;
 }
 
-// todo doesn't work at startup before regs exist
+// TODO: Doesn't work at startup before regs exist.
 void HRPWM::set_frequency_hz(uint32_t frequency_hz, uint16_t min_off_ns,
                              uint16_t min_on_ns, bool keep_prescaler) {
   if (!keep_prescaler) {
@@ -78,6 +142,11 @@ void HRPWM::set_frequency_hz(uint32_t frequency_hz, uint16_t min_off_ns,
   current_frequency_hz_ = frequency_hz;
 }
 
+void HRPWM::set_frequency_hz(uint32_t frequency_hz) {
+  set_frequency_hz(frequency_hz, /*min_off_ns=*/0, /*min_on_ns=*/0,
+                   /*keep_prescaler=*/false);
+}
+
 void HRPWM::set_frequency_multiplier(uint8_t multiplier) {
   uint8_t multiplier_int = multiplier;
   HRTIM1->sCommonRegs.ADCPS1 = multiplier_int << HRTIM_ADCPS1_AD1PSC_Pos |
@@ -91,6 +160,21 @@ void HRPWM::set_frequency_multiplier(uint8_t multiplier) {
 
 uint8_t HRPWM::get_frequency_multiplier() const {
   return current_frequency_hz_ / base_frequency_hz_;
+}
+
+HRPWM3::HRPWM3(uint32_t frequency_hz, HRTIM_TypeDef &regs, uint8_t ch_a,
+               uint8_t ch_b, uint8_t ch_c, uint16_t min_off_ns,
+               uint16_t min_on_ns)
+    : HRPWM(regs, regs.sTimerxRegs[ch_a].CMP1xR, regs.sTimerxRegs[ch_b].CMP2xR,
+            regs.sTimerxRegs[ch_c].CMP1xR) {
+  ch_a_ = ch_a;
+  ch_b_ = ch_b;
+  ch_c_ = ch_c;
+  pwm3_mode_ = true;
+  set_frequency_hz(frequency_hz, min_off_ns, min_on_ns,
+                   /*keep_prescaler=*/false);
+  set_vbus(12);
+  init();
 }
 
 void HRPWM3::voltage_mode() {

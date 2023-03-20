@@ -28,8 +28,11 @@ class PWM_EN final : public PWMBase {
   void set_frequency_hz(uint32_t frequency_hz);
 
  private:
-  uint16_t period_, half_period_;
-  uint32_t &pwm_a_, &pwm_b_, &pwm_c_;
+  uint16_t period_;
+  uint16_t half_period_;
+  uint32_t &pwm_a_;
+  uint32_t &pwm_b_;
+  uint32_t &pwm_c_;
   TIM_TypeDef &regs_;
   GPIO &enable_;
   float v_to_pwm_;
