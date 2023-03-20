@@ -1,6 +1,8 @@
 #ifndef UNHUMAN_MOTORLIB_TEMPERATURE_SENSOR_H_
 #define UNHUMAN_MOTORLIB_TEMPERATURE_SENSOR_H_
 
+#include <stdint.h>
+
 class TemperatureSensor {
  public:
   float read() { return get_temperature(); }
