@@ -57,6 +57,8 @@ class I2CTorque final : public TorqueSensorBase {
     return torque_;
   }
 
+  float get_value() const { return torque_; }
+
  private:
   I2C_DMA &i2c_;
   uint8_t address_;
