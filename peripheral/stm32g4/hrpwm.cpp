@@ -79,17 +79,19 @@ void HRPWM::set_frequency_multiplier(FrequencyMultiplier multiplier) {
     uint8_t multiplier_int = multiplier;
     HRTIM1->sCommonRegs.ADCPS1 = multiplier_int << HRTIM_ADCPS1_AD1PSC_Pos | multiplier_int << HRTIM_ADCPS1_AD2PSC_Pos;
     uint32_t frequency_hz = base_frequency_hz_;
-    switch (multiplier) {
-        default:
-        case MULT_1:
-            break;
-        case MULT_2:
-            frequency_hz *= 2;
-            break;
-        case MULT_4:
-            frequency_hz *= 4;
-            break;
-    }
+    // switch (multiplier) {
+    //     default:
+    //     case MULT_1:
+    //         break;
+    //     case MULT_2:
+    //         frequency_hz *= 2;
+    //         break;
+    //     case MULT_4:
+    //         frequency_hz *= 4;
+    //         break;
+        
+    // }
+    frequency_hz *= multiplier_int;
     set_frequency_hz(frequency_hz, min_off_ns_, min_on_ns_, true);
 
 
