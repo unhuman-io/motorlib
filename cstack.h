@@ -11,8 +11,13 @@ class CStack {
 	void copy(const CStack &stack) {
 		pos_ = stack.pos_.load(std::memory_order_acquire);
 		for(int i=0;i<size;i++) {
-			data_[i] = stack.data_[i];
+			data_[pos_] = stack.data_[pos_];
+			pos_++;
+			if (pos_ >= size) {
+				pos_ = 0;
+			}
 		}
+		
 		future_pos_ = stack.future_pos_;
 	}
     void push(T const &t) {

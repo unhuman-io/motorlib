@@ -77,6 +77,13 @@ class FrequencyLimiter {
         }
         return false;
     }
+    bool ready() const {
+        uint32_t time = get_clock();
+        if (time - last_time_ > t_diff_) {
+            return true;
+        }
+        return false;
+    }
  private:
     uint32_t t_diff_, last_time_;
 };
