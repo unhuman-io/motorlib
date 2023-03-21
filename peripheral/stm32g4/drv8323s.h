@@ -9,9 +9,13 @@ extern uint16_t drv_regs_error;
 
 class DRV8323S : public DriverBase {
  public:
-  DRV8323S(SPI_TypeDef &regs, volatile int *register_operation = nullptr,
+  DRV8323S(SPI_TypeDef &regs, const uint16_t drv_regs[], uint8_t drv_regs_size,
+           volatile int *register_operation = nullptr,
            void (*spi_reinit_callback)() = nullptr)
-      : regs_(regs), spi_reinit_callback_(spi_reinit_callback) {
+      : regs_(regs),
+        drv_regs_(drv_regs),
+        drv_regs_size_(drv_regs_size),
+        spi_reinit_callback_(spi_reinit_callback) {
     if (register_operation != nullptr) {
       register_operation_ = register_operation;
     }
@@ -54,11 +58,11 @@ class DRV8323S : public DriverBase {
 
     drv_spi_start();
     drv_regs_error = 0;
-    for (uint8_t i = 0; i < sizeof(param->drv_regs) / sizeof(uint16_t); i++) {
-      uint16_t reg_out = param->drv_regs[i];
+    for (uint8_t i = 0; i < drv_regs_size_; i++) {
+      uint16_t reg_out = drv_regs_[i];
       uint16_t reg_in = 0;
       write_reg(reg_out);
-      uint8_t address = param->drv_regs[i] >> 11;
+      uint8_t address = drv_regs_[i] >> 11;
       reg_in = read_reg(address);
       if ((reg_in & 0x7FF) != (reg_out & 0x7FF)) {
         drv_regs_error |= 1 << i;
@@ -113,6 +117,8 @@ class DRV8323S : public DriverBase {
 
  private:
   SPI_TypeDef &regs_;
+  const uint16_t *drv_regs_;
+  const uint8_t drv_regs_size_;
   volatile int register_operation_local_ = 0;
   void (*spi_reinit_callback_)();
 };
