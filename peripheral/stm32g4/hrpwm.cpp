@@ -1,6 +1,7 @@
 
 #include "hrpwm.h"
 #include "../../control_fun.h"
+#include "../../logger.h"
 
 void HRPWM::set_voltage(float v_abc[3]) {
     pwm_a_ = fsat2(v_abc[0] * v_to_pwm_ + half_period_, pwm_min_, pwm_max_);
@@ -91,7 +92,8 @@ void HRPWM::set_frequency_multiplier(FrequencyMultiplier multiplier) {
     //         break;
         
     // }
-    frequency_hz *= multiplier_int;
+    frequency_hz *= multiplier_int + 1;
+    logger.log_printf("pwm frequency: %d", frequency_hz);
     set_frequency_hz(frequency_hz, min_off_ns_, min_on_ns_, true);
 
 
