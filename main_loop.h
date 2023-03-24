@@ -119,12 +119,12 @@ class MainLoop {
       int32_t output_encoder_raw = output_encoder_.read();
       float output_encoder_x = (output_encoder_raw % (int32_t) param_.output_encoder.cpr) / (float) param_.output_encoder.cpr;
       float output_encoder_rad = output_encoder_raw*2.0*(float) M_PI/param_.output_encoder.cpr;
-      status_.output_position = output_encoder_rad + param_.output_encoder.bias 
+      status_.output_position = param_.output_encoder.dir * output_encoder_rad + param_.output_encoder.bias 
         + output_encoder_correction_table_.table_interp(output_encoder_x);
 
       status_.motor_position = status_.fast_loop.motor_position.position + motor_encoder_bias_;
 
-      float torque_corrected = torque_sensor_.read();
+      float torque_corrected = param_.torque_sensor.dir * torque_sensor_.read();
       //if (torque_corrected != status_.torque) {
         torque_corrected += param_.torque_correction*status_.fast_loop.foc_status.measured.i_q;
       //}
@@ -347,6 +347,12 @@ class MainLoop {
       }
       if (param_.error_mask.all == 0) {
         param_.error_mask.all = ERROR_MASK_ALL;
+      }
+      if (param_.output_encoder.dir == 0) {
+        param_.output_encoder.dir = 1;
+      }
+      if (param_.torque_sensor.dir == 0) {
+        param_.torque_sensor.dir = 1;
       }
     }
     void set_rollover(float rollover) {
