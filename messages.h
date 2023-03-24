@@ -80,6 +80,7 @@ typedef struct {
     float k_temp;
     float table[TORQUE_TABLE_LENGTH][4];
     float table_gain;
+    float dir;
 } TorqueSensorParam;
 
 typedef struct {
@@ -132,6 +133,7 @@ typedef struct {
         float table[OUTPUT_ENCODER_TABLE_LENGTH][4];
         float cpr;                                  // output encoder cpr \sa FastLoopParam.motor_encoder.cpr
         float bias;
+        float dir;                                  // -1 or 1
     } output_encoder;
     struct {
         float motor_hard_max;         // will switch to safe mode if going past these limits

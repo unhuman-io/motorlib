@@ -64,20 +64,21 @@ class System {
         api.add_api_variable("ib", new APIFloat(&actuator_.fast_loop_.foc_command_.measured.i_b));
         api.add_api_variable("ic", new APIFloat(&actuator_.fast_loop_.foc_command_.measured.i_c));
         api.add_api_variable("id", new APIFloat(&actuator_.main_loop_.status_.fast_loop.foc_status.measured.i_d));
+        api.add_api_variable("iq", new APIFloat(&actuator_.main_loop_.status_.fast_loop.foc_status.measured.i_q));
         api.add_api_variable("i0", new APIFloat(&actuator_.main_loop_.status_.fast_loop.foc_status.measured.i_0));
-        api.add_api_variable("ikp", new APIFloat(&actuator_.fast_loop_.foc_->pi_iq_->kp_));
-        api.add_api_variable("iki", new APIFloat(&actuator_.fast_loop_.foc_->pi_iq_->ki_));
-        api.add_api_variable("iki_limit", new APIFloat(&actuator_.fast_loop_.foc_->pi_iq_->ki_limit_));
-        api.add_api_variable("imax", new APIFloat(&actuator_.fast_loop_.foc_->pi_iq_->command_max_));
-        api.add_api_variable("idkp", new APIFloat(&actuator_.fast_loop_.foc_->pi_id_->kp_));
-        api.add_api_variable("idki", new APIFloat(&actuator_.fast_loop_.foc_->pi_id_->ki_));
-        api.add_api_variable("idki_limit", new APIFloat(&actuator_.fast_loop_.foc_->pi_id_->ki_limit_));
-        api.add_api_variable("idmax", new APIFloat(&actuator_.fast_loop_.foc_->pi_id_->command_max_));
+        api.add_api_variable("ikp", new APIFloat(&actuator_.fast_loop_.foc_->pi_iq_.kp_));
+        api.add_api_variable("iki", new APIFloat(&actuator_.fast_loop_.foc_->pi_iq_.ki_));
+        api.add_api_variable("iki_limit", new APIFloat(&actuator_.fast_loop_.foc_->pi_iq_.ki_limit_));
+        api.add_api_variable("imax", new APIFloat(&actuator_.fast_loop_.foc_->pi_iq_.command_max_));
+        api.add_api_variable("idkp", new APIFloat(&actuator_.fast_loop_.foc_->pi_id_.kp_));
+        api.add_api_variable("idki", new APIFloat(&actuator_.fast_loop_.foc_->pi_id_.ki_));
+        api.add_api_variable("idki_limit", new APIFloat(&actuator_.fast_loop_.foc_->pi_id_.ki_limit_));
+        api.add_api_variable("idmax", new APIFloat(&actuator_.fast_loop_.foc_->pi_id_.command_max_));
         api.add_api_variable("idiq", new APICallbackFloat([](){return 0;}, 
-            [](float f){actuator_.fast_loop_.foc_->pi_id_->kp_ = actuator_.fast_loop_.foc_->pi_iq_->kp_;
-                actuator_.fast_loop_.foc_->pi_id_->ki_ = actuator_.fast_loop_.foc_->pi_iq_->ki_;
-                actuator_.fast_loop_.foc_->pi_id_->ki_limit_ = actuator_.fast_loop_.foc_->pi_iq_->ki_limit_;
-                actuator_.fast_loop_.foc_->pi_id_->command_max_ = actuator_.fast_loop_.foc_->pi_iq_->command_max_;}));
+            [](float f){actuator_.fast_loop_.foc_->pi_id_.kp_ = actuator_.fast_loop_.foc_->pi_iq_.kp_;
+                actuator_.fast_loop_.foc_->pi_id_.ki_ = actuator_.fast_loop_.foc_->pi_iq_.ki_;
+                actuator_.fast_loop_.foc_->pi_id_.ki_limit_ = actuator_.fast_loop_.foc_->pi_iq_.ki_limit_;
+                actuator_.fast_loop_.foc_->pi_id_.command_max_ = actuator_.fast_loop_.foc_->pi_iq_.command_max_;}));
         api.add_api_variable("tkp", new APIFloat(&actuator_.main_loop_.torque_controller_.controller_.kp_));
         api.add_api_variable("tkd", new APIFloat(&actuator_.main_loop_.torque_controller_.controller_.kd_));
         api.add_api_variable("tki", new APIFloat(&actuator_.main_loop_.torque_controller_.controller_.ki_));
@@ -141,7 +142,8 @@ class System {
         api.add_api_variable("beep", new APICallbackFloat([](){ return 0; }, [](float f){ actuator_.fast_loop_.beep_on(f); }));
         api.add_api_variable("zero_current_sensors", new APICallbackFloat([](){ return 0; }, [](float f){ actuator_.fast_loop_.zero_current_sensors_on(f); }));
         api.add_api_variable("disable_safe_mode", new const APICallback([](){ actuator_.main_loop_.param_.error_mask.all = ERROR_MASK_NONE; return "ok"; }));
-        api.add_api_variable("error_mask", new const APICallback([](){ return u32_to_hex(actuator_.main_loop_.param_.error_mask.all); }));
+        api.add_api_variable("error_mask", new APICallback([](){ return u32_to_hex(actuator_.main_loop_.param_.error_mask.all); },
+                [](std::string s){ actuator_.main_loop_.param_.error_mask.all = std::stoul(s, nullptr, 16); }));
         api.add_api_variable("help", new const APICallback([](){ return api.get_all_api_variables(); }));
         api.add_api_variable("api_length", new const APICallbackUint16([](){ return api.get_api_length(); }));
         api.add_api_variable("disable_position_limits", new APIBool(&actuator_.main_loop_.position_limits_disable_));
@@ -150,6 +152,14 @@ class System {
         api.add_api_variable("obias", new APIFloat(&actuator_.main_loop_.param_.output_encoder.bias));
         api.add_api_variable("mbias", new APIFloat(&actuator_.main_loop_.motor_encoder_bias_));
         api.add_api_variable("ttgain", new APIFloat(&actuator_.main_loop_.param_.torque_sensor.table_gain));
+        API_ADD_FILTER(id_filter, FirstOrderLowPassFilter, actuator_.fast_loop_.foc_->id_filter_);
+        API_ADD_FILTER(iq_filter, FirstOrderLowPassFilter, actuator_.fast_loop_.foc_->iq_filter_);
+        api.add_api_variable("startup_phase_lock_current", new const APIFloat(&param->startup_param.phase_lock_current));
+        api.add_api_variable("startup_mbias", new APIFloat(&actuator_.startup_motor_bias_));
+        api.add_api_variable("set_startup_bias", new const APICallback([](){ actuator_.set_bias(); return "ok"; }));
+        api.add_api_variable("odir", new APIFloat(&actuator_.main_loop_.param_.output_encoder.dir));
+        api.add_api_variable("tdir", new APIFloat(&actuator_.main_loop_.param_.torque_sensor.dir));
+        api.add_api_variable("mdir", new APIFloat(&actuator_.fast_loop_.param_.motor_encoder.dir));
 
         uint32_t t_start = get_clock();
         while(1) {
