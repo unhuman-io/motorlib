@@ -22,6 +22,9 @@ class HRPWM : public PWMBase {
          ch_a_(ch_a), ch_b_(ch_b), ch_c_(ch_c),
          pwm3_mode_(pwm3_mode),
          deadtime_ns_(deadtime_ns) {
+      base_frequency_hz_ = frequency_hz;
+      min_off_ns_ = min_off_ns;
+      min_on_ns_ = min_on_ns;
       set_frequency_hz(frequency_hz, min_off_ns, min_on_ns);
       set_vbus(12);
       init();
@@ -45,6 +48,8 @@ class HRPWM : public PWMBase {
       regs_.sCommonRegs.ADC2R = HRTIM_ADC2R_AD2TFPER; // also hrtim trig 2
    }
 
+   void set_frequency_multiplier(uint8_t frequency_multiplier);
+   uint8_t get_frequency_multiplier() const;
    void set_voltage(float v_abc[3])  __attribute__((section (".ccmram")));
    void set_vbus(float vbus);
    void open_mode();
@@ -59,9 +64,9 @@ class HRPWM : public PWMBase {
          regs_.sTimerxRegs[ch].DTxR = (deadtime << HRTIM_DTR_DTF_Pos) | (deadtime << HRTIM_DTR_DTR_Pos) | (deadprescale << HRTIM_DTR_DTPRSC_Pos);
       }
    }
-   void set_frequency_hz(uint32_t frequency_hz, uint16_t min_off_ns = 0, uint16_t min_on_ns = 0);
-
+   void set_frequency_hz(uint32_t frequency_hz, uint16_t min_off_ns = 0, uint16_t min_on_ns = 0, bool keep_prescaler = false);
    uint16_t period_, half_period_;
+   uint32_t base_frequency_hz_, current_frequency_hz_, min_on_ns_, min_off_ns_;
    HRTIM_TypeDef &regs_;
    volatile uint32_t &pwm_a_, &pwm_b_, &pwm_c_;
    uint8_t ch_a_, ch_b_, ch_c_;
