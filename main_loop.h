@@ -224,6 +224,16 @@ class MainLoop {
               fast_loop_.set_tuning_chirp(false, 0);
             }
           }
+          // every cycle
+          if (fast_log_ready_) {
+            if (current_tuning_rate_limiter_.ready()) {
+              if (status_stack_.top().fast_loop.foc_command.desired.i_q < 0 &&
+                  status_.fast_loop.foc_command.desired.i_q > 0) {
+                fast_loop_.trigger_status_log();
+                current_tuning_rate_limiter_.run();
+              }
+            }
+          }
           break;
         case VOLTAGE:
           vq_des = receive_data_.voltage.voltage_desired;
@@ -497,6 +507,12 @@ class MainLoop {
       }
       return false;
     }
+    void lock_status_log() {
+      fast_log_ready_ = false;
+    }
+    void unlock_status_log() {
+      fast_log_ready_ = true;
+    }
 
     // use to set the command from another low priority source than communication, 
     // such as from the System or Actuator classes
@@ -533,6 +549,8 @@ class MainLoop {
     OutputEncoder &output_encoder_;
     float motor_encoder_bias_ = 0;
     TorqueSensor &torque_sensor_;
+    FrequencyLimiter current_tuning_rate_limiter_ = {10};
+    bool fast_log_ready_ = true;
     float dt_ = 0;
     TrajectoryGenerator position_trajectory_generator_;
     uint32_t timestamp_ = 0;

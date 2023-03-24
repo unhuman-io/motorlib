@@ -119,7 +119,8 @@ class System {
         api.add_api_variable("energy", new const APIUint32(&actuator_.main_loop_.status_.fast_loop.energy_uJ));
         api.add_api_variable("fast_log", new const APICallback([](){
             logger.log_printf("timestamp, position, iq_des, iq_meas_filt, ia, ib, ic, va, vb, vc, vbus");
-            for(int i=0; i<100; i++) {
+            actuator_.main_loop_.lock_status_log();
+            for(int i=0; i<95; i++) {
                 FastLoopStatus &status = actuator_.fast_loop_.status_log_.next();
                 logger.log_printf("%d, %f, %f, %f, %f, %f, %f, %f, %f, %f, %f", 
                     status.timestamp,
@@ -135,6 +136,7 @@ class System {
                     status.vbus);
                 actuator_.fast_loop_.status_log_.finish();
             }
+            actuator_.main_loop_.unlock_status_log();
             return "ok"; }));
         api.add_api_variable("beep", new APICallbackFloat([](){ return 0; }, [](float f){ actuator_.fast_loop_.beep_on(f); }));
         api.add_api_variable("zero_current_sensors", new APICallbackFloat([](){ return 0; }, [](float f){ actuator_.fast_loop_.zero_current_sensors_on(f); }));
