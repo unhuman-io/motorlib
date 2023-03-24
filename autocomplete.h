@@ -28,28 +28,30 @@ class AutoComplete {
         switch (c) {
             case '\t': {
                 auto &str = str_;
-                std::copy_if(strs_.begin(), strs_.end(), std::back_inserter(matches), [&str](std::string s){return s.rfind(str,0)==0;});
-                if (matches.size() == 1) {
-                    str_ = matches[0];
-                    str_out = '\r' + str_;
-                } else if (matches.size()) {
-                    std::string max_match = matches[0];
-                    if (last_key_ == '\t') {
-                        str_out = '\n';
-                        std::string max_match = matches[0];
-                        for (auto &match : matches) {
-                            max_match = max_string_match(max_match, match);
-                            str_out += match + '\t';
-                        }
-                        // move str_ out to farthest in common characters
-                        str_ = max_match;
-                        str_out += '\n' + str_;
-                    } else {
-                        for (auto &match : matches) {
-                            max_match = max_string_match(max_match, match);
-                        }
-                        str_ = max_match;
+                if (str.size() > 0) { // todo not enough memory to do all strs
+                    std::copy_if(strs_.begin(), strs_.end(), std::back_inserter(matches), [&str](std::string s){return s.rfind(str,0)==0;});
+                    if (matches.size() == 1) {
+                        str_ = matches[0];
                         str_out = '\r' + str_;
+                    } else if (matches.size()) {
+                        std::string max_match = matches[0];
+                        if (last_key_ == '\t') {
+                            str_out = '\n';
+                            std::string max_match = matches[0];
+                            for (auto &match : matches) {
+                                max_match = max_string_match(max_match, match);
+                                str_out += match + '\t';
+                            }
+                            // move str_ out to farthest in common characters
+                            str_ = max_match;
+                            str_out += '\n' + str_;
+                        } else {
+                            for (auto &match : matches) {
+                                max_match = max_string_match(max_match, match);
+                            }
+                            str_ = max_match;
+                            str_out = '\r' + str_;
+                        }
                     }
                 }
                 break;
