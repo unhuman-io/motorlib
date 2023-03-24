@@ -11,7 +11,9 @@ void system_init();
 
 class Actuator {
  public:
-    Actuator(FastLoop &fast_loop, MainLoop &main_loop, const volatile StartupParam &startup_param) : fast_loop_(fast_loop), main_loop_(main_loop), startup_param_(startup_param) {}
+    Actuator(FastLoop &fast_loop, MainLoop &main_loop, const volatile StartupParam &startup_param) : fast_loop_(fast_loop), main_loop_(main_loop), startup_param_(startup_param) {
+      startup_motor_bias_ = startup_param_.motor_encoder_bias;
+    }
     void start() {
       if (!startup_param_.no_driver_enable) {
          main_loop_.driver_.enable();
@@ -69,19 +71,19 @@ class Actuator {
          case StartupParam::ENCODER_ZERO:
             break;
          case StartupParam::ENCODER_BIAS: {
-            main_loop_.set_motor_encoder_bias(-status.motor_position + startup_param_.motor_encoder_bias);
+            main_loop_.set_motor_encoder_bias(-status.motor_position + startup_motor_bias_);
             break;
          }
          case StartupParam::ENCODER_BIAS_FROM_OUTPUT: {
             main_loop_.set_motor_encoder_bias(status.output_position * startup_param_.gear_ratio 
-              - status.fast_loop.motor_position.position + startup_param_.motor_encoder_bias);
+              - status.fast_loop.motor_position.position + startup_motor_bias_);
             break;
          }
          case StartupParam::ENCODER_BIAS_FROM_OUTPUT_WITH_MOTOR_CORRECTION: {
             float round_by = 2*M_PI*(startup_param_.num_encoder_poles == 0 ? 1 : startup_param_.num_encoder_poles);
             float motor_bias_from_output = status.output_position * startup_param_.gear_ratio 
               - (status.fast_loop.motor_position.position);
-            float motor_bias_rounded = roundf(motor_bias_from_output/round_by)*(round_by) + startup_param_.motor_encoder_bias;
+            float motor_bias_rounded = roundf(motor_bias_from_output/round_by)*(round_by) + startup_motor_bias_;
             logger.log("Encoder bias from output with correction");
             logger.log_printf("Output position: %f, motor_position: %f, motor mechanical position: %f", 
                status.output_position, status.fast_loop.motor_position.position, status.fast_loop.motor_mechanical_position);
@@ -94,7 +96,7 @@ class Actuator {
             // todo fix as above
             float round_by = 2*M_PI*(startup_param_.num_encoder_poles == 0 ? 1 : startup_param_.num_encoder_poles);
             float motor_bias_from_output = (status.output_position - status.torque*startup_param_.transmission_stiffness) * startup_param_.gear_ratio 
-              - (status.fast_loop.motor_position.position + startup_param_.motor_encoder_bias);
+              - (status.fast_loop.motor_position.position + startup_motor_bias_);
             float motor_bias_rounded = roundf(motor_bias_from_output*round_by)/(round_by);
             main_loop_.set_motor_encoder_bias(motor_bias_rounded);
             break;
@@ -105,6 +107,7 @@ private:
     FastLoop &fast_loop_;
     MainLoop &main_loop_;
     const volatile StartupParam &startup_param_;
+    float startup_motor_bias_;
 
     friend class System;
     friend void system_init();

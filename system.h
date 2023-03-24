@@ -155,7 +155,7 @@ class System {
         API_ADD_FILTER(id_filter, FirstOrderLowPassFilter, actuator_.fast_loop_.foc_->id_filter_);
         API_ADD_FILTER(iq_filter, FirstOrderLowPassFilter, actuator_.fast_loop_.foc_->iq_filter_);
         api.add_api_variable("startup_phase_lock_current", new const APIFloat(&param->startup_param.phase_lock_current));
-        api.add_api_variable("startup_mbias", new APIFloat(&param->startup_param.motor_encoder_bias));
+        api.add_api_variable("startup_mbias", new APIFloat(&actuator_.startup_motor_bias_));
         api.add_api_variable("set_startup_bias", new const APICallback([](){ actuator_.set_bias(); return "ok"; }));
         api.add_api_variable("odir", new APIFloat(&actuator_.main_loop_.param_.output_encoder.dir));
         api.add_api_variable("tdir", new APIFloat(&actuator_.main_loop_.param_.torque_sensor.dir));
