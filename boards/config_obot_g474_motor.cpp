@@ -108,7 +108,7 @@ void system_init() {
     System::api.add_api_variable("Tboard", new const APICallbackFloat([](){ return config::board_temperature.get_temperature(); }));
 #endif
     System::api.add_api_variable("index_mod", new APIInt32(&index_mod));
-    System::api.add_api_variable("pwm_mult", new APICallbackUint8([](){return config::motor_pwm.get_frequency_multiplier();}, [](uint8_t mult){ config::motor_pwm.set_frequency_multiplier(static_cast<HRPWM::FrequencyMultiplier>(mult));}));
+    System::api.add_api_variable("pwm_mult", new APICallbackUint8([](){return config::motor_pwm.get_frequency_multiplier();}, [](uint8_t mult){ config::motor_pwm.set_frequency_multiplier(mult);}));
     System::api.add_api_variable("drv_err", new const APICallbackUint32([](){ return config::drv.get_drv_status(); }));
     System::api.add_api_variable("drv_reset", new const APICallback([](){ return config::drv.drv_reset(); }));
     System::api.add_api_variable("A1", new const APICallbackFloat([](){ return A1_DR; }));

@@ -48,7 +48,7 @@ class HRPWM : public PWMBase {
       regs_.sCommonRegs.ADC2R = HRTIM_ADC2R_AD2TFPER; // also hrtim trig 2
    }
 
-   void set_frequency_multiplier(FrequencyMultiplier mult = MULT_1);
+   void set_frequency_multiplier(uint8_t frequency_multiplier);
    uint8_t get_frequency_multiplier() const;
    void set_voltage(float v_abc[3])  __attribute__((section (".ccmram")));
    void set_vbus(float vbus);
