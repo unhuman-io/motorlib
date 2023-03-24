@@ -118,12 +118,14 @@ class System {
         api.add_api_variable("power_avg", new const APIFloat(&actuator_.main_loop_.status_.power));
         api.add_api_variable("energy", new const APIUint32(&actuator_.main_loop_.status_.fast_loop.energy_uJ));
         api.add_api_variable("fast_log", new const APICallback([](){
-            logger.log_printf("timestamp, position, ia, ib, ic, va, vb, vc, vbus");
+            logger.log_printf("timestamp, position, iq_des, iq_meas_filt, ia, ib, ic, va, vb, vc, vbus");
             for(int i=0; i<100; i++) {
                 FastLoopStatus &status = actuator_.fast_loop_.status_log_.next();
-                logger.log_printf("%d, %f, %f, %f, %f, %f, %f, %f, %f", 
+                logger.log_printf("%d, %f, %f, %f, %f, %f, %f, %f, %f, %f, %f", 
                     status.timestamp,
                     status.foc_command.measured.motor_encoder,
+                    status.foc_command.desired.i_q,
+                    status.foc_status.measured.i_q,
                     status.foc_command.measured.i_a,
                     status.foc_command.measured.i_b,
                     status.foc_command.measured.i_c,
