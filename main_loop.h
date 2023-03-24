@@ -124,7 +124,7 @@ class MainLoop {
 
       status_.motor_position = status_.fast_loop.motor_position.position + motor_encoder_bias_;
 
-      float torque_corrected = param_.torque_sensor.dir * torque_sensor_.read();
+      float torque_corrected = param_.torque_sensor.dir * (torque_sensor_.read() + param_.torque_sensor.bias) + param_.torque_sensor.bias;
       //if (torque_corrected != status_.torque) {
         torque_corrected += param_.torque_correction*status_.fast_loop.foc_status.measured.i_q;
       //}
