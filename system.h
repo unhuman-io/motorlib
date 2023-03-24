@@ -65,19 +65,19 @@ class System {
         api.add_api_variable("ic", new APIFloat(&actuator_.fast_loop_.foc_command_.measured.i_c));
         api.add_api_variable("id", new APIFloat(&actuator_.main_loop_.status_.fast_loop.foc_status.measured.i_d));
         api.add_api_variable("i0", new APIFloat(&actuator_.main_loop_.status_.fast_loop.foc_status.measured.i_0));
-        api.add_api_variable("ikp", new APIFloat(&actuator_.fast_loop_.foc_->pi_iq_->kp_));
-        api.add_api_variable("iki", new APIFloat(&actuator_.fast_loop_.foc_->pi_iq_->ki_));
-        api.add_api_variable("iki_limit", new APIFloat(&actuator_.fast_loop_.foc_->pi_iq_->ki_limit_));
-        api.add_api_variable("imax", new APIFloat(&actuator_.fast_loop_.foc_->pi_iq_->command_max_));
-        api.add_api_variable("idkp", new APIFloat(&actuator_.fast_loop_.foc_->pi_id_->kp_));
-        api.add_api_variable("idki", new APIFloat(&actuator_.fast_loop_.foc_->pi_id_->ki_));
-        api.add_api_variable("idki_limit", new APIFloat(&actuator_.fast_loop_.foc_->pi_id_->ki_limit_));
-        api.add_api_variable("idmax", new APIFloat(&actuator_.fast_loop_.foc_->pi_id_->command_max_));
+        api.add_api_variable("ikp", new APIFloat(&actuator_.fast_loop_.foc_->pi_iq_.kp_));
+        api.add_api_variable("iki", new APIFloat(&actuator_.fast_loop_.foc_->pi_iq_.ki_));
+        api.add_api_variable("iki_limit", new APIFloat(&actuator_.fast_loop_.foc_->pi_iq_.ki_limit_));
+        api.add_api_variable("imax", new APIFloat(&actuator_.fast_loop_.foc_->pi_iq_.command_max_));
+        api.add_api_variable("idkp", new APIFloat(&actuator_.fast_loop_.foc_->pi_id_.kp_));
+        api.add_api_variable("idki", new APIFloat(&actuator_.fast_loop_.foc_->pi_id_.ki_));
+        api.add_api_variable("idki_limit", new APIFloat(&actuator_.fast_loop_.foc_->pi_id_.ki_limit_));
+        api.add_api_variable("idmax", new APIFloat(&actuator_.fast_loop_.foc_->pi_id_.command_max_));
         api.add_api_variable("idiq", new APICallbackFloat([](){return 0;}, 
-            [](float f){actuator_.fast_loop_.foc_->pi_id_->kp_ = actuator_.fast_loop_.foc_->pi_iq_->kp_;
-                actuator_.fast_loop_.foc_->pi_id_->ki_ = actuator_.fast_loop_.foc_->pi_iq_->ki_;
-                actuator_.fast_loop_.foc_->pi_id_->ki_limit_ = actuator_.fast_loop_.foc_->pi_iq_->ki_limit_;
-                actuator_.fast_loop_.foc_->pi_id_->command_max_ = actuator_.fast_loop_.foc_->pi_iq_->command_max_;}));
+            [](float f){actuator_.fast_loop_.foc_->pi_id_.kp_ = actuator_.fast_loop_.foc_->pi_iq_.kp_;
+                actuator_.fast_loop_.foc_->pi_id_.ki_ = actuator_.fast_loop_.foc_->pi_iq_.ki_;
+                actuator_.fast_loop_.foc_->pi_id_.ki_limit_ = actuator_.fast_loop_.foc_->pi_iq_.ki_limit_;
+                actuator_.fast_loop_.foc_->pi_id_.command_max_ = actuator_.fast_loop_.foc_->pi_iq_.command_max_;}));
         api.add_api_variable("tkp", new APIFloat(&actuator_.main_loop_.torque_controller_.controller_.kp_));
         api.add_api_variable("tkd", new APIFloat(&actuator_.main_loop_.torque_controller_.controller_.kd_));
         api.add_api_variable("tki", new APIFloat(&actuator_.main_loop_.torque_controller_.controller_.ki_));
@@ -150,6 +150,8 @@ class System {
         api.add_api_variable("obias", new APIFloat(&actuator_.main_loop_.param_.output_encoder.bias));
         api.add_api_variable("mbias", new APIFloat(&actuator_.main_loop_.motor_encoder_bias_));
         api.add_api_variable("ttgain", new APIFloat(&actuator_.main_loop_.param_.torque_sensor.table_gain));
+        API_ADD_FILTER(id_filter, FirstOrderLowPassFilter, actuator_.fast_loop_.foc_->id_filter_);
+        API_ADD_FILTER(iq_filter, FirstOrderLowPassFilter, actuator_.fast_loop_.foc_->iq_filter_);
 
         uint32_t t_start = get_clock();
         while(1) {
