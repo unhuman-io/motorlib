@@ -21,6 +21,7 @@ class APIVariable2 : public APIVariable {
   APIVariable2(T *value) : value_(value){};
   APIVariable2(volatile T *value) : value_(value){};
   APIVariable2(const T *value) : value_(const_cast<T *>(value)) {}
+  APIVariable2(const volatile T *value) : value_(const_cast<T *>(value)) {}
   virtual std::string get() const { return std::to_string(*value_); }
   virtual void set(std::string) = 0;
 
@@ -33,6 +34,7 @@ class APIFloat : public APIVariable2<float> {
   APIFloat(float *f) : APIVariable2(f) {}
   APIFloat(volatile float *f) : APIVariable2(f) {}
   APIFloat(const float *f) : APIVariable2(f) {}
+  APIFloat(const volatile float *f) : APIVariable2(f) {}
   void set(std::string);
 };
 
