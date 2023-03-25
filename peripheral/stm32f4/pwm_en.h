@@ -1,4 +1,5 @@
-#pragma once
+#ifndef UNHUMAN_MOTORLIB_PERIPHERAL_STM32F4_PWM_EN_H_
+#define UNHUMAN_MOTORLIB_PERIPHERAL_STM32F4_PWM_EN_H_
 
 #include "../pwm.h"
 #include <cstdint>
@@ -28,3 +29,5 @@ class PWM_EN final : public PWMBase {
    GPIO &enable_;
    float v_to_pwm_;
 };
+
+#endif  // UNHUMAN_MOTORLIB_PERIPHERAL_STM32F4_PWM_EN_H_

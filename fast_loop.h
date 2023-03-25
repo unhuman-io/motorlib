@@ -1,5 +1,5 @@
-#ifndef FAST_LOOP_H
-#define FAST_LOOP_H
+#ifndef UNHUMAN_MOTORLIB_FAST_LOOP_H_
+#define UNHUMAN_MOTORLIB_FAST_LOOP_H_
 
 #include <cstdint>
 #include "messages.h"
@@ -28,13 +28,19 @@ class FastLoop {
        float dt = 1.0f/frequency_hz;
        foc_ = new FOC(dt);
        set_param(param);
+#ifdef END_TRIGGER_MOTOR_ENCODER
+       encoder_.trigger();
+#endif
     }
     ~FastLoop() {
        delete foc_;
     }
     void update()  __attribute__((section (".ccmram"))) {
          // trigger encoder read
+#ifndef END_TRIGGER_MOTOR_ENCODER
+      // probably don't use end trigger on a shared spi bus
       encoder_.trigger();
+#endif
 
       timestamp_ = get_clock();
 
@@ -42,9 +48,9 @@ class FastLoop {
       adc1 = *i_a_dr_;
       adc2 = *i_b_dr_;
       adc3 = *i_c_dr_;
-      foc_command_.measured.i_a = param_.adc1_gain*(adc1-param_.adc1_offset) - ia_bias_;
-      foc_command_.measured.i_b = param_.adc2_gain*(adc2-param_.adc2_offset) - ib_bias_;
-      foc_command_.measured.i_c = param_.adc3_gain*(adc3-param_.adc3_offset) - ic_bias_;
+      foc_command_.measured.i_a = param_.adc1_gain*(adc1-2048) - param_.ia_bias;
+      foc_command_.measured.i_b = param_.adc2_gain*(adc2-2048) - param_.ib_bias;
+      foc_command_.measured.i_c = param_.adc3_gain*(adc3-2048) - param_.ic_bias;
       
       // get encoder value, may wait a little
       motor_enc = encoder_.read();
@@ -109,7 +115,18 @@ class FastLoop {
       dt_ = (timestamp_ - last_timestamp_)*(float) (1.0f/CPU_FREQUENCY_HZ);
       last_timestamp_ = timestamp_;
 
+      if (zero_current_sensors_) {
+        if ((int32_t) (get_clock()-zero_current_sensors_end_) > 0) {
+          zero_current_sensors_ = false;
+        } else {
+          zero_current_sensors();
+        }
+
+      }
       store_status();
+#ifdef END_TRIGGER_MOTOR_ENCODER
+      encoder_.trigger();
+#endif
     }
     void maintenance() {
       if (encoder_.index_received() && !motor_index_pos_set_) {
@@ -126,8 +143,15 @@ class FastLoop {
          motor_electrical_zero_pos_ = encoder_.get_value();
          if (encoder_.index_received()) {
            motor_index_pos_ = encoder_.get_index_pos();
-           motor_index_electrical_offset_measured_ = (motor_electrical_zero_pos_ - motor_index_pos_ + param_.motor_encoder.cpr) % 
+           int32_t index_offset = motor_electrical_zero_pos_ - motor_index_pos_;
+           if (index_offset >= 0) {
+            motor_index_electrical_offset_measured_ = index_offset % 
               (param_.motor_encoder.cpr/(uint8_t) param_.foc_param.num_poles);
+           } else {
+            int32_t m = (param_.motor_encoder.cpr/(uint8_t) param_.foc_param.num_poles);
+            motor_index_electrical_offset_measured_ = index_offset -
+               m * ((index_offset/m)-1);
+           }
         }
       }
 
@@ -196,6 +220,9 @@ class FastLoop {
       param_ = fast_loop_param;
       foc_->set_param(param_.foc_param);
       set_phase_mode();
+      if (param_.motor_encoder.dir == 0) {
+        param_.motor_encoder.dir = 1;
+      }
       inv_motor_encoder_cpr_ = param_.motor_encoder.cpr != 0 ? 1.f/param_.motor_encoder.cpr : 0;
     }
     const FastLoopStatus &get_status() const {
@@ -209,17 +236,29 @@ class FastLoop {
       s.timestamp = timestamp_;
       s.vbus = v_bus_;
       s.foc_command = foc_command_;
+      s.power = s.foc_status.command.v_d * s.foc_status.measured.i_d + 
+                s.foc_status.command.v_q * s.foc_status.measured.i_q;
+      int32_t energy =  s.power * dt_ * 1e6;
+      energy_uJ_ += (uint32_t) energy;
+      s.energy_uJ = energy_uJ_;
       foc_->get_status(&s.foc_status);
       status_.finish();
     }
 
     void zero_current_sensors() {
-      ia_bias_ = (1-alpha_zero_)*ia_bias_ + alpha_zero_* param_.adc1_gain*(adc1-param_.adc1_offset);
-      ib_bias_ = (1-alpha_zero_)*ib_bias_ + alpha_zero_* param_.adc2_gain*(adc2-param_.adc2_offset);
-      ic_bias_ = (1-alpha_zero_)*ic_bias_ + alpha_zero_* param_.adc3_gain*(adc3-param_.adc3_offset);
+      param_.ia_bias = (1-alpha_zero_)*param_.ia_bias + alpha_zero_* param_.adc1_gain*(adc1-2048);
+      param_.ib_bias = (1-alpha_zero_)*param_.ib_bias + alpha_zero_* param_.adc2_gain*(adc2-2048);
+      param_.ic_bias = (1-alpha_zero_)*param_.ic_bias + alpha_zero_* param_.adc3_gain*(adc3-2048);
     }
     void set_phase_mode() {
       phase_mode_desired_ = param_.phase_mode == 0 ? 1 : -1;
+    }
+    void set_phase_mode(uint8_t phase_mode) {
+      param_.phase_mode = phase_mode;
+      set_phase_mode();
+    }
+    uint8_t get_phase_mode() {
+      return param_.phase_mode;
     }
     float get_rollover() const { return 2*M_PI*inv_motor_encoder_cpr_*param_.motor_encoder.rollover; }
     void beep_on(float t_seconds = 1) {
@@ -229,7 +268,18 @@ class FastLoop {
     void beep_off() {
       beep_ = false;
     }
+
+    void zero_current_sensors_on(float t_seconds = 1) {
+      zero_current_sensors_ = true;
+      zero_current_sensors_end_ = get_clock() + t_seconds*CPU_FREQUENCY_HZ;
+    }
+    void zero_current_sensors_off() {
+      zero_current_sensors_ = false;
+    }
     bool motor_encoder_error() { return encoder_.error(); }
+    void trigger_status_log() {
+      status_log_.copy(status_);
+    }
  private:
     FastLoopParam param_;
     FOC *foc_;
@@ -260,10 +310,7 @@ class FastLoop {
     float motor_index_electrical_offset_measured_ = NAN;
     float inv_motor_encoder_cpr_;
     int32_t frequency_hz_ = 100000;
-    volatile float ia_bias_ = 0;
-    volatile float ib_bias_ = 0;
-    volatile float ic_bias_ = 0;
-    float alpha_zero_ = 0.001;
+    float alpha_zero_ = 0.0002;
     float v_bus_ = 12;
     mcu_time timestamp_;
    MotorEncoder &encoder_;
@@ -287,12 +334,16 @@ class FastLoop {
    volatile uint32_t *const v_bus_dr_;
    PChipTable<MOTOR_ENCODER_TABLE_LENGTH> motor_correction_table_;
    PChipTable<COGGING_TABLE_SIZE> cogging_correction_table_;
-   CStack<FastLoopStatus,2> status_;
+   CStack<FastLoopStatus,100> status_;
+   CStack<FastLoopStatus,100> status_log_;
    bool beep_ = false;
    uint32_t beep_end_ = 0;
+   bool zero_current_sensors_ = false;
+   uint32_t zero_current_sensors_end_ = 0;
    float phi_beep_ = 0;
+   uint32_t energy_uJ_ = 0;
 
    friend class System;
 };
 
-#endif
+#endif  // UNHUMAN_MOTORLIB_FAST_LOOP_H_

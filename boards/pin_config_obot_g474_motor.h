@@ -1,4 +1,5 @@
-#pragma once
+#ifndef UNHUMAN_MOTORLIB_BOARDS_PIN_CONFIG_OBOT_G474_MOTOR_H_
+#define UNHUMAN_MOTORLIB_BOARDS_PIN_CONFIG_OBOT_G474_MOTOR_H_
 
 #include "stm32g474xx.h"
 #include "../peripheral/stm32g4/pin_config.h"
@@ -16,7 +17,7 @@
 #define TIM_R TIM4->CCR1
 #define TIM_G TIM4->CCR2
 #define TIM_B TIM4->CCR3
-#ifdef R0
+#if defined(R0) || defined (R4) | defined (MR0P)
     #undef TIM_R
     #undef TIM_G
     #undef TIM_B
@@ -25,41 +26,9 @@
     #define TIM_B TIM4->CCR2
 #endif
 
-void drv_disable() {
-    GPIOC->BSRR = GPIO_BSRR_BR13; // drv disable
-}
-
-void drv_enable() {
-    GPIOC->BSRR = GPIO_BSRR_BS13; // drv enable
-    ms_delay(10);
-    
-    for (uint8_t i=0; i<sizeof(param->drv_regs)/sizeof(uint16_t); i++) {
-        uint16_t reg_out = param->drv_regs[i];
-        uint16_t reg_in = 0;
-        SPI1->DR = reg_out;
-        while(!(SPI1->SR & SPI_SR_RXNE));
-        reg_in = SPI1->DR;
-
-        reg_out |= (1<<15); // switch to read mode
-        SPI1->DR = reg_out;
-        while(!(SPI1->SR & SPI_SR_RXNE));
-        reg_in = SPI1->DR;
-        if ((reg_in & 0x7FF) != (reg_out & 0x7FF)) {
-        drv_regs_error |= 1 << i;
-        }
-    }
-}
-
-std::string drv_reset() {
-    drv_disable();
-    ms_delay(10);
-    drv_enable();
-    return "ok";
-}
-
 void pin_config_obot_g474_motor_r0() {
      // Peripheral clock enable
-        RCC->APB1ENR1 = RCC_APB1ENR1_SPI3EN | RCC_APB1ENR1_TIM2EN |  RCC_APB1ENR1_TIM4EN | RCC_APB1ENR1_TIM5EN | RCC_APB1ENR1_USBEN | RCC_APB1ENR1_RTCAPBEN | RCC_APB1ENR1_PWREN;
+        RCC->APB1ENR1 = RCC_APB1ENR1_SPI3EN | RCC_APB1ENR1_TIM2EN |  RCC_APB1ENR1_TIM4EN | RCC_APB1ENR1_TIM5EN | RCC_APB1ENR1_USBEN | RCC_APB1ENR1_I2C1EN | RCC_APB1ENR1_RTCAPBEN | RCC_APB1ENR1_PWREN;
         RCC->APB2ENR |= RCC_APB2ENR_SPI1EN | RCC_APB2ENR_TIM1EN | RCC_APB2ENR_HRTIM1EN | RCC_APB2ENR_SYSCFGEN;
         RCC->AHB1ENR |= RCC_AHB1ENR_DMA1EN | RCC_AHB1ENR_DMAMUX1EN;
         RCC->AHB2ENR |= RCC_AHB2ENR_GPIOAEN | RCC_AHB2ENR_GPIOBEN | RCC_AHB2ENR_GPIOCEN | RCC_AHB2ENR_GPIODEN | RCC_AHB2ENR_ADC12EN | RCC_AHB2ENR_ADC345EN;
@@ -204,51 +173,23 @@ void pin_config_obot_g474_motor_r0() {
         NVIC_SetPriority(USB_LP_IRQn, NVIC_EncodePriority(NVIC_GetPriorityGrouping(), 2, 0));
         NVIC_EnableIRQ(USB_LP_IRQn);
 
-        // SPI1 DRV8323RS        
-        SPI1->CR2 = (15 << SPI_CR2_DS_Pos) | SPI_CR2_FRF;   // 16 bit TI mode
-        // ORDER DEPENDANCE SPE set last
-        SPI1->CR1 = SPI_CR1_MSTR | (5 << SPI_CR1_BR_Pos) | SPI_CR1_SPE;    // baud = clock/64
-        drv_enable();
+#if defined(R4)
+        GPIO_SETL(C, 4, GPIO::OUTPUT, GPIO_SPEED::LOW, 0);        // imu cs
+        GPIOC->BSRR |= GPIO_BSRR_BS4; // set imu cs
+#endif
 
+        // SPI1 CS2
+        GPIO_SETL(C, 3, GPIO::OUTPUT, GPIO_SPEED::MEDIUM, 0);
 
+        // I2C1
+        GPIO_SETH(A, 15, GPIO_MODE::ALT_FUN, GPIO_SPEED::LOW, 4);   // i2c1 scl
+        GPIO_SETH(B, 9, GPIO_MODE::ALT_FUN, GPIO_SPEED::LOW, 4);   // i2c1 sda
+        MASK_SET(GPIOA->PUPDR, GPIO_PUPDR_PUPD15, GPIO_PULL::UP);
+        MASK_SET(GPIOB->PUPDR, GPIO_PUPDR_PUPD9, GPIO_PULL::UP);
+        MASK_SET(GPIOA->OTYPER, GPIO_OTYPER_OT15, 1);       // open drain
+        MASK_SET(GPIOB->OTYPER, GPIO_OTYPER_OT9, 1);
+        SYSCFG->CFGR1 |= SYSCFG_CFGR1_I2C1_FMP | SYSCFG_CFGR1_I2C2_FMP | SYSCFG_CFGR1_I2C_PB9_FMP;  // fast mode plus (1 MHz)
 
-        // SPI1->CR1 = 0; // clear SPE
-        // // SPI1 CS-> gpio
-        // GPIO_SETL(A, 4, 1, 0, 0);
-        // GPIOA->BSRR = GPIO_ODR_OD4;
-
-}
-
-// return (fault status register 2 << 16) | (fault status register 1) 
-uint32_t get_drv_status() {
-        // pause main loop (due to overlap with torque sensor)
-        //TIM1->CR1 &= ~TIM_CR1_CEN;
-        // GPIO_SETL(A, 4, 2, 3, 5); 
-        // SPI1->CR1 = 0; // clear SPE
-        // SPI1->CR2 = (15 << SPI_CR2_DS_Pos) | SPI_CR2_FRF;   // 16 bit TI mode
-        // // ORDER DEPENDANCE SPE set last
-        // SPI1->CR1 = SPI_CR1_MSTR | (5 << SPI_CR1_BR_Pos) | SPI_CR1_SPE;    // baud = clock/64
-
-        SPI1->DR = 1<<15; // fault status 1
-        while(!(SPI1->SR & SPI_SR_RXNE));
-        uint32_t reg_in = SPI1->DR;
-
-        SPI1->DR = (1<<15) | (1<<11); // vgs status2
-        while(!(SPI1->SR & SPI_SR_RXNE));
-        reg_in |= SPI1->DR << 16;
-
-        SPI1->CR1 = 0; // clear SPE
-        // SPI1 CS-> gpio
-        GPIO_SETL(A, 4, 1, 0, 0);
-        GPIOA->BSRR = GPIO_ODR_OD4;
-
-        // // SPI1 ADS1235
-        // SPI1->CR1 = SPI_CR1_CPHA | SPI_CR1_MSTR | (4 << SPI_CR1_BR_Pos) | SPI_CR1_SSI | SPI_CR1_SSM | SPI_CR1_SPE;    // baud = clock/32
-        // SPI1->CR2 = (7 << SPI_CR2_DS_Pos) | SPI_CR2_FRXTH | SPI_CR2_RXDMAEN | SPI_CR2_TXDMAEN;    // 8 bit   
-
-        // reenable main loop
-        //TIM1->CR1 = TIM_CR1_CEN;
-        return reg_in;
 }
 
 extern "C" void RTC_WKUP_IRQHandler() {
@@ -259,21 +200,4 @@ extern "C" void RTC_WKUP_IRQHandler() {
     RTC->SCR = RTC_SCR_CWUTF;
 }
 
-void setup_sleep() {
-    NVIC_DisableIRQ(TIM1_UP_TIM16_IRQn);
-    NVIC_DisableIRQ(ADC5_IRQn);
-    drv_disable();
-    NVIC_SetPriority(USB_LP_IRQn, NVIC_EncodePriority(NVIC_GetPriorityGrouping(), 0, 1));
-    NVIC_EnableIRQ(RTC_WKUP_IRQn);
-    MASK_SET(RCC->CFGR, RCC_CFGR_SW, 2); // HSE is system clock source
-    RTC->SCR = RTC_SCR_CWUTF;
-}
-
-void finish_sleep() {
-    MASK_SET(RCC->CFGR, RCC_CFGR_SW, 3); // PLL is system clock source
-    drv_enable();
-    NVIC_DisableIRQ(RTC_WKUP_IRQn);
-    NVIC_SetPriority(USB_LP_IRQn, NVIC_EncodePriority(NVIC_GetPriorityGrouping(), 2, 0));
-    NVIC_EnableIRQ(TIM1_UP_TIM16_IRQn);
-    NVIC_EnableIRQ(ADC5_IRQn);
-}
+#endif  // UNHUMAN_MOTORLIB_BOARDS_PIN_CONFIG_OBOT_G474_MOTOR_H_

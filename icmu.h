@@ -1,4 +1,5 @@
-#pragma once
+#ifndef UNHUMAN_MOTORLIB_ICMU_H_
+#define UNHUMAN_MOTORLIB_ICMU_H_
 
 #include "icpz.h"
 
@@ -15,3 +16,5 @@ class ICMU : public ICPZ {
         return success;
     }
 };
+
+#endif  // UNHUMAN_MOTORLIB_ICMU_H_

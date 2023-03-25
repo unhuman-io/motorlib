@@ -1,4 +1,6 @@
-#pragma once
+#ifndef UNHUMAN_MOTORLIB_MA782_ENCODER_H_
+#define UNHUMAN_MOTORLIB_MA782_ENCODER_H_
+
 #include "ma732_encoder.h"
 #include "logger.h"
 
@@ -58,3 +60,5 @@ class MA782Encoder final : public MA732Encoder {
     }
 
 };
+
+#endif  // UNHUMAN_MOTORLIB_MA782_ENCODER_H_

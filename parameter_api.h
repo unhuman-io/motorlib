@@ -1,5 +1,5 @@
-#ifndef PARAMETER_API_H
-#define PARAMETER_API_H
+#ifndef UNHUMAN_MOTORLIB_PARAMETER_API_H_
+#define UNHUMAN_MOTORLIB_PARAMETER_API_H_
 
 #include <string>
 #include <map>
@@ -118,10 +118,12 @@ class ParameterAPI {
     std::string get_api_variable(std::string name);
     std::string parse_string(std::string);
     std::string get_all_api_variables() const;
+    uint16_t get_api_length() const;
+    std::string get_api_variable_name(uint16_t index) const;
  private:
     std::map<std::string, APIVariable *> variable_map_;
     std::map<std::string, const APIVariable *> const_variable_map_;
     AutoComplete auto_complete_;
 };
 
-#endif
+#endif  // UNHUMAN_MOTORLIB_PARAMETER_API_H_

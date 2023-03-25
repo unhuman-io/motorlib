@@ -1,4 +1,6 @@
-#pragma once
+#ifndef UNHUMAN_MOTORLIB_LOGGER_H_
+#define UNHUMAN_MOTORLIB_LOGGER_H_
+
 #include <string>
 #include <queue>
 #include <stdarg.h>
@@ -6,7 +8,7 @@
 class Logger {
  public:
     void log(std::string str) {
-        if (log_queue_.size() < 20) {
+        if (log_queue_.size() < 103) {
             log_queue_.push(str);
         }
     }
@@ -36,3 +38,5 @@ class Logger {
 };
 
 extern Logger logger;
+
+#endif  // UNHUMAN_MOTORLIB_LOGGER_H_

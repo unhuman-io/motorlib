@@ -1,4 +1,6 @@
-#pragma once
+#ifndef UNHUMAN_MOTORLIB_ADS1235_2_H_
+#define UNHUMAN_MOTORLIB_ADS1235_2_H_
+
 #include "ads1235.h"
 #include "logger.h"
 
@@ -58,3 +60,5 @@ class ADS1235_2 : public ADS1235 {
     friend void system_init();
     friend void config_init();
 };
+
+#endif  // UNHUMAN_MOTORLIB_ADS1235_2_H_

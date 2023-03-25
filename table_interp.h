@@ -1,4 +1,6 @@
-#pragma once
+#ifndef UNHUMAN_MOTORLIB_TABLE_INTERP_H_
+#define UNHUMAN_MOTORLIB_TABLE_INTERP_H_
+
 #include <cstdint>
 
 // interpolate in an table of piecewise cubic function coeffcients. x input 
@@ -25,3 +27,5 @@ class PChipTable {
  private:
     const float (&table_)[TABLE_LENGTH][4];
 };
+
+#endif  // UNHUMAN_MOTORLIB_TABLE_INTERP_H_

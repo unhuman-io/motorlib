@@ -1,9 +1,12 @@
-#pragma once
+#ifndef UNHUMAN_MOTORLIB_TORQUE_SENSOR_H_
+#define UNHUMAN_MOTORLIB_TORQUE_SENSOR_H_
+
 #include "messages.h"
+#include "sensor.h"
 
 class TorqueSensorBase : public SensorBase {
  public:
-    void init() {}
+    bool init() { return true; }
     void trigger() {}
     float read() { return bias_; }
     void set_param(const TorqueSensorParam &param) {
@@ -18,3 +21,5 @@ class TorqueSensorBase : public SensorBase {
     float gain_ = 0, bias_ = 0, k_temp_ = 0, torque_ = 0;
  //   friend class System;
 };
+
+#endif  // UNHUMAN_MOTORLIB_TORQUE_SENSOR_H_

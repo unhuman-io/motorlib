@@ -1,5 +1,5 @@
-#ifndef GPIO_H
-#define GPIO_H
+#ifndef UNHUMAN_MOTORLIB_GPIO_H_
+#define UNHUMAN_MOTORLIB_GPIO_H_
 
 #include <cstdint>
 #include "../st_device.h"    //TODO remove
@@ -11,6 +11,7 @@ class GPIO {
     void set();
     void clear();
     uint8_t get_value() const;
+    void set_value(uint8_t value);
     bool is_set() const { return get_value(); }
     bool is_clear() const { return !get_value(); }
     void set_direction(Direction);
@@ -37,4 +38,4 @@ class GPIODebounce : public GPIO {
    uint8_t next_value_;
 };
 
-#endif
+#endif  // UNHUMAN_MOTORLIB_GPIO_H_

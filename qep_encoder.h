@@ -1,5 +1,5 @@
-#ifndef QEP_ENCODER_H
-#define QEP_ENCODER_H
+#ifndef UNHUMAN_MOTORLIB_QEP_ENCODER_H_
+#define UNHUMAN_MOTORLIB_QEP_ENCODER_H_
 
 #include <cstdint>
 #include "encoder.h"
@@ -49,4 +49,4 @@ class QEPEncoder final : public EncoderBase {
    friend void config_init();
 };
 
-#endif
+#endif  // UNHUMAN_MOTORLIB_QEP_ENCODER_H_

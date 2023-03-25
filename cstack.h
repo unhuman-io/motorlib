@@ -1,4 +1,5 @@
-#pragma once
+#ifndef UNHUMAN_MOTORLIB_CSTACK_H_
+#define UNHUMAN_MOTORLIB_CSTACK_H_
 
 #include <atomic>
 
@@ -6,6 +7,19 @@
 template <class T, int size=100>
 class CStack {
  public:
+	CStack() = default;
+	void copy(const CStack &stack) {
+		pos_ = stack.pos_.load(std::memory_order_acquire);
+		for(int i=0;i<size;i++) {
+			data_[pos_] = stack.data_[pos_];
+			pos_++;
+			if (pos_ >= size) {
+				pos_ = 0;
+			}
+		}
+		
+		future_pos_ = stack.future_pos_;
+	}
     void push(T const &t) {
 		next() = t;
 		finish();	
@@ -28,3 +42,5 @@ class CStack {
 	std::atomic<int> pos_ = {0};
 	int future_pos_ = {0};
 };
+
+#endif  // UNHUMAN_MOTORLIB_CSTACK_H_

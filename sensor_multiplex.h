@@ -1,4 +1,5 @@
-#pragma once
+#ifndef UNHUMAN_MOTORLIB_SENSOR_MULTIPLEX_H_
+#define UNHUMAN_MOTORLIB_SENSOR_MULTIPLEX_H_
 
 #include "sensor.h"
 #include "torque_sensor.h"
@@ -76,3 +77,5 @@ class TorqueSensorMultiplex : public SensorMultiplex<Sensor1, Sensor2> {
    float &gain_, &bias_, &k_temp_, &torque_;
    friend class System;
 };
+
+#endif  // UNHUMAN_MOTORLIB_SENSOR_MULTIPLEX_H_

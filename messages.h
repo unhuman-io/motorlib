@@ -1,7 +1,12 @@
-#pragma once
+#ifndef UNHUMAN_MOTORLIB_MESSAGES_H_
+#define UNHUMAN_MOTORLIB_MESSAGES_H_
 
 #include <stdint.h>
 #include "motor_messages/motor_messages.h"
+
+#ifdef __cplusplus
+using namespace obot;
+#endif
 
 typedef MotorCommand ReceiveData;
 #ifndef CUSTOM_SENDDATA
@@ -38,8 +43,10 @@ typedef struct {
 #define COGGING_TABLE_SIZE 512  // must be multiple of 2
 #define MOTOR_ENCODER_TABLE_LENGTH  512
 #define OUTPUT_ENCODER_TABLE_LENGTH  128
+#define TORQUE_TABLE_LENGTH  512
+
 typedef struct {
-    float adc1_offset, adc2_offset, adc3_offset;    // initial guess at current sensor bias in counts - default 2048
+    float ia_bias, ib_bias, ic_bias;                // initial guess at current sensor bias in amps
     float adc1_gain, adc2_gain, adc3_gain;          // current sensor linear gain units A/count
     FOCParam foc_param;
     uint8_t phase_mode;     // two possible motor wiring states: 0: standard, 1: reverse (i.e. two motor leads flipped)
@@ -71,6 +78,9 @@ typedef struct {
     float gain;
     float bias;
     float k_temp;
+    float table[TORQUE_TABLE_LENGTH][4];
+    float table_gain;
+    float dir;
 } TorqueSensorParam;
 
 typedef struct {
@@ -92,6 +102,9 @@ typedef struct {
     float velocity_filter_frequency_hz;
     float torque_filter_frequency_hz;
     float torque_dot_filter_frequency_hz;
+    float output_filter_frequency_hz;
+    float ff_tau;
+    float command_max;
 } StateControllerParam;
 
 typedef struct {
@@ -100,14 +113,27 @@ typedef struct {
 } VelocityControllerParam;
 
 typedef struct {
+    VelocityControllerParam velocity;       // inner velocity controller
+    float kpj;                              // outer loop gain on joint position (motor rad/s)/(joint rad)
+} JointPositionControllerParam;
+
+typedef struct {
+
+} FindLimitsControllerParam;                // note uses the velocity_controller_param of the velocity controller
+                                            // and position_controller_param of the position controller
+
+typedef struct {
     PositionControllerParam position_controller_param;
     TorqueControllerParam torque_controller_param;
     ImpedanceControllerParam impedance_controller_param;
     VelocityControllerParam velocity_controller_param;
+    StateControllerParam state_controller_param;
+    JointPositionControllerParam joint_position_controller_param;
     struct {
         float table[OUTPUT_ENCODER_TABLE_LENGTH][4];
         float cpr;                                  // output encoder cpr \sa FastLoopParam.motor_encoder.cpr
         float bias;
+        float dir;                                  // -1 or 1
     } output_encoder;
     struct {
         float motor_hard_max;         // will switch to safe mode if going past these limits
@@ -121,10 +147,12 @@ typedef struct {
     int16_t host_timeout;                             // 0 to disable, if no commands received before host timeout, go to safe_mode
     MainControlMode safe_mode;                 // goes to this mode and freeze command if error
                                                     // need to send reset from host to exit
-    uint8_t disable_safe_mode;                        // false to enable safe modes
     float torque_correction;
     float vbus_min;
     float vbus_max;
+    MotorError error_mask;              // can set to ERROR_MASK_ALL or ERROR_MASK_NONE or others
+    uint8_t safe_mode_driver_disable;   // driver is disabled in safe mode
+    uint8_t no_latch_driver_fault;      // 1 allows for the driver_fault to be reset by software
 } MainLoopParam;
 
 typedef struct {
@@ -153,6 +181,9 @@ typedef struct {
     float transmission_stiffness; // also use transmission stiffness to help with motor bias setting
     float output_encoder_rollover; // if the output encoder+bias is greater than this then output_encoder -= 2*pi
     MainControlMode startup_mode;
+    uint8_t no_zero_current_sensors;   // default of 0 will zero current sensors for 2 seconds on startup
+                                       // 1 to disable and use fast_loop_param.i*_bias
+    uint8_t no_driver_enable;       // 1 to require sending driver_enable mode and clear faults to enable the driver
 } StartupParam;
 
 typedef struct {
@@ -179,8 +210,10 @@ typedef struct {
     } motor_position;
     float motor_mechanical_position;    // counts referenced to index
     FOCCommand foc_command;
+    float power;                        // estimated power in W
+    uint32_t energy_uJ;                  // rolling over sum of micro Joules (rollover at 4000J/1.1 Wh)
     float vbus;                         // bus voltage V
-} FastLoopStatus;
+} FastLoopStatus; // 22*4 bytes
 
 typedef struct {
     FastLoopStatus fast_loop;
@@ -189,4 +222,8 @@ typedef struct {
     float motor_position;
     MotorMode mode;
     MotorError error;
+    RoundRobinData rr_data;
+    float power;
 } MainLoopStatus;
+
+#endif  // UNHUMAN_MOTORLIB_MESSAGES_H_

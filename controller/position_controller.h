@@ -1,3 +1,6 @@
+#ifndef UNHUMAN_MOTORLIB_CONTROLLER_POSITION_CONTROLLER_H_
+#define UNHUMAN_MOTORLIB_CONTROLLER_POSITION_CONTROLLER_H_
+
 #include "controller.h"
 #include "../control_fun.h"
 
@@ -28,3 +31,5 @@ class PositionController : public Controller {
     friend class System;
     friend void config_init();
 };
+
+#endif  // UNHUMAN_MOTORLIB_CONTROLLER_POSITION_CONTROLLER_H_

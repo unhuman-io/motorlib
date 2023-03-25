@@ -1,4 +1,6 @@
-#pragma once
+#ifndef UNHUMAN_MOTORLIB_PERIPHERAL_STM32G4_I2C_TORQUE_H_
+#define UNHUMAN_MOTORLIB_PERIPHERAL_STM32G4_I2C_TORQUE_H_
+
 #include <cstdint>
 #include "../st_device.h"
 #include "../../gpio.h"
@@ -71,3 +73,5 @@ class I2CTorque final : public TorqueSensorBase {
     friend void system_init();
     friend void config_init();
 };
+
+#endif  // UNHUMAN_MOTORLIB_PERIPHERAL_STM32G4_I2C_TORQUE_H_

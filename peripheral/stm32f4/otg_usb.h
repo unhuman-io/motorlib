@@ -1,4 +1,5 @@
-#pragma once
+#ifndef UNHUMAN_MOTORLIB_PERIPHERAL_STM32F4_OTG_USB_H_
+#define UNHUMAN_MOTORLIB_PERIPHERAL_STM32F4_OTG_USB_H_
 
 #include "../st_device.h"
 #include <cstdint>
@@ -200,6 +201,7 @@ class USB_OTG {
     }
 
     bool new_rx_data(uint8_t endpoint) const { return new_rx_data_[endpoint]; }
+    bool tx_data_ack(uint8_t endpoint) { return true; }
     void cancel_transfer(uint8_t endpoint) {} // todo implement if useful
 
 private:
@@ -214,3 +216,5 @@ private:
 
     friend class System;
 };
+
+#endif  // UNHUMAN_MOTORLIB_PERIPHERAL_STM32F4_OTG_USB_H_

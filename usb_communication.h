@@ -1,5 +1,5 @@
-#ifndef USB_COMMUNICATION_H
-#define USB_COMMUNICATION_H
+#ifndef UNHUMAN_MOTORLIB_USB_COMMUNICATION_H_
+#define UNHUMAN_MOTORLIB_USB_COMMUNICATION_H_
 
 #include "communication.h"
 
@@ -25,9 +25,10 @@ class USBCommunication : public CommunicationBase {
     bool send_string_active() const { return usb_.tx_active(1); }
     void cancel_send_string() { usb_.cancel_transfer(1); }
     bool new_rx_data() { return usb_.new_rx_data(2); }
+    bool tx_data_ack() { return usb_.tx_data_ack(2); }
  private:
     USB1 &usb_;
     friend class System;
 };
 
-#endif
+#endif  // UNHUMAN_MOTORLIB_USB_COMMUNICATION_H_

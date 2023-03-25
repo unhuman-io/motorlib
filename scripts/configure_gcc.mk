@@ -5,7 +5,7 @@
 DEBUG = 1
 # optimization
 OPT = -Og -fsingle-precision-constant -O3 
-LTO = -flto
+LTO = -flto=auto
 
 #######################################
 # binaries
@@ -13,6 +13,7 @@ LTO = -flto
 PREFIX = arm-none-eabi-
 # The gcc compiler bin path can be either defined in make command via GCC_PATH variable (> make GCC_PATH=xxx)
 # either it can be added to the PATH environment variable.
+GCC_PATH=$(dir $(lastword $(MAKEFILE_LIST)))/../gcc/bin
 ifdef GCC_PATH
 CC = $(GCC_PATH)/$(PREFIX)gcc
 AS = $(GCC_PATH)/$(PREFIX)gcc -x assembler-with-cpp
@@ -60,15 +61,15 @@ CPPFLAGS = $(CFLAGS)
 # libraries
 LIBS = -lc -lm -lnosys 
 LIBDIR = 
-LDFLAGS = $(MCU) -specs=nosys.specs -specs=nano.specs -T$(LDSCRIPT) $(LIBDIR) $(LIBS) -Wl,-Map=$(BUILD_DIR)/$(TARGET).map,--cref -Wl,--gc-sections -u _printf_float
+LDFLAGS = $(MCU) -specs=rdimon.specs -specs=nosys.specs -T$(LDSCRIPT) $(LIBDIR) $(LIBS) -Wl,-Map=$(BUILD_DIR)/$(TARGET).map,--cref -Wl,--gc-sections -u _printf_float
 	
 GCC_VERSION := $(shell $(CC) -dumpversion)
 GCC_MAJOR_VERSION := $(word 1, $(subst ., ,$(GCC_VERSION)))
 
-ifeq ($(GCC_MAJOR_VERSION), $(filter $(GCC_MAJOR_VERSION),10 11))
+ifeq ($(GCC_MAJOR_VERSION), $(filter $(GCC_MAJOR_VERSION),10 11 12))
 $(info gcc version $(GCC_VERSION))
 else
-$(error gcc version $(GCC_VERSION), 10 or 11 required)
+$(error gcc version $(GCC_VERSION), 10, 11, or 12 required)
 endif
 
 ifeq ($(OS),Windows_NT)

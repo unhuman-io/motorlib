@@ -1,5 +1,5 @@
-#ifndef UTIL_H
-#define UTIL_H
+#ifndef UNHUMAN_MOTORLIB_UTIL_H_
+#define UNHUMAN_MOTORLIB_UTIL_H_
 
 #include "../st_device.h"
 #include "core_cm4.h"
@@ -13,6 +13,7 @@ static inline uint8_t get_lsu_count() { return DWT->LSUCNT; }
 
 
 void ms_delay(uint16_t ms);
+void us_delay(uint16_t us);
 void ns_delay(uint16_t ns);
 
 extern char _estack;
@@ -76,6 +77,13 @@ class FrequencyLimiter {
         }
         return false;
     }
+    bool ready() const {
+        uint32_t time = get_clock();
+        if (time - last_time_ > t_diff_) {
+            return true;
+        }
+        return false;
+    }
  private:
     uint32_t t_diff_, last_time_;
 };
@@ -108,6 +116,11 @@ inline std::string u16_to_hex(const uint16_t w) {
     return byte_to_hex((uint8_t) (w>>8)) + byte_to_hex((uint8_t) (w & 0xFF));
 }
 
+inline std::string u32_to_hex(const uint32_t w) {
+    return byte_to_hex((uint8_t) (w>>24)) + byte_to_hex((uint8_t) ((w>>16) & 0xFF)) +
+            byte_to_hex((uint8_t) ((w>>8) & 0xFF)) + byte_to_hex((uint8_t) (w & 0xFF));
+}
+
 inline std::string bytes_to_hex(const std::vector<char>& bytes) { 
     std::string s;   
     for (uint8_t b : bytes) {
@@ -116,6 +129,5 @@ inline std::string bytes_to_hex(const std::vector<char>& bytes) {
     return s;
 }
 
-#endif
-
-#endif
+#endif  // __cplusplus
+#endif  // UNHUMAN_MOTORLIB_UTIL_H_

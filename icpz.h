@@ -1,20 +1,34 @@
-#pragma once
+#ifndef UNHUMAN_MOTORLIB_ICPZ_H_
+#define UNHUMAN_MOTORLIB_ICPZ_H_
+
 #include "encoder.h"
 #include "util.h"
 #include <vector>
 
 class ICPZ : public EncoderBase {
  public:
-    ICPZ(SPIDMA &spidma) 
-      : spidma_(spidma) {
+    enum Disk{Default, PZ03S};
+    ICPZ(SPIDMA &spidma, Disk disk = Default) 
+      : spidma_(spidma), disk_(disk) {
       command_[0] = 0xa6; // read position
     }
     bool init() {
       bool success = true;
+      // send reboot (currently not working probably)
+      // uint8_t data_out[2] = {0x77, 0x10};
+      // uint8_t data_in[2];
+      // spidma_.readwrite(data_out, data_in, 2);
+
       set_register(7, 9, {0});
       success = set_register(7, 9, {0}) ? success : false; // multiturn data length = 0
       success = set_register(0, 0, {3}) ? success : false; // fast speed on port a
       success = set_register(0, 0xF, {0}) ? success : false; // 0x00 ran_fld = 0 -> never update position based on absolute track after initial
+
+      if (disk_ == PZ03S) {
+        success = set_register(2, 2, {0, 1}) ? success : false; // fcl = 256
+        success = set_register(0, 7, {8 << 4}) ? success : false; // sys_ovr = 8 (don't really need this 8 is default for 2656),
+        success = set_register(1, 0xB, {9}) ? success : false; // ai_scale = 9 (1.0048),
+      }
 
       //  command[0] = 0xcf;
       //  command[1] = 0x40;
@@ -147,6 +161,7 @@ class ICPZ : public EncoderBase {
 
  protected:
     SPIDMA &spidma_;
+    Disk disk_;
     uint8_t command_[4] = {};
     uint8_t data_[4] = {};
     int32_t pos_ = 0;
@@ -160,3 +175,5 @@ class ICPZ : public EncoderBase {
     enum {PZ, MU} type_ = PZ;
 
 };
+
+#endif  // UNHUMAN_MOTORLIB_ICPZ_H_

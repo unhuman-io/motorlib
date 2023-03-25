@@ -1,5 +1,5 @@
-#ifndef USB_H
-#define USB_H
+#ifndef UNHUMAN_MOTORLIB_PERIPHERAL_USB_H_
+#define UNHUMAN_MOTORLIB_PERIPHERAL_USB_H_
 
 #include <cstdint>
 
@@ -23,6 +23,7 @@ class USB1 {
     void interrupt();
 
     bool new_rx_data(uint8_t endpoint) const { return new_rx_data_[endpoint]; }
+    bool tx_data_ack(uint8_t endpoint) { bool tx_data_ack = tx_data_ack_[endpoint]; tx_data_ack_[endpoint] = false; return tx_data_ack; }
 
     void cancel_transfer(uint8_t endpoint);
 
@@ -35,10 +36,11 @@ class USB1 {
     uint8_t device_address_ = 0;
     uint16_t interface_ = 0;
     volatile bool new_rx_data_[3] = {};
+    volatile bool tx_data_ack_[3] = {};
     uint8_t count_rx_[3] = {};
     uint8_t rx_buffer_[3][64] = {};
     uint32_t error_count_ = 0;
     friend class System;
 };
 
-#endif
+#endif  // UNHUMAN_MOTORLIB_PERIPHERAL_USB_H_

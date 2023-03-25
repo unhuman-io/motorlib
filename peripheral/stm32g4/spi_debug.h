@@ -1,4 +1,6 @@
-#pragma once
+#ifndef UNHUMAN_MOTORLIB_PERIPHERAL_STM32G4_SPI_DEBUG_H_
+#define UNHUMAN_MOTORLIB_PERIPHERAL_STM32G4_SPI_DEBUG_H_
+
 #include <cstdint>
 #include <vector>
 #include "../../util.h"
@@ -33,3 +35,5 @@ class SPIDebug {
 
     friend void config_init();
 };
+
+#endif  // UNHUMAN_MOTORLIB_PERIPHERAL_STM32G4_SPI_DEBUG_H_

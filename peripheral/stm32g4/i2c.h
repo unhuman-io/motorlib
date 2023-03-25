@@ -1,4 +1,6 @@
-#pragma once
+#ifndef UNHUMAN_MOTORLIB_PERIPHERAL_STM32G4_I2C_H_
+#define UNHUMAN_MOTORLIB_PERIPHERAL_STM32G4_I2C_H_
+
 #include "stm32g474xx.h"
 
 class I2C {
@@ -85,3 +87,5 @@ class I2C {
     float timeout_ms_;
     I2C_TypeDef &regs_;
 };
+
+#endif  // UNHUMAN_MOTORLIB_PERIPHERAL_STM32G4_I2C_H_

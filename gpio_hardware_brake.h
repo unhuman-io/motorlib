@@ -1,4 +1,6 @@
-#pragma once
+#ifndef UNHUMAN_MOTORLIB_GPIO_HARDWARE_BRAKE_H_
+#define UNHUMAN_MOTORLIB_GPIO_HARDWARE_BRAKE_H_
+
 #include "hardware_brake.h"
 #include "gpio.h"
 
@@ -11,3 +13,5 @@ class GPIOHardwareBrake : public HardwareBrakeBase {
  private:
     GPIO &gpio_;
 };
+
+#endif  // UNHUMAN_MOTORLIB_GPIO_HARDWARE_BRAKE_H_

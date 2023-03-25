@@ -1,5 +1,5 @@
-#ifndef HALL_H
-#define HALL_H
+#ifndef UNHUMAN_MOTORLIB_HALL_H_
+#define UNHUMAN_MOTORLIB_HALL_H_
 
 #include "encoder.h"
 
@@ -36,4 +36,4 @@ class HallEncoder : public EncoderBase {
     static uint8_t hall_table_[8];
 };
 
-#endif
+#endif  // UNHUMAN_MOTORLIB_HALL_H_

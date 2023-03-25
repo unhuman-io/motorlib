@@ -2,11 +2,22 @@
 #include "../usb_communication.h"
 #include "../peripheral/stm32g4/hrpwm.h"
 #include "../util.h"
+#include "../peripheral/stm32g4/pin_config.h"
+#include "../peripheral/stm32g4/drv8323s.h"
 
 using PWM = HRPWM;
 using Communication = USBCommunication;
+using Driver = DRV8323S;
 volatile uint32_t * const cpu_clock = &DWT->CYCCNT;
-uint16_t drv_regs_error = 0;  
+uint16_t drv_regs_error = 0;
+
+#ifndef GPIO_OUT
+#define GPIO_OUT (reinterpret_cast<volatile gpio_bits*>(&GPIOA->ODR)->bit1)
+#endif
+
+#ifndef GPIO_IN
+#define GPIO_IN ((GPIOA->IDR & (1 << 2)) ? 1 : 0)
+#endif
 
 #include "../led.h"
 #include "../controller/position_controller.h"
@@ -14,6 +25,7 @@ uint16_t drv_regs_error = 0;
 #include "../controller/impedance_controller.h"
 #include "../controller/velocity_controller.h"
 #include "../controller/state_controller.h"
+#include "../controller/joint_position_controller.h"
 #include "../fast_loop.h"
 #include "../main_loop.h"
 #include "../actuator.h"
@@ -21,9 +33,24 @@ uint16_t drv_regs_error = 0;
 #include "pin_config_obot_g474_motor.h"
 #include "../peripheral/stm32g4/temp_sensor.h"
 
+
+#if defined(R3) || defined(R4) || defined(MR0) || defined(MR0P)
+#define HAS_MAX31875
+#include "../peripheral/stm32g4/max31875.h"
+#endif
+
 namespace config {
     static_assert(((double) CPU_FREQUENCY_HZ * 8 / 2) / pwm_frequency < 65535);    // check pwm frequency
+#ifdef SPI1_REINIT_CALLBACK
+    DRV8323S drv(*SPI1, spi1_dma.register_operation_, spi1_reinit_callback);
+#else
+    DRV8323S drv(*SPI1);
+#endif
     TempSensor temp_sensor;
+#ifdef HAS_MAX31875
+    I2C i2c1(*I2C1, 1000);
+    MAX31875 board_temperature(i2c1);
+#endif
     HRPWM motor_pwm = {pwm_frequency, *HRTIM1, 3, 5, 4, false, 200, 1000, 0};
     USB1 usb;
     FastLoop fast_loop = {(int32_t) pwm_frequency, motor_pwm, motor_encoder, param->fast_loop_param, &I_A_DR, &I_B_DR, &I_C_DR, &V_BUS_DR};
@@ -35,7 +62,8 @@ namespace config {
     ImpedanceController impedance_controller = {(float) (1.0/main_loop_frequency)};
     VelocityController velocity_controller = {(float) (1.0/main_loop_frequency)};
     StateController state_controller = {(float) (1.0/main_loop_frequency)};
-    MainLoop main_loop = {fast_loop, position_controller, torque_controller, impedance_controller, velocity_controller, state_controller, System::communication_, led, output_encoder, torque_sensor, param->main_loop_param};
+    JointPositionController joint_position_controller(1.0/main_loop_frequency);
+    MainLoop main_loop = {fast_loop, position_controller, torque_controller, impedance_controller, velocity_controller, state_controller, joint_position_controller, System::communication_, led, output_encoder, torque_sensor, drv, param->main_loop_param};
 };
 
 Communication System::communication_ = {config::usb};
@@ -66,15 +94,23 @@ void system_init() {
     } else {
         System::log("drv configure success");
     }
-    config::torque_sensor.init();
+    if (config::torque_sensor.init()) {
+        System::log("torque sensor init success");
+    } else {
+        System::log("torque sensor init failure");
+    }
 
     System::api.add_api_variable("3v3", new APIFloat(&v3v3));
     std::function<float()> get_t = std::bind(&TempSensor::get_value, &config::temp_sensor);
     std::function<void(float)> set_t = std::bind(&TempSensor::set_value, &config::temp_sensor, std::placeholders::_1);
     System::api.add_api_variable("T", new APICallbackFloat(get_t, set_t));
+#ifdef HAS_MAX31875
+    System::api.add_api_variable("Tboard", new const APICallbackFloat([](){ return config::board_temperature.get_temperature(); }));
+#endif
     System::api.add_api_variable("index_mod", new APIInt32(&index_mod));
-    System::api.add_api_variable("drv_err", new const APICallbackUint32(get_drv_status));
-    System::api.add_api_variable("drv_reset", new const APICallback(drv_reset));
+    System::api.add_api_variable("pwm_mult", new APICallbackUint8([](){return config::motor_pwm.get_frequency_multiplier();}, [](uint8_t mult){ config::motor_pwm.set_frequency_multiplier(mult);}));
+    System::api.add_api_variable("drv_err", new const APICallbackUint32([](){ return config::drv.get_drv_status(); }));
+    System::api.add_api_variable("drv_reset", new const APICallback([](){ return config::drv.drv_reset(); }));
     System::api.add_api_variable("A1", new const APICallbackFloat([](){ return A1_DR; }));
     System::api.add_api_variable("A2", new const APICallbackFloat([](){ return A2_DR; }));
     System::api.add_api_variable("A3", new const APICallbackFloat([](){ return A3_DR; }));
@@ -141,13 +177,40 @@ void system_maintenance() {
         if (T > 100) {
             config::main_loop.status_.error.microcontroller_temperature = 1;
         }
+#ifdef HAS_MAX31875
+        config::board_temperature.read();
+        if (config::board_temperature.get_temperature() > 100) {
+            config::main_loop.status_.error.board_temperature = 1;
+        }
+#endif
     }
     if (!(GPIOC->IDR & 1<<14)) {
         driver_fault = true;
+    } else if (param->main_loop_param.no_latch_driver_fault) {
+        driver_fault = false;
     }
-    config::main_loop.status_.error.driver_fault = driver_fault;    // latch driver fault until reset
+    config::main_loop.status_.error.driver_fault |= driver_fault;    // maybe latch driver fault until reset
     index_mod = config::motor_encoder.index_error(param->fast_loop_param.motor_encoder.cpr);
     config_maintenance();
+}
+
+void setup_sleep() {
+    NVIC_DisableIRQ(TIM1_UP_TIM16_IRQn);
+    NVIC_DisableIRQ(ADC5_IRQn);
+    config::drv.disable();
+    NVIC_SetPriority(USB_LP_IRQn, NVIC_EncodePriority(NVIC_GetPriorityGrouping(), 0, 1));
+    NVIC_EnableIRQ(RTC_WKUP_IRQn);
+    MASK_SET(RCC->CFGR, RCC_CFGR_SW, 2); // HSE is system clock source
+    RTC->SCR = RTC_SCR_CWUTF;
+}
+
+void finish_sleep() {
+    MASK_SET(RCC->CFGR, RCC_CFGR_SW, 3); // PLL is system clock source
+    config::drv.enable();
+    NVIC_DisableIRQ(RTC_WKUP_IRQn);
+    NVIC_SetPriority(USB_LP_IRQn, NVIC_EncodePriority(NVIC_GetPriorityGrouping(), 2, 0));
+    NVIC_EnableIRQ(TIM1_UP_TIM16_IRQn);
+    NVIC_EnableIRQ(ADC5_IRQn);
 }
 
 

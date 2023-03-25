@@ -17,5 +17,6 @@ void system_log(std::string s) {
 }
 
 Logger logger;
+RoundRobinLogger round_robin_logger;
 uint32_t System::count_ = 0;
 ParameterAPI System::api = {};

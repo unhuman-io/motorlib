@@ -2,7 +2,9 @@
 #include "../usb_communication.h"
 #include "../peripheral/stm32g4/hrpwm.h"
 #include "../util.h"
+#include "../driver.h"
 
+using Driver = DriverBase;
 using PWM = HRPWM;
 using Communication = USBCommunication;
 volatile uint32_t * const cpu_clock = &DWT->CYCCNT;
@@ -14,6 +16,7 @@ uint16_t drv_regs_error = 0;
 #include "../controller/impedance_controller.h"
 #include "../controller/velocity_controller.h"
 #include "../controller/state_controller.h"
+#include "../controller/joint_position_controller.h"
 #include "../fast_loop.h"
 #include "../main_loop.h"
 #include "../actuator.h"
@@ -25,6 +28,7 @@ uint16_t drv_regs_error = 0;
 namespace config {
     static_assert(((double) CPU_FREQUENCY_HZ * 8 / 2) / pwm_frequency < 65535);    // check pwm frequency
     TempSensor temp_sensor;
+    Driver driver;
     I2C i2c1(*I2C1, 1000);
     MAX31875 i2c_temp_sensor(i2c1);
     HRPWM motor_pwm = {pwm_frequency, *HRTIM1, 4, 5, 3, true, 200, 1000, 0};
@@ -38,7 +42,8 @@ namespace config {
     ImpedanceController impedance_controller = {(float) (1.0/main_loop_frequency)};
     VelocityController velocity_controller = {(float) (1.0/main_loop_frequency)};
     StateController state_controller = {(float) (1.0/main_loop_frequency)};
-    MainLoop main_loop = {fast_loop, position_controller, torque_controller, impedance_controller, velocity_controller, state_controller, System::communication_, led, output_encoder, torque_sensor, param->main_loop_param};
+    JointPositionController joint_position_controller(1.0/main_loop_frequency);
+    MainLoop main_loop = {fast_loop, position_controller, torque_controller, impedance_controller, velocity_controller, state_controller, joint_position_controller, System::communication_, led, output_encoder, torque_sensor, driver, param->main_loop_param};
 };
 
 Communication System::communication_ = {config::usb};

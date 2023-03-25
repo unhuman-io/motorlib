@@ -1,10 +1,8 @@
-#ifndef MOTOR_FOC_H
-#define MOTOR_FOC_H
+#ifndef UNHUMAN_MOTORLIB_FOC_H_
+#define UNHUMAN_MOTORLIB_FOC_H_
 
 #include "messages.h"
-
-class PIController;
-class FirstOrderLowPassFilter;
+#include "control_fun.h"
 
 class FOC {
 public:
@@ -24,15 +22,14 @@ public:
 private:
     float num_poles_ = 7;
     volatile float i_gain_ = 0;
-    PIController *pi_id_, *pi_iq_;
+    PIController pi_id_, pi_iq_;
     FOCStatus status_;
     static const float Kc[2][3];
     float dt_;
-    FirstOrderLowPassFilter *id_filter_, *iq_filter_;
+    FirstOrderLowPassFilter id_filter_, iq_filter_;
     FOCParam param_;
 
     friend class System;
 };
 
-
-#endif //MOTOR_FOC_H
+#endif  // UNHUMAN_MOTORLIB_FOC_H_
