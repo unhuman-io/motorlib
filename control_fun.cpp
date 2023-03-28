@@ -2,6 +2,8 @@
 
 #include <cmath>
 
+#include "system_types.h"
+
 float fsat(float a, float sat) {
   // Slow version
   // if (a > sat) {

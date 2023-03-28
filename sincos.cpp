@@ -2,8 +2,7 @@
 
 #include <cmath>
 #include <cstdint>
-
-#define M_PI 3.14159
+#include "system_types.h"
 
 constexpr int32_t kTableLength = 512;
 
