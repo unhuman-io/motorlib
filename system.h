@@ -213,8 +213,8 @@ class System {
                         [](std::string s) {}));
     api.add_api_variable(
         "usb_err",
-        new APIUint32(
-            &((USBCommunication *)&communication_)->usb_.error_count_));
+        new APICallbackUint32([]() { return communication_.get_error_count(); },
+                              [](uint32_t u) {}));
     api.add_api_variable(
         "index_pos", new APICallback(
                          []() {

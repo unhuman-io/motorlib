@@ -358,7 +358,7 @@ class MainLoop {
     fast_loop_.set_iq_des(iq_des);
     fast_loop_.set_vq_des(vq_des);
 
-    if (communication_.tx_data_ack()) {
+    if (communication_.send_acknowledged()) {
       round_robin_logger.get_next_data(&status_.rr_data);
     }
 
@@ -524,7 +524,7 @@ class MainLoop {
           led_.set_on_dim();
           fast_loop_.open_mode();
           setup_sleep();
-          while (!communication_.new_rx_data()) {
+          while (!communication_.receive_ready()) {
             __WFI();
           }
           finish_sleep();

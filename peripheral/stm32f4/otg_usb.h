@@ -201,6 +201,8 @@ class USB_OTG {
   // terminator
   void Get_SerialNum(char *buffer);
 
+  uint32_t get_error_count() { return error_count_; }
+
   void handle_setup_packet(uint8_t *setup_data);
   bool tx_active(int ep_num) {
     return USBx_INEP(ep_num)->DIEPCTL & USB_OTG_DIEPCTL_EPENA;
