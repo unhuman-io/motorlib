@@ -3,9 +3,10 @@
 
 #include "communication.h"
 
+template<class USBType>
 class USBCommunication : public CommunicationBase {
  public:
-  USBCommunication(USB1 &usb) : usb_(usb) {}
+  USBCommunication(USBType &usb) : usb_(usb) {}
   int receive_data(ReceiveData *const data) {
     return usb_.receive_data(2, (uint8_t *const)data, sizeof(*data));
   }
@@ -32,7 +33,7 @@ class USBCommunication : public CommunicationBase {
   uint32_t get_error_count() { return usb_.get_error_count(); }
 
  private:
-  USB1 &usb_;
+  USBType &usb_;
   friend class System;
 };
 
