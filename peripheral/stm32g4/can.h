@@ -5,10 +5,11 @@
 
 class CAN {
  public:
-    CAN(CAN_TypeDef &regs);
-    void interrupt() {}
+  CAN(CAN_TypeDef &regs);
+  void interrupt() {}
+
  private:
-    CAN_TypeDef &regs_;
+  CAN_TypeDef &regs_;
 };
 
 #endif  // UNHUMAN_MOTORLIB_PERIPHERAL_STM32G4_CAN_H_
