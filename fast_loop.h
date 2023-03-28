@@ -4,29 +4,21 @@
 #include <cstdint>
 
 #include "control_fun.h"
-#include "logger.h"
-#include "messages.h"
-
-// #include "fast_loop.h"
-#include "foc.h"
-// #include <cmath>
-// #include "peripheral/pwm.h"
-#include "util.h"
-// #include "encoder.h"
-// #include "../st_device.h"
 #include "cstack.h"
-#include "sincos.h"
+#include "foc.h"
+#include "messages.h"
+#include "system_types.h"
 #include "table_interp.h"
 
 class FastLoop {
  public:
-  FastLoop(int32_t frequency_hz, PWM &pwm, MotorEncoder &encoder,
+  FastLoop(int32_t frequency_hz, PWMType &pwm, MotorEncoderType &motor_encoder,
            const FastLoopParam &param, volatile uint32_t *const i_a_dr,
            volatile uint32_t *const i_b_dr, volatile uint32_t *const i_c_dr,
            volatile uint32_t *const v_bus_dr)
       : param_(param),
         pwm_(pwm),
-        encoder_(encoder),
+        motor_encoder_(motor_encoder),
         i_a_dr_(i_a_dr),
         i_b_dr_(i_b_dr),
         i_c_dr_(i_c_dr),
@@ -38,7 +30,7 @@ class FastLoop {
     foc_ = new FOC(dt);
     set_param(param);
 #ifdef END_TRIGGER_MOTOR_ENCODER
-    encoder_.trigger();
+    motor_encoder_.trigger();
 #endif
   }
   ~FastLoop() { delete foc_; }
@@ -46,7 +38,7 @@ class FastLoop {
     // trigger encoder read
 #ifndef END_TRIGGER_MOTOR_ENCODER
     // probably don't use end trigger on a shared spi bus
-    encoder_.trigger();
+    motor_encoder_.trigger();
 #endif
 
     timestamp_ = get_clock();
@@ -63,7 +55,7 @@ class FastLoop {
         param_.adc3_gain * (adc3 - 2048) - param_.ic_bias;
 
     // get encoder value, may wait a little
-    motor_enc = encoder_.read();
+    motor_enc = motor_encoder_.read();
     int32_t motor_enc_diff = motor_enc - last_motor_enc;
     motor_enc_wrap_ =
         wrap1(motor_enc_wrap_ + motor_enc_diff, param_.motor_encoder.rollover);
@@ -147,12 +139,12 @@ class FastLoop {
     }
     store_status();
 #ifdef END_TRIGGER_MOTOR_ENCODER
-    encoder_.trigger();
+    motor_encoder_.trigger();
 #endif
   }
   void maintenance() {
-    if (encoder_.index_received() && !motor_index_pos_set_) {
-      motor_index_pos_ = encoder_.get_index_pos();
+    if (motor_encoder_.index_received() && !motor_index_pos_set_) {
+      motor_index_pos_ = motor_encoder_.get_index_pos();
       if (param_.motor_encoder.use_index_electrical_offset_pos) {
         // motor_index_electrical_offset_pos is the value of an electrical zero
         // minus the index position motor_electrical_zero_pos is the offset to
@@ -164,9 +156,9 @@ class FastLoop {
     }
 
     if (mode_ == PHASE_LOCK_MODE) {
-      motor_electrical_zero_pos_ = encoder_.get_value();
-      if (encoder_.index_received()) {
-        motor_index_pos_ = encoder_.get_index_pos();
+      motor_electrical_zero_pos_ = motor_encoder_.get_value();
+      if (motor_encoder_.index_received()) {
+        motor_index_pos_ = motor_encoder_.get_index_pos();
         int32_t index_offset = motor_electrical_zero_pos_ - motor_index_pos_;
         if (index_offset >= 0) {
           motor_index_electrical_offset_measured_ =
@@ -302,13 +294,13 @@ class FastLoop {
     zero_current_sensors_end_ = get_clock() + t_seconds * CPU_FREQUENCY_HZ;
   }
   void zero_current_sensors_off() { zero_current_sensors_ = false; }
-  bool motor_encoder_error() { return encoder_.error(); }
+  bool motor_encoder_error() { return motor_encoder_.error(); }
   void trigger_status_log() { status_log_.copy(status_); }
 
  private:
   FastLoopParam param_;
   FOC *foc_;
-  PWM &pwm_;
+  PWMType &pwm_;
   enum {
     OPEN_MODE,
     BRAKE_MODE,
@@ -346,7 +338,7 @@ class FastLoop {
   float alpha_zero_ = 0.0002;
   float v_bus_ = 12;
   mcu_time timestamp_;
-  MotorEncoder &encoder_;
+  MotorEncoderType &motor_encoder_;
   float reserved_ = 0;
   mcu_time last_timestamp_ = 0;
   float dt_ = 0;

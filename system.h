@@ -4,6 +4,7 @@
 #ifdef __cplusplus
 #include "actuator.h"
 #include "parameter_api.h"
+#include "system_types.h"
 
 extern uint32_t t_exec_fastloop;
 extern uint32_t t_exec_mainloop;
@@ -21,7 +22,7 @@ class System {
   static std::string get_log();
   static char *get_string();
 
-  static Communication communication_;
+  static CommunicationType communication_;
   static Actuator actuator_;
   static ParameterAPI api;
   static uint32_t count_;

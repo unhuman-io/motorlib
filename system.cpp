@@ -214,17 +214,18 @@ void System::run() {
       "usb_err",
       new APICallbackUint32([]() { return communication_.get_error_count(); },
                             [](uint32_t u) {}));
-  api.add_api_variable("index_pos",
-                       new APICallback(
-                           []() {
-                             return std::to_string(
-                                 actuator_.fast_loop_.encoder_.get_index_pos());
-                           },
-                           [](std::string s) {}));
+  api.add_api_variable(
+      "index_pos",
+      new APICallback(
+          []() {
+            return std::to_string(
+                actuator_.fast_loop_.motor_encoder_.get_index_pos());
+          },
+          [](std::string s) {}));
   api.add_api_variable(
       "index_received",
       new APICallbackUint32(
-          []() { return actuator_.fast_loop_.encoder_.index_received(); },
+          []() { return actuator_.fast_loop_.motor_encoder_.index_received(); },
           [](uint32_t u) {}));
   api.add_api_variable(
       "index_offset_measured",

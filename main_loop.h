@@ -1,16 +1,14 @@
 #ifndef UNHUMAN_MOTORLIB_MAIN_LOOP_H_
 #define UNHUMAN_MOTORLIB_MAIN_LOOP_H_
 
-#include <cmath>
-
 #include "control_fun.h"
-#include "hardware_brake.h"
+#include "cstack.h"
+#include "fast_loop.h"
 #include "led.h"
 #include "messages.h"
 #include "round_robin_logger.h"
-#include "sincos.h"
-#include "torque_sensor.h"
-#include "util.h"
+#include "system_types.h"
+#include "table_interp.h"
 
 extern "C" {
 void system_init();
@@ -22,21 +20,18 @@ void finish_sleep();
 class MainLoop;
 void load_send_data(const MainLoop &main_loop, SendData *const data);
 
-#ifndef HARDWARE_BRAKE
-using HardwareBrake = HardwareBrakeBase;
-#endif  // HARDWARE_BRAKE
-
 class MainLoop {
  public:
-  MainLoop(FastLoop &fast_loop, PositionController &position_controller,
-           TorqueController &torque_controller,
-           ImpedanceController &impedance_controller,
-           VelocityController &velocity_controller,
-           StateController &state_controller,
-           JointPositionController &joint_position_controller,
-           Communication &communication, LED &led,
-           OutputEncoder &output_encoder, TorqueSensor &torque, Driver &driver,
-           const MainLoopParam &param, HardwareBrake &brake = no_brake_)
+  MainLoop(FastLoop &fast_loop, PositionControllerType &position_controller,
+           TorqueControllerType &torque_controller,
+           ImpedanceControllerType &impedance_controller,
+           VelocityControllerType &velocity_controller,
+           StateControllerType &state_controller,
+           JointPositionControllerType &joint_position_controller,
+           CommunicationType &communication, LED &led,
+           OutputEncoderType &output_encoder, TorqueSensorType &torque,
+           DriverType &driver, const MainLoopParam &param,
+           HardwareBrakeType &brake = no_brake_)
       : param_(param),
         fast_loop_(fast_loop),
         position_controller_(position_controller),
@@ -588,13 +583,13 @@ class MainLoop {
   LED *led() { return &led_; }
   MainLoopParam param_;
   FastLoop &fast_loop_;
-  PositionController &position_controller_;
-  TorqueController &torque_controller_;
-  ImpedanceController &impedance_controller_;
-  VelocityController &velocity_controller_;
-  StateController &state_controller_;
-  JointPositionController &joint_position_controller_;
-  Communication &communication_;
+  PositionControllerType &position_controller_;
+  TorqueControllerType &torque_controller_;
+  ImpedanceControllerType &impedance_controller_;
+  VelocityControllerType &velocity_controller_;
+  StateControllerType &state_controller_;
+  JointPositionControllerType &joint_position_controller_;
+  CommunicationType &communication_;
   LED &led_;
   ReceiveData receive_data_ = {};
   mcu_time host_timestamp_ = {};
@@ -608,9 +603,9 @@ class MainLoop {
   bool started_ = false;
   MainLoopStatus status_ = {};
   MainControlMode mode_ = NO_MODE;
-  OutputEncoder &output_encoder_;
+  OutputEncoderType &output_encoder_;
   float motor_encoder_bias_ = 0;
-  TorqueSensor &torque_sensor_;
+  TorqueSensorType &torque_sensor_;
   FrequencyLimiter current_tuning_rate_limiter_ = {10};
   bool fast_log_ready_ = true;
   float dt_ = 0;
@@ -624,8 +619,8 @@ class MainLoop {
   PChipTable<TORQUE_TABLE_LENGTH> torque_correction_table_;
   CStack<MainLoopStatus, 2> status_stack_;
   bool first_command_received_ = false;
-  Driver &driver_;
-  HardwareBrake brake_;
+  DriverType &driver_;
+  HardwareBrakeType brake_;
   static HardwareBrakeBase no_brake_;
   volatile bool driver_enable_triggered_ = false;
   volatile bool driver_disable_triggered_ = false;
