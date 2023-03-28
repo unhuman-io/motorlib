@@ -1,13 +1,15 @@
-
 #include "sincos.h"
 
 #include <cmath>
 #include <cstdint>
-#define LENGTH_TABLE 512
+
+#define M_PI 3.14159
+
+constexpr int32_t kTableLength = 512;
 
 // defining tables as volatile locates them in ram, to help with execution
 // jitter
-volatile float sin_table[LENGTH_TABLE] = {
+volatile float sin_table[kTableLength] = {
     0.000000,  0.012272,  0.024541,  0.036807,  0.049068,  0.061321,  0.073565,
     0.085797,  0.098017,  0.110222,  0.122411,  0.134581,  0.146730,  0.158858,
     0.170962,  0.183040,  0.195090,  0.207111,  0.219101,  0.231058,  0.242980,
@@ -82,7 +84,7 @@ volatile float sin_table[LENGTH_TABLE] = {
     -0.183040, -0.170962, -0.158858, -0.146730, -0.134581, -0.122411, -0.110222,
     -0.098017, -0.085797, -0.073565, -0.061321, -0.049068, -0.036807, -0.024541,
     -0.012272};
-volatile float cos_table[LENGTH_TABLE] = {
+volatile float cos_table[kTableLength] = {
     1.000000,  0.999925,  0.999699,  0.999322,  0.998795,  0.998118,  0.997290,
     0.996313,  0.995185,  0.993907,  0.992480,  0.990903,  0.989177,  0.987301,
     0.985278,  0.983105,  0.980785,  0.978317,  0.975702,  0.972940,  0.970031,
@@ -158,20 +160,24 @@ volatile float cos_table[LENGTH_TABLE] = {
     0.995185,  0.996313,  0.997290,  0.998118,  0.998795,  0.999322,  0.999699,
     0.999925};
 
-#define M_PI 3.14159
 Sincos sincos1(float x) {
   Sincos out;
 
-  float table_x = x * ((float)(512 / 2 / M_PI));
+  constexpr float kRadianToIncrement =
+      static_cast<float>(0.5 * kTableLength / M_PI);
+  float table_x = x * kRadianToIncrement;
   int32_t i = table_x;
   float remainder_x = table_x - i;
-  float dx = remainder_x * ((float)(2 * M_PI / 512));
-  i &= LENGTH_TABLE - 1;
+  constexpr float kIncrementToRadian =
+      static_cast<float>(2 * M_PI / kTableLength);
+  float dx = remainder_x * kIncrementToRadian;
+  i &= kTableLength - 1;
   float stab = sin_table[i];
   float ctab = cos_table[i];
-  out.sin = stab + dx * ctab - .5f * dx * dx * stab -
-            (float)(1.0 / 6.0) * dx * dx * dx * ctab;
-  out.cos = ctab - dx * stab - .5f * dx * dx * ctab +
-            (float)(1.0 / 6.0) * dx * dx * dx * stab;
+  constexpr float kOneSixth = static_cast<float>(1.0 / 6.0);
+  out.sin =
+      stab + dx * ctab - .5f * dx * dx * stab - kOneSixth * dx * dx * dx * ctab;
+  out.cos =
+      ctab - dx * stab - .5f * dx * dx * ctab + kOneSixth * dx * dx * dx * stab;
   return out;
 }
