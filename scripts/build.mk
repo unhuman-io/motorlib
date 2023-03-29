@@ -24,7 +24,7 @@ $(BUILD_DIR)/%.o: %.c Makefile | $(BUILD_DIR)
 	$(CC) $(PARAM_INCLUDE) -c $(CFLAGS) -Wa,-a,-ad,-alms=$(BUILD_DIR)/lto.lst $< -o $@
 
 $(BUILD_DIR)/%.o: %.cpp Makefile | $(BUILD_DIR) 
-	$(CXX) -include $(SELF_DIR)../system_log.h -c $(CPPFLAGS) -std=c++11 -Wa,-a,-ad,-alms=$(BUILD_DIR)/lto.lst $< -o $@
+	$(CXX) -include $(SELF_DIR)../system_log.h -c $(CPPFLAGS) $(TYPE_HEADER_DEFINE) -std=c++11 -Wa,-a,-ad,-alms=$(BUILD_DIR)/lto.lst $< -o $@
 
 $(BUILD_DIR)/%.o: %.s Makefile | $(BUILD_DIR)
 	$(AS) -c $(CFLAGS) $< -o $@
