@@ -127,7 +127,7 @@ class FastLoop {
       foc_command_.measured.motor_encoder = stepper_position_;
       motor_position_filtered_ = stepper_position_;
       stepper_position_ += stepper_velocity_ * dt_;
-      stepper_position_ = wrap1(stepper_position_, 2 * M_PI);
+      stepper_position_ = wrap1(stepper_position_, 2 * (float)M_PI);
     }
 
     FOCStatus *foc_status = foc_->step(foc_command_);
