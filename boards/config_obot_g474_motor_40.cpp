@@ -1,25 +1,14 @@
 // TODO: Fix include order. util.h must come first.
 #include "../util.h"
 // TODO: Remaining includes can be alphabetical.
-#include "../driver_mps.h"
-#include "../peripheral/stm32g4/hrpwm.h"
-#include "../peripheral/usb.h"
-#include "../usb_communication.h"
+#include "config_obot_g474_motor_40_types.h"
 
-using PWM = HRPWM;
-using Communication = USBCommunication;
-using Driver = DriverMPS;
 volatile uint32_t *const cpu_clock = &DWT->CYCCNT;
 
 #include "../boards/pin_config_obot_g474_motor_40.h"
-#include "../controller/impedance_controller.h"
-#include "../controller/joint_position_controller.h"
-#include "../controller/position_controller.h"
-#include "../controller/state_controller.h"
-#include "../controller/torque_controller.h"
-#include "../controller/velocity_controller.h"
 #include "../fast_loop.h"
 #include "../led.h"
+#include "../logger.h"
 #include "../main_loop.h"
 #include "../peripheral/stm32g4/max31875.h"
 #include "../peripheral/stm32g4/temp_sensor.h"
@@ -63,7 +52,7 @@ MainLoop main_loop(fast_loop, position_controller, torque_controller,
                    param->main_loop_param);
 };  // namespace config
 
-Communication System::communication_ = {config::usb};
+USBCommunication<USB1> System::communication_ = {config::usb};
 void usb_interrupt() { config::usb.interrupt(); }
 Actuator System::actuator_ = {config::fast_loop, config::main_loop,
                               param->startup_param};

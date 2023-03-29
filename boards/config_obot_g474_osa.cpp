@@ -1,24 +1,13 @@
 // TODO: Fix include order. util.h must come first.
 #include "../util.h"
 // TODO: Remaining includes can be alphabetical.
+#include "../boards/config_obot_g474_osa_types.h"
 #include "../driver.h"
-#include "../peripheral/stm32g4/hrpwm.h"
-#include "../peripheral/usb.h"
-#include "../usb_communication.h"
 
-using Driver = DriverBase;
-using PWM = HRPWM;
-using Communication = USBCommunication;
 volatile uint32_t *const cpu_clock = &DWT->CYCCNT;
 uint16_t drv_regs_error = 0;
 
 #include "../boards/pin_config_obot_g474_osa.h"
-#include "../controller/impedance_controller.h"
-#include "../controller/joint_position_controller.h"
-#include "../controller/position_controller.h"
-#include "../controller/state_controller.h"
-#include "../controller/torque_controller.h"
-#include "../controller/velocity_controller.h"
 #include "../fast_loop.h"
 #include "../led.h"
 #include "../main_loop.h"
@@ -33,7 +22,7 @@ namespace config {
 static_assert(((double)CPU_FREQUENCY_HZ * 8 / 2) / pwm_frequency <
               65535);  // check pwm frequency
 TempSensor temp_sensor;
-Driver driver;
+DriverBase driver;
 I2C i2c1(*I2C1, 1000);
 MAX31875 i2c_temp_sensor(i2c1);
 HRPWM motor_pwm = {pwm_frequency, *HRTIM1, 4, 5, 3, true, 200, 1000, 0};
@@ -71,7 +60,7 @@ MainLoop main_loop = {fast_loop,
                       param->main_loop_param};
 };  // namespace config
 
-Communication System::communication_ = {config::usb};
+USBCommunication<USB1> System::communication_ = {config::usb};
 void usb_interrupt() { config::usb.interrupt(); }
 Actuator System::actuator_ = {config::fast_loop, config::main_loop,
                               param->startup_param};

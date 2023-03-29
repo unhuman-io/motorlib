@@ -3,14 +3,9 @@
 // TODO: Fix include order. pin_config.h must come second.
 #include "../peripheral/stm32g4/pin_config.h"
 // TODO: Remaining includes can be alphabetical.
-#include "../peripheral/stm32g4/drv8323s.h"
-#include "../peripheral/stm32g4/hrpwm.h"
+#include "../boards/config_obot_g474_motor_types.h"
 #include "../peripheral/usb.h"
-#include "../usb_communication.h"
 
-using PWM = HRPWM;
-using Communication = USBCommunication;
-using Driver = DRV8323S;
 volatile uint32_t *const cpu_clock = &DWT->CYCCNT;
 uint16_t drv_regs_error = 0;
 
@@ -23,12 +18,6 @@ uint16_t drv_regs_error = 0;
 #endif
 
 #include "../boards/pin_config_obot_g474_motor.h"
-#include "../controller/impedance_controller.h"
-#include "../controller/joint_position_controller.h"
-#include "../controller/position_controller.h"
-#include "../controller/state_controller.h"
-#include "../controller/torque_controller.h"
-#include "../controller/velocity_controller.h"
 #include "../fast_loop.h"
 #include "../led.h"
 #include "../main_loop.h"
@@ -44,13 +33,18 @@ uint16_t drv_regs_error = 0;
 #endif
 
 namespace config {
-static_assert(((double)CPU_FREQUENCY_HZ * 8 / 2) / pwm_frequency <
-              65535);  // check pwm frequency
+
+// Check PWM frequency is valid.
+static_assert(((double)CPU_FREQUENCY_HZ * 8 / 2) / pwm_frequency < 65535);
+
+uint8_t drv_regs_size = sizeof(param->drv_regs) / sizeof(uint16_t);
 #ifdef SPI1_REINIT_CALLBACK
-DRV8323S drv(*SPI1, spi1_dma.register_operation_, spi1_reinit_callback);
+DRV8323S drv(*SPI1, param->drv_regs, drv_regs_size,
+             spi1_dma.register_operation_, spi1_reinit_callback);
 #else
-DRV8323S drv(*SPI1);
+DRV8323S drv(*SPI1, param->drv_regs, drv_regs_size);
 #endif
+
 TempSensor temp_sensor;
 #ifdef HAS_MAX31875
 I2C i2c1(*I2C1, 1000);
@@ -91,7 +85,7 @@ MainLoop main_loop = {fast_loop,
                       param->main_loop_param};
 };  // namespace config
 
-Communication System::communication_ = {config::usb};
+USBCommunication<USB1> System::communication_ = {config::usb};
 void usb_interrupt() { config::usb.interrupt(); }
 Actuator System::actuator_ = {config::fast_loop, config::main_loop,
                               param->startup_param};
