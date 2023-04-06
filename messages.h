@@ -174,6 +174,7 @@ typedef struct {
                         // 
     } motor_encoder_startup;
     float gear_ratio;   // gear ratio from input to output
+    float gear_a, gear_b, gear_c, gear_d;       // cubic constants for gear ratio, 0 to not use
     float motor_encoder_bias;   // for ENCODER_BIAS and ENCODER_BIAS_FROM_OUTPUT: extra bias to add to motor encoder
                                 // for ENCODER_BIAS_*_WITH_MOTOR_CORRECTION: motor bias to give a desired motor zero position
                                     // for example when output position = 0 if motor position is -1, then motor_encoder_bias = 1
