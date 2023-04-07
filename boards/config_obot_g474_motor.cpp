@@ -174,6 +174,7 @@ void system_maintenance() {
         while(ADC1->CR & ADC_CR_JADSTART);
         T = config::temp_sensor.read();
         v3v3 =  *((uint16_t *) (0x1FFF75AA)) * 3.0 * ADC1->GCOMP / 4096.0 / ADC1->JDR2;
+        round_robin_logger.log_data(VOLTAGE_3V3_INDEX, v3v3);
         if (T > 100) {
             config::main_loop.status_.error.microcontroller_temperature = 1;
         }
@@ -189,6 +190,7 @@ void system_maintenance() {
     } else if (param->main_loop_param.no_latch_driver_fault) {
         driver_fault = false;
     }
+    round_robin_logger.log_data(BUS_VOLTAGE_INDEX, config::main_loop.status_.fast_loop.vbus);
     config::main_loop.status_.error.driver_fault |= driver_fault;    // maybe latch driver fault until reset
     index_mod = config::motor_encoder.index_error(param->fast_loop_param.motor_encoder.cpr);
     config_maintenance();
