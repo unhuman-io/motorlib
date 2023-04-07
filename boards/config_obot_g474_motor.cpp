@@ -48,7 +48,7 @@ namespace config {
 #endif
     TempSensor temp_sensor;
 #ifdef HAS_MAX31875
-    I2C i2c1(*I2C1, 1000);
+    I2C i2c1(*I2C1, 400);
     MAX31875 board_temperature(i2c1);
 #endif
     HRPWM motor_pwm = {pwm_frequency, *HRTIM1, 3, 5, 4, false, 200, 1000, 0};
