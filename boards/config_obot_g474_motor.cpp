@@ -191,6 +191,7 @@ void system_maintenance() {
         driver_fault = false;
     }
     round_robin_logger.log_data(BUS_VOLTAGE_INDEX, config::main_loop.status_.fast_loop.vbus);
+    round_robin_logger.log_data(USB_ERROR_COUNT_INDEX, config::usb.error_count_);
     config::main_loop.status_.error.driver_fault |= driver_fault;    // maybe latch driver fault until reset
     index_mod = config::motor_encoder.index_error(param->fast_loop_param.motor_encoder.cpr);
     config_maintenance();
