@@ -75,16 +75,17 @@ class Actuator {
             break;
          }
          case StartupParam::ENCODER_BIAS_FROM_OUTPUT: {
-            main_loop_.set_motor_encoder_bias(status.output_position * startup_param_.gear_ratio 
+            main_loop_.set_motor_encoder_bias(output_position_to_motor_position(status.output_position)
               - status.fast_loop.motor_position.position + startup_motor_bias_);
             break;
          }
          case StartupParam::ENCODER_BIAS_FROM_OUTPUT_WITH_MOTOR_CORRECTION: {
             float round_by = 2*M_PI*(startup_param_.num_encoder_poles == 0 ? 1 : startup_param_.num_encoder_poles);
-            float motor_bias_from_output = status.output_position * startup_param_.gear_ratio 
+            float motor_bias_from_output = output_position_to_motor_position(status.output_position) 
               - (status.fast_loop.motor_position.position);
             float motor_bias_rounded = roundf(motor_bias_from_output/round_by)*(round_by) + startup_motor_bias_;
             logger.log("Encoder bias from output with correction");
+            logger.log_printf("output_position_to_motor_position: %f", output_position_to_motor_position(status.output_position));
             logger.log_printf("Output position: %f, motor_position: %f, motor mechanical position: %f", 
                status.output_position, status.fast_loop.motor_position.position, status.fast_loop.motor_mechanical_position);
             logger.log_printf("Encoder bias, round_by: %f, motor_bias_from_output: %f, motor_bias_rounded: %f",
@@ -95,13 +96,31 @@ class Actuator {
          case StartupParam::ENCODER_BIAS_FROM_OUTPUT_WITH_TORQUE_AND_MOTOR_CORRECTION: {
             // todo fix as above
             float round_by = 2*M_PI*(startup_param_.num_encoder_poles == 0 ? 1 : startup_param_.num_encoder_poles);
-            float motor_bias_from_output = (status.output_position - status.torque*startup_param_.transmission_stiffness) * startup_param_.gear_ratio 
+            float motor_bias_from_output = output_position_to_motor_position(status.output_position - status.torque*startup_param_.transmission_stiffness) 
               - (status.fast_loop.motor_position.position + startup_motor_bias_);
             float motor_bias_rounded = roundf(motor_bias_from_output*round_by)/(round_by);
             main_loop_.set_motor_encoder_bias(motor_bias_rounded);
             break;
          }
       }
+   }
+
+   float output_position_to_motor_position(float output_position) {
+      float motor_position;
+      if (startup_param_.gear_a != 0 ||
+          startup_param_.gear_b != 0 ||
+          startup_param_.gear_c != 0 ||
+          startup_param_.gear_d != 0) {
+         motor_position = startup_param_.gear_ratio * (
+            startup_param_.gear_a +
+            output_position * (startup_param_.gear_b +
+            output_position * (startup_param_.gear_c +
+            output_position * startup_param_.gear_d)));
+      } else {
+         // just gear ratio
+         motor_position = output_position * startup_param_.gear_ratio;
+      }
+      return motor_position;
    }
 private:
     FastLoop &fast_loop_;
