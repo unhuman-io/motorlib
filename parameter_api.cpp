@@ -19,10 +19,12 @@ void ParameterAPI::add_api_variable(std::string name, const APIVariable *var) {
     auto_complete_.add_match_string(name);
 }
 
-void ParameterAPI::set_api_variable(std::string name, std::string value) {
+bool ParameterAPI::set_api_variable(std::string name, std::string value) {
     if (variable_map_.count(name))  {
         variable_map_[name]->set(value);
+        return true;
     }
+    return false;
 }
 
 std::string ParameterAPI::get_api_variable(std::string name) {
@@ -38,35 +40,43 @@ std::string ParameterAPI::get_api_variable(std::string name) {
 std::string ParameterAPI::parse_string(std::string s) {
     std::string out;
 
-    bool autocomplete = false;
-    if (s.size() == 1) {
-        autocomplete = true;
-        out = auto_complete_.autocomplete(s[0]);
-        if (out == "\n") {
-            s = auto_complete_.last_string();
+    try {
+        bool autocomplete = false;
+        if (s.size() == 1) {
+            autocomplete = true;
+            out = auto_complete_.autocomplete(s[0]);
+            if (out == "\n") {
+                s = auto_complete_.last_string();
+            } else {
+                return out;
+            }
+        }
+
+        auto equal_pos = s.find("=");
+        if (equal_pos != std::string::npos) {
+            auto variable = trim(s.substr(0,equal_pos));
+            auto value = trim(s.substr(equal_pos+1));
+            if (variable == "api_name") {
+                out = get_api_variable_name(std::stoi(value));
+            } else {
+                if (set_api_variable(variable, value)) {
+                    out = variable + " set " + value;
+                } else {
+                    out = variable + " error";
+                }
+                
+            }
+        } else {
+            out = get_api_variable(s);
+        }
+        
+        if (autocomplete) {
+            return "\n" + out + "\n";
         } else {
             return out;
         }
-    }
-
-    auto equal_pos = s.find("=");
-    if (equal_pos != std::string::npos) {
-        auto variable = trim(s.substr(0,equal_pos));
-        auto value = trim(s.substr(equal_pos+1));
-        if (variable == "api_name") {
-            out = get_api_variable_name(std::stoi(value));
-        } else {
-            set_api_variable(variable, value);
-            out = variable + " set " + value;
-        }
-    } else {
-        out = get_api_variable(s);
-    }
-    
-    if (autocomplete) {
-        return "\n" + out + "\n";
-    } else {
-        return out;
+    } catch(...) {
+        return "error";
     }
 }
 
