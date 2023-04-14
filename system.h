@@ -145,7 +145,9 @@ class System {
         api.add_api_variable("zero_current_sensors", new APICallbackFloat([](){ return 0; }, [](float f){ actuator_.fast_loop_.zero_current_sensors_on(f); }));
         api.add_api_variable("disable_safe_mode", new const APICallback([](){ actuator_.main_loop_.param_.error_mask.all = ERROR_MASK_NONE; return "ok"; }));
         api.add_api_variable("error_mask", new APICallback([](){ return u32_to_hex(actuator_.main_loop_.param_.error_mask.all); },
-                [](std::string s){ actuator_.main_loop_.param_.error_mask.all = std::stoul(s, nullptr, 16); }));
+                [](std::string s){ try {
+                        actuator_.main_loop_.param_.error_mask.all = std::stoul(s, nullptr, 16);}
+                    catch(...) {} }));
         api.add_api_variable("help", new const APICallback([](){ return api.get_all_api_variables(); }));
         api.add_api_variable("api_length", new const APICallbackUint16([](){ return api.get_api_length(); }));
         api.add_api_variable("disable_position_limits", new APIBool(&actuator_.main_loop_.position_limits_disable_));
