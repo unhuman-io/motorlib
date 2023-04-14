@@ -45,7 +45,8 @@ class System {
         api.add_api_variable("vki_limit", new APIFloat(&actuator_.main_loop_.velocity_controller_.controller_.ki_limit_));
         api.add_api_variable("vmax", new APIFloat(&actuator_.main_loop_.velocity_controller_.controller_.command_max_));
         api.add_api_variable("vacceleration_limit", new APIFloat(&actuator_.main_loop_.velocity_controller_.acceleration_limit_));
-        api.add_api_variable("kpj", new APIFloat(&actuator_.main_loop_.joint_position_controller_.param_.kpj));
+        api.add_api_variable("jmax", new APIFloat(&actuator_.main_loop_.joint_position_controller_.velocity_controller_.controller_.command_max_));
+        api.add_api_variable("jki_limit", new APIFloat(&actuator_.main_loop_.joint_position_controller_.velocity_controller_.controller_.ki_limit_));
         API_ADD_FILTER(vfilt, FirstOrderLowPassFilter, actuator_.main_loop_.velocity_controller_.velocity_filter_);
         API_ADD_FILTER(voutput_filt, FirstOrderLowPassFilter, actuator_.main_loop_.velocity_controller_.controller_.output_filter_);
         api.add_api_variable("cpu_frequency", new APIUint32(&cpu_frequency));
