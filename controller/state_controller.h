@@ -7,7 +7,7 @@
 class StateController : public Controller {
  public:
     StateController(float dt) : Controller(dt), velocity_error_filter_(dt), torque_error_filter_(dt), 
-        torque_dot_error_filter_(dt), output_filter_(dt) {}
+        torque_dot_error_filter_(dt), output_filter_(dt), position_desired_filter_(dt) {}
     void init(const MainLoopStatus &status) {
         position_last_ = status.motor_position;
         torque_last_ = status.torque;
@@ -15,6 +15,7 @@ class StateController : public Controller {
         torque_error_filter_.init(0);
         torque_dot_error_filter_.init(0);
         output_filter_.init(0);
+        position_desired_filter_.init(0);
     }
     float step(const MotorCommand &command, const MainLoopStatus &status) {
         const StateControllerCommand &c = command.state;
@@ -39,6 +40,7 @@ class StateController : public Controller {
         torque_error_filter_.set_frequency(param.torque_filter_frequency_hz);
         torque_dot_error_filter_.set_frequency(param.torque_dot_filter_frequency_hz);
         output_filter_.set_frequency(param.output_filter_frequency_hz);
+        position_desired_filter_.set_frequency(param.position_desired_filter_frequency_hz);
         param_ = param;
     }
     void set_rollover(float rollover) { /* doesn't support rollover */ }
@@ -51,6 +53,7 @@ class StateController : public Controller {
     FirstOrderLowPassFilter torque_error_filter_;
     FirstOrderLowPassFilter torque_dot_error_filter_;
     FirstOrderLowPassFilter output_filter_;
+    SecondOrderLowPassFilter position_desired_filter_;
     StateControllerParam param_ = {};
     friend class System;
     friend void config_init();
