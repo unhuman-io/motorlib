@@ -75,19 +75,26 @@ void HRPWM::set_frequency_hz(uint32_t frequency_hz, uint16_t min_off_ns, uint16_
 }
 
 void HRPWM::set_frequency_multiplier(uint8_t multiplier) {
+    if (multiplier > 0x1F) {
+        multiplier = 0x1F;
+    }
     uint8_t multiplier_int = multiplier;
-    HRTIM1->sCommonRegs.ADCPS1 = multiplier_int << HRTIM_ADCPS1_AD1PSC_Pos | multiplier_int << HRTIM_ADCPS1_AD2PSC_Pos;
     uint32_t frequency_hz = base_frequency_hz_;
 
     frequency_hz *= multiplier_int + 1;
     logger.log_printf("pwm frequency: %d", frequency_hz);
-    set_frequency_hz(frequency_hz, min_off_ns_, min_on_ns_, true);
 
-
+    if (frequency_hz >= current_frequency_hz_) {
+        HRTIM1->sCommonRegs.ADCPS1 = multiplier_int << HRTIM_ADCPS1_AD1PSC_Pos | multiplier_int << HRTIM_ADCPS1_AD2PSC_Pos;
+        set_frequency_hz(frequency_hz, min_off_ns_, min_on_ns_, true);
+    } else {
+        set_frequency_hz(frequency_hz, min_off_ns_, min_on_ns_, true);
+        HRTIM1->sCommonRegs.ADCPS1 = multiplier_int << HRTIM_ADCPS1_AD1PSC_Pos | multiplier_int << HRTIM_ADCPS1_AD2PSC_Pos;
+    }
 }
 
 uint8_t HRPWM::get_frequency_multiplier() const {
-    return current_frequency_hz_/base_frequency_hz_;
+    return current_frequency_hz_/base_frequency_hz_ - 1;
 }
 
 void HRPWM3::voltage_mode() {
