@@ -114,7 +114,7 @@ class ParameterAPI {
     // type is used by scanf to parse the string
     void add_api_variable(std::string name, APIVariable *variable);
     void add_api_variable(std::string name, const APIVariable *variable);
-    void set_api_variable(std::string name, std::string value);
+    bool set_api_variable(std::string name, std::string value);
     std::string get_api_variable(std::string name);
     std::string parse_string(std::string);
     std::string get_all_api_variables() const;
