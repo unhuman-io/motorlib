@@ -65,6 +65,9 @@ class Actuator {
       if (status.output_position > startup_param_.output_encoder_rollover) {
          main_loop_.adjust_output_encoder(-2*M_PI);
          status.output_position -= 2*M_PI;
+      } else if (status.output_position < -startup_param_.output_encoder_rollover) {
+         main_loop_.adjust_output_encoder(2*M_PI);
+         status.output_position += 2*M_PI;
       }
       switch(startup_param_.motor_encoder_startup) {
          default:
