@@ -8,6 +8,8 @@ from calibration_file import CalibrationFile
 from logger import Logger
 import signal
 import psutil
+import paramiko
+
 
 logger = Logger(__name__)
 
@@ -97,23 +99,22 @@ def read_motor_util_log(filename, api_to_params):
 	values = data.strip().split(', ')
 
 	# Save the values to the specified variables
-	params_to_values[api_to_params["phase_mode"]] = parse_value(api_to_params["phase_mode"], values[0])
-	params_to_values[api_to_params["index_offset_measured"]] = parse_value(api_to_params["index_offset_measured"], values[1])
-	params_to_values[api_to_params["obias"]] = -parse_value(api_to_params["obias"], values[2])
-	params_to_values[api_to_params["startup_mbias"]] = -parse_value(api_to_params["startup_mbias"], values[3])
-	params_to_values[api_to_params["tgain"]] = -parse_value(api_to_params["tgain"], values[4])
-	params_to_values[api_to_params["tbias"]] = -parse_value(api_to_params["tbias"], values[5])
+	i = 0
+	for key, value in api_to_params.items():
+		params_to_values[value] = parse_value(value, values[i])
+		i+=1
 
 	return params_to_values
 
 
 class MotorCalibrator:
-	def __init__(self, name, config_file_path, serial_number):
+	def __init__(self, name, config_file_path, serial_number, client=None):
 		self.name = name
 		self.config_file_path = os.path.expanduser(config_file_path)
 		self.serial_number = serial_number
 		self.json_config_file = CalibrationFile(self.config_file_path)
 		self.param_only_binary_path = None
+		self.client = client
 
 	def generate_header_file(self):
 		"""Generate a C header file based on the motor's configuration file"""
@@ -131,8 +132,27 @@ class MotorCalibrator:
 
 		self.param_only_binary_path = obot_path + "/build/param/param_obot_g474_" + self.name + ".bin"
 		logger.info(f"Generated binary at {self.param_only_binary_path}")
+		print(self.param_only_binary_path)
+		if self.client is not None:
+			self.client.send_file(self.param_only_binary_path)
 
 	def flash_binary_file(self):
+		if self.client is None:
+			self.flash_binary_file_local()
+		else:
+			self.flash_binary_file_remote()
+
+	def flash_binary_file_remote(self):
+		"""Flash the binary file to the motor's flash memory"""
+		'''Use dfu-util to flash the binary to the flash memory'''
+		binary_path = "/tmp/" + self.param_only_binary_path.split("/")[-1]
+		cmd = f"dfu-util -a0 -s 0x8060000:leave -D {binary_path} -S {self.serial_number}"
+		# cmd = "dfu-util"
+		logger.info(f"Executing: {cmd}")
+
+		self.client.run_command(cmd)
+
+	def flash_binary_file_local(self):
 		"""Flash the binary file to the motor's flash memory"""
 		'''Use dfu-util to flash the binary to the flash memory'''
 		cmd = f"dfu-util -a0 -s 0x8060000:leave -D {self.param_only_binary_path} -S {self.serial_number}"
@@ -158,6 +178,10 @@ class MotorCalibrator:
 			"startup_mbias": "startup_param.motor_encoder_bias",
 			"tgain": "main_loop_param.torque_sensor.gain",
 			"tbias": "main_loop_param.torque_sensor.bias",
+			"state_ff_tau": "main_loop_param.state_controller_param.ff_tau",
+			"idmax":"fast_loop_param.foc_param.pi_d.command_max",
+			"imax":"fast_loop_param.foc_param.pi_q.command_max",
+			"state_command_max":"main_loop_param.state_controller_param.command_max"
 		}
 
 		process_command = ["motor_util", "-s", f"{self.serial_number}","read", "--text"]
@@ -192,7 +216,7 @@ class MotorCalibrator:
 
 		# Remove the generated text log
 		subprocess.run(["rm", f"{textfile_name}"])
-
+		print(params_to_values)
 		return params_to_values
 
 	def run_save_to_flash_routine(self):

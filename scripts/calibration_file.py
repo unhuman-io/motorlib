@@ -110,7 +110,7 @@ class CalibrationFile:
 					file_to_params[file_path] = []
 					file_to_params[file_path].append({param:value})
 			else:
-				logger.error(f"Parameter {param} not found in {self.config_file_path} or any inherited files")
+				logger.error(f"Parameter {param} not found in {self.file_path} or any inherited files")
 
 		for file_path, params in file_to_params.items():
 			file = CalibrationFile(file_path)

@@ -8,6 +8,7 @@ import argparse
 from calibration_file import CalibrationFile
 from motor_calibrator import MotorCalibrator
 from logger import Logger
+from remote_client import RemoteClient
 
 logger = Logger(__name__)
 
@@ -79,6 +80,12 @@ if __name__ == "__main__":
 		help="Read runtime values and save to flash",
 	)
 
+	parser.add_argument(
+		"--remote",
+		action='store_true',
+		help="Run on robot",
+	)
+
 	args = parser.parse_args()
 
 	if args.use_package is True and args.package is None:
@@ -95,7 +102,11 @@ if __name__ == "__main__":
 		serial_number = package_data[args.motor_name]["sn"]
 		base_config = args.config_dir + "/" + args.motor_name + ".json"
 
-	motor_cal = MotorCalibrator(args.motor_name, base_config, serial_number)
+	client = None
+	if args.remote:
+		client = RemoteClient()
+
+	motor_cal = MotorCalibrator(args.motor_name, base_config, serial_number, client)
 
 	if args.flash:
 		motor_cal.run_save_to_flash_routine()
