@@ -173,7 +173,7 @@ void pin_config_obot_g474_motor_r0() {
         NVIC_SetPriority(USB_LP_IRQn, NVIC_EncodePriority(NVIC_GetPriorityGrouping(), 2, 0));
         NVIC_EnableIRQ(USB_LP_IRQn);
 
-#if defined(R4)
+#ifdef HAS_BMI270
         GPIO_SETL(C, 4, GPIO::OUTPUT, GPIO_SPEED::LOW, 0);        // imu cs
         GPIOC->BSRR |= GPIO_BSRR_BS4; // set imu cs
 #endif
