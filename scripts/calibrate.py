@@ -97,9 +97,15 @@ if __name__ == "__main__":
 	base_config = args.base_config
 	serial_number = args.serial_number
 	if args.use_package:
-		# If the user provided the YAML package read the motor details from the package
 		package_data = read_yaml(args.package)
-		serial_number = package_data[args.motor_name]["sn"]
+
+		# If the user provided the YAML package read the motor details from the package
+		try:
+			serial_number = package_data[args.motor_name]["sn"]
+		except KeyError as e:
+			logger.error(f"{args.motor_name} not found in {args.package}. Please check contents of the package file")
+			raise
+
 		base_config = args.config_dir + "/" + args.motor_name + ".json"
 
 	client = None

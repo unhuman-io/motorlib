@@ -22,10 +22,7 @@ class RemoteClient:
         self.sftp = self.client.open_sftp()
 
     def run_command(self, command):
-        # cmd = f"echo {self.pwd} | " + command
-        # cmd = f"echo {self.pwd} | sudo -S {command}"
-        # print(cmd)
-        stdin, stdout, stderr = self.client.exec_command(command, timeout=60)
+        stdin, stdout, stderr = self.client.exec_command(command, timeout=0.1)
         exit_status = stdout.channel.recv_exit_status()          # Blocking call
 
         for line in iter(lambda: stdout.readline(2000000), ""):
@@ -33,16 +30,15 @@ class RemoteClient:
 
         for line in stdout:
             print(line.strip('\n'))
-        if exit_status == 0:
-            print ("File Deleted")
-        else:
+        if exit_status != 0:
             print(f'STDERR: {stderr.read().decode("utf8")}')
             print("Error", exit_status)
 
-    def send_file(self, binary_path):
-        dest = "/tmp/" + binary_path.split("/")[-1]
-        print(f"** {dest}")
-        self.sftp.put(binary_path, dest)
+    def send_file(self, local_path, remote_path):
+        self.sftp.put(local_path, remote_path)
+
+    def get_file(self, remote_path, local_path):
+        self.sftp.get(remote_path, local_path)
 
     def close_connection(self):
         client.close()

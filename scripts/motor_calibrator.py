@@ -13,8 +13,13 @@ import paramiko
 
 logger = Logger(__name__)
 
-# Accessing the value of the environment variable "OBOT_PATH"
+# Read the environment variable "OBOT_PATH"
 obot_path = os.getenv('OBOT_PATH')
+
+if(obot_path is None):
+	logger.error("Please define OBOT_PATH environment variable."\
+				  "Run the following command with the correct user path`export OBOT_PATH=/home/user-path/obot-controller/obot_g474`")
+	sys.exit()
 
 def kill(proc_pid):
 	process = psutil.Process(proc_pid)
@@ -74,38 +79,27 @@ def generate_c_header_file(param_dict, motor_name, incl_file=None, prefix=""):
 
 	return header_file
 
-def parse_value(param, value_str):
-	if value_str.lower() == 'nan':
-		return float(0)
-		# raise ValueError(f"{param} is NAN")
-	else:
-		return float(value_str)
-
-def read_motor_util_log(filename, api_to_params):
+def read_motor_util_log(filename, api_to_cparams):
 	params_to_values = {}
 	# Open the file for reading
 	with open(filename, 'r') as f:
 		# Read the first line to get the number of motors connected
-		first_line = next(f)
-		num_motors_connected = int(first_line.split()[0])
-		# Determine the number of header lines based on the number of motors connected
-		num_header_lines = num_motors_connected + 3
-		# Skip the header lines
-		for i in range(num_header_lines):
-			next(f)
-		# Read the first data line
-		data = next(f)
+		# Parse the second-to-last line and split it into values
+		lines = f.readlines()
+		second_to_last_line = lines[-2].strip()
 	# Split the data line into separate values
-	values = data.strip().split(', ')
+	values = second_to_last_line.strip().split(', ')
 
-	# Save the values to the specified variables
+	# Assign the value to the correct variable
 	i = 0
-	for key, value in api_to_params.items():
-		params_to_values[value] = parse_value(value, values[i])
+	for util_param, c_param in api_to_cparams.items():
+		if values[i].lower() == 'nan':
+			logger.warning(f"Parameter {util_param} is NAN, this value will not be overwritten")
+		else:
+			params_to_values[c_param] = float(values[i])
 		i+=1
 
 	return params_to_values
-
 
 class MotorCalibrator:
 	def __init__(self, name, config_file_path, serial_number, client=None):
@@ -132,9 +126,10 @@ class MotorCalibrator:
 
 		self.param_only_binary_path = obot_path + "/build/param/param_obot_g474_" + self.name + ".bin"
 		logger.info(f"Generated binary at {self.param_only_binary_path}")
-		print(self.param_only_binary_path)
+
 		if self.client is not None:
-			self.client.send_file(self.param_only_binary_path)
+			binary_remote_dest = "/tmp/" + self.param_only_binary_path.split("/")[-1]
+			self.client.send_file(self.param_only_binary_path, binary_remote_dest)
 
 	def flash_binary_file(self):
 		if self.client is None:
@@ -169,31 +164,9 @@ class MotorCalibrator:
 			else:
 				raise Exception(f"Failed to flash binary file for motor {self.name}")
 
-	def read_runtime_values(self):
 
-		api_to_params = {
-			"phase_mode": "fast_loop_param.phase_mode",
-			"index_offset_measured": "fast_loop_param.motor_encoder.index_electrical_offset_pos",
-			"obias": "main_loop_param.output_encoder.bias",
-			"startup_mbias": "startup_param.motor_encoder_bias",
-			"tgain": "main_loop_param.torque_sensor.gain",
-			"tbias": "main_loop_param.torque_sensor.bias",
-			"state_ff_tau": "main_loop_param.state_controller_param.ff_tau",
-			"idmax":"fast_loop_param.foc_param.pi_d.command_max",
-			"imax":"fast_loop_param.foc_param.pi_q.command_max",
-			"state_command_max":"main_loop_param.state_controller_param.command_max"
-		}
-
-		process_command = ["motor_util", "-s", f"{self.serial_number}","read", "--text"]
-		for api_param in api_to_params.keys():
-			process_command.append(api_param)
-		process_command.append(">>")
-		textfile_name = f"motor_{self.serial_number}_params.txt"
-		process_command.append(textfile_name)
-
-		# Start the motor_util command-line interface with the --api option
-		logger.info(f"Executing {' '.join(process_command)}")
-		motor_util_process = subprocess.Popen("exec " + ' '.join(process_command), 
+	def read_values_from_motor_util_local(self, command):
+		motor_util_process = subprocess.Popen("exec " + ' '.join(command), 
 											  shell=True,
 											  stdin=subprocess.PIPE,
 											  stdout=subprocess.PIPE,
@@ -211,16 +184,53 @@ class MotorCalibrator:
 		if stderr:
 			logger.error(f"Standard error: {stderr.decode('utf-8')}")
 
+	def read_values_from_motor_util_remote(self, command, param_log_path):
+		# create the log with the values on the remote computer
+		cmd = ' '.join(command) + "& sleep 2 ; kill $!"
+		logger.info(cmd)
+		self.client.run_command(cmd)
+		# transfer the text file to a local location
+		self.client.get_file(param_log_path, param_log_path)
+
+	def read_runtime_values(self):
+		# Parameters to read at runtime and overwrite
+		api_to_cparams = {
+			"phase_mode": "fast_loop_param.phase_mode",
+			"index_offset_measured": "fast_loop_param.motor_encoder.index_electrical_offset_pos",
+			"obias": "main_loop_param.output_encoder.bias",
+			"startup_mbias": "startup_param.motor_encoder_bias",
+			"tgain": "main_loop_param.torque_sensor.gain",
+			"tbias": "main_loop_param.torque_sensor.bias",
+			"state_ff_tau": "main_loop_param.state_controller_param.ff_tau",
+			"idmax":"fast_loop_param.foc_param.pi_d.command_max",
+			"imax":"fast_loop_param.foc_param.pi_q.command_max",
+			"state_command_max":"main_loop_param.state_controller_param.command_max"
+		}
+
+		process_command = ["motor_util", "-s", f"{self.serial_number}","read", "--text"]
+		for api_param in api_to_cparams.keys():
+			process_command.append(api_param)
+		process_command.append(">>")
+		param_log_path = f"/tmp/motor_{self.serial_number}_params.txt"
+		process_command.append(param_log_path)
+
+		# Start the motor_util command-line interface with the --api option
+		logger.info(f"Executing {' '.join(process_command)}")
+
+		if self.client is None:
+			self.read_values_from_motor_util_local(process_command)
+		else:
+			self.read_values_from_motor_util_remote(process_command, param_log_path)
+
 		# Read the text log with parameter values and generate a dictionary with the data
-		params_to_values = read_motor_util_log(textfile_name, api_to_params)
+		params_to_values = read_motor_util_log(param_log_path, api_to_cparams)
 
 		# Remove the generated text log
-		subprocess.run(["rm", f"{textfile_name}"])
-		print(params_to_values)
+		subprocess.run(["rm", f"{param_log_path}"])
 		return params_to_values
 
 	def run_save_to_flash_routine(self):
-		logger.info(f"***** Running Save to Flash routine: ****")
+		logger.info(f"***************** Running Save to Flash routine: ***************** ")
 
 		# Generate a header file given the JSON file with parameters
 		self.generate_header_file()
@@ -232,7 +242,7 @@ class MotorCalibrator:
 		self.flash_binary_file()
 
 	def run_read_runtime_and_save_to_flash_routine(self):
-		logger.info(f"***** Running Read Runtime Values and Save to Flash routine: ****")
+		logger.info(f"*****************  Running Read Runtime Values and Save to Flash routine: ***************** ")
 
 		# Read the runtime values
 		new_values = self.read_runtime_values()

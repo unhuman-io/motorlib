@@ -4,8 +4,8 @@ import datetime
 class Logger:
     COLOR_CODES = {
         'DEBUG': '\033[36m',
-        'INFO': '\033[93m',
-        'WARNING': '\033[33m',
+        'INFO': '\033[97m',
+        'WARNING': '\033[93m',
         'ERROR': '\033[91m',
         'CRITICAL': '\033[41m\033[37m',
     }
@@ -25,10 +25,10 @@ class Logger:
             return f'{color_code}{timestamp} {message}{reset_code}'
 
     def info(self, msg, *args, **kwargs):
-        self.logger.info(msg, *args, **kwargs)
+        self.logger.info("INFO: " + msg, *args, **kwargs)
 
     def warning(self, msg, *args, **kwargs):
-        self.logger.warning(msg, *args, **kwargs)
+        self.logger.warning("WARNING: " + msg, *args, **kwargs)
 
     def error(self, msg, *args, **kwargs):
-        self.logger.error(msg, *args, **kwargs)
+        self.logger.error("ERROR: " + msg, *args, **kwargs)
