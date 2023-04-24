@@ -39,6 +39,14 @@ uint16_t drv_regs_error = 0;
 #include "../peripheral/stm32g4/max31875.h"
 #endif
 
+#if defined(MR1)
+#define HAS_MAX1889
+#endif
+
+#if defined(R4) || defined (MR0P) || defined (MR0) || defined(MR1)
+#define HAS_BMI270
+#endif
+
 namespace config {
     static_assert(((double) CPU_FREQUENCY_HZ * 8 / 2) / pwm_frequency < 65535);    // check pwm frequency
 #ifdef SPI1_REINIT_CALLBACK
