@@ -1,9 +1,6 @@
 import json
 import os
-import subprocess
 import sys
-import logging
-import argparse
 from logger import Logger
 
 logger = Logger(__name__)
@@ -20,9 +17,23 @@ def merge_dicts(dict1, dict2) -> dict:
 
 	return merged_dict
 
+def add_path_to_dict(path, dictionary, param, value):
+	if path in dictionary:
+		dictionary[path].append({param:value})
+	else:
+		dictionary[path] = []
+		dictionary[path].append({param:value})
+
+def get_data(file_path):
+	with open(file_path, 'r') as f:
+		data = json.load(f)
+	return data
+
 class CalibrationFile:
 	def __init__(self, file_path):
 		self.file_path = file_path
+		self.data = get_data(self.file_path)
+		self.inherit_files = []
 		self.processed_data = self.process_file()
 
 	def process_file(self):
@@ -34,6 +45,7 @@ class CalibrationFile:
 		processed_data=self.data.copy()
 		while inherit_key in processed_data:
 			inherited_file_path = os.path.join(os.path.dirname(self.file_path), processed_data[inherit_key])
+			self.inherit_files.append(inherited_file_path)
 			inherited_data = CalibrationFile(inherited_file_path).process_file()
 			del processed_data[inherit_key]
 			processed_data = merge_dicts(inherited_data, processed_data)
@@ -78,17 +90,30 @@ class CalibrationFile:
 					inherit_key = f"inherits{cnt}"
 			return None
 
+	def write_to_file(self):
+		with open(self.file_path, 'w') as f:
+			json.dump(self.data, f, indent=4)
+
+	def add_param(self, param_string, value):
+	    parts = param_string.split('.')
+	    current = self.data
+	    for part in parts[:-1]:
+	    	if part in current.keys():
+	    		current = current[part]
+	    	else:
+	        	current[part] = {}
+	        	current = current[part]
+	    current[parts[-1]] = value
+	    print(self.data)
+	    self.write_to_file()
+
 	def overwrite_params(self, params):
 		"""Overwrite specified parameter values in this file"""
-		with open(self.file_path, 'r') as f:
-			data = json.load(f)
-
 		for p in params:
 			for key, value in p.items():
-				data = self.overwrite_key(data, key, value)
+				self.data = self.overwrite_key(self.data, key, value)
 
-		with open(self.file_path, 'w') as f:
-			json.dump(data, f, indent=4)
+		self.write_to_file()
 
 	def overwrite_key(self, data, param_name, new_value):
 		"""Overwrite a single parameter value in this file"""
@@ -104,14 +129,12 @@ class CalibrationFile:
 		for param, value in params_to_values.items():
 			file_path = self.find_param(param)
 			if file_path:
-				if file_path in file_to_params:
-					file_to_params[file_path].append({param:value})
-				else:
-					file_to_params[file_path] = []
-					file_to_params[file_path].append({param:value})
+				add_path_to_dict(file_path, file_to_params, param, value)
 			else:
-				logger.warning(f"Parameter {param} not found in {self.file_path} or any inherited files")
+				logger.warning(f"Parameter {param} not found in {self.file_path} or any inherited files. The parameter will be added to {self.file_path}")
+				self.add_param(param, value)
 
+		print(file_to_params)
 		for file_path, params in file_to_params.items():
 			file = CalibrationFile(file_path)
 			file.overwrite_params(params)

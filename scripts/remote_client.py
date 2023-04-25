@@ -3,9 +3,9 @@ import datetime
 import time
 
 class RemoteClient:
-    def __init__(self):
+    def __init__(self, ip_address):
         self.uname = "figure"
-        self.ip_address = "172.16.10.100"
+        self.ip_address = ip_address
         self.pwd = "GoFigure"
 
         # Create a new SSH client

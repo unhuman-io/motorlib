@@ -1,15 +1,11 @@
-import json
 import os
-import subprocess
 import sys
-# import logging
+import subprocess
 import argparse
 from calibration_file import CalibrationFile
 from logger import Logger
-import signal
 import psutil
-import paramiko
-
+import time
 
 logger = Logger(__name__)
 
@@ -101,58 +97,74 @@ def read_motor_util_log(filename, api_to_cparams):
 
 	return params_to_values
 
-class MotorCalibrator:
-	def __init__(self, name, config_file_path, serial_number, client=None):
+class MotorHandler:
+	def __init__(self, name, config_dir_path, motor_info, client=None):
 		self.name = name
-		self.config_file_path = os.path.expanduser(config_file_path)
-		self.serial_number = serial_number
+		self.motor_info = motor_info
+		self.config_file_path = os.path.expanduser(config_dir_path + "/" + name + ".json")
+		# self.config_file_path = os.path.expanduser(config_file_path)
+		self.serial_number = motor_info["sn"]
+		# self.serial_number = serial_number
 		self.json_config_file = CalibrationFile(self.config_file_path)
-		self.param_only_binary_path = None
 		self.client = client
+		self.param_address = "0x8060000"
+		self.fw_address = "0x8000000"
 
-	def generate_header_file(self):
-		"""Generate a C header file based on the motor's configuration file"""
+	def generate_param_c_file(self):
+		"""Generate a C file based on the motor's configuration file"""
 		data = self.json_config_file.process_file()
 		generate_c_header_file(data, self.name)
 
-	def generate_binary_file(self):
-		"""Generate a binary file based on the C header file"""
-		cmd = f"make build_param PARAM={self.name}"
+	def generate_binary(self, param_only = True):
+		"""Generate a binary file with either parameters or firmware"""
+		binary_path = None
+		if param_only:
+			# Remove the existing build directory to guarantee new binaries are made
+			result = subprocess.run("rm -rf build/".split(), cwd=obot_path, capture_output=True)
+			cmd = f"make build_param PARAM={self.name}"
+			binary_path = obot_path + "/build/param/param_obot_g474_" + self.name + ".bin"
+		else:
+			cmd =  f"make -j CONFIG={self.motor_info['fw_type']} C_DEFS=-D{self.motor_info['pcb_type']}"
+			binary_path = obot_path + "/build/" + self.motor_info["fw_type"] + "_noparam.bin"
+
 		logger.info(f"Executing: {cmd}")
 
 		result = subprocess.run(cmd.split(), cwd=obot_path, capture_output=True)
 		if result.returncode != 0:
 			raise Exception(f"Failed to generate binary file for motor {self.name}")
 
-		self.param_only_binary_path = obot_path + "/build/param/param_obot_g474_" + self.name + ".bin"
-		logger.info(f"Generated binary at {self.param_only_binary_path}")
+		logger.info(f"Generated binary at {binary_path}")
 
 		if self.client is not None:
-			binary_remote_dest = "/tmp/" + self.param_only_binary_path.split("/")[-1]
-			self.client.send_file(self.param_only_binary_path, binary_remote_dest)
+			binary_remote_dest = "/tmp/" + binary_path.split("/")[-1]
+			self.client.send_file(binary_path, binary_remote_dest)
 
-	def flash_binary_file(self):
+		return binary_path
+
+	def flash_binary_file(self, file_path, address, leave=True):
+		"""Flash the binary file to the given address using dfu-util"""
+		leave_dfu = ""
+		if leave:
+			leave_dfu = ":leave"
+
 		if self.client is None:
-			self.flash_binary_file_local()
+			cmd = f"dfu-util -a0 -s {address}{leave_dfu} -D {file_path} -S {self.serial_number}"
+			self.flash_binary_file_local(cmd)
 		else:
-			self.flash_binary_file_remote()
+			# the binary is sent to the /tmp folder on the remote machine
+			binary_path = "/tmp/" + file_path.split("/")[-1]
+			cmd = f"dfu-util -a0 -s {address}{leave_dfu} -D {binary_path} -S {self.serial_number}"
+			self.flash_binary_file_remote(cmd)
 
-	def flash_binary_file_remote(self):
+	def flash_binary_file_remote(self, cmd):
 		"""Flash the binary file to the motor's flash memory"""
 		'''Use dfu-util to flash the binary to the flash memory'''
-		binary_path = "/tmp/" + self.param_only_binary_path.split("/")[-1]
-		cmd = f"dfu-util -a0 -s 0x8060000:leave -D {binary_path} -S {self.serial_number}"
-		# cmd = "dfu-util"
 		logger.info(f"Executing: {cmd}")
-
 		self.client.run_command(cmd)
 
-	def flash_binary_file_local(self):
-		"""Flash the binary file to the motor's flash memory"""
+	def flash_binary_file_local(self, cmd):
 		'''Use dfu-util to flash the binary to the flash memory'''
-		cmd = f"dfu-util -a0 -s 0x8060000:leave -D {self.param_only_binary_path} -S {self.serial_number}"
 		logger.info(f"Executing: {cmd}")
-
 		result = subprocess.run(cmd.split(), cwd=obot_path, capture_output=True, text=True)
 		logger.info(result.stdout)
 
@@ -229,20 +241,20 @@ class MotorCalibrator:
 		subprocess.run(["rm", f"{param_log_path}"])
 		return params_to_values
 
-	def run_save_to_flash_routine(self):
-		logger.info(f"***************** Running Save to Flash routine: ***************** ")
+	def run_flash_params_routine(self):
+		logger.info(f"***************** Running Save to Flash Routine for Motor: {self.name} SN: {self.serial_number}: ********************* ")
 
-		# Generate a header file given the JSON file with parameters
-		self.generate_header_file()
+		# Generate a C file given the JSON file with parameters
+		self.generate_param_c_file()
 
 		# Generate a binary with only the flash parameters (not full firmware)
-		self.generate_binary_file()
+		binary_path = self.generate_binary(param_only=True)
 
-		# Save the param only binary to flash
-		self.flash_binary_file()
+		# Flash the param only binary
+		self.flash_binary_file(binary_path, self.param_address)
 
 	def run_read_runtime_and_save_to_flash_routine(self):
-		logger.info(f"*****************  Running Read Runtime Values and Save to Flash routine: ***************** ")
+		logger.info(f"*****************  Running Read Runtime Values and Save to Flash Routine for Motor: {self.name} SN: {self.serial_number}: ***************** ")
 
 		# Read the runtime values
 		new_values = self.read_runtime_values()
@@ -254,4 +266,31 @@ class MotorCalibrator:
 		data = self.json_config_file.process_file()
 
 		# Run the routine to save values from the JSON file to flash
-		self.run_save_to_flash_routine()
+		self.run_flash_params_routine()
+
+	def run_flash_firmware_routine(self, package_data):
+		logger.info(f"*****************  Running Flash Firmware Routine for Motor: {self.name} SN: {self.serial_number}:: ***************** ")
+
+		# Generate a binary with only the firmware (not parameters)
+		binary_path = self.generate_binary(param_only=False)
+
+		# Flash the firmware binary
+		self.flash_binary_file(binary_path, self.fw_address)
+
+	def run_flash_all_routine(self, package_data):
+		logger.info(f"*****************  Running Flash All Routine: ***************** ")
+
+		# Generate a C file with params given the JSON file with parameters
+		self.generate_param_c_file()
+
+		# Generate a binary with only the firmware (no parameters)
+		fw_binary_path = self.generate_binary(param_only=False)
+		
+		# Flash the firmware binary
+		self.flash_binary_file(fw_binary_path, self.fw_address, leave=False)
+
+		# Generate a binary with only the flash parameters (no full firmware)
+		param_binary_path = self.generate_binary(param_only=True)
+
+		# Flash the param only binary
+		self.flash_binary_file(param_binary_path, self.param_address)
