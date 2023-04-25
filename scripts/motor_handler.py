@@ -155,6 +155,7 @@ class MotorHandler:
 			binary_path = "/tmp/" + file_path.split("/")[-1]
 			cmd = f"dfu-util -a0 -s {address}{leave_dfu} -D {binary_path} -S {self.serial_number}"
 			self.flash_binary_file_remote(cmd)
+			self.client.run_command(f"rm -f {binary_path}")
 
 	def flash_binary_file_remote(self, cmd):
 		"""Flash the binary file to the motor's flash memory"""
@@ -242,7 +243,7 @@ class MotorHandler:
 		return params_to_values
 
 	def run_flash_params_routine(self):
-		logger.info(f"***************** Running Save to Flash Routine for Motor: {self.name} SN: {self.serial_number}: ********************* ")
+		logger.info(f"***************** Running Flash Params Routine for Motor: {self.name} SN: {self.serial_number}: ********************* ")
 
 		# Generate a C file given the JSON file with parameters
 		self.generate_param_c_file()
@@ -254,7 +255,7 @@ class MotorHandler:
 		self.flash_binary_file(binary_path, self.param_address)
 
 	def run_read_runtime_and_save_to_flash_routine(self):
-		logger.info(f"*****************  Running Read Runtime Values and Save to Flash Routine for Motor: {self.name} SN: {self.serial_number}: ***************** ")
+		logger.info(f"*****************  Running Read Runtime Values and Save to Flash Routine for Motor: {self.name} SN: {self.serial_number} ***************** ")
 
 		# Read the runtime values
 		new_values = self.read_runtime_values()
@@ -268,8 +269,8 @@ class MotorHandler:
 		# Run the routine to save values from the JSON file to flash
 		self.run_flash_params_routine()
 
-	def run_flash_firmware_routine(self, package_data):
-		logger.info(f"*****************  Running Flash Firmware Routine for Motor: {self.name} SN: {self.serial_number}:: ***************** ")
+	def run_flash_firmware_routine(self):
+		logger.info(f"*****************  Running Flash Firmware Routine for Motor: {self.name} SN: {self.serial_number} ***************** ")
 
 		# Generate a binary with only the firmware (not parameters)
 		binary_path = self.generate_binary(param_only=False)
@@ -277,8 +278,8 @@ class MotorHandler:
 		# Flash the firmware binary
 		self.flash_binary_file(binary_path, self.fw_address)
 
-	def run_flash_all_routine(self, package_data):
-		logger.info(f"*****************  Running Flash All Routine: ***************** ")
+	def run_flash_all_routine(self):
+		logger.info(f"*****************  Running Flash All Routine for Motor: {self.name} SN: {self.serial_number} ***************** ")
 
 		# Generate a C file with params given the JSON file with parameters
 		self.generate_param_c_file()

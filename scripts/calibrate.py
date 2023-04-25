@@ -31,9 +31,9 @@ def run_routine(args, motor_handler):
 	elif args.runtime_flash_params:
 		motor_handler.run_read_runtime_and_save_to_flash_routine()
 	elif args.flash_firmware:
-		motor_handler.run_flash_firmware_routine(package_data)
+		motor_handler.run_flash_firmware_routine()
 	elif args.flash_all:
-		motor_handler.run_flash_all_routine(package_data)
+		motor_handler.run_flash_all_routine()
 
 if __name__ == "__main__":
 	""" Usage: python3 save_to_flash.py --config_dir=/project-x/tools/obot --base_config=base_test.json --motor_name right_hip_z_010

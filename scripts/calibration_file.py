@@ -56,40 +56,6 @@ class CalibrationFile:
 			json.dump(processed_data, f, indent=4)
 		return processed_data
 
-	def find_param(self, param_name):
-		cnt = 0
-		inherit_key = f"inherits{cnt}"
-
-		def traverse(node, path):
-
-			if path == param_name:
-				return self.file_path
-			elif isinstance(node, dict):
-				for key, value in node.items():
-					res = traverse(value, f"{path}.{key}" if path else key)
-					if res: 
-						return res
-			elif isinstance(node, list):
-				for i, item in enumerate(node):
-					res = traverse(item, f"{path}[{i}]")
-					if res:
-						return res
-			return None
-
-		path = traverse(self.data, '')
-		if path is not None:
-			return path
-		else:
-			while inherit_key in self.data:
-				inherited_file_path = os.path.join(os.path.dirname(self.file_path), self.data[inherit_key])
-				res = CalibrationFile(inherited_file_path).find_param(param_name)
-				if res is not None:
-					return res
-				else:
-					cnt += 1
-					inherit_key = f"inherits{cnt}"
-			return None
-
 	def write_to_file(self):
 		with open(self.file_path, 'w') as f:
 			json.dump(self.data, f, indent=4)
@@ -104,37 +70,9 @@ class CalibrationFile:
 	        	current[part] = {}
 	        	current = current[part]
 	    current[parts[-1]] = value
-	    print(self.data)
 	    self.write_to_file()
-
-	def overwrite_params(self, params):
-		"""Overwrite specified parameter values in this file"""
-		for p in params:
-			for key, value in p.items():
-				self.data = self.overwrite_key(self.data, key, value)
-
-		self.write_to_file()
-
-	def overwrite_key(self, data, param_name, new_value):
-		"""Overwrite a single parameter value in this file"""
-		keys = param_name.split('.')
-		cur = data
-		for key in keys[:-1]:
-			cur = cur[key]
-		cur[keys[-1]] = str(new_value)
-		return data
 
 	def write_runtime_values_to_json(self, params_to_values):
 		file_to_params = {}
 		for param, value in params_to_values.items():
-			file_path = self.find_param(param)
-			if file_path:
-				add_path_to_dict(file_path, file_to_params, param, value)
-			else:
-				logger.warning(f"Parameter {param} not found in {self.file_path} or any inherited files. The parameter will be added to {self.file_path}")
-				self.add_param(param, value)
-
-		print(file_to_params)
-		for file_path, params in file_to_params.items():
-			file = CalibrationFile(file_path)
-			file.overwrite_params(params)
+			self.add_param(param, value)
