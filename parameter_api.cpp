@@ -37,6 +37,21 @@ std::string ParameterAPI::get_api_variable(std::string name) {
     return out;
 }
 
+#include <cxxabi.h>
+
+
+using namespace __cxxabiv1;
+
+std::string util_demangle(std::string to_demangle)
+{
+    int status = 0;
+    char * buff = __cxxabiv1::__cxa_demangle(to_demangle.c_str(), NULL, NULL, &status);
+    std::string demangled = buff;
+    std::free(buff);
+    return demangled;
+}
+
+
 std::string ParameterAPI::parse_string(std::string s) {
     std::string out;
 
@@ -76,7 +91,7 @@ std::string ParameterAPI::parse_string(std::string s) {
             return out;
         }
     } catch(...) {
-        return "error";
+        return "error on " + s + " " + util_demangle(__cxa_current_exception_type()->name());
     }
 }
 

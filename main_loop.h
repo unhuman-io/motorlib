@@ -513,6 +513,9 @@ class MainLoop {
       }
       return false;
     }
+    bool status_log_locked() {
+      return !fast_log_ready_;
+    }
     void lock_status_log() {
       fast_log_ready_ = false;
     }
