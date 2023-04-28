@@ -153,6 +153,9 @@ void pin_config_obot_g474_motor_r0() {
         ADC2->JSQR = 3 << ADC_JSQR_JL_Pos | 8 << ADC_JSQR_JSQ1_Pos | 16 << ADC_JSQR_JSQ2_Pos | 12 << ADC_JSQR_JSQ3_Pos | 11 << ADC_JSQR_JSQ4_Pos | 1 << ADC_JSQR_JEXTEN_Pos | 19 << ADC_JSQR_JEXTSEL_Pos; // trig 19 hrtim_adc_trg2 (injected)
         ADC2->CFGR = ADC_CFGR_JQDIS | ADC_CFGR_OVRMOD |1 << ADC_CFGR_EXTEN_Pos | 21 << ADC_CFGR_EXTSEL_Pos; // trigger 21 -> hrtim trig1
         ADC2->SMPR1 = 6 << ADC_SMPR1_SMP8_Pos;  // 247.5 cycles A3, 5.8us
+        ADC2->SMPR2 = 6 << ADC_SMPR2_SMP11_Pos | // 247.5 cycles , 5.8us
+                      6 << ADC_SMPR2_SMP12_Pos | // 247.5 cycles , 5.8us
+                      6 << ADC_SMPR2_SMP16_Pos;  // 247.5 cycles A3, 5.8us
         ADC2->CFGR2 =  ADC_CFGR2_JOVSE | ADC_CFGR2_ROVSE | (8 << ADC_CFGR2_OVSS_Pos) | (7 << ADC_CFGR2_OVSR_Pos); // 256x oversample
 
         
