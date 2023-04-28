@@ -163,6 +163,7 @@ typedef struct {
     enum {
         ENCODER_ZERO, // motor encoder is 0 at startup plus any absolute offset
         ENCODER_BIAS, // motor encoder is set to bias at startup
+        ENCODER_VALUE, // motor encoder has startup bias added at startup
         ENCODER_BIAS_FROM_OUTPUT, // motor encoder bias is set to 
                         // (output_encoder/cpr - output_encoder.bias)*gear_ratio+motor_encoder_bias
                         // Note: this requires that output encoder and motor encoder both increment in the 

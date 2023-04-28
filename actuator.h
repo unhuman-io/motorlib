@@ -72,9 +72,14 @@ class Actuator {
       switch(startup_param_.motor_encoder_startup) {
          default:
          case StartupParam::ENCODER_ZERO:
+            main_loop_.set_motor_encoder_bias(-status.motor_position);
             break;
          case StartupParam::ENCODER_BIAS: {
             main_loop_.set_motor_encoder_bias(-status.motor_position + startup_motor_bias_);
+            break;
+         }
+         case StartupParam::ENCODER_VALUE: {
+            main_loop_.set_motor_encoder_bias(startup_motor_bias_);
             break;
          }
          case StartupParam::ENCODER_BIAS_FROM_OUTPUT: {
