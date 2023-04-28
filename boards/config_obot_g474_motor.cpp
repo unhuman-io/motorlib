@@ -61,8 +61,8 @@ namespace config {
     DRV8323S drv(*SPI1);
 #endif
     TempSensor temp_sensor;
-#ifdef HAS_MAX31875
     I2C i2c1(*I2C1, 400);
+#ifdef HAS_MAX31875
     MAX31875 board_temperature(i2c1);
 #endif
 #ifdef HAS_BRIDGE_THERMISTORS
