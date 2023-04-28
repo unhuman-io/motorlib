@@ -13,6 +13,12 @@
 #define A1_DR ADC1->JDR3
 #define A2_DR ADC1->JDR4
 #define A3_DR ADC2->JDR1
+// MR0+
+#define TSENSE ADC2->JDR2
+#define TSENSE2 ADC2->JDR3
+// MR1
+#define V5V ADC2->JDR4
+#define I5V ADC3->JDR3
 
 #define TIM_R TIM4->CCR1
 #define TIM_G TIM4->CCR2
@@ -125,13 +131,12 @@ void pin_config_obot_g474_motor_r0() {
         // ADC1
         GPIO_SETL(C, 0, GPIO_MODE::ANALOG, GPIO_SPEED::LOW, 0); // A1
         GPIO_SETL(C, 1, GPIO_MODE::ANALOG, GPIO_SPEED::LOW, 0); // A2
-        GPIO_SETL(C, 2, GPIO_MODE::ANALOG, GPIO_SPEED::LOW, 0); // A3
         ADC12_COMMON->CCR = ADC_CCR_VSENSESEL | ADC_CCR_VREFEN | 3 << ADC_CCR_CKMODE_Pos; // hclk/4 (42.5 MHz)
         ADC1->SQR1 = 13 << ADC_SQR1_SQ1_Pos;    // vbus on opamp
         ADC1->JSQR = 3 << ADC_JSQR_JL_Pos | 16 << ADC_JSQR_JSQ1_Pos | 18 << ADC_JSQR_JSQ2_Pos | 6 << ADC_JSQR_JSQ3_Pos 
             | 7 << ADC_JSQR_JSQ4_Pos; // internal temperature, vrefint, A1, A2
     
-        ADC1->CFGR = ADC_CFGR_JQDIS | ADC_CFGR_OVRMOD |1 << ADC_CFGR_EXTEN_Pos | 21 << ADC_CFGR_EXTSEL_Pos; // trigger 21 -> hrtim trig1
+        ADC1->CFGR = ADC_CFGR_JQDIS | ADC_CFGR_OVRMOD | 1 << ADC_CFGR_EXTEN_Pos | 21 << ADC_CFGR_EXTSEL_Pos; // trigger 21 -> hrtim trig1
         ADC1->CFGR2 =  ADC_CFGR2_JOVSE | ADC_CFGR2_ROVSE | (8 << ADC_CFGR2_OVSS_Pos) | (7 << ADC_CFGR2_OVSR_Pos); // 256x oversample
         ADC1->SMPR1 = 6 << ADC_SMPR1_SMP6_Pos | // 247.5 cycles A1, 5.8us
                       6 << ADC_SMPR1_SMP7_Pos;  // 247.5 cycles A2, 5.8us
@@ -139,21 +144,30 @@ void pin_config_obot_g474_motor_r0() {
                       6 << ADC_SMPR2_SMP16_Pos | // 247.5 cycles interal temperature, 5.8us, 5us min
                       6 << ADC_SMPR2_SMP18_Pos;  // 247.5 cycles vrefint (~1.21V), 5.8us, 4us min
 
-                // ADC2 A3->JDR1
-        GPIO_SETL(C, 2, GPIO_MODE::ANALOG, GPIO_SPEED::LOW, 0); // VC
-        ADC2->JSQR = 0 << ADC_JSQR_JL_Pos | 8 << ADC_JSQR_JSQ1_Pos | 1 << ADC_JSQR_JEXTEN_Pos | 19 << ADC_JSQR_JEXTSEL_Pos; // trig 19 hrtim_adc_trg2 (injected)
+        // ADC2 PC2 (A3), PB0->opamp2 (Tsense), PB2 (Tsense2), PC5 (I5V)
+        GPIO_SETL(C, 2, GPIO_MODE::ANALOG, GPIO_SPEED::LOW, 0); // A3
+        GPIO_SETL(B, 0, GPIO_MODE::ANALOG, GPIO_SPEED::LOW, 0); // Tsense
+        OPAMP2->CSR = 2 << OPAMP_CSR_VPSEL_Pos | 3 << OPAMP_CSR_VMSEL_Pos | OPAMP_CSR_HIGHSPEEDEN | OPAMP_CSR_OPAMPINTEN | OPAMP_CSR_OPAMPxEN; // internal follower on pb0/vinp2
+        GPIO_SETL(B, 2, GPIO_MODE::ANALOG, GPIO_SPEED::LOW, 0); // Tsense2
+        GPIO_SETL(C, 5, GPIO_MODE::ANALOG, GPIO_SPEED::LOW, 0); // v5v
+        ADC2->JSQR = 3 << ADC_JSQR_JL_Pos | 8 << ADC_JSQR_JSQ1_Pos | 16 << ADC_JSQR_JSQ2_Pos | 12 << ADC_JSQR_JSQ3_Pos | 11 << ADC_JSQR_JSQ4_Pos | 1 << ADC_JSQR_JEXTEN_Pos | 19 << ADC_JSQR_JEXTSEL_Pos; // trig 19 hrtim_adc_trg2 (injected)
         ADC2->CFGR = ADC_CFGR_JQDIS | ADC_CFGR_OVRMOD |1 << ADC_CFGR_EXTEN_Pos | 21 << ADC_CFGR_EXTSEL_Pos; // trigger 21 -> hrtim trig1
         ADC2->SMPR1 = 6 << ADC_SMPR1_SMP8_Pos;  // 247.5 cycles A3, 5.8us
+        ADC2->SMPR2 = 6 << ADC_SMPR2_SMP11_Pos | // 247.5 cycles , 5.8us
+                      6 << ADC_SMPR2_SMP12_Pos | // 247.5 cycles , 5.8us
+                      6 << ADC_SMPR2_SMP16_Pos;  // 247.5 cycles A3, 5.8us
         ADC2->CFGR2 =  ADC_CFGR2_JOVSE | ADC_CFGR2_ROVSE | (8 << ADC_CFGR2_OVSS_Pos) | (7 << ADC_CFGR2_OVSR_Pos); // 256x oversample
 
         
         //ADC3,4,5
+        // ADC3 adds PB1 (i5v), then back to current to clear s&h error
+        GPIO_SETL(B, 1, GPIO_MODE::ANALOG, GPIO_SPEED::LOW, 0); // i5v
         ADC345_COMMON->CCR = ADC_CCR_VREFEN | 3 << ADC_CCR_CKMODE_Pos; // hclk/4 (42.5 MHz)
-
         ADC3->SMPR2 = 2 << ADC_SMPR2_SMP13_Pos; // 12.5 cycles current_sense, 294 ns, 200 ns min for opamp3
+        ADC3->SMPR1 = 2 << ADC_SMPR1_SMP1_Pos;  // 12.5 cycles, max9610 direct
         ADC4->SMPR2 = 2 << ADC_SMPR2_SMP17_Pos; // 12.5 cycles current_sense, 294 ns, 200 ns min for opamp6
         ADC5->SMPR1 = 2 << ADC_SMPR1_SMP5_Pos; // 12.5 cycles current_sense, 294 ns, 200 ns min for opamp4
-        ADC3->JSQR = 1 << ADC_JSQR_JEXTEN_Pos | 27 << ADC_JSQR_JEXTSEL_Pos | 13 << ADC_JSQR_JSQ1_Pos; // trig 27 hrtim adc_trig1 (injected)
+        ADC3->JSQR = 2 << ADC_JSQR_JL_Pos | 1 << ADC_JSQR_JEXTEN_Pos | 27 << ADC_JSQR_JEXTSEL_Pos | 13 << ADC_JSQR_JSQ1_Pos | 1 << ADC_JSQR_JSQ2_Pos | 13 << ADC_JSQR_JSQ3_Pos; // trig 27 hrtim adc_trig1 (injected)
         ADC4->JSQR = 1 << ADC_JSQR_JEXTEN_Pos | 27 << ADC_JSQR_JEXTSEL_Pos | 17 << ADC_JSQR_JSQ1_Pos; // trig 27 hrtim adc_trig1 (injected)
         ADC5->JSQR = 1 << ADC_JSQR_JEXTEN_Pos | 27 << ADC_JSQR_JEXTSEL_Pos | 5 << ADC_JSQR_JSQ1_Pos;  // trig 27 hrtim adc_trig1 (injected)
         NVIC_SetPriority(ADC5_IRQn, NVIC_EncodePriority(NVIC_GetPriorityGrouping(), 0, 0));
