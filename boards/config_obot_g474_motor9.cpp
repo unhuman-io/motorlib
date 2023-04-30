@@ -5,7 +5,11 @@
 #include "../peripheral/stm32g4/pin_config.h"
 #include "../peripheral/stm32g4/drv8323s.h"
 
-using PWM = HRPWM;
+
+using PWM = HRPWM3;
+//using MotorEncoder = ICPZ;
+using MotorEncoder = EncoderBase;
+
 using Communication = USBCommunication;
 using Driver = DRV8323S;
 volatile uint32_t * const cpu_clock = &DWT->CYCCNT;
@@ -30,30 +34,14 @@ uint16_t drv_regs_error = 0;
 #include "../main_loop.h"
 #include "../actuator.h"
 #include "../system.h"
-#include "pin_config_obot_g474_motor.h"
+#include "pin_config_obot_g474_motor9.h"
 #include "../peripheral/stm32g4/temp_sensor.h"
+#include "../peripheral/stm32g4/spi_dma.h"
+#include "../icpz.h"
 #include "../peripheral/stm32g4/i2c.h"
-
-
-#if defined(R3) || defined(R4) || defined(MR0) || defined(MR0P)
-#ifndef BROKEN_MAX31875
-#define HAS_MAX31875
-#include "../peripheral/stm32g4/max31875.h"
-#endif
-#endif
-
-#if defined(MR1)
-#define HAS_MAX31889
 #include "../peripheral/stm32g4/max31889.h"
-#endif
 
-#if defined(R4) || defined (MR0P) || defined (MR0) || defined(MR1)
-#define HAS_BMI270
-#endif
 
-#if defined(MR0) || defined (MR0P)
-#define HAS_BRIDGE_THERMISTORS
-#endif
 
 namespace config {
     static_assert(((double) CPU_FREQUENCY_HZ * 8 / 2) / pwm_frequency < 65535);    // check pwm frequency
@@ -64,18 +52,14 @@ namespace config {
 #endif
     TempSensor temp_sensor;
     I2C i2c1(*I2C1, 400);
-#ifdef HAS_MAX31875
-    MAX31875 board_temperature(i2c1);
-#endif
-#ifdef HAS_MAX31889
+
     MAX31889 board_temperature(i2c1);
-#endif
-#ifdef HAS_BRIDGE_THERMISTORS
-    NTC temp_bridge(TSENSE);
-    NTC temp_bridge2(TSENSE2);
-#endif
-    HRPWM motor_pwm = {pwm_frequency, *HRTIM1, 3, 5, 4, false, 200, 1000, 0};
+    HRPWM3 motor_pwm = {pwm_frequency, *HRTIM1, 3, 3, 0, 1000, 0};
     USB1 usb;
+    GPIO motor_encoder_cs = {*GPIOD, 2, GPIO::OUTPUT}; // todo, correct gpio and spi
+    SPIDMA spi3_dma = {*SPI3, motor_encoder_cs, *DMA1_Channel1, *DMA1_Channel2};
+    //ICPZ motor_encoder(spi3_dma);
+    MotorEncoder motor_encoder;
     FastLoop fast_loop = {(int32_t) pwm_frequency, motor_pwm, motor_encoder, param->fast_loop_param, &I_A_DR, &I_B_DR, &I_C_DR, &V_BUS_DR};
     LED led = {const_cast<uint16_t*>(reinterpret_cast<volatile uint16_t *>(&TIM_R)), 
                const_cast<uint16_t*>(reinterpret_cast<volatile uint16_t *>(&TIM_G)),
@@ -127,13 +111,7 @@ void system_init() {
     std::function<float()> get_t = std::bind(&TempSensor::get_value, &config::temp_sensor);
     std::function<void(float)> set_t = std::bind(&TempSensor::set_value, &config::temp_sensor, std::placeholders::_1);
     System::api.add_api_variable("T", new APICallbackFloat(get_t, set_t));
-#if defined(HAS_MAX31875) || defined(HAS_MAX31889)
     System::api.add_api_variable("Tboard", new const APICallbackFloat([](){ return config::board_temperature.get_temperature(); }));
-#endif
-#ifdef HAS_BRIDGE_THERMISTORS
-    System::api.add_api_variable("Tbridge", new const APICallbackFloat([](){ return config::temp_bridge.read(); }));
-    System::api.add_api_variable("Tbridge2", new const APICallbackFloat([](){ return config::temp_bridge2.read(); }));
-#endif
     System::api.add_api_variable("index_mod", new APIInt32(&index_mod));
     System::api.add_api_variable("pwm_mult", new APICallbackUint8([](){return config::motor_pwm.get_frequency_multiplier();}, [](uint8_t mult){ config::motor_pwm.set_frequency_multiplier(mult);}));
     System::api.add_api_variable("drv_err", new const APICallbackUint32([](){ return config::drv.get_drv_status(); }));
@@ -187,7 +165,7 @@ void system_init() {
 
     TIM1->CR1 = TIM_CR1_CEN; // start main loop interrupt
     config::usb.connect();
-    HRTIM1->sMasterRegs.MCR = HRTIM_MCR_TDCEN + HRTIM_MCR_TECEN + HRTIM_MCR_TFCEN; // start high res timer
+    HRTIM1->sMasterRegs.MCR = HRTIM_MCR_TACEN  + HRTIM_MCR_TDCEN + HRTIM_MCR_TFCEN; // start high res timer
 }
 
 FrequencyLimiter temp_rate = {10};
@@ -205,25 +183,11 @@ void system_maintenance() {
         if (T > 100) {
             config::main_loop.status_.error.microcontroller_temperature = 1;
         }
-#if defined(HAS_MAX31875) || defined(HAS_MAX31889)
         config::board_temperature.read();
         round_robin_logger.log_data(BOARD_TEMPERATURE_INDEX, config::board_temperature.get_temperature());
         if (config::board_temperature.get_temperature() > 100) {
             config::main_loop.status_.error.board_temperature = 1;
         }
-#endif
-#ifdef HAS_BRIDGE_THERMISTORS
-        config::temp_bridge.read();
-        round_robin_logger.log_data(MOSFET_TEMPERATURE_INDEX, config::temp_bridge.get_temperature());
-        if (config::temp_bridge.get_temperature() > 150) {
-            config::main_loop.status_.error.board_temperature = 1;
-        }
-        round_robin_logger.log_data(MOSFET2_TEMPERATURE_INDEX, config::temp_bridge2.get_temperature());
-        config::temp_bridge2.read();
-        if (config::temp_bridge2.get_temperature() > 150) {
-            config::main_loop.status_.error.board_temperature = 1;
-        }
-#endif
     }   
     
     float bus_current = config::main_loop.status_.power/config::main_loop.status_.fast_loop.vbus;
