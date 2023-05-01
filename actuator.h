@@ -59,6 +59,12 @@ class Actuator {
          ms_delay(10);
          main_loop_.driver_.disable();
       }
+
+      MainLoopStatus status = main_loop_.get_status();
+      if (main_loop_.param_.output_encoder.disagreement_tolerance > 0 &&
+          std::abs(status.output_position - startup_param_.gear_ratio * status.motor_position) > main_loop_.param_.output_encoder.disagreement_tolerance) {
+        main_loop_.status_.error.encoder_disagreement = 1;
+      }
     }
     void set_bias() {
       MainLoopStatus status = main_loop_.get_status();
