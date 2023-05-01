@@ -102,9 +102,7 @@ class MotorHandler:
 		self.name = name
 		self.motor_info = motor_info
 		self.config_file_path = os.path.expanduser(config_dir_path + "/" + name + ".json")
-		# self.config_file_path = os.path.expanduser(config_file_path)
 		self.serial_number = motor_info["sn"]
-		# self.serial_number = serial_number
 		self.json_config_file = CalibrationFile(self.config_file_path)
 		self.client = client
 		self.param_address = "0x8060000"
