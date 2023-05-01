@@ -33,7 +33,7 @@ class SensorMultiplex : public SensorBase {
       }
     int32_t get_value() const { return primary_.get_value(); }
     void trigger() { 
-       if (count_++ > decimation_) {
+       if (count_++ >= decimation_) {
          count_ = 0;
          if (toggle_) { 
             primary_.reinit(); primary_.trigger(); 
