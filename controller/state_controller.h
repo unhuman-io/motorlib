@@ -30,7 +30,7 @@ class StateController : public Controller {
         torque_last_ = status.torque;
 
         float iq_des = c.kp*position_error_ + c.kd*velocity_error_ + c.kt*torque_error_ + 
-            c.ks*torque_dot_error_ + param_.ff_tau*command.torque_desired + command.current_desired;
+            c.ks*torque_dot_error_ + c.ff_tau*command.torque_desired + command.current_desired;
         float iq_filtered = output_filter_.update(iq_des);
         float iq_sat = fsat(iq_filtered, param_.command_max);
         return iq_sat;

@@ -104,7 +104,6 @@ typedef struct {
     float torque_dot_filter_frequency_hz;
     float output_filter_frequency_hz;
     float position_desired_filter_frequency_hz;
-    float ff_tau;
     float command_max;
 } StateControllerParam;
 
