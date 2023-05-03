@@ -43,15 +43,16 @@ class Aksim2Encoder : public EncoderBase {
         diag_.warn = diag.warn;
         crc_calc_ = ~CRC_BiSS_43_24bit(raw_value_ >> (31 - 2 - nbits_)) & 0x3F; // crc of data plus 2 status bits
         diag_.crc6 = crc_calc_ == diag.crc6;
-        if (!diag_.err) {
-            diag_err_count_++;
-        }
-        if (!diag_.warn) {
-            diag_warn_count_++;
-        }
         if (!diag_.crc6) {
             crc_error_raw_latch_ = raw_value_;
             crc_err_count_++;
+        } else {
+            if (!diag_.err) {
+                diag_err_count_++;
+            }
+            if (!diag_.warn) {
+                diag_warn_count_++;
+            }
         }
 
         if (diag_.crc6 && diag_.err) {
