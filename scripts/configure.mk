@@ -5,7 +5,7 @@
 
 # Build path
 BUILD_DIR = build
-GIT_VERSION := $(shell git describe --dirty --always)
+GIT_VERSION := $(shell git describe --long --dirty --always)
 
 SELF_DIR := $(dir $(lastword $(MAKEFILE_LIST)))
 
