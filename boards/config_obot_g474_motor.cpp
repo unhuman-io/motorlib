@@ -32,6 +32,7 @@ uint16_t drv_regs_error = 0;
 #include "../system.h"
 #include "pin_config_obot_g474_motor.h"
 #include "../peripheral/stm32g4/temp_sensor.h"
+#include "../temperature_sensor.h"
 #include "../peripheral/stm32g4/i2c.h"
 
 
