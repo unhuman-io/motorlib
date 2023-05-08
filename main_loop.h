@@ -239,7 +239,7 @@ class MainLoop {
           vq_des = receive_data_.voltage.voltage_desired;
           break;
         case PHASE_LOCK:
-          fast_loop_.phase_lock_mode(receive_data_.current_desired);
+          fast_loop_.set_id_des(receive_data_.current_desired);
           break;
         case FIND_LIMITS:
         {
