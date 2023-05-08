@@ -56,8 +56,8 @@ FOCStatus * const FOC::step(const FOCCommand &command) {
     status_.command.v_c = v_c_desired;
     status_.command.v_d = v_d_desired;
     status_.command.v_q = v_q_desired;
-    status_.measured.i_d = i_d_measured;
-    status_.measured.i_q = i_q_measured;
+    status_.measured.i_d = i_d_measured_filtered;
+    status_.measured.i_q = i_q_measured_filtered;
     status_.measured.i_0 = i_abc_measured[0] + i_abc_measured[1] + i_abc_measured[2];
     return &status_;
 }
