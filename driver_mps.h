@@ -14,6 +14,7 @@ class DriverMPS : public DriverBase {
 
     void enable() {
         GPIOC->BSRR = GPIO_BSRR_BS13; // drv enable
+        ms_delay(10);
         DriverBase::enable();
     }
 
