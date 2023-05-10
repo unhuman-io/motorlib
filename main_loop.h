@@ -390,6 +390,7 @@ class MainLoop {
             led_.set_color(LED::SPRING);
             break;
           case POSITION_TUNING:
+            position_trajectory_generator_.init();
           case POSITION:
             position_controller_.init(status_);
           case VELOCITY:

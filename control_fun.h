@@ -244,6 +244,7 @@ class TrajectoryGenerator {
             }
         }
     }
+    void init(float phi=0) { phi_.init(phi); }
 
     TrajectoryValue &step(float dt) {
         // phi_ is a radian counter at the command frequency doesn't get larger than 2*pi
