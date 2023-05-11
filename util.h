@@ -95,39 +95,11 @@ inline T signextend(const T x)
   return s.x = x;
 }
 
-inline std::vector<char> hex_to_bytes(const std::string& hex) {
-  std::vector<char> bytes;
-
-  for (unsigned int i = 0; i < hex.length(); i += 2) {
-    std::string byteString = hex.substr(i, 2);
-    char byte = (char) strtol(byteString.c_str(), NULL, 16);
-    bytes.push_back(byte);
-  }
-  return bytes;
-}
-
-inline std::string byte_to_hex(const uint8_t byte) {
-    const char hexval[16] = {'0', '1', '2', '3', '4', '5', '6', '7', '8', '9', 'a', 'b', 'c', 'd', 'e', 'f'};
-    char c[3] = { hexval[(byte >> 4) & 0xF], hexval[byte & 0xF] };
-    return c;
-}
-
-inline std::string u16_to_hex(const uint16_t w) {
-    return byte_to_hex((uint8_t) (w>>8)) + byte_to_hex((uint8_t) (w & 0xFF));
-}
-
-inline std::string u32_to_hex(const uint32_t w) {
-    return byte_to_hex((uint8_t) (w>>24)) + byte_to_hex((uint8_t) ((w>>16) & 0xFF)) +
-            byte_to_hex((uint8_t) ((w>>8) & 0xFF)) + byte_to_hex((uint8_t) (w & 0xFF));
-}
-
-inline std::string bytes_to_hex(const std::vector<char>& bytes) { 
-    std::string s;   
-    for (uint8_t b : bytes) {
-        s += byte_to_hex(b);
-    }
-    return s;
-}
+std::vector<char> hex_to_bytes(const std::string& hex);
+std::string byte_to_hex(const uint8_t byte);
+std::string u16_to_hex(const uint16_t w);
+std::string u32_to_hex(const uint32_t w);
+std::string bytes_to_hex(const std::vector<char>& bytes);
 
 #endif  // __cplusplus
 #endif  // UNHUMAN_MOTORLIB_UTIL_H_
