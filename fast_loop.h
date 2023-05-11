@@ -27,7 +27,7 @@ class FastLoop {
        frequency_hz_ = frequency_hz;
        float dt = 1.0f/frequency_hz;
        foc_ = new FOC(dt);
-       set_param(param);
+       set_param();
 #ifdef END_TRIGGER_MOTOR_ENCODER
        encoder_.trigger();
 #endif
@@ -59,10 +59,10 @@ class FastLoop {
       motor_mechanical_position_ = (motor_enc_wrap_ - motor_index_pos_);
       float motor_x = motor_mechanical_position_*inv_motor_encoder_cpr_;
 
-      motor_position_ = param_.motor_encoder.dir * (2 * (float) M_PI * inv_motor_encoder_cpr_ * motor_enc_wrap_ 
+      motor_position_ = motor_encoder_dir_ * (2 * (float) M_PI * inv_motor_encoder_cpr_ * motor_enc_wrap_ 
                           + motor_index_pos_set_*motor_correction_table_.table_interp(motor_x));
       motor_position_filtered_ = motor_position_;//(1-alpha10)*motor_position_filtered_ + alpha10*motor_position_;
-      motor_velocity =  param_.motor_encoder.dir * (motor_enc_diff)*(2*(float) M_PI * inv_motor_encoder_cpr_ * frequency_hz_);
+      motor_velocity =  motor_encoder_dir_ * (motor_enc_diff)*(2*(float) M_PI * inv_motor_encoder_cpr_ * frequency_hz_);
       motor_velocity_filtered = (1-alpha)*motor_velocity_filtered + alpha*motor_velocity;
       last_motor_enc = motor_enc;
 
@@ -216,14 +216,14 @@ class FastLoop {
       foc_->voltage_mode();
       mode_ = OPEN_MODE;
     }
-    void set_param(const FastLoopParam &fast_loop_param) {
-      param_ = fast_loop_param;
+    void set_param() {
       foc_->set_param(param_.foc_param);
       set_phase_mode();
-      if (param_.motor_encoder.dir == 0) {
-        param_.motor_encoder.dir = 1;
-      }
+      motor_encoder_dir_ = param_.motor_encoder.dir >= 0 ? 1 : -1;
       inv_motor_encoder_cpr_ = param_.motor_encoder.cpr != 0 ? 1.f/param_.motor_encoder.cpr : 0;
+      ia_bias_ = param_.ia_bias;
+      ib_bias_ = param_.ib_bias;
+      ic_bias_ = param_.ic_bias;
     }
     const FastLoopStatus &get_status() const {
       return status_.top();
@@ -246,20 +246,23 @@ class FastLoop {
     }
 
     void zero_current_sensors() {
-      param_.ia_bias = (1-alpha_zero_)*param_.ia_bias + alpha_zero_* param_.adc1_gain*(adc1-2048);
-      param_.ib_bias = (1-alpha_zero_)*param_.ib_bias + alpha_zero_* param_.adc2_gain*(adc2-2048);
-      param_.ic_bias = (1-alpha_zero_)*param_.ic_bias + alpha_zero_* param_.adc3_gain*(adc3-2048);
+      ia_bias_ = (1-alpha_zero_)*ia_bias_ + alpha_zero_* param_.adc1_gain*(adc1-2048);
+      ib_bias_ = (1-alpha_zero_)*ib_bias_ + alpha_zero_* param_.adc2_gain*(adc2-2048);
+      ic_bias_ = (1-alpha_zero_)*ic_bias_ + alpha_zero_* param_.adc3_gain*(adc3-2048);
     }
-    void set_phase_mode() {
-      phase_mode_desired_ = param_.phase_mode == 0 ? 1 : -1;
-    }
+
     void set_phase_mode(uint8_t phase_mode) {
-      param_.phase_mode = phase_mode;
-      set_phase_mode();
+      phase_mode_desired_ = phase_mode == 0 ? 1 : -1;
     }
+
+    void set_phase_mode() {
+      set_phase_mode(param_.phase_mode);
+    }
+
     uint8_t get_phase_mode() {
-      return param_.phase_mode;
+      return phase_mode_desired_;
     }
+
     float get_rollover() const { return 2*M_PI*inv_motor_encoder_cpr_*param_.motor_encoder.rollover; }
     void beep_on(float t_seconds = 1) {
       beep_ = true;
@@ -281,11 +284,13 @@ class FastLoop {
       status_log_.copy(status_);
     }
  private:
-    FastLoopParam param_;
+    FastLoopParam param_; // reallocate tables in ram
+
     FOC *foc_;
     PWM &pwm_;
     enum {OPEN_MODE, BRAKE_MODE, CURRENT_MODE, PHASE_LOCK_MODE, VOLTAGE_MODE, CURRENT_TUNING_MODE, STEPPER_TUNING_MODE} mode_ = CURRENT_MODE;
 
+    float motor_encoder_dir_;
     int32_t motor_enc;
     int32_t last_motor_enc=0;
     float motor_position_ = 0;
@@ -297,6 +302,8 @@ class FastLoop {
     float phase_mode_ = 1;    // 1: standard or -1: two wires switched
     float phase_mode_desired_ = 1;
     int32_t motor_mechanical_position_ = 0;
+
+    float ia_bias_, ib_bias_, ic_bias_;
 
     float iq_des = 0;
     float id_des = 0;
@@ -335,7 +342,7 @@ class FastLoop {
    PChipTable<MOTOR_ENCODER_TABLE_LENGTH> motor_correction_table_;
    PChipTable<COGGING_TABLE_SIZE> cogging_correction_table_;
    CStack<FastLoopStatus,100> status_;
-   CStack<FastLoopStatus,100> status_log_;
+   CStack<FastLoopStatus,100> status_log_; // 24*4*100*2 = 19200 bytes
    bool beep_ = false;
    uint32_t beep_end_ = 0;
    bool zero_current_sensors_ = false;

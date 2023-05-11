@@ -40,10 +40,10 @@ typedef struct {
                             // for linear encoders set to poles per mm * 2 * pi
 } FOCParam;
 
-#define COGGING_TABLE_SIZE 512  // must be multiple of 2
-#define MOTOR_ENCODER_TABLE_LENGTH  512
+#define COGGING_TABLE_SIZE 128  // must be multiple of 2
+#define MOTOR_ENCODER_TABLE_LENGTH  128
 #define OUTPUT_ENCODER_TABLE_LENGTH  128
-#define TORQUE_TABLE_LENGTH  512
+#define TORQUE_TABLE_LENGTH  128
 
 typedef struct {
     float ia_bias, ib_bias, ic_bias;                // initial guess at current sensor bias in amps
@@ -138,7 +138,7 @@ typedef struct {
         float disagreement_tolerance;               // fault if |output_encoder - startup_param.gear_ratio*motor_encoder| > disagreement_tolerance
                                                     // 0 to disable
     } output_encoder;
-    struct {
+    struct EncoderLimits {
         float motor_hard_max;         // will switch to safe mode if going past these limits
         float motor_hard_min;         // ignored if both are set to the same value
         float output_hard_max;
