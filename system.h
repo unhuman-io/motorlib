@@ -112,11 +112,11 @@ class System {
         API_ADD_FILTER(state_torque_error_filter, FirstOrderLowPassFilter, actuator_.main_loop_.state_controller_.torque_error_filter_);
         API_ADD_FILTER(state_torque_dot_error_filter, FirstOrderLowPassFilter, actuator_.main_loop_.state_controller_.torque_dot_error_filter_);
         API_ADD_FILTER(state_position_desired_filter, SecondOrderLowPassFilter, actuator_.main_loop_.state_controller_.position_desired_filter_);
-        api.add_api_variable("vbus_min", new APIFloat(&actuator_.main_loop_.param_.vbus_min));
-        api.add_api_variable("vbus_max", new APIFloat(&actuator_.main_loop_.param_.vbus_max));
-        api.add_api_variable("ia_bias", new APIFloat(&actuator_.fast_loop_.param_.ia_bias));
-        api.add_api_variable("ib_bias", new APIFloat(&actuator_.fast_loop_.param_.ib_bias));
-        api.add_api_variable("ic_bias", new APIFloat(&actuator_.fast_loop_.param_.ic_bias));
+        api.add_api_variable("vbus_min", new APIFloat(&actuator_.main_loop_.vbus_min_));
+        api.add_api_variable("vbus_max", new APIFloat(&actuator_.main_loop_.vbus_max_));
+        api.add_api_variable("ia_bias", new APIFloat(&actuator_.fast_loop_.ia_bias_));
+        api.add_api_variable("ib_bias", new APIFloat(&actuator_.fast_loop_.ib_bias_));
+        api.add_api_variable("ic_bias", new APIFloat(&actuator_.fast_loop_.ic_bias_));
         api.add_api_variable("power", new const APIFloat(&actuator_.main_loop_.status_.fast_loop.power));
         api.add_api_variable("power_avg", new const APIFloat(&actuator_.main_loop_.status_.power));
         api.add_api_variable("energy", new const APIUint32(&actuator_.main_loop_.status_.fast_loop.energy_uJ));
@@ -143,17 +143,17 @@ class System {
             return "ok"; }));
         api.add_api_variable("beep", new APICallbackFloat([](){ return 0; }, [](float f){ actuator_.fast_loop_.beep_on(f); }));
         api.add_api_variable("zero_current_sensors", new APICallbackFloat([](){ return 0; }, [](float f){ actuator_.fast_loop_.zero_current_sensors_on(f); }));
-        api.add_api_variable("disable_safe_mode", new const APICallback([](){ actuator_.main_loop_.param_.error_mask.all = ERROR_MASK_NONE; return "ok"; }));
-        api.add_api_variable("error_mask", new APICallback([](){ return u32_to_hex(actuator_.main_loop_.param_.error_mask.all); },
+        api.add_api_variable("disable_safe_mode", new const APICallback([](){ actuator_.main_loop_.error_mask_.all = ERROR_MASK_NONE; return "ok"; }));
+        api.add_api_variable("error_mask", new APICallback([](){ return u32_to_hex(actuator_.main_loop_.error_mask_.all); },
                 [](std::string s){ try {
-                        actuator_.main_loop_.param_.error_mask.all = std::stoul(s, nullptr, 16);}
+                        actuator_.main_loop_.error_mask_.all = std::stoul(s, nullptr, 16);}
                     catch(...) {} }));
         api.add_api_variable("help", new const APICallback([](){ return api.get_all_api_variables(); }));
         api.add_api_variable("api_length", new const APICallbackUint16([](){ return api.get_api_length(); }));
         api.add_api_variable("disable_position_limits", new APIBool(&actuator_.main_loop_.position_limits_disable_));
         api.add_api_variable("jkpj", new APIFloat(&actuator_.main_loop_.joint_position_controller_.param_.kpj));
         api.add_api_variable("motor_position_raw", new const APIFloat(&actuator_.fast_loop_.motor_position_));
-        api.add_api_variable("obias", new APIFloat(&actuator_.main_loop_.param_.output_encoder.bias));
+        api.add_api_variable("obias", new APIFloat(&actuator_.main_loop_.output_encoder_bias_));
         api.add_api_variable("mbias", new APIFloat(&actuator_.main_loop_.motor_encoder_bias_));
         api.add_api_variable("ttgain", new APIFloat(&actuator_.main_loop_.param_.torque_sensor.table_gain));
         API_ADD_FILTER(id_filter, FirstOrderLowPassFilter, actuator_.fast_loop_.foc_->id_filter_);
@@ -161,9 +161,9 @@ class System {
         api.add_api_variable("startup_phase_lock_current", new const APIFloat(&param->startup_param.phase_lock_current));
         api.add_api_variable("startup_mbias", new APIFloat(&actuator_.startup_motor_bias_));
         api.add_api_variable("set_startup_bias", new const APICallback([](){ actuator_.set_bias(); return "ok"; }));
-        api.add_api_variable("odir", new APIFloat(&actuator_.main_loop_.param_.output_encoder.dir));
-        api.add_api_variable("tdir", new APIFloat(&actuator_.main_loop_.param_.torque_sensor.dir));
-        api.add_api_variable("mdir", new APIFloat(&actuator_.fast_loop_.param_.motor_encoder.dir));
+        api.add_api_variable("odir", new APIFloat(&actuator_.main_loop_.output_encoder_dir_));
+        api.add_api_variable("tdir", new APIFloat(&actuator_.main_loop_.torque_sensor_dir_));
+        api.add_api_variable("mdir", new APIFloat(&actuator_.fast_loop_.motor_encoder_dir_));
 
         uint32_t t_start = get_clock();
         while(1) {

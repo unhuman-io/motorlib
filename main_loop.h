@@ -40,13 +40,7 @@ class MainLoop {
           output_encoder_correction_table_(param_.output_encoder.table), 
           torque_correction_table_(param_.torque_sensor.table), driver_(driver), brake_(brake),
           iq_filter_(1.0/10000, 1) {
-          set_param(param);
-          if (param_.vbus_min == 0) {
-            param_.vbus_min = 8;  // defaults that can be overridden via api
-          }
-          if (param_.vbus_max == 0) {
-            param_.vbus_max = 60;
-          }
+          set_param();
         }
     void init() {}
     void update() {
@@ -113,33 +107,33 @@ class MainLoop {
         status_.error.sequence = 1;
       }
 
-      status_.error.bus_voltage_low |= status_.fast_loop.vbus < param_.vbus_min;
-      status_.error.bus_voltage_high |= status_.fast_loop.vbus > param_.vbus_max;
+      status_.error.bus_voltage_low |= status_.fast_loop.vbus < vbus_min_;
+      status_.error.bus_voltage_high |= status_.fast_loop.vbus > vbus_max_;
 
       int32_t output_encoder_raw = output_encoder_.read();
       float output_encoder_x = (output_encoder_raw % (int32_t) param_.output_encoder.cpr) / (float) param_.output_encoder.cpr;
       float output_encoder_rad = output_encoder_raw*2.0*(float) M_PI/param_.output_encoder.cpr;
-      status_.output_position = param_.output_encoder.dir * output_encoder_rad + param_.output_encoder.bias 
+      status_.output_position = output_encoder_dir_ * output_encoder_rad + output_encoder_bias_ 
         + output_encoder_correction_table_.table_interp(output_encoder_x);
 
       status_.motor_position = status_.fast_loop.motor_position.position + motor_encoder_bias_;
 
-      float torque_corrected = param_.torque_sensor.dir * (torque_sensor_.read() + param_.torque_sensor.bias) + param_.torque_sensor.bias;
+      float torque_corrected = torque_sensor_dir_ * (torque_sensor_.read() + param_.torque_sensor.bias) + param_.torque_sensor.bias;
       //if (torque_corrected != status_.torque) {
         torque_corrected += param_.torque_correction*status_.fast_loop.foc_status.measured.i_q;
       //}
-      float torque_calibrated = torque_corrected + param_.torque_sensor.table_gain*torque_correction_table_.table_interp(output_encoder_x+param_.output_encoder.bias*(1.0/(2*M_PI)));
+      float torque_calibrated = torque_corrected + param_.torque_sensor.table_gain*torque_correction_table_.table_interp(output_encoder_x+output_encoder_bias_*(1.0/(2*M_PI)));
       status_.torque = torque_calibrated;
 
       if (!position_limits_disable_) {
-        if ((status_.motor_position > param_.encoder_limits.motor_hard_max ||
-            status_.motor_position < param_.encoder_limits.motor_hard_min) && started_) {
+        if ((status_.motor_position > encoder_limits_.motor_hard_max ||
+            status_.motor_position < encoder_limits_.motor_hard_min) && started_) {
           status_.error.motor_encoder_limit = 1;
         }
         status_.error.motor_encoder |= fast_loop_.motor_encoder_error();
         
-        if ((status_.output_position > param_.encoder_limits.output_hard_max ||
-            status_.output_position < param_.encoder_limits.output_hard_min) && started_) {
+        if ((status_.output_position > encoder_limits_.output_hard_max ||
+            status_.output_position < encoder_limits_.output_hard_min) && started_) {
             status_.error.output_encoder_limit = 1;
         }
         status_.error.output_encoder |= output_encoder_.error();
@@ -149,7 +143,7 @@ class MainLoop {
 
       iq_filter_.update(status_.fast_loop.foc_status.measured.i_q);
 
-      if (status_.error.all & param_.error_mask.all && !(receive_data_.mode_desired == DRIVER_ENABLE)) {
+      if (status_.error.all & error_mask_.all && !(receive_data_.mode_desired == DRIVER_ENABLE)) {
           status_.error.fault = 1;
           safe_mode_ = true;
           set_mode(param_.safe_mode);
@@ -261,8 +255,8 @@ class MainLoop {
                 find_limits_state_ = VELOCITY_TO_POSITION;
                 // record negative limit
                 // change encoder biases around
-                adjust_output_encoder(-(status_.output_position - param_.encoder_limits.output_hard_min));
-                adjust_motor_encoder(-(status_.motor_position - param_.encoder_limits.motor_hard_min));
+                adjust_output_encoder(-(status_.output_position - encoder_limits_.output_hard_min));
+                adjust_motor_encoder(-(status_.motor_position - encoder_limits_.motor_hard_min));
                 velocity_controller_.init(status_);
               }
               iq_des = velocity_controller_.step(command, status_);
@@ -291,8 +285,8 @@ class MainLoop {
       }
 
       if (!position_limits_disable_) {
-        if (((status_.motor_position > param_.encoder_limits.motor_controlled_max && iq_des >= 0) ||
-            (status_.motor_position < param_.encoder_limits.motor_controlled_min && iq_des <= 0)) && started_) {
+        if (((status_.motor_position > encoder_limits_.motor_controlled_max && iq_des >= 0) ||
+            (status_.motor_position < encoder_limits_.motor_controlled_min && iq_des <= 0)) && started_) {
             if (mode_ != VELOCITY && mode_ != param_.safe_mode) {
               set_mode(VELOCITY);
             }
@@ -325,42 +319,49 @@ class MainLoop {
     }
 
 
-    void set_param(const MainLoopParam &param) {
-      position_controller_.set_param(param.position_controller_param);
-      torque_controller_.set_param(param.torque_controller_param);
-      impedance_controller_.set_param(param.impedance_controller_param);
-      velocity_controller_.set_param(param.velocity_controller_param);
-      state_controller_.set_param(param.state_controller_param);
-      joint_position_controller_.set_param(param.joint_position_controller_param);
-      torque_sensor_.set_param(param.torque_sensor);
+    void set_param() {
+      position_controller_.set_param(param_.position_controller_param);
+      torque_controller_.set_param(param_.torque_controller_param);
+      impedance_controller_.set_param(param_.impedance_controller_param);
+      velocity_controller_.set_param(param_.velocity_controller_param);
+      state_controller_.set_param(param_.state_controller_param);
+      joint_position_controller_.set_param(param_.joint_position_controller_param);
+      torque_sensor_.set_param(param_.torque_sensor);
       if (param_.encoder_limits.motor_hard_max == param_.encoder_limits.motor_hard_min) {
-        param_.encoder_limits.motor_hard_max = INFINITY;
-        param_.encoder_limits.motor_hard_min = -INFINITY;
+        encoder_limits_.motor_hard_max = INFINITY;
+        encoder_limits_.motor_hard_min = -INFINITY;
+      } else {
+        encoder_limits_.motor_hard_max = param_.encoder_limits.motor_hard_max;
+        encoder_limits_.motor_hard_min = param_.encoder_limits.motor_hard_min;
       }
       if (param_.encoder_limits.motor_controlled_max == param_.encoder_limits.motor_controlled_min) {
-        param_.encoder_limits.motor_controlled_max = INFINITY;
-        param_.encoder_limits.motor_controlled_min = -INFINITY;
+        encoder_limits_.motor_controlled_max = INFINITY;
+        encoder_limits_.motor_controlled_min = -INFINITY;
+      } else {
+        encoder_limits_.motor_controlled_max = param_.encoder_limits.motor_controlled_max;
+        encoder_limits_.motor_controlled_min = param_.encoder_limits.motor_controlled_min;
       }
       if (param_.encoder_limits.output_hard_max == param_.encoder_limits.output_hard_min) {
-        param_.encoder_limits.output_hard_max = INFINITY;
-        param_.encoder_limits.output_hard_min = -INFINITY;
+        encoder_limits_.output_hard_max = INFINITY;
+        encoder_limits_.output_hard_min = -INFINITY;
+      } else {
+        encoder_limits_.output_hard_max = param_.encoder_limits.output_hard_max;
+        encoder_limits_.output_hard_min = param_.encoder_limits.output_hard_min;
       }
-      if (param_.error_mask.all == 0) {
-        param_.error_mask.all = ERROR_MASK_ALL;
-      }
-      if (param_.output_encoder.dir == 0) {
-        param_.output_encoder.dir = 1;
-      }
-      if (param_.torque_sensor.dir == 0) {
-        param_.torque_sensor.dir = 1;
-      }
+
+      output_encoder_bias_ = param_.output_encoder.bias;
+      error_mask_.all = param_.error_mask.all == 0 ? ERROR_MASK_ALL : param_.error_mask.all;
+      output_encoder_dir_ = param_.output_encoder.dir == 0 ? 1 : param_.output_encoder.dir;
+      torque_sensor_dir_ = param_.torque_sensor.dir == 0 ? 1 : param_.torque_sensor.dir;
+      vbus_min_ = param_.vbus_min == 0 ? 8 : param_.vbus_min;
+      vbus_max_ = param_.vbus_max == 0 ? 58 : param_.vbus_max;
     }
     void set_rollover(float rollover) {
       position_controller_.set_rollover(rollover);
       impedance_controller_.set_rollover(rollover);
       velocity_controller_.set_rollover(rollover);
     }
-    void adjust_output_encoder(float adjustment) { param_.output_encoder.bias += adjustment; }
+    void adjust_output_encoder(float adjustment) { output_encoder_bias_ += adjustment; }
     void set_motor_encoder_bias(float bias) { motor_encoder_bias_ = bias; }
     void adjust_motor_encoder(float adjustment) { motor_encoder_bias_ += adjustment; }
     const MainLoopStatus & get_status() const { return status_stack_.top(); }
@@ -531,7 +532,7 @@ class MainLoop {
     bool first_command_received() const { return first_command_received_; }
  private:
     LED* led() { return &led_; }
-    MainLoopParam param_;
+    const MainLoopParam &param_;
     FastLoop &fast_loop_;
     PositionController &position_controller_;
     TorqueController &torque_controller_;
@@ -540,6 +541,11 @@ class MainLoop {
     StateController &state_controller_;
     JointPositionController &joint_position_controller_;
     Communication &communication_;
+    MainLoopParam::EncoderLimits encoder_limits_;
+    MotorError error_mask_;
+    float vbus_min_, vbus_max_;
+    float torque_sensor_dir_;
+    float output_encoder_dir_;
     LED &led_;
     ReceiveData receive_data_ = {};
     mcu_time host_timestamp_ = {};
@@ -555,6 +561,7 @@ class MainLoop {
     MainControlMode mode_ = NO_MODE;
     OutputEncoder &output_encoder_;
     float motor_encoder_bias_ = 0;
+    float output_encoder_bias_ = 0;
     TorqueSensor &torque_sensor_;
     FrequencyLimiter current_tuning_rate_limiter_ = {10};
     bool fast_log_ready_ = true;
