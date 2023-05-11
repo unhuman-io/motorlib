@@ -65,7 +65,7 @@ C_INCLUDES =  \
 -IDrivers/CMSIS/Include \
 -I$(DRIVERS)/STM32G4xx_HAL_Driver/Inc \
 -I$(DRIVERS)/STM32G4xx_HAL_Driver/Inc/Legacy \
--I$(DRIVERS)/CMSIS/Device/ST/STM32G4xx/Include \
+-I../motorlib/device/stm32g4/Include \
 -I$(DRIVERS)/CMSIS/Include
 
 #######################################
