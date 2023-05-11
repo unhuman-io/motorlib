@@ -9,6 +9,7 @@ As per the convention of `motorlib`, filtering is taken care of by the controlle
 
 The actual realtime command interface is the [`StateControllerCommand`](https://github.com/unhuman-io/motor_messages/blob/ccfa577f92dc7b82534664f639baf24b8acd76f7/motor_messages.h#L135) in [`motor_messages.h`](../motor_messages/motor_messages.h). Parameters are definined in [`StateControllerParam`](https://github.com/unhuman-io/motorlib/blob/4dcba4bdafbc64327b806b476517bcbbcb4a0b4d/messages.h#L95) in [`messages.h'](../messages.h). The tuning interface to the parameters is:
   - `state_command_max`
+  - `state_ff_tau`
   - `state_output_filter`
   - `state_velocity_error_filter`
   - `state_torque_error_filter`
