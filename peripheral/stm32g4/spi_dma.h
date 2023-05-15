@@ -52,6 +52,21 @@ class SPIDMA {
         }
     }
 
+    void start_write(const uint8_t * const data_out, uint8_t length) {
+        if (!*register_operation_) {
+            gpio_cs_.clear();
+            ns_delay(start_cs_delay_ns_);
+            tx_dma_.CCR = 0;
+            rx_dma_.CCR = 0;
+            tx_dma_.CNDTR = length;
+            rx_dma_.CNDTR = length;
+            tx_dma_.CMAR = (uint32_t) data_out;
+            rx_dma_.CMAR = (uint32_t) tmp_;        
+            rx_dma_.CCR = DMA_CCR_EN;
+            tx_dma_.CCR = DMA_CCR_EN | DMA_CCR_MINC | DMA_CCR_DIR; // DIR = 1 > read from memory
+        }
+    }
+
     void finish_readwrite() {
         if (!*register_operation_) {
             while(rx_dma_.CNDTR);
