@@ -31,6 +31,7 @@ class USB1 {
     void send_stall(uint8_t endpoint);
 
     void handle_setup_packet(usb_control_request *setup_data);
+    std::string get_usb_stats() const;
 
     uint8_t device_address_ = 0;
     uint16_t interface_ = 0;
@@ -39,6 +40,19 @@ class USB1 {
     uint8_t count_rx_[3] = {};
     uint8_t rx_buffer_[3][64] = {};
     uint32_t error_count_ = 0;
+    uint32_t reset_count_ = 0;
+    uint32_t suspend_count_ = 0;
+    uint32_t istr_error_ = 0;
+    uint32_t esof_error_ = 0;
+    uint32_t realtime_rx_ = 0;
+    uint32_t realtime_tx_ = 0;
+    uint32_t api_rx_ = 0;
+    uint32_t api_tx_ = 0;
+    uint32_t control_ = 0;
+    uint32_t wkup_count_ = 0;
+    uint16_t istr_latch_ = 0;
+    uint32_t sof_count_ = 0;
+
     friend class System;
 };
 

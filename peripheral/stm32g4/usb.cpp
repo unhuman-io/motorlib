@@ -322,6 +322,7 @@ void USB1::interrupt() {
     /* Handle Reset Interrupt */
     if (USB->ISTR & USB_ISTR_RESET)
     {
+        reset_count_++;
         // Set up endpoint 0
         USB->EP0R = USB_EP_CONTROL;
         USBPMA->btable[0].ADDR_TX = offsetof(USBPMA_TypeDef, buffer[0].EP_TX);
@@ -341,6 +342,7 @@ void USB1::interrupt() {
 
     // Suspend interrupt
     if (USB->ISTR & USB_ISTR_SUSP) {
+        suspend_count_++;
         USB->ISTR &= ~USB_ISTR_SUSP;
     }
 
@@ -350,6 +352,7 @@ void USB1::interrupt() {
         uint16_t istr = USB->ISTR;
         switch (istr & USB_ISTR_EP_ID) {
             case 0:
+                control_++;
                 if (istr & USB_ISTR_DIR) { // RX
                     if (USB->EP0R & USB_EP_SETUP) {
                         uint8_t buffer[64];
@@ -369,6 +372,7 @@ void USB1::interrupt() {
                 break;
             case 2:
                 if (istr & USB_ISTR_DIR) { // RX
+                    realtime_rx_++;
                     // clear CTR_RX
                     USB->EP2R = (USB_EP_CTR_TX | (USB->EP2R & USB_EPREG_MASK)) & ~USB_EP_CTR_RX;
                     count_rx_[2] = (USBPMA->btable[2].COUNT_RX & USB_COUNT2_RX_COUNT2_RX);
@@ -377,6 +381,7 @@ void USB1::interrupt() {
                     epr_set_toggle(2, USB_EP_RX_VALID, USB_EPRX_STAT);
                 }
                 if (USB->EP2R & USB_EP_CTR_TX) {
+                    realtime_tx_++;
                     tx_data_ack_[2] = true;
                     // clear CTR_TX
                     USB->EP2R = (USB_EP_CTR_RX | (USB->EP2R & USB_EPREG_MASK)) & ~USB_EP_CTR_TX;
@@ -384,6 +389,7 @@ void USB1::interrupt() {
                 break;
             case 1:
                 if (istr & USB_ISTR_DIR) { // RX
+                    api_rx_++;
                     // clear CTR_RX
                     USB->EP1R = (USB_EP_CTR_TX | (USB->EP1R & USB_EPREG_MASK)) & ~USB_EP_CTR_RX;
                     count_rx_[1] = (USBPMA->btable[1].COUNT_RX & USB_COUNT2_RX_COUNT2_RX);
@@ -392,6 +398,7 @@ void USB1::interrupt() {
                     epr_set_toggle(1, USB_EP_RX_VALID, USB_EPRX_STAT);
                 }
                 if (USB->EP1R & USB_EP_CTR_TX) {
+                    api_tx_++;
                     tx_data_ack_[1] = true;
                      // clear CTR_TX
                     USB->EP1R = (USB_EP_CTR_RX | (USB->EP1R & USB_EPREG_MASK)) & ~USB_EP_CTR_TX;
@@ -401,12 +408,38 @@ void USB1::interrupt() {
     }
 
     if (USB->ISTR & (USB_ISTR_ERR | USB_ISTR_ESOF)) {
-        error_count_++;
+        if (USB->ISTR & USB_ISTR_ERR) {
+            error_count_++;
+        }
+        if (USB->ISTR & USB_ISTR_ESOF) {
+            esof_error_++;
+        }
         USB->ISTR &= ~(USB_ISTR_ERR | USB_ISTR_ESOF);
     }
-
+    if (USB->ISTR & USB_ISTR_WKUP) {
+        wkup_count_++;
+        USB->ISTR &= ~(USB_ISTR_WKUP);
+    }
+    if (USB->ISTR & USB_ISTR_SOF) {
+        sof_count_++;
+        USB->ISTR &= ~(USB_ISTR_SOF);
+    }
     // clear anything remaining
-    //USB->ISTR = 0;
+    if (USB->ISTR & 0x7F80) {
+        istr_error_++;
+        istr_latch_ = USB->ISTR;
+        //USB->ISTR = 0;
+    }
+}
+
+std::string USB1::get_usb_stats() const {
+    char s[256];
+    std::snprintf(s, 255, "sof: %ld, rx: %ld, tx: %ld, api_rx: %ld, api_tx: %ld, ctrl: %ld, reset: %ld, suspend: %ld, err: %ld, esof_err: %ld, wkup: %ld, istr_err: %ld %04x", 
+        sof_count_,
+        realtime_rx_, realtime_tx_, api_rx_, api_tx_, control_,
+        reset_count_, suspend_count_,
+        error_count_, esof_error_, wkup_count_, istr_error_, istr_latch_);
+    return s;
 }
 
  void USB1::handle_setup_packet(usb_control_request *setup_data) {
