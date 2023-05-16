@@ -32,11 +32,26 @@ uint16_t drv_regs_error = 0;
 #include "../system.h"
 #include "pin_config_obot_g474_motor.h"
 #include "../peripheral/stm32g4/temp_sensor.h"
+#include "../peripheral/stm32g4/i2c.h"
 
 
 #if defined(R3) || defined(R4) || defined(MR0) || defined(MR0P)
+#ifndef BROKEN_MAX31875
 #define HAS_MAX31875
 #include "../peripheral/stm32g4/max31875.h"
+#endif
+#endif
+
+#if defined(MR1)
+#define HAS_MAX31889
+#endif
+
+#if defined(R4) || defined (MR0P) || defined (MR0) || defined(MR1)
+#define HAS_BMI270
+#endif
+
+#if defined(MR0) || defined (MR0P)
+#define HAS_BRIDGE_THERMISTORS
 #endif
 
 namespace config {
@@ -47,9 +62,13 @@ namespace config {
     DRV8323S drv(*SPI1);
 #endif
     TempSensor temp_sensor;
+    I2C i2c1(*I2C1, 400);
 #ifdef HAS_MAX31875
-    I2C i2c1(*I2C1, 1000);
     MAX31875 board_temperature(i2c1);
+#endif
+#ifdef HAS_BRIDGE_THERMISTORS
+    NTC temp_bridge(TSENSE);
+    NTC temp_bridge2(TSENSE2);
 #endif
     HRPWM motor_pwm = {pwm_frequency, *HRTIM1, 3, 5, 4, false, 200, 1000, 0};
     USB1 usb;
@@ -106,6 +125,10 @@ void system_init() {
     System::api.add_api_variable("T", new APICallbackFloat(get_t, set_t));
 #ifdef HAS_MAX31875
     System::api.add_api_variable("Tboard", new const APICallbackFloat([](){ return config::board_temperature.get_temperature(); }));
+#endif
+#ifdef HAS_BRIDGE_THERMISTORS
+    System::api.add_api_variable("Tbridge", new const APICallbackFloat([](){ return config::temp_bridge.read(); }));
+    System::api.add_api_variable("Tbridge2", new const APICallbackFloat([](){ return config::temp_bridge2.read(); }));
 #endif
     System::api.add_api_variable("index_mod", new APIInt32(&index_mod));
     System::api.add_api_variable("pwm_mult", new APICallbackUint8([](){return config::motor_pwm.get_frequency_multiplier();}, [](uint8_t mult){ config::motor_pwm.set_frequency_multiplier(mult);}));
@@ -174,21 +197,41 @@ void system_maintenance() {
         while(ADC1->CR & ADC_CR_JADSTART);
         T = config::temp_sensor.read();
         v3v3 =  *((uint16_t *) (0x1FFF75AA)) * 3.0 * ADC1->GCOMP / 4096.0 / ADC1->JDR2;
+        round_robin_logger.log_data(VOLTAGE_3V3_INDEX, v3v3);
         if (T > 100) {
             config::main_loop.status_.error.microcontroller_temperature = 1;
         }
 #ifdef HAS_MAX31875
         config::board_temperature.read();
+        round_robin_logger.log_data(BOARD_TEMPERATURE_INDEX, config::board_temperature.get_temperature());
         if (config::board_temperature.get_temperature() > 100) {
             config::main_loop.status_.error.board_temperature = 1;
         }
 #endif
-    }
+#ifdef HAS_BRIDGE_THERMISTORS
+        config::temp_bridge.read();
+        round_robin_logger.log_data(MOSFET_TEMPERATURE_INDEX, config::temp_bridge.get_temperature());
+        if (config::temp_bridge.get_temperature() > 150) {
+            config::main_loop.status_.error.board_temperature = 1;
+        }
+        round_robin_logger.log_data(MOSFET2_TEMPERATURE_INDEX, config::temp_bridge2.get_temperature());
+        config::temp_bridge2.read();
+        if (config::temp_bridge2.get_temperature() > 150) {
+            config::main_loop.status_.error.board_temperature = 1;
+        }
+#endif
+    }   
+    
+    float bus_current = config::main_loop.status_.power/config::main_loop.status_.fast_loop.vbus;
+    round_robin_logger.log_data(BUS_CURRENT_INDEX, bus_current);
+    round_robin_logger.log_data(MOTOR_POWER_INDEX, config::main_loop.status_.fast_loop.power);
     if (!(GPIOC->IDR & 1<<14)) {
         driver_fault = true;
     } else if (param->main_loop_param.no_latch_driver_fault) {
         driver_fault = false;
     }
+    round_robin_logger.log_data(BUS_VOLTAGE_INDEX, config::main_loop.status_.fast_loop.vbus);
+    round_robin_logger.log_data(USB_ERROR_COUNT_INDEX, config::usb.error_count_);
     config::main_loop.status_.error.driver_fault |= driver_fault;    // maybe latch driver fault until reset
     index_mod = config::motor_encoder.index_error(param->fast_loop_param.motor_encoder.cpr);
     config_maintenance();

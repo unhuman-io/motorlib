@@ -45,7 +45,8 @@ class System {
         api.add_api_variable("vki_limit", new APIFloat(&actuator_.main_loop_.velocity_controller_.controller_.ki_limit_));
         api.add_api_variable("vmax", new APIFloat(&actuator_.main_loop_.velocity_controller_.controller_.command_max_));
         api.add_api_variable("vacceleration_limit", new APIFloat(&actuator_.main_loop_.velocity_controller_.acceleration_limit_));
-        api.add_api_variable("kpj", new APIFloat(&actuator_.main_loop_.joint_position_controller_.param_.kpj));
+        api.add_api_variable("jmax", new APIFloat(&actuator_.main_loop_.joint_position_controller_.velocity_controller_.controller_.command_max_));
+        api.add_api_variable("jki_limit", new APIFloat(&actuator_.main_loop_.joint_position_controller_.velocity_controller_.controller_.ki_limit_));
         API_ADD_FILTER(vfilt, FirstOrderLowPassFilter, actuator_.main_loop_.velocity_controller_.velocity_filter_);
         API_ADD_FILTER(voutput_filt, FirstOrderLowPassFilter, actuator_.main_loop_.velocity_controller_.controller_.output_filter_);
         api.add_api_variable("cpu_frequency", new APIUint32(&cpu_frequency));
@@ -110,6 +111,7 @@ class System {
         API_ADD_FILTER(state_velocity_error_filter, FirstOrderLowPassFilter, actuator_.main_loop_.state_controller_.velocity_error_filter_);
         API_ADD_FILTER(state_torque_error_filter, FirstOrderLowPassFilter, actuator_.main_loop_.state_controller_.torque_error_filter_);
         API_ADD_FILTER(state_torque_dot_error_filter, FirstOrderLowPassFilter, actuator_.main_loop_.state_controller_.torque_dot_error_filter_);
+        API_ADD_FILTER(state_position_desired_filter, SecondOrderLowPassFilter, actuator_.main_loop_.state_controller_.position_desired_filter_);
         api.add_api_variable("vbus_min", new APIFloat(&actuator_.main_loop_.param_.vbus_min));
         api.add_api_variable("vbus_max", new APIFloat(&actuator_.main_loop_.param_.vbus_max));
         api.add_api_variable("ia_bias", new APIFloat(&actuator_.fast_loop_.param_.ia_bias));
@@ -143,7 +145,9 @@ class System {
         api.add_api_variable("zero_current_sensors", new APICallbackFloat([](){ return 0; }, [](float f){ actuator_.fast_loop_.zero_current_sensors_on(f); }));
         api.add_api_variable("disable_safe_mode", new const APICallback([](){ actuator_.main_loop_.param_.error_mask.all = ERROR_MASK_NONE; return "ok"; }));
         api.add_api_variable("error_mask", new APICallback([](){ return u32_to_hex(actuator_.main_loop_.param_.error_mask.all); },
-                [](std::string s){ actuator_.main_loop_.param_.error_mask.all = std::stoul(s, nullptr, 16); }));
+                [](std::string s){ try {
+                        actuator_.main_loop_.param_.error_mask.all = std::stoul(s, nullptr, 16);}
+                    catch(...) {} }));
         api.add_api_variable("help", new const APICallback([](){ return api.get_all_api_variables(); }));
         api.add_api_variable("api_length", new const APICallbackUint16([](){ return api.get_api_length(); }));
         api.add_api_variable("disable_position_limits", new APIBool(&actuator_.main_loop_.position_limits_disable_));

@@ -61,7 +61,7 @@ CPPFLAGS = $(CFLAGS)
 # libraries
 LIBS = -lc -lm -lnosys 
 LIBDIR = 
-LDFLAGS = $(MCU) -specs=rdimon.specs -specs=nosys.specs -T$(LDSCRIPT) $(LIBDIR) $(LIBS) -Wl,-Map=$(BUILD_DIR)/$(TARGET).map,--cref -Wl,--gc-sections -u _printf_float
+LDFLAGS = $(MCU) -specs=nosys.specs -T$(LDSCRIPT) $(LIBDIR) $(LIBS) -Wl,-Map=$(BUILD_DIR)/$(TARGET).map,--cref -Wl,--gc-sections -u _printf_float
 	
 GCC_VERSION := $(shell $(CC) -dumpversion)
 GCC_MAJOR_VERSION := $(word 1, $(subst ., ,$(GCC_VERSION)))

@@ -103,6 +103,7 @@ typedef struct {
     float torque_filter_frequency_hz;
     float torque_dot_filter_frequency_hz;
     float output_filter_frequency_hz;
+    float position_desired_filter_frequency_hz;
     float ff_tau;
     float command_max;
 } StateControllerParam;
@@ -162,6 +163,7 @@ typedef struct {
     enum {
         ENCODER_ZERO, // motor encoder is 0 at startup plus any absolute offset
         ENCODER_BIAS, // motor encoder is set to bias at startup
+        ENCODER_VALUE, // motor encoder has startup bias added at startup
         ENCODER_BIAS_FROM_OUTPUT, // motor encoder bias is set to 
                         // (output_encoder/cpr - output_encoder.bias)*gear_ratio+motor_encoder_bias
                         // Note: this requires that output encoder and motor encoder both increment in the 
@@ -174,6 +176,7 @@ typedef struct {
                         // 
     } motor_encoder_startup;
     float gear_ratio;   // gear ratio from input to output
+    float gear_a, gear_b, gear_c, gear_d;       // cubic constants for gear ratio, 0 to not use
     float motor_encoder_bias;   // for ENCODER_BIAS and ENCODER_BIAS_FROM_OUTPUT: extra bias to add to motor encoder
                                 // for ENCODER_BIAS_*_WITH_MOTOR_CORRECTION: motor bias to give a desired motor zero position
                                     // for example when output position = 0 if motor position is -1, then motor_encoder_bias = 1

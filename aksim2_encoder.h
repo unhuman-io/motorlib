@@ -50,6 +50,7 @@ class Aksim2Encoder : public EncoderBase {
             diag_warn_count_++;
         }
         if (!diag_.crc6) {
+            crc_error_raw_latch_ = raw_value_;
             crc_err_count_++;
         }
 
@@ -72,6 +73,7 @@ class Aksim2Encoder : public EncoderBase {
     uint32_t diag_err_count_ = 0;
     uint32_t diag_warn_count_ = 0;
     uint32_t raw_value_ = 0;
+    uint32_t crc_error_raw_latch_ = 0;
 
 
  private:

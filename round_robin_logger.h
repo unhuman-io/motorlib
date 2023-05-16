@@ -3,7 +3,7 @@
 
 #include "messages.h"
 
-#define RR_DATA_LENGTH  20
+#define RR_DATA_LENGTH  ROUND_ROBIN_LENGTH
 // an indexed pile of data meant to be read in round robin fashion
 class RoundRobinLogger {
  public:

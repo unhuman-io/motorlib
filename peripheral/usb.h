@@ -27,7 +27,6 @@ class USB1 {
 
     void cancel_transfer(uint8_t endpoint);
 
- private:
      // send tx stall
     void send_stall(uint8_t endpoint);
 
