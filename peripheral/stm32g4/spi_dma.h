@@ -52,7 +52,7 @@ class SPIDMA {
         }
     }
 
-    void start_write(const uint8_t * const data_out, uint8_t length) {
+    void start_write(const uint8_t * const data_out, uint16_t length) {
         if (!*register_operation_) {
             gpio_cs_.clear();
             ns_delay(start_cs_delay_ns_);
