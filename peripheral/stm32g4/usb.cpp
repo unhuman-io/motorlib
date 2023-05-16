@@ -201,8 +201,14 @@ void USB1::connect() {
 
 void USB1::cancel_transfer(uint8_t endpoint) {
     // set NAK but it doesn't cancel any transfer in progress right now
+    uint16_t nak_count = 0;
     while((USBEPR->EP[endpoint].EPR & USB_EPTX_STAT) != USB_EP_TX_NAK) {
         epr_set_toggle(endpoint, USB_EP_TX_NAK, USB_EPTX_STAT);
+        nak_count++;
+        if (nak_count > 100) {
+            // give up
+            break;
+        }
     }
 
     // wait for any current transfer to complete, checking for activity on an EXTI pin 
