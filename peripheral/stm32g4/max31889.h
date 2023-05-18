@@ -15,8 +15,10 @@ class MAX31889 {
     }
     float read() {
         uint8_t fifo_reg = 8;
-        i2c_.write(address_, 1, &fifo_reg);
-        uint8_t raw_val[2];
+        if (!i2c_.write(address_, 1, &fifo_reg)) {
+            return 0;
+        }
+        uint8_t raw_val[2] = {};
         i2c_.read(address_, 2, raw_val);
         raw_value_ = (raw_val[0] << 8 | raw_val[1]);
         value_ = raw_value_ * .005;

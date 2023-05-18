@@ -23,10 +23,10 @@ class I2C {
             timeout_ms_ = timeout_ms;       
             regs_.CR1 |= I2C_CR1_PE;
     }
-    void write(uint8_t address, int8_t nbytes, uint8_t *data, bool stop = false) {
+    bool write(uint8_t address, int8_t nbytes, uint8_t *data, bool stop = false) {
         regs_.ISR = I2C_ISR_TXE; // flush txdr
         regs_.TXDR = data[0];
-       // regs_.CR2 = 0;
+        regs_.CR2 = 0;
         regs_.CR2 = (address << 1) | (nbytes << I2C_CR2_NBYTES_Pos) | I2C_CR2_START;
 
         for (int i=1; i<nbytes; i++) {
@@ -35,7 +35,7 @@ class I2C {
             if(trouble()) {
                 clear_isr();
                 regs_.CR2 = 0;
-                return;
+                return false;
             }
             regs_.TXDR = data[i];
         }
@@ -44,14 +44,14 @@ class I2C {
         if(trouble()) {
             clear_isr();
             regs_.CR2 = 0;
-            return;
+            return false;
         }
         if (stop) {
             regs_.CR2 = I2C_CR2_STOP;
         }
-
+        return true;
     }
-    void read(uint8_t address, uint8_t nbytes, uint8_t *data) {
+    bool read(uint8_t address, uint8_t nbytes, uint8_t *data) {
         //regs_.CR2 = 0;
         regs_.CR2 = (address << 1) | I2C_CR2_RD_WRN | (nbytes << I2C_CR2_NBYTES_Pos) | I2C_CR2_START;// | I2C_CR2_AUTOEND;
 
@@ -60,13 +60,21 @@ class I2C {
             while_timeout_ms(!rx_ready() && !trouble(), timeout_ms_);
             if(trouble()) {
                 clear_isr();
-                return;
+                return false;
             }
-            data[i] = regs_.RXDR;
+            if (rx_ready()) {
+                data[i] = regs_.RXDR;
+            } else {
+                return false;
+            }
         }
         uint32_t t_start = get_clock();
         while_timeout_ms(!transfer_complete(), timeout_ms_);
         regs_.CR2 = I2C_CR2_STOP;
+        if (timed_out(timeout_ms_)) {
+            return false;
+        }
+        return true;
     }
     bool tx_ready() const {
         return regs_.ISR &  I2C_ISR_TXE;
