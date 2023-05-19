@@ -58,6 +58,7 @@ inline uint32_t get_heap_used() {
 #define wait_while_true_with_timeout_us(condition, timeout_us) wait_while_false_with_timeout_us(!condition, timeout_us)
 
 #define while_timeout_ms(condition, ms) while((condition) && ((get_clock() - t_start) < ms*CPU_FREQUENCY_HZ/1000))
+#define timed_out(ms) ((get_clock() - t_start) > ms*CPU_FREQUENCY_HZ/1000)
 
 #ifdef __cplusplus
 #include <string>
