@@ -251,8 +251,9 @@ class FastLoop {
       ic_bias_ = (1-alpha_zero_)*ic_bias_ + alpha_zero_* param_.adc3_gain*(adc3-2048);
     }
 
-    void set_phase_mode(uint8_t phase_mode) {
+    void set_phase_mode(float phase_mode) {
       phase_mode_desired_ = phase_mode == 0 ? 1 : -1;
+      logger.log_printf("phase mode desired: %f", phase_mode_desired_);
     }
 
     void set_phase_mode() {
@@ -260,7 +261,7 @@ class FastLoop {
     }
 
     uint8_t get_phase_mode() {
-      return phase_mode_desired_;
+      return phase_mode_desired_ == 1 ? 0 : 1;
     }
 
     float get_rollover() const { return 2*M_PI*inv_motor_encoder_cpr_*param_.motor_encoder.rollover; }

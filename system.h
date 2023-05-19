@@ -90,7 +90,7 @@ class System {
         api.add_api_variable("tgain", new APIFloat(&actuator_.main_loop_.torque_sensor_.gain_));
         api.add_api_variable("tbias", new APIFloat(&actuator_.main_loop_.torque_sensor_.bias_));
         api.add_api_variable("torque", new const APIFloat(&actuator_.main_loop_.torque_sensor_.torque_));
-        api.add_api_variable("t_i_correction", new APIFloat(&actuator_.main_loop_.param_.torque_correction));
+        api.add_api_variable("t_i_correction", new const APIFloat(&actuator_.main_loop_.param_.torque_correction));
         api.add_api_variable("log", new APICallback(get_log, log));
         api.add_api_variable("messages_version", new APICallback([](){ return MOTOR_MESSAGES_VERSION; }, [](std::string s) {} ));
         api.add_api_variable("usb_err", new APIUint32(&((USBCommunication *) &communication_)->usb_.error_count_));
@@ -155,7 +155,7 @@ class System {
         api.add_api_variable("motor_position_raw", new const APIFloat(&actuator_.fast_loop_.motor_position_));
         api.add_api_variable("obias", new APIFloat(&actuator_.main_loop_.output_encoder_bias_));
         api.add_api_variable("mbias", new APIFloat(&actuator_.main_loop_.motor_encoder_bias_));
-        api.add_api_variable("ttgain", new APIFloat(&actuator_.main_loop_.param_.torque_sensor.table_gain));
+        api.add_api_variable("ttgain", new const APIFloat(&actuator_.main_loop_.param_.torque_sensor.table_gain));
         API_ADD_FILTER(id_filter, FirstOrderLowPassFilter, actuator_.fast_loop_.foc_->id_filter_);
         API_ADD_FILTER(iq_filter, FirstOrderLowPassFilter, actuator_.fast_loop_.foc_->iq_filter_);
         api.add_api_variable("startup_phase_lock_current", new const APIFloat(&param->startup_param.phase_lock_current));
