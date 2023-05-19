@@ -44,8 +44,8 @@ class Actuator {
       main_loop_.set_started();
     }
     void enable_driver() {
-         if (main_loop_.status_.fast_loop.vbus > main_loop_.param_.vbus_min && 
-            main_loop_.status_.fast_loop.vbus < main_loop_.param_.vbus_max) {
+         if (main_loop_.status_.fast_loop.vbus > main_loop_.vbus_min_ && 
+            main_loop_.status_.fast_loop.vbus < main_loop_.vbus_max_) {
             main_loop_.driver_.enable();
          }
          main_loop_.set_mode(CLEAR_FAULTS);
