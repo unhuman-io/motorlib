@@ -32,7 +32,8 @@ class I2C {
         for (int i=1; i<nbytes; i++) {
             uint32_t t_start = get_clock();
             while_timeout_ms(!tx_ready() && !trouble(), timeout_ms_);
-            if(trouble()) {
+            if(trouble() || timed_out(timeout_ms_)) {
+                //logger.log_printf("i2c write trouble or timeout isr %x, byte %d, addr %x", regs_.ISR, i, address);
                 clear_isr();
                 regs_.CR2 = 0;
                 return false;
@@ -42,6 +43,13 @@ class I2C {
         uint32_t t_start = get_clock();
         while_timeout_ms(!transfer_complete() && !trouble(), timeout_ms_);
         if(trouble()) {
+            //logger.log_printf("i2c write transfer complete trouble isr %x, addr %x", regs_.ISR, address);
+            clear_isr();
+            regs_.CR2 = 0;
+            return false;
+        }
+        if(timed_out(timeout_ms_)) {
+            //logger.log_printf("i2c write transfer complete timeout isr %x, addr %x", regs_.ISR, address);
             clear_isr();
             regs_.CR2 = 0;
             return false;
@@ -58,13 +66,15 @@ class I2C {
         for(int i=0;i<nbytes; i++) {
             uint32_t t_start = get_clock();
             while_timeout_ms(!rx_ready() && !trouble(), timeout_ms_);
-            if(trouble()) {
+            if(trouble() || timed_out(timeout_ms_)) {
+                //logger.log_printf("i2c read trouble or timeout isr %x, byte %d, addr %x", regs_.ISR, i, address);
                 clear_isr();
                 return false;
             }
             if (rx_ready()) {
                 data[i] = regs_.RXDR;
             } else {
+                //logger.log_printf("i2c read rx not ready isr %x, byte %d, addr %x", regs_.ISR, i, address);
                 return false;
             }
         }
@@ -72,6 +82,7 @@ class I2C {
         while_timeout_ms(!transfer_complete(), timeout_ms_);
         regs_.CR2 = I2C_CR2_STOP;
         if (timed_out(timeout_ms_)) {
+            //logger.log_printf("i2c read transfer complete timeout isr %x, addr %x", regs_.ISR, address);
             return false;
         }
         return true;
