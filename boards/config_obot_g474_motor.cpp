@@ -205,7 +205,7 @@ void system_maintenance() {
 #ifdef HAS_MAX31875
         config::board_temperature.read();
         round_robin_logger.log_data(BOARD_TEMPERATURE_INDEX, config::board_temperature.get_temperature());
-        if (config::board_temperature.get_temperature() > 100) {
+        if (config::board_temperature.get_temperature() > 120) {
             config::main_loop.status_.error.board_temperature = 1;
         }
 #endif
