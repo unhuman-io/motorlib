@@ -27,7 +27,7 @@ volatile uint32_t * const cpu_clock = &DWT->CYCCNT;
 namespace config {
     static_assert(((double) CPU_FREQUENCY_HZ * 8 / 2) / pwm_frequency < 65535);    // check pwm frequency
     TempSensor temp_sensor;
-    I2C i2c1(*I2C1, 1000);
+    I2C_DMA i2c1(*I2C1, 1000);
     MAX31875 board_temperature(i2c1);
     DriverMPS driver;
 

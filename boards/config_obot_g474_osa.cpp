@@ -29,7 +29,7 @@ namespace config {
     static_assert(((double) CPU_FREQUENCY_HZ * 8 / 2) / pwm_frequency < 65535);    // check pwm frequency
     TempSensor temp_sensor;
     Driver driver;
-    I2C i2c1(*I2C1, 1000);
+    I2C_DMA i2c1(*I2C1, 1000);
     MAX31875 i2c_temp_sensor(i2c1);
     HRPWM motor_pwm = {pwm_frequency, *HRTIM1, 4, 5, 3, true, 200, 1000, 0};
     USB1 usb;

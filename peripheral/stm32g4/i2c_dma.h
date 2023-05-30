@@ -99,13 +99,15 @@ class I2C_DMA {
             cancel_async_write();
             return -1;
         }
-        do {
-            error = busy();
-            timeout = get_clock() - t_start > CPU_FREQUENCY_HZ/1e6*timeout_us;
-        } while(error && !trouble() && !timeout);
-        if (error || trouble() || timeout) {
-            cancel_async_write();
-            return -2;
+        if (stop) {
+            do {
+                error = busy();
+                timeout = get_clock() - t_start > CPU_FREQUENCY_HZ/1e6*timeout_us;
+            } while(error && !trouble() && !timeout);
+            if (error || trouble() || timeout) {
+                cancel_async_write();
+                return -2;
+            }
         }
         return nbytes;
     }
