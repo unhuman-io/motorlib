@@ -51,7 +51,7 @@ uint16_t drv_regs_error = 0;
 #define HAS_BMI270
 #endif
 
-#if defined(MR0) || defined (MR0P)
+#if defined(MR0) || defined (MR0P) || defined (MR1)
 #define HAS_BRIDGE_THERMISTORS
 #endif
 
@@ -66,6 +66,9 @@ namespace config {
     I2C_DMA i2c1(*I2C1, *DMA1_Channel7, *DMA1_Channel8, 400);
 #ifdef HAS_MAX31875
     MAX31875 board_temperature(i2c1);
+#endif
+#ifdef HAS_MAX31889
+    MAX31889 board_temperature(i2c1);
 #endif
 #ifdef HAS_BRIDGE_THERMISTORS
     NTC temp_bridge(TSENSE);
@@ -127,6 +130,9 @@ void system_init() {
     std::function<void(float)> set_t = std::bind(&TempSensor::set_value, &config::temp_sensor, std::placeholders::_1);
     System::api.add_api_variable("T", new APICallbackFloat(get_t, set_t));
 #ifdef HAS_MAX31875
+    System::api.add_api_variable("Tboard", new const APICallbackFloat([](){ return config::board_temperature.get_temperature(); }));
+#endif
+#ifdef HAS_MAX31889
     System::api.add_api_variable("Tboard", new const APICallbackFloat([](){ return config::board_temperature.get_temperature(); }));
 #endif
 #ifdef HAS_BRIDGE_THERMISTORS
@@ -204,7 +210,7 @@ void system_maintenance() {
         if (T > 100) {
             config::main_loop.status_.error.microcontroller_temperature = 1;
         }
-#ifdef HAS_MAX31875
+#if defined(HAS_MAX31875) || defined(HAS_MAX31889)
         config::board_temperature.read();
         round_robin_logger.log_data(BOARD_TEMPERATURE_INDEX, config::board_temperature.get_temperature());
         if (config::board_temperature.get_temperature() > 120) {
