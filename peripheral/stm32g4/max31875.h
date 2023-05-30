@@ -23,14 +23,14 @@ class MAX31875 {
         int ret_val = i2c_.write(address_, 1, &reg);
         if (ret_val <= 0) {
             value_ = 0;
-            logger.log_printf("i2c write error: %d", ret_val);
+            //logger.log_printf("i2c write error: %d", ret_val);
             return 0;
         }
         uint8_t raw_val[2] = {};
         ret_val = i2c_.read(address_, 2, raw_val);
         if (ret_val <= 0) {
             value_ = 0;
-            logger.log_printf("i2c read error: %d", ret_val);
+            //logger.log_printf("i2c read error: %d", ret_val);
             return 0;
         }
         value_ = ((raw_val[0] << 8 | raw_val[1])>>3) * (100.0/16);

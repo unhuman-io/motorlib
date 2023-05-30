@@ -100,7 +100,7 @@ void config_init();
 
 void system_init() {
     DMAMUX1_Channel6->CCR =  DMA_REQUEST_I2C1_TX;
-    DMAMUX1_Channel7->CCR =  DMA_REQUEST_I2C2_RX;
+    DMAMUX1_Channel7->CCR =  DMA_REQUEST_I2C1_RX;
     if (config::motor_encoder.init()) {
         System::log("Motor encoder init success");
     } else {

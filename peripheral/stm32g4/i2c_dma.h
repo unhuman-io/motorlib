@@ -99,16 +99,17 @@ class I2C_DMA {
             cancel_async_write();
             return -1;
         }
-        if (stop) {
-            do {
-                error = busy();
-                timeout = get_clock() - t_start > CPU_FREQUENCY_HZ/1e6*timeout_us;
-            } while(error && !trouble() && !timeout);
-            if (error || trouble() || timeout) {
-                cancel_async_write();
-                return -2;
-            }
+        // wait for completion
+        do {
+            error = busy();
+            timeout = get_clock() - t_start > CPU_FREQUENCY_HZ/1e6*timeout_us;
+        } while(error && !trouble() && !timeout);
+        if (error || trouble() || timeout) {
+            //logger.log_printf("error: %d, trouble: %d, timeout: %d, isr: %x", error, trouble(), timeout, regs_.ISR);
+            cancel_async_write();
+            return -2;
         }
+
         return nbytes;
     }
 
@@ -138,6 +139,7 @@ class I2C_DMA {
             return -3;
         }
         if (timeout) {
+            //logger.log_printf("error: %d, trouble: %d, timeout: %d, isr: %x", error, trouble(), timeout, regs_.ISR);
             cancel_async_read();
             return -4;
         }
@@ -145,6 +147,9 @@ class I2C_DMA {
     }
     volatile bool busy() const {
         // note start can be asserted before busy becomes active
+        if (regs_.ISR & I2C_ISR_TC) {
+            return false;
+        }
         return (regs_.ISR & I2C_ISR_BUSY) | (regs_.CR2 & I2C_CR2_START);
     }
     volatile bool ready() const {

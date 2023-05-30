@@ -15,13 +15,17 @@ class MAX31889 {
     }
     float read() {
         uint8_t fifo_reg = 8;
-        if (i2c_.write(address_, 1, &fifo_reg) <= 0) {
+        int ret_val = i2c_.write(address_, 1, &fifo_reg);
+        if (ret_val <= 0) {
             value_ = 0;
+            //logger.log_printf("%x i2c write error: %d", address_, ret_val);
             return 0;
         }
         uint8_t raw_val[2] = {};
-        if (i2c_.read(address_, 2, raw_val) <= 0) {
+        ret_val = i2c_.read(address_, 2, raw_val);
+        if (ret_val <= 0) {
             value_ = 0;
+            //logger.log_printf("%x i2c read error: %d", address_, ret_val);
             return 0;
         }
         raw_value_ = (raw_val[0] << 8 | raw_val[1]);
@@ -29,7 +33,10 @@ class MAX31889 {
         
         // trigger new read
         uint8_t reg_val[2] = {0x14, 1};
-        i2c_.write(address_, 2, reg_val, true);
+        ret_val = i2c_.write(address_, 2, reg_val, true);
+        if (ret_val <= 0) {
+            //logger.log_printf("%x i2c write trigger error: %d", address_, ret_val);
+        }
 
         return get_temperature();
     }
