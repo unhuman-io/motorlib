@@ -55,6 +55,10 @@ uint16_t drv_regs_error = 0;
 #define HAS_BRIDGE_THERMISTORS
 #endif
 
+#if defined (MR1)
+#define HAS_BUS_CURRENT_SENSE
+#endif
+
 namespace config {
     static_assert(((double) CPU_FREQUENCY_HZ * 8 / 2) / pwm_frequency < 65535);    // check pwm frequency
 #ifdef SPI1_REINIT_CALLBACK
@@ -229,7 +233,9 @@ void system_maintenance() {
     }   
     
     float bus_current = config::main_loop.status_.power/config::main_loop.status_.fast_loop.vbus;
+#ifndef HAS_BUS_CURRENT_SENSE
     round_robin_logger.log_data(BUS_CURRENT_INDEX, bus_current);
+#endif
     round_robin_logger.log_data(MOTOR_POWER_INDEX, config::main_loop.status_.fast_loop.power);
     if (!(GPIOC->IDR & 1<<14)) {
         driver_fault = true;
