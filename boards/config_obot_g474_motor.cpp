@@ -129,10 +129,7 @@ void system_init() {
     std::function<float()> get_t = std::bind(&TempSensor::get_value, &config::temp_sensor);
     std::function<void(float)> set_t = std::bind(&TempSensor::set_value, &config::temp_sensor, std::placeholders::_1);
     System::api.add_api_variable("T", new APICallbackFloat(get_t, set_t));
-#ifdef HAS_MAX31875
-    System::api.add_api_variable("Tboard", new const APICallbackFloat([](){ return config::board_temperature.get_temperature(); }));
-#endif
-#ifdef HAS_MAX31889
+#if defined (HAS_MAX31875) || defined (HAS_MAX31889)
     System::api.add_api_variable("Tboard", new const APICallbackFloat([](){ return config::board_temperature.get_temperature(); }));
 #endif
 #ifdef HAS_BRIDGE_THERMISTORS
