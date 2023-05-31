@@ -185,7 +185,7 @@ void system_init() {
     ADC1->CR |= ADC_CR_ADSTART;
     ADC2->CR |= ADC_CR_JADSTART;
     ADC5->CR |= ADC_CR_JADSTART;
-    ADC5->IER |= ADC_IER_JEOCIE;
+    ADC5->IER |= ADC_IER_JEOSIE;
     ADC4->CR |= ADC_CR_JADSTART;
     ADC3->CR |= ADC_CR_JADSTART;
 
