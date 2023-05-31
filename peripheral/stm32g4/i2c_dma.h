@@ -143,6 +143,7 @@ class I2C_DMA {
             cancel_async_read();
             return -4;
         }
+        asm("nop"); // todo: a nop seems necessary in order to recognize a data update (due to dma), make volatile maybe
         return nbytes;
     }
     volatile bool busy() const {

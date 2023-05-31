@@ -28,7 +28,6 @@ class MAX31889 {
             //logger.log_printf("%x i2c read error: %d", address_, ret_val);
             return 0;
         }
-        asm("nop"); // todo: a nop seems necessary in order to recognize a raw_val update (due to dma), make volatile maybe
         //logger.log_printf("max31889 %x %x %x",address_, raw_val[0], raw_val[1]);
         // logger.log_printf("%p %x",raw_val, I2C1->RXDR);
         
