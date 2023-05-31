@@ -33,7 +33,7 @@ uint16_t drv_regs_error = 0;
 #include "pin_config_obot_g474_motor.h"
 #include "../peripheral/stm32g4/temp_sensor.h"
 #include "../temperature_sensor.h"
-#include "../peripheral/stm32g4/i2c.h"
+#include "../peripheral/stm32g4/i2c_dma.h"
 
 
 #if defined(R3) || defined(R4) || defined(MR0) || defined(MR0P)
@@ -63,7 +63,7 @@ namespace config {
     DRV8323S drv(*SPI1);
 #endif
     TempSensor temp_sensor;
-    I2C i2c1(*I2C1, 400);
+    I2C_DMA i2c1(*I2C1, *DMA1_Channel7, *DMA1_Channel8, 400);
 #ifdef HAS_MAX31875
     MAX31875 board_temperature(i2c1);
 #endif
@@ -99,6 +99,8 @@ int32_t index_mod = 0;
 void config_init();
 
 void system_init() {
+    DMAMUX1_Channel6->CCR =  DMA_REQUEST_I2C1_TX;
+    DMAMUX1_Channel7->CCR =  DMA_REQUEST_I2C1_RX;
     if (config::motor_encoder.init()) {
         System::log("Motor encoder init success");
     } else {
