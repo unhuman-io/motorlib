@@ -27,7 +27,7 @@ volatile uint32_t * const cpu_clock = &DWT->CYCCNT;
 namespace config {
     static_assert(((double) CPU_FREQUENCY_HZ * 8 / 2) / pwm_frequency < 65535);    // check pwm frequency
     TempSensor temp_sensor;
-    I2C_DMA i2c1(*I2C1, 1000);
+    I2C_DMA i2c1(*I2C1, *DMA1_Channel7, *DMA1_Channel8, 1000);
     MAX31875 board_temperature(i2c1);
     DriverMPS driver;
 
@@ -59,6 +59,8 @@ int32_t index_mod = 0;
 void config_init();
 
 void system_init() {
+    DMAMUX1_Channel6->CCR =  DMA_REQUEST_I2C1_TX;
+    DMAMUX1_Channel7->CCR =  DMA_REQUEST_I2C1_RX;
     if (config::motor_encoder.init()) {
         System::log("Motor encoder init success");
     } else {

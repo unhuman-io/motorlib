@@ -59,6 +59,7 @@ class I2C_DMA {
         }
         clear_isr();
         rx_dma_.CCR = 0;
+        asm("nop"); // memory barrier in case optimization things nothing is using data[*]
         rx_dma_.CMAR = (uint32_t) data;
         rx_dma_.CNDTR = nbytes;
         rx_dma_.CCR = DMA_CCR_EN | DMA_CCR_MINC;
