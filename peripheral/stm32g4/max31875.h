@@ -28,6 +28,7 @@ class MAX31875 {
         }
         uint8_t raw_val[2] = {};
         ret_val = i2c_.read(address_, 2, raw_val);
+        asm("nop");
         if (ret_val <= 0) {
             value_ = 0;
             //logger.log_printf("i2c read error: %d", ret_val);
