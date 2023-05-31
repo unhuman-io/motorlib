@@ -48,9 +48,9 @@ class FastLoop {
       adc1 = *i_a_dr_;
       adc2 = *i_b_dr_;
       adc3 = *i_c_dr_;
-      foc_command_.measured.i_a = param_.adc1_gain*(adc1-2048) - param_.ia_bias;
-      foc_command_.measured.i_b = param_.adc2_gain*(adc2-2048) - param_.ib_bias;
-      foc_command_.measured.i_c = param_.adc3_gain*(adc3-2048) - param_.ic_bias;
+      foc_command_.measured.i_a = param_.adc1_gain*(adc1-2048) - ia_bias_;
+      foc_command_.measured.i_b = param_.adc2_gain*(adc2-2048) - ib_bias_;
+      foc_command_.measured.i_c = param_.adc3_gain*(adc3-2048) - ic_bias_;
       
       // get encoder value, may wait a little
       motor_enc = encoder_.read();

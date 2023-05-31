@@ -16,9 +16,16 @@
 // MR0+
 #define TSENSE ADC2->JDR2
 #define TSENSE2 ADC2->JDR3
+
 // MR1
 #define V5V ADC2->JDR4
-#define I5V ADC3->JDR3
+#define I5V ADC3->JDR2
+#define I_BUS_DR ADC5->JDR2
+
+#if defined(MR0P)
+#undef V5V
+#define V5V A3_DR
+#endif
 
 #define TIM_R TIM4->CCR1
 #define TIM_G TIM4->CCR2
@@ -162,14 +169,16 @@ void pin_config_obot_g474_motor_r0() {
         //ADC3,4,5
         // ADC3 adds PB1 (i5v), then back to current to clear s&h error
         GPIO_SETL(B, 1, GPIO_MODE::ANALOG, GPIO_SPEED::LOW, 0); // i5v
+        GPIO_SETH(A, 8, GPIO_MODE::ANALOG, GPIO_SPEED::LOW, 0); // i48v, adc5 in1
         ADC345_COMMON->CCR = ADC_CCR_VREFEN | 3 << ADC_CCR_CKMODE_Pos; // hclk/4 (42.5 MHz)
         ADC3->SMPR2 = 2 << ADC_SMPR2_SMP13_Pos; // 12.5 cycles current_sense, 294 ns, 200 ns min for opamp3
         ADC3->SMPR1 = 2 << ADC_SMPR1_SMP1_Pos;  // 12.5 cycles, max9610 direct
         ADC4->SMPR2 = 2 << ADC_SMPR2_SMP17_Pos; // 12.5 cycles current_sense, 294 ns, 200 ns min for opamp6
-        ADC5->SMPR1 = 2 << ADC_SMPR1_SMP5_Pos; // 12.5 cycles current_sense, 294 ns, 200 ns min for opamp4
+        ADC5->SMPR1 = 2 << ADC_SMPR1_SMP1_Pos | // 12.5 cycles current_sense i48v
+                      2 << ADC_SMPR1_SMP5_Pos; // 12.5 cycles current_sense, 294 ns, 200 ns min for opamp4
         ADC3->JSQR = 2 << ADC_JSQR_JL_Pos | 1 << ADC_JSQR_JEXTEN_Pos | 27 << ADC_JSQR_JEXTSEL_Pos | 13 << ADC_JSQR_JSQ1_Pos | 1 << ADC_JSQR_JSQ2_Pos | 13 << ADC_JSQR_JSQ3_Pos; // trig 27 hrtim adc_trig1 (injected)
         ADC4->JSQR = 1 << ADC_JSQR_JEXTEN_Pos | 27 << ADC_JSQR_JEXTSEL_Pos | 17 << ADC_JSQR_JSQ1_Pos; // trig 27 hrtim adc_trig1 (injected)
-        ADC5->JSQR = 1 << ADC_JSQR_JEXTEN_Pos | 27 << ADC_JSQR_JEXTSEL_Pos | 5 << ADC_JSQR_JSQ1_Pos;  // trig 27 hrtim adc_trig1 (injected)
+        ADC5->JSQR = 2 << ADC_JSQR_JL_Pos | 1 << ADC_JSQR_JEXTEN_Pos | 27 << ADC_JSQR_JEXTSEL_Pos | 5 << ADC_JSQR_JSQ1_Pos | 1 << ADC_JSQR_JSQ2_Pos | 5 << ADC_JSQR_JSQ3_Pos;;  // trig 27 hrtim adc_trig1 (injected)
         NVIC_SetPriority(ADC5_IRQn, NVIC_EncodePriority(NVIC_GetPriorityGrouping(), 0, 0));
         NVIC_EnableIRQ(ADC5_IRQn);
 

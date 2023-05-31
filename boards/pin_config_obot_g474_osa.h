@@ -13,7 +13,7 @@
 #define V_A_DR ADC2->JDR1
 #define V_B_DR ADC2->JDR2
 #define V_C_DR ADC2->JDR3
-#define I_BUS_DR ADC1->JDR3
+
 
 #define TIM_R TIM4->CCR1
 #define TIM_G TIM4->CCR3

@@ -82,7 +82,6 @@ void system_init() {
     System::api.add_api_variable("vam", new const APICallbackFloat([]() { return (33.0+2.0)/2.0 * 3.0/4096 * V_A_DR; }));
     System::api.add_api_variable("vbm", new const APICallbackFloat([]() { return (33.0+2.0)/2.0 * 3.0/4096 * V_B_DR; }));
     System::api.add_api_variable("vcm", new const APICallbackFloat([]() { return (33.0+2.0)/2.0 * 3.0/4096 * V_C_DR; }));
-    System::api.add_api_variable("ibus", new const APICallbackFloat([]() { return (1.0/400) * (1000.0/4096 * I_BUS_DR - 1500); }));
     System::api.add_api_variable("shutdown", new const APICallback([](){
         // requires power cycle to return 
         setup_sleep();
