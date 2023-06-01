@@ -21,7 +21,7 @@ class DRV8323S : public DriverBase {
         regs_.CR1 = 0; // clear SPE
         regs_.CR2 = (15 << SPI_CR2_DS_Pos) | SPI_CR2_FRF;   // 16 bit TI mode
         // ORDER DEPENDANCE SPE set last
-        regs_.CR1 = SPI_CR1_MSTR | (6 << SPI_CR1_BR_Pos) | SPI_CR1_SPE;    // baud = clock/64
+        regs_.CR1 = SPI_CR1_MSTR | (7 << SPI_CR1_BR_Pos) | SPI_CR1_SPE;    // baud = clock/256
     }
 
     void drv_spi_end() {
