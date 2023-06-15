@@ -45,6 +45,7 @@ uint16_t drv_regs_error = 0;
 
 #if defined(MR1)
 #define HAS_MAX31889
+#include "../peripheral/stm32g4/max31889.h"
 #endif
 
 #if defined(R4) || defined (MR0P) || defined (MR0) || defined(MR1)
