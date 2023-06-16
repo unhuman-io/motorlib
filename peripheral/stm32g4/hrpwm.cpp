@@ -68,7 +68,7 @@ void HRPWM::set_frequency_hz(uint32_t frequency_hz, uint16_t min_off_ns, uint16_
     regs_.sTimerxRegs[ch_b_].PERxR = period_;
     regs_.sTimerxRegs[ch_c_].PERxR = period_;
     regs_.sTimerxRegs[5].PERxR = period_;
-    regs_.sTimerxRegs[5].CMP3xR = period_ - 1; // for low time adc trigger
+    regs_.sTimerxRegs[5].CMP3xR = period_ - 65; // for low time adc trigger
     half_period_ = period_/2; 
     pwm_max_ = period_ - fmaxf(2*min_on_ns*count_per_ns_, 65); // seems to require at least 64 to not glitch and go high when should be low
     pwm_min_ = 2*min_off_ns*count_per_ns_;
