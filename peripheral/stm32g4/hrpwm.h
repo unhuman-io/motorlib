@@ -46,6 +46,7 @@ class HRPWM : public PWMBase {
       regs_.sCommonRegs.DLLCR = HRTIM_DLLCR_CALEN | (3 << HRTIM_DLLCR_CALRTE_Pos); // periodic calibration at 2048*hrtim = 12us
       regs_.sCommonRegs.ADC1R = HRTIM_ADC1R_AD1TFPER; // TODO coded only to F
       regs_.sCommonRegs.ADC2R = HRTIM_ADC2R_AD2TFPER; // also hrtim trig 2
+      regs_.sCommonRegs.ADC3R = HRTIM_ADC3R_AD3TFC3; // low pwm trigger for measuring 0 bias
    }
 
    void set_frequency_multiplier(uint8_t frequency_multiplier);
