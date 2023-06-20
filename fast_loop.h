@@ -251,6 +251,12 @@ class FastLoop {
       ic_bias_ = (1-alpha_zero_)*ic_bias_ + alpha_zero_* param_.adc3_gain*(adc3-2048);
     }
 
+    void zero_current_sensors(uint16_t adc1_0, uint16_t adc2_0, uint16_t adc3_0) {
+      ia_bias_ = (1-alpha_zero_)*(ia_bias_) + alpha_zero_* param_.adc1_gain*(adc1_0-2048);
+      ib_bias_ = (1-alpha_zero_)*(ib_bias_) + alpha_zero_* param_.adc2_gain*(adc2_0-2048);
+      ic_bias_ = (1-alpha_zero_)*(ic_bias_) + alpha_zero_* param_.adc3_gain*(adc3_0-2048);
+    }
+
     void set_phase_mode(float phase_mode) {
       phase_mode_desired_ = phase_mode == 0 ? 1 : -1;
       logger.log_printf("phase mode desired: %f", phase_mode_desired_);
