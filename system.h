@@ -158,6 +158,9 @@ class System {
         api.add_api_variable("ttgain", new const APIFloat(&actuator_.main_loop_.param_.torque_sensor.table_gain));
         API_ADD_FILTER(id_filter, FirstOrderLowPassFilter, actuator_.fast_loop_.foc_->id_filter_);
         API_ADD_FILTER(iq_filter, FirstOrderLowPassFilter, actuator_.fast_loop_.foc_->iq_filter_);
+        API_ADD_FILTER(output_iq_filter, FirstOrderLowPassFilter, actuator_.fast_loop_.iq_filter_);
+        API_ADD_FILTER(output_motor_velocity_filter, FirstOrderLowPassFilter, actuator_.fast_loop_.motor_velocity_filter_);
+        API_ADD_FILTER(output_motor_position_filter, FirstOrderLowPassFilter, actuator_.fast_loop_.motor_position_filter_);
         api.add_api_variable("startup_phase_lock_current", new const APIFloat(&param->startup_param.phase_lock_current));
         api.add_api_variable("startup_mbias", new APIFloat(&actuator_.startup_motor_bias_));
         api.add_api_variable("set_startup_bias", new const APICallback([](){ actuator_.set_bias(); return "ok"; }));

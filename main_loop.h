@@ -116,7 +116,7 @@ class MainLoop {
       status_.output_position = output_encoder_dir_ * output_encoder_rad + output_encoder_bias_ 
         + output_encoder_correction_table_.table_interp(output_encoder_x);
 
-      status_.motor_position = status_.fast_loop.motor_position.position + motor_encoder_bias_;
+      status_.motor_position = status_.fast_loop.motor_position.position_filtered + motor_encoder_bias_;
 
       float torque_corrected = torque_sensor_dir_ * (torque_sensor_.read() + param_.torque_sensor.bias) + param_.torque_sensor.bias;
       //if (torque_corrected != status_.torque) {
@@ -603,12 +603,13 @@ class MainLoop {
 
 #ifndef CUSTOM_SENDDATA
 void load_send_data(const MainLoop &main_loop, SendData * const data) {
-    data->iq = main_loop.status_.fast_loop.foc_status.measured.i_q;
+    data->iq = main_loop.status_.fast_loop.iq_filtered;
     data->host_timestamp_received = main_loop.host_timestamp_;
     data->mcu_timestamp = main_loop.status_.fast_loop.timestamp;
     data->motor_encoder = main_loop.status_.fast_loop.motor_position.raw;
     data->motor_position = main_loop.status_.motor_position;
     data->joint_position = main_loop.status_.output_position;
+    data->motor_velocity = main_loop.status_.fast_loop.motor_velocity.velocity_filtered;
     data->torque = main_loop.status_.torque;
     data->rr_data = main_loop.status_.rr_data;
     data->reserved = *reinterpret_cast<float *>(main_loop.reserved0_);

@@ -72,6 +72,13 @@ typedef struct {
     float vbus_gain;                                // vbus sensor gain units V/count
     float beep_frequency;                           // frequency hz for audio feedback
     float beep_amplitude;                           // beep amplitude A
+
+    struct {
+        float motor_velocity;
+        float motor_position;
+        float iq;
+    } output_filter_hz;
+
 } FastLoopParam;
 
 typedef struct {
@@ -156,6 +163,13 @@ typedef struct {
     MotorError error_mask;              // can set to ERROR_MASK_ALL or ERROR_MASK_NONE or others
     uint8_t safe_mode_driver_disable;   // driver is disabled in safe mode
     uint8_t no_latch_driver_fault;      // 1 allows for the driver_fault to be reset by software
+
+    struct {
+        float joint_velocity;
+        float joint_position;
+        float torque;
+    } output_filter_hz;
+
 } MainLoopParam;
 
 typedef struct {
@@ -211,8 +225,13 @@ typedef struct {
     FOCStatus foc_status;
     struct {
         int32_t raw;                    // raw counts since startup
-        float position;                 // position in radians, 0 at startup or absolute value    
+        float position;                 // position in radians, 0 at startup or absolute value 
+        float position_filtered;   
     } motor_position;
+    struct {
+        float velocity_filtered;
+    } motor_velocity;
+    float iq_filtered;
     float motor_mechanical_position;    // counts referenced to index
     FOCCommand foc_command;
     float power;                        // estimated power in W
