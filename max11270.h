@@ -52,6 +52,9 @@ class MAX11270 : public TorqueSensorBase {
         if (count_ == 0) {
             spi_dma_.finish_readwrite();
             raw_value_ = data_in_[1] << 16 | data_in_[2] << 8 | data_in_[3];
+            if (isol) {
+                raw_value_ = (data_in_[2] << 24 | data_in_[3] << 16 | data_in_[4] << 8) >> 8;
+            }
             int32_t s32 = raw_value_ << 8;
             signed_value_ = s32 >> 8;
             torque_ = signed_value_ * (2.5 / pow(2,23)) / .02085;
@@ -61,12 +64,13 @@ class MAX11270 : public TorqueSensorBase {
         }
         return torque_;
     }
+    bool isol = true;
     uint8_t count_ = 0;
     uint8_t decimation_ = 1;
     int32_t signed_value_ = 0;
     uint32_t raw_value_ = 0;
  private:
-    static const uint8_t length_ = 4;
+    static const uint8_t length_ = 5;
     uint8_t data_out_[length_] = {};
     uint8_t data_in_[length_] = {};
     SPIDMA &spi_dma_;
