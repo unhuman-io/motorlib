@@ -221,6 +221,7 @@ void pin_config_obot_g474_motor_r0() {
         MASK_SET(GPIOA->OTYPER, GPIO_OTYPER_OT15, 1);       // open drain
         MASK_SET(GPIOB->OTYPER, GPIO_OTYPER_OT9, 1);
         SYSCFG->CFGR1 |= SYSCFG_CFGR1_I2C1_FMP | SYSCFG_CFGR1_I2C2_FMP | SYSCFG_CFGR1_I2C_PB9_FMP;  // fast mode plus (1 MHz)
+        MASK_SET(I2C1->CR1, I2C_CR1_DNF, 8);    // digital noise filter set to half 8 out of 15
 
 }
 
