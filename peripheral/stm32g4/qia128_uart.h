@@ -164,6 +164,12 @@ class QIA128_UART : public TorqueSensorBase {
         }
         return torque_;
     }
+    void clear_faults() {
+        timeout_error_ = 0;
+        read_error_ = 0;
+        crc_error_ = 0;
+        wait_error_ = 0;
+    }
     float get_value() const { return torque_; }
     float torque_ = 0;
     uint32_t offset_ = 0;

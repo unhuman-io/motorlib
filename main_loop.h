@@ -453,6 +453,9 @@ class MainLoop {
             break;
           case CLEAR_FAULTS:
             safe_mode_ = false;
+            torque_sensor_.clear_faults();
+            fast_loop_.clear_faults();
+            output_encoder_.clear_faults();
             status_.error.all = 0;
             led_.set_color(LED::AZURE);
             break;
