@@ -118,6 +118,7 @@ class QIA128_UART : public TorqueSensorBase {
             }
         } else {
             if (regs_.ISR & USART_ISR_RXFT) {
+                read_timeout_count_ = 0;
                 read_len_ = 0;
                 // 4 bytes received
                 for (int i=0; i<3; i++) {
@@ -153,6 +154,12 @@ class QIA128_UART : public TorqueSensorBase {
                     torque_ = 0;
                 }
                 state_ = WAIT;
+            } else {
+                read_timeout_count_++;
+                if (read_timeout_count_ > 10) {
+                    read_timeout_count_ = 0;
+                    timeout_error_++;
+                }
             }
         }
         return torque_;
@@ -166,10 +173,12 @@ class QIA128_UART : public TorqueSensorBase {
     uint32_t wait_error_ = 0;
     uint32_t read_error_ = 0;
     uint32_t crc_error_ = 0;
+    uint32_t timeout_error_ = 0;
     uint32_t read_len_ = 0;
     uint8_t crc_read_ = 0;
     uint8_t crc_calc_ = 0;
     uint32_t full_raw_ = 0;
+    uint32_t read_timeout_count_ = 0;
  private:
     volatile USART_TypeDef& regs_;
     enum State {WAIT, READ} state_ = WAIT;
