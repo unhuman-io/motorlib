@@ -145,6 +145,9 @@ class MainLoop {
 
       if (status_.error.all & error_mask_.all && !(receive_data_.mode_desired == DRIVER_ENABLE)) {
           status_.error.fault = 1;
+          if (safe_mode_ != true) {
+            logger.log_printf("fault detected, error: %08x", status_.error.all);
+          }
           safe_mode_ = true;
           set_mode(param_.safe_mode);
       }
