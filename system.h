@@ -164,6 +164,9 @@ class System {
         api.add_api_variable("odir", new APIFloat(&actuator_.main_loop_.output_encoder_dir_));
         api.add_api_variable("tdir", new APIFloat(&actuator_.main_loop_.torque_sensor_dir_));
         api.add_api_variable("mdir", new APIFloat(&actuator_.fast_loop_.motor_encoder_dir_));
+        api.add_api_variable("i_rate_limit", new APICallback([](){ return std::to_string(actuator_.fast_loop_.foc_->v_d_rate_limit_.get_limit());},
+            [](std::string s){ actuator_.fast_loop_.foc_->v_d_rate_limit_.set_limit(std::stof(s));
+                actuator_.fast_loop_.foc_->v_q_rate_limit_.set_limit(std::stof(s)); }));
 
         uint32_t t_start = get_clock();
         while(1) {
