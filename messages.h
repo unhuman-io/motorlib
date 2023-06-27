@@ -165,8 +165,10 @@ typedef struct {
     uint8_t no_latch_driver_fault;      // 1 allows for the driver_fault to be reset by software
 
     struct {
-        float joint_velocity;
-        float joint_position;
+        float output_velocity;
+        float output_position;
+        float motor_velocity;
+        float motor_position;
         float torque;
     } output_filter_hz;
 
@@ -242,8 +244,13 @@ typedef struct {
 typedef struct {
     FastLoopStatus fast_loop;
     float torque;
+    float torque_filtered;
     float output_position;
+    float output_position_filtered;
+    float output_velocity_filtered;
     float motor_position;
+    float motor_position_filtered;
+    float motor_velocity_filtered;
     MotorMode mode;
     MotorError error;
     RoundRobinData rr_data;

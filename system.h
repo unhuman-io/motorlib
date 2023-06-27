@@ -170,6 +170,11 @@ class System {
         api.add_api_variable("i_rate_limit", new APICallback([](){ return std::to_string(actuator_.fast_loop_.foc_->v_d_rate_limit_.get_limit());},
             [](std::string s){ actuator_.fast_loop_.foc_->v_d_rate_limit_.set_limit(std::stof(s));
                 actuator_.fast_loop_.foc_->v_q_rate_limit_.set_limit(std::stof(s)); }));
+        API_ADD_FILTER(output_motor_velocity_filter2, FirstOrderLowPassFilter, actuator_.main_loop_.motor_velocity_filter_);
+        API_ADD_FILTER(output_motor_position_filter2, FirstOrderLowPassFilter, actuator_.main_loop_.motor_position_filter_);
+        API_ADD_FILTER(output_output_velocity_filter, FirstOrderLowPassFilter, actuator_.main_loop_.output_velocity_filter_);
+        API_ADD_FILTER(output_output_position_filter, FirstOrderLowPassFilter, actuator_.main_loop_.output_position_filter_);
+        API_ADD_FILTER(output_torque_filter, FirstOrderLowPassFilter, actuator_.main_loop_.torque_filter_);
 
         uint32_t t_start = get_clock();
         while(1) {
