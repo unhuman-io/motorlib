@@ -165,9 +165,9 @@ typedef struct {
     uint8_t no_latch_driver_fault;      // 1 allows for the driver_fault to be reset by software
 
     struct {
-        float output_velocity;
+        float output_velocity[11];
         float output_position;
-        float motor_velocity;
+        float motor_velocity[11];
         float motor_position;
         float torque;
     } output_filter_hz;

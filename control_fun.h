@@ -137,6 +137,35 @@ class IIRFilter {
     float b_[IIRSIZE] = {2.91464944656705e-05,      8.74394833970116e-05,      8.74394833970116e-05,      2.91464944656705e-05};
 };
 
+template<int size=11>
+class FIRFilter {
+ public:
+    FIRFilter(float dt, const float coeff[size]) : dt_(dt), coeff_(coeff) {}
+    float update(float value) {
+        current_pos_++;
+        if (current_pos_ >= size) {
+            current_pos_ = 0;
+        }
+        values_[current_pos_] = value;
+
+        float out = 0;
+        for (int i=0; i<size; i++) {        
+            current_pos_++;
+            if (current_pos_ >= size) {
+                current_pos_ = 0;
+            }
+            out += values_[current_pos_]*coeff_[i];
+           
+        }
+        return out/dt_;
+    }
+ private:
+    float dt_;
+    const float *coeff_;
+    float values_[size] = {};
+    int current_pos_;
+};
+
 class PIController {
 public:
     ~PIController() {}
