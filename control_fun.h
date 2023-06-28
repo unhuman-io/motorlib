@@ -140,7 +140,17 @@ class IIRFilter {
 template<int size=11>
 class FIRFilter {
  public:
-    FIRFilter(float dt, const float coeff[size]) : dt_(dt), coeff_(coeff) {}
+    FIRFilter(float dt, const float coeff[size]) : dt_(dt), coeff_(coeff) {
+        bool empty_coeff = true;
+        for (int i=0; i<size; i++) {
+            if (coeff_[i] != 0) {
+                empty_coeff = false;
+            }
+        }
+        if (empty_coeff) {
+            coeff_ = default_coeff_;
+        }
+    }
     float update(float value) {
         current_pos_++;
         if (current_pos_ >= size) {
@@ -162,6 +172,7 @@ class FIRFilter {
  private:
     float dt_;
     const float *coeff_;
+    static const float default_coeff_[size];
     float values_[size] = {};
     int current_pos_;
 };

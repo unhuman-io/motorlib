@@ -2,6 +2,10 @@
 //#include "hal_fun.h"
 #include <cmath>
 
+// 11 point Savitzky-Golay linear polynomial filter, first derivative (for velocity)
+template<>
+const float FIRFilter<11>::default_coeff_[11] = {-0.0455, -0.0364, -0.0273, -0.0182, -0.0091, -0.0000, 0.0091, 0.0182, 0.0273, 0.0364, 0.0455};
+
 float fsat(float a, float sat) {
     // Slow version
     // if (a > sat) {
