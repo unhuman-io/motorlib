@@ -12,6 +12,7 @@ class SensorBase {
     bool index_received() const { return false; }
     void reinit() {}
     bool error() { return false; }
+    void clear_faults() {}
 };
 
 #endif  // UNHUMAN_MOTORLIB_SENSOR_H_

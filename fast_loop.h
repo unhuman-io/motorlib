@@ -290,6 +290,9 @@ class FastLoop {
     void trigger_status_log() {
       status_log_.copy(status_);
     }
+    void clear_faults() {
+      encoder_.clear_faults();
+    }
  private:
     FastLoopParam param_; // reallocate tables in ram
 

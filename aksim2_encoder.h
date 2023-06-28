@@ -65,6 +65,11 @@ class Aksim2Encoder : public EncoderBase {
         diag_raw_ = diag;
         return get_value();
     }
+    void clear_faults() {
+        crc_err_count_ = 0;
+        diag_err_count_ = 0;
+        diag_warn_count_ = 0;
+    }
     int32_t get_value() const { return value_; }
     bool index_received() { return true; }
     DiagProcessed diag_ = {};

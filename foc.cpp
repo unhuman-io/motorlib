@@ -44,6 +44,9 @@ FOCStatus * const FOC::step(const FOCCommand &command) {
     float v_d_desired = i_gain_*pi_id_.step(status_.desired.i_d, i_d_measured_filtered);
     float v_q_desired = i_gain_*pi_iq_.step(status_.desired.i_q, i_q_measured_filtered) + command.desired.v_q;
 
+    v_d_desired = v_d_rate_limit_.step(v_d_desired);
+    v_q_desired = v_q_rate_limit_.step(v_q_desired);
+
     float v_alpha_desired = cos_t * v_d_desired + sin_t * v_q_desired;
     float v_beta_desired = -sin_t * v_d_desired + cos_t * v_q_desired;
 

@@ -145,6 +145,9 @@ class MainLoop {
 
       if (status_.error.all & error_mask_.all && !(receive_data_.mode_desired == DRIVER_ENABLE)) {
           status_.error.fault = 1;
+          if (safe_mode_ != true) {
+            logger.log_printf("fault detected, error: %08x", status_.error.all);
+          }
           safe_mode_ = true;
           set_mode(param_.safe_mode);
       }
@@ -450,6 +453,9 @@ class MainLoop {
             break;
           case CLEAR_FAULTS:
             safe_mode_ = false;
+            torque_sensor_.clear_faults();
+            fast_loop_.clear_faults();
+            output_encoder_.clear_faults();
             status_.error.all = 0;
             led_.set_color(LED::AZURE);
             break;
