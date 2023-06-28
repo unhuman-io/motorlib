@@ -23,11 +23,19 @@ class FastLoop {
       volatile uint32_t *const i_a_dr, volatile uint32_t *const i_b_dr, volatile uint32_t *const i_c_dr, 
       volatile uint32_t *const v_bus_dr) 
       : param_(param), pwm_(pwm), encoder_(encoder), i_a_dr_(i_a_dr), i_b_dr_(i_b_dr), i_c_dr_(i_c_dr), v_bus_dr_(v_bus_dr),
-        motor_correction_table_(param_.motor_encoder.table), cogging_correction_table_(param_.cogging.table) {
+        motor_correction_table_(param_.motor_encoder.table), cogging_correction_table_(param_.cogging.table),
+        iq_filter_(1.0/frequency_hz), motor_velocity_filter_(1.0/frequency_hz), motor_position_filter_(1.0/frequency_hz) {
        frequency_hz_ = frequency_hz;
        float dt = 1.0f/frequency_hz;
        foc_ = new FOC(dt);
        set_param();
+       iq_filter_.init(0);
+       motor_velocity_filter_.init(0);
+       encoder_.trigger();
+       int32_t motor_enc = encoder_.read();
+       int32_t tmp;
+       float tmp2;
+       motor_position_filter_.init(motor_enc_to_position(motor_enc, tmp, tmp2));
 #ifdef END_TRIGGER_MOTOR_ENCODER
        encoder_.trigger();
 #endif
@@ -54,16 +62,12 @@ class FastLoop {
       
       // get encoder value, may wait a little
       motor_enc = encoder_.read();
-      int32_t motor_enc_diff = motor_enc-last_motor_enc;
-      motor_enc_wrap_ = wrap1(motor_enc_wrap_ + motor_enc_diff, param_.motor_encoder.rollover);
-      motor_mechanical_position_ = (motor_enc_wrap_ - motor_index_pos_);
-      float motor_x = motor_mechanical_position_*inv_motor_encoder_cpr_;
-
-      motor_position_ = motor_encoder_dir_ * (2 * (float) M_PI * inv_motor_encoder_cpr_ * motor_enc_wrap_ 
-                          + motor_index_pos_set_*motor_correction_table_.table_interp(motor_x));
-      motor_position_filtered_ = motor_position_;//(1-alpha10)*motor_position_filtered_ + alpha10*motor_position_;
-      motor_velocity =  motor_encoder_dir_ * (motor_enc_diff)*(2*(float) M_PI * inv_motor_encoder_cpr_ * frequency_hz_);
-      motor_velocity_filtered = (1-alpha)*motor_velocity_filtered + alpha*motor_velocity;
+      int32_t motor_enc_diff;
+      float motor_x;
+      motor_position_ = motor_enc_to_position(motor_enc, motor_enc_diff, motor_x);
+      motor_position_filtered_ = motor_position_filter_.update(motor_position_);//(1-alpha10)*motor_position_filtered_ + alpha10*motor_position_;
+      motor_velocity_ =  motor_encoder_dir_ * (motor_enc_diff)*(2*(float) M_PI * inv_motor_encoder_cpr_ * frequency_hz_);
+      motor_velocity_filtered_ = motor_velocity_filter_.update(motor_velocity_);
       last_motor_enc = motor_enc;
 
       // cogging compensation, interpolate in the table
@@ -127,6 +131,17 @@ class FastLoop {
 #ifdef END_TRIGGER_MOTOR_ENCODER
       encoder_.trigger();
 #endif
+    }
+
+    float motor_enc_to_position(int32_t motor_enc, int32_t &motor_enc_diff, float &motor_x) {
+      motor_enc_diff = motor_enc-last_motor_enc;
+      motor_enc_wrap_ = wrap1(motor_enc_wrap_ + motor_enc_diff, param_.motor_encoder.rollover);
+      motor_mechanical_position_ = (motor_enc_wrap_ - motor_index_pos_);
+      motor_x = motor_mechanical_position_*inv_motor_encoder_cpr_;
+
+      motor_position_ = motor_encoder_dir_ * (2 * (float) M_PI * inv_motor_encoder_cpr_ * motor_enc_wrap_ 
+                          + motor_index_pos_set_*motor_correction_table_.table_interp(motor_x));
+      return motor_position_;
     }
     void maintenance() {
       if (encoder_.index_received() && !motor_index_pos_set_) {
@@ -224,6 +239,9 @@ class FastLoop {
       ia_bias_ = param_.ia_bias;
       ib_bias_ = param_.ib_bias;
       ic_bias_ = param_.ic_bias;
+      iq_filter_.set_frequency(param_.output_filter_hz.iq);
+      motor_velocity_filter_.set_frequency(param_.output_filter_hz.motor_velocity);
+      motor_position_filter_.set_frequency(param_.output_filter_hz.motor_position);
     }
     const FastLoopStatus &get_status() const {
       return status_.top();
@@ -231,7 +249,9 @@ class FastLoop {
     void store_status() {
       FastLoopStatus &s = status_.next();
       s.motor_mechanical_position = motor_mechanical_position_;
-      s.motor_position.position = motor_position_filtered_;
+      s.motor_position.position = motor_position_;
+      s.motor_position.position_filtered = motor_position_filtered_;
+      s.motor_velocity.velocity_filtered = motor_velocity_filtered_;
       s.motor_position.raw = motor_enc;
       s.timestamp = timestamp_;
       s.vbus = v_bus_;
@@ -242,6 +262,7 @@ class FastLoop {
       energy_uJ_ += (uint32_t) energy;
       s.energy_uJ = energy_uJ_;
       foc_->get_status(&s.foc_status);
+      s.iq_filtered = iq_filter_.update(s.foc_status.measured.i_q);
       status_.finish();
     }
 
@@ -305,8 +326,8 @@ class FastLoop {
     int32_t last_motor_enc=0;
     float motor_position_ = 0;
     float motor_position_filtered_ = 0;
-    float motor_velocity=0;
-    float motor_velocity_filtered=0;
+    float motor_velocity_=0;
+    float motor_velocity_filtered_=0;
     float alpha=0.001;
     float alpha10=1;//0.3859;   // 1/10 cutoff frequency
     float phase_mode_ = 1;    // 1: standard or -1: two wires switched
@@ -359,6 +380,13 @@ class FastLoop {
    uint32_t zero_current_sensors_end_ = 0;
    float phi_beep_ = 0;
    uint32_t energy_uJ_ = 0;
+  
+   FirstOrderLowPassFilter iq_filter_;
+   FirstOrderLowPassFilter motor_velocity_filter_;
+   FirstOrderLowPassFilter motor_position_filter_;
+   
+   
+
 
    friend class System;
 };

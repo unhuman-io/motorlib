@@ -28,7 +28,7 @@ using HardwareBrake = HardwareBrakeBase;
 
 class MainLoop {
  public:
-    MainLoop(FastLoop &fast_loop, PositionController &position_controller,  TorqueController &torque_controller, 
+    MainLoop(int32_t frequency_hz, FastLoop &fast_loop, PositionController &position_controller,  TorqueController &torque_controller, 
         ImpedanceController &impedance_controller, VelocityController &velocity_controller, StateController &state_controller, 
         JointPositionController &joint_position_controller, Communication &communication,
         LED &led, OutputEncoder &output_encoder, TorqueSensor &torque, Driver &driver, const MainLoopParam &param,
@@ -39,10 +39,11 @@ class MainLoop {
           communication_(communication), led_(led), output_encoder_(output_encoder), torque_sensor_(torque),
           output_encoder_correction_table_(param_.output_encoder.table), 
           torque_correction_table_(param_.torque_sensor.table), driver_(driver), brake_(brake),
-          iq_filter_(1.0/10000, 1) {
+          iq_find_limits_filter_(1.0/frequency_hz, 1), motor_velocity_filter_(1.0/frequency_hz, param.output_filter_hz.motor_velocity), motor_position_filter_(1.0/frequency_hz),
+          output_position_filter_(1.0/frequency_hz), output_velocity_filter_(1.0/frequency_hz, param.output_filter_hz.output_velocity), torque_filter_(1.0/frequency_hz) {
           set_param();
         }
-    void init() {}
+    void init() {} // todo: init filters with first status
     void update() {
       count_++;
       output_encoder_.trigger();
@@ -116,7 +117,7 @@ class MainLoop {
       status_.output_position = output_encoder_dir_ * output_encoder_rad + output_encoder_bias_ 
         + output_encoder_correction_table_.table_interp(output_encoder_x);
 
-      status_.motor_position = status_.fast_loop.motor_position.position + motor_encoder_bias_;
+      status_.motor_position = status_.fast_loop.motor_position.position_filtered + motor_encoder_bias_;
 
       float torque_corrected = torque_sensor_dir_ * (torque_sensor_.read() + param_.torque_sensor.bias) + param_.torque_sensor.bias;
       //if (torque_corrected != status_.torque) {
@@ -141,7 +142,15 @@ class MainLoop {
       status_.error.driver_not_enabled |= !driver_.is_enabled();
       status_.error.driver_fault |= driver_.is_faulted();
 
-      iq_filter_.update(status_.fast_loop.foc_status.measured.i_q);
+      float output_velocity = (status_.output_position - output_position_last_)/dt_;
+      output_position_last_ = status_.output_position;
+      iq_find_limits_filter_.update(status_.fast_loop.foc_status.measured.i_q);
+      status_.motor_velocity_filtered = motor_velocity_filter_.update(status_.motor_position);//(status_.fast_loop.motor_velocity.velocity_filtered);
+      status_.motor_position_filtered = motor_position_filter_.update(status_.motor_position);
+      status_.output_position_filtered = output_position_filter_.update(status_.output_position);
+      status_.output_velocity_filtered = output_velocity_filter_.update(status_.output_position);//(output_velocity);
+      status_.torque_filtered = torque_filter_.update(status_.torque);
+
 
       if (status_.error.all & error_mask_.all && !(receive_data_.mode_desired == DRIVER_ENABLE)) {
           status_.error.fault = 1;
@@ -244,7 +253,7 @@ class MainLoop {
           switch (find_limits_state_) {
             case FIND_FIRST_LIMIT:
               command.velocity_desired = receive_data_.velocity_desired;
-              if (iq_filter_.get_value() > receive_data_.current_desired) {
+              if (iq_find_limits_filter_.get_value() > receive_data_.current_desired) {
                 find_limits_state_ = FIND_SECOND_LIMIT;
                 // record positive limit
                 //motor_positive_limit_ = status_.motor_position;
@@ -254,7 +263,7 @@ class MainLoop {
               break;
             case FIND_SECOND_LIMIT:
               command.velocity_desired = -receive_data_.velocity_desired;
-              if (iq_filter_.get_value() < -receive_data_.current_desired) {
+              if (iq_find_limits_filter_.get_value() < -receive_data_.current_desired) {
                 find_limits_state_ = VELOCITY_TO_POSITION;
                 // record negative limit
                 // change encoder biases around
@@ -358,6 +367,12 @@ class MainLoop {
       torque_sensor_dir_ = param_.torque_sensor.dir == 0 ? 1 : param_.torque_sensor.dir;
       vbus_min_ = param_.vbus_min == 0 ? 8 : param_.vbus_min;
       vbus_max_ = param_.vbus_max == 0 ? 58 : param_.vbus_max;
+
+      //motor_velocity_filter_.set_frequency(param_.output_filter_hz.motor_velocity);
+      motor_position_filter_.set_frequency(param_.output_filter_hz.motor_position);
+      output_position_filter_.set_frequency(param_.output_filter_hz.output_position);
+      //output_velocity_filter_.set_frequency(param_.output_filter_hz.output_velocity);
+      torque_filter_.set_frequency(param_.output_filter_hz.torque);
     }
     void set_rollover(float rollover) {
       position_controller_.set_rollover(rollover);
@@ -589,8 +604,15 @@ class MainLoop {
     volatile bool driver_disable_triggered_ = false;
     uint32_t last_energy_uJ_ = 0;
     enum FindLimitsState {FIND_FIRST_LIMIT, FIND_SECOND_LIMIT, VELOCITY_TO_POSITION, GOTO_POSITION} find_limits_state_;
-    FirstOrderLowPassFilter iq_filter_;
+    FirstOrderLowPassFilter iq_find_limits_filter_;
     bool position_limits_disable_ = false;
+
+    float output_position_last_ = 0;
+    FIRFilter<> motor_velocity_filter_;
+    FirstOrderLowPassFilter motor_position_filter_;
+    FirstOrderLowPassFilter output_position_filter_;
+    FIRFilter<> output_velocity_filter_;
+    FirstOrderLowPassFilter torque_filter_;
 
     friend class System;
     friend class Actuator;
@@ -603,13 +625,15 @@ class MainLoop {
 
 #ifndef CUSTOM_SENDDATA
 void load_send_data(const MainLoop &main_loop, SendData * const data) {
-    data->iq = main_loop.status_.fast_loop.foc_status.measured.i_q;
+    data->iq = main_loop.status_.fast_loop.iq_filtered;
     data->host_timestamp_received = main_loop.host_timestamp_;
     data->mcu_timestamp = main_loop.status_.fast_loop.timestamp;
     data->motor_encoder = main_loop.status_.fast_loop.motor_position.raw;
-    data->motor_position = main_loop.status_.motor_position;
-    data->joint_position = main_loop.status_.output_position;
-    data->torque = main_loop.status_.torque;
+    data->motor_position = main_loop.status_.motor_position_filtered;
+    data->joint_position = main_loop.status_.output_position_filtered;
+    data->motor_velocity = main_loop.status_.motor_velocity_filtered;
+    data->joint_velocity = main_loop.status_.output_velocity_filtered;
+    data->torque = main_loop.status_.torque_filtered;
     data->rr_data = main_loop.status_.rr_data;
     data->reserved = *reinterpret_cast<float *>(main_loop.reserved0_);
     data->flags.mode = main_loop.status_.mode;
