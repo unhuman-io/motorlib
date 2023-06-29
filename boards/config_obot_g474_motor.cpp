@@ -206,6 +206,10 @@ void system_init() {
 FrequencyLimiter temp_rate = {10};
 FrequencyLimiter zero_rate = {100};
 float T = 0;
+MedianFilter<> board_temperature_filter;
+MedianFilter<> microcontroller_temperature_filter;
+MedianFilter<> mosfet_temperature_filter;
+MedianFilter<> mosfet2_temperature_filter;
 
 void config_maintenance();
 void system_maintenance() {
@@ -218,28 +222,30 @@ void system_maintenance() {
     if (temp_rate.run()) {
         ADC1->CR |= ADC_CR_JADSTART;
         while(ADC1->CR & ADC_CR_JADSTART);
-        T = config::temp_sensor.read();
+        T = microcontroller_temperature_filter.update(config::temp_sensor.read());
+        round_robin_logger.log_data(MICROCONTROLLER_TEMPERATURE_INDEX, T);
         v3v3 =  *((uint16_t *) (0x1FFF75AA)) * 3.0 * ADC1->GCOMP / 4096.0 / ADC1->JDR2;
         round_robin_logger.log_data(VOLTAGE_3V3_INDEX, v3v3);
         if (T > 100) {
             config::main_loop.status_.error.microcontroller_temperature = 1;
         }
 #if defined(HAS_MAX31875) || defined(HAS_MAX31889)
-        config::board_temperature.read();
-        round_robin_logger.log_data(BOARD_TEMPERATURE_INDEX, config::board_temperature.get_temperature());
-        if (config::board_temperature.get_temperature() > 120) {
+        float Tboard = board_temperature_filter.update(config::board_temperature.read());
+        round_robin_logger.log_data(BOARD_TEMPERATURE_INDEX, Tboard);
+        if (Tboard > 120) {
             config::main_loop.status_.error.board_temperature = 1;
         }
 #endif
 #ifdef HAS_BRIDGE_THERMISTORS
-        config::temp_bridge.read();
-        round_robin_logger.log_data(MOSFET_TEMPERATURE_INDEX, config::temp_bridge.get_temperature());
-        if (config::temp_bridge.get_temperature() > 150) {
+        float Tmosfet = mosfet_temperature_filter.update(config::temp_bridge.read());
+        round_robin_logger.log_data(MOSFET_TEMPERATURE_INDEX, Tmosfet);
+        if (Tmosfet > 150) {
             config::main_loop.status_.error.board_temperature = 1;
         }
-        round_robin_logger.log_data(MOSFET2_TEMPERATURE_INDEX, config::temp_bridge2.get_temperature());
+        float Tmosfet2 = mosfet_temperature_filter.update(config::temp_bridge2.read());
+        round_robin_logger.log_data(MOSFET2_TEMPERATURE_INDEX, Tmosfet2);
         config::temp_bridge2.read();
-        if (config::temp_bridge2.get_temperature() > 150) {
+        if (Tmosfet2 > 150) {
             config::main_loop.status_.error.board_temperature = 1;
         }
 #endif

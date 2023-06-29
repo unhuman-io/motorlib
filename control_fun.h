@@ -6,6 +6,8 @@
 #include <cmath>
 #define M_PI 3.1415926f
 #include "sincos.h"
+#include <algorithm>
+#include <vector>
 
 class Hysteresis {
  public:
@@ -15,6 +17,33 @@ class Hysteresis {
  private:
     float value_ = 0;
     float hysteresis_ = 0;
+};
+
+template<int size=5>
+class MedianFilter {
+ public:
+    MedianFilter() :
+        data_(size, 0), data_tmp_(size) {}
+    float update(float value) {
+        pos_++;
+        if (pos_ >= size) {
+            pos_ = 0;
+        }
+        data_[pos_] = value;
+        sort();
+        return data_tmp_[size/2];
+    }
+    std::vector<float> &sort() {
+        for (int i=0; i<size; i++) {
+            data_tmp_[i] = data_[i];
+        }
+        std::sort(data_tmp_.begin(), data_tmp_.end());
+        return data_tmp_;
+    }
+ private:
+    std::vector<float> data_;
+    std::vector<float> data_tmp_;
+    int pos_ = 0;
 };
 
 float fsat(float a, float sat);
