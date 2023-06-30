@@ -28,7 +28,6 @@ private:
     float dt_;
     FirstOrderLowPassFilter id_filter_, iq_filter_;
     FOCParam param_;
-    RateLimiter v_d_rate_limit_, v_q_rate_limit_;
 
     friend class System;
 };

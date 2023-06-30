@@ -209,7 +209,6 @@ class RateLimiter {
         last_value_ = out_value;
         return out_value;
     }
-    float get_limit() const { return limit_; }
     float get_value() const { return last_value_; }
     float get_velocity() const { return velocity_; }
  private:
