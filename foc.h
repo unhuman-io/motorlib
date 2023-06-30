@@ -22,7 +22,7 @@ public:
 private:
     float num_poles_ = 7;
     volatile float i_gain_ = 0;
-    PIController pi_id_, pi_iq_;
+    PI2Controller pi_id_, pi_iq_;
     FOCStatus status_;
     static const float Kc[2][3];
     float dt_;
