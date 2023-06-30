@@ -23,6 +23,14 @@ class RoundRobinLogger {
     void log_data(uint8_t index, float data) {
       data_[index].data = data;
     }
+    void log_data(uint8_t index, uint32_t data) {
+      data_[index].data = data;
+      data_[index].type = UINT32_T;
+    }
+    void log_data(uint8_t index, int32_t data) {
+      data_[index].data = data;
+      data_[index].type = INT32_T;
+    }
  private:
     uint8_t index_;
     RoundRobinData data_[RR_DATA_LENGTH];
