@@ -23,6 +23,16 @@ typedef struct {
 } PIParam;
 
 typedef struct {
+    float kp;               // proportional gain, units of V/A for current control
+    float ki;               // integral gain, same units as proportional gain but per cycle, note this may change to per second
+    float kp2;              // linear slope to this gain at value2
+    float ki2;              // linear slope to this gain at value2
+    float value2;           // linear slope target
+    float ki_limit;         // integrator saturation, same units as output saturation
+    float command_max;      // Output saturation, units of V for current control, A for position control
+} PI2Param;
+
+typedef struct {
     float kp;               // proportional gain, units of A/rad for position control
     float ki;               // \sa PIParam.ki 
     float ki_limit;         // \sa PIParam.ki_limit
@@ -33,8 +43,8 @@ typedef struct {
 } PIDParam;
 
 typedef struct {
-    PIParam pi_d;           // PIParam for d axis current - often make the same as pi_q
-    PIParam pi_q;           // PIParam for q axis current
+    PI2Param pi_d;           // PIParam for d axis current - often make the same as pi_q
+    PI2Param pi_q;           // PIParam for q axis current
     float current_filter_frequency_hz;  // First order filter on current measurements
     float num_poles;        // number of motor pole pairs - i.e. number of motor magnets/2
                             // for linear encoders set to poles per mm * 2 * pi

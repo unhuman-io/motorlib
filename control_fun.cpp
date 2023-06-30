@@ -74,6 +74,38 @@ float PIController::step(float desired, float measured) {
     return fsat(kp_*error + ki_sum_, command_max_);
 }
 
+void PI2Controller::set_param(const PI2Param &pi_param) {
+    ki_ = pi_param.ki;
+    kp_ = pi_param.kp;
+    ki2_ = pi_param.ki2;
+    kp2_ = pi_param.kp2;
+    value2_ = pi_param.value2;
+    if (value2_ != 0) {
+        inv_value2_ = 1/value2_;
+    } else {
+        kp2_ = kp_;
+        ki2_ = ki_;
+        inv_value2_ = 1;
+    }
+    ki_limit_ = pi_param.ki_limit;
+    command_max_ = pi_param.command_max;
+}
+
+float fabsf2(float f) {
+    return f >= 0 ? f : -f;
+}
+
+float PI2Controller::step(float desired, float measured) {
+    float error = desired - measured;
+    float ratio = (value2_ - fabsf2(desired))*inv_value2_; // 1: all k, 0: all k2
+    ratio = ratio < 0 ? 0 : ratio;
+    float ki = ratio*ki_ + (1-ratio)*ki2_;
+    float kp = ratio*kp_ + (1-ratio)*kp2_;
+    ki_sum_ += ki * error;
+    ki_sum_ = fsat(ki_sum_, ki_limit_);
+    return fsat(kp*error + ki_sum_, command_max_);
+}
+
 void PIDController::set_param(const PIDParam &param) {
     ki_ = param.ki;
     kp_ = param.kp;
