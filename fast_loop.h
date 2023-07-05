@@ -101,7 +101,7 @@ class FastLoop {
       }
 
       // update FOC
-      foc_command_.measured.motor_encoder = phase_mode_*(motor_enc_wrap_ - motor_electrical_zero_pos_)*(2*(float) M_PI  * inv_motor_encoder_cpr_);
+      foc_command_.measured.motor_encoder = phase_mode_*(motor_enc_wrap_ - motor_electrical_zero_dir_pos_)*(2*(float) M_PI  * inv_motor_encoder_cpr_);
       foc_command_.desired.i_q = iq_des_gain_ * (iq_des + iq_ff);
 
       if (mode_ == STEPPER_TUNING_MODE) {
@@ -169,6 +169,8 @@ class FastLoop {
            }
         }
       }
+
+      motor_electrical_zero_dir_pos_ = motor_electrical_zero_pos_ + current_direction_*(param_.motor_encoder.cpr/(uint8_t) param_.foc_param.num_poles/2);
 
       v_bus_ = *v_bus_dr_*param_.vbus_gain;
       pwm_.set_vbus(fmaxf(7, v_bus_));
@@ -242,6 +244,7 @@ class FastLoop {
       iq_filter_.set_frequency(param_.output_filter_hz.iq);
       motor_velocity_filter_.set_frequency(param_.output_filter_hz.motor_velocity);
       motor_position_filter_.set_frequency(param_.output_filter_hz.motor_position);
+      current_direction_ = param_.current_direction;
     }
     const FastLoopStatus &get_status() const {
       return status_.top();
@@ -345,6 +348,8 @@ class FastLoop {
     int32_t motor_index_pos_ = 0;
     bool motor_index_pos_set_ = false;
     int32_t motor_electrical_zero_pos_;
+    int32_t motor_electrical_zero_dir_pos_;
+    uint8_t current_direction_ = 0;
     float motor_index_electrical_offset_measured_ = NAN;
     float inv_motor_encoder_cpr_;
     int32_t frequency_hz_ = 100000;

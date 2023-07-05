@@ -88,7 +88,7 @@ typedef struct {
         float motor_position;
         float iq;
     } output_filter_hz;
-
+    uint8_t current_direction;                      // 0 or 1 to switch direction
 } FastLoopParam;
 
 typedef struct {

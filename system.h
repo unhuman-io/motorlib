@@ -172,6 +172,7 @@ class System {
         //API_ADD_FILTER(output_output_velocity_filter, FirstOrderLowPassFilter, actuator_.main_loop_.output_velocity_filter_);
         API_ADD_FILTER(output_output_position_filter, FirstOrderLowPassFilter, actuator_.main_loop_.output_position_filter_);
         API_ADD_FILTER(output_torque_filter, FirstOrderLowPassFilter, actuator_.main_loop_.torque_filter_);
+        api.add_api_variable("idir", new APIUint8(&actuator_.fast_loop_.current_direction_));
 
         uint32_t t_start = get_clock();
         while(1) {
