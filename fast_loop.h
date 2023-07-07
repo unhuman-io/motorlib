@@ -68,7 +68,7 @@ class FastLoop {
       motor_position_filtered_ = motor_position_filter_.update(motor_position_);//(1-alpha10)*motor_position_filtered_ + alpha10*motor_position_;
       motor_velocity_ =  motor_encoder_dir_ * (motor_enc_diff)*(2*(float) M_PI * inv_motor_encoder_cpr_ * frequency_hz_);
       motor_velocity_filtered_ = motor_velocity_filter_.update(motor_velocity_);
-      last_motor_enc = motor_enc;
+      
 
       // cogging compensation, interpolate in the table
       float iq_ff = param_.cogging.gain * cogging_correction_table_.table_interp(motor_x);
@@ -141,6 +141,7 @@ class FastLoop {
 
       motor_position_ = motor_encoder_dir_ * (2 * (float) M_PI * inv_motor_encoder_cpr_ * motor_enc_wrap_ 
                           + motor_index_pos_set_*motor_correction_table_.table_interp(motor_x));
+      last_motor_enc = motor_enc;
       return motor_position_;
     }
     void maintenance() {
