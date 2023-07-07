@@ -25,7 +25,7 @@ class MAX11254 : public TorqueSensorBase {
     MAX11254(SPIDMA &spi_dma) :
         TorqueSensorBase(), spi_dma_(spi_dma) {
         
-        init();
+        //init();
         register_address dr = {.rw = 1, .addr = 14, .bits2 = 3};
         data_out_[0] = dr.word;
     }
@@ -34,10 +34,17 @@ class MAX11254 : public TorqueSensorBase {
         uint8_t data_out[5] = {stat_read.word};
         uint8_t data_in[5];
         spi_dma_.readwrite(data_out, data_in, 5);
-        logger.log_printf("max11274stat: %02x %02x %02x", data_in[1], data_in[2], data_in[3]);
+        logger.log_printf("max11274 stat: %02x %02x %02x", data_in[2], data_in[3], data_in[4]);
         bool ret_val = true;
-        ret_val &= !write_reg(2, 0x2F);
-        ret_val &= !write_reg24(7, 2);
+        //ret_val &= write_reg(8, 0x40); // in 1
+        ret_val &= write_reg(1, 0x3);   // continuous conversion
+        ret_val &= write_reg(2, 0x2F);
+        
+        //ret_val &= write_reg24(7, 0x6);
+
+
+        command conv = {.rate=0b1111, .mode=3, .b7=1};
+        spi_dma_.readwrite(&conv.word, data_in, 1);
         return ret_val;
     }
 
@@ -91,10 +98,11 @@ class MAX11254 : public TorqueSensorBase {
             int32_t s32 = raw_value_ << 8;
             signed_value_ = s32 >> 8;
             torque_ = signed_value_;
-            uint8_t data_in;
-            command conv = {.rate=0b1111, .mode=3, .b7=1};
-            spi_dma_.readwrite(&conv.word, &data_in, 1);
+
         }
+        uint8_t data_in;
+        command conv = {.rate=0b1111, .mode=3, .b7=1};
+        spi_dma_.readwrite(&conv.word, &data_in, 1);
         return torque_;
     }
     bool isol = true;
