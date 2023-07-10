@@ -39,7 +39,7 @@ class MAX11254 : public TorqueSensorBase {
         //ret_val &= write_reg(8, 0x40); // in 1
         ret_val &= write_reg(1, 0x3);   // continuous conversion
         ret_val &= write_reg(2, 0x2F);
-        
+        ret_val &= write_reg(9, 0x1); //  GPO0 on
         //ret_val &= write_reg24(7, 0x6);
 
 
