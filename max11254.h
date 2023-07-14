@@ -97,7 +97,7 @@ class MAX11254 : public TorqueSensorBase {
             }
             int32_t s32 = raw_value_ << 8;
             signed_value_ = s32 >> 8;
-            torque_ = signed_value_;
+            torque_ = signed_value_ * gain_ + bias_;
 
         }
         uint8_t data_in;
