@@ -9,6 +9,10 @@
 #include <algorithm>
 #include <vector>
 
+inline float fabsf2(float f) {
+    return f >= 0 ? f : -f;
+}
+
 class Hysteresis {
  public:
     float step(float);

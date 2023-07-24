@@ -104,6 +104,7 @@ typedef struct {
     PIDParam position;
     float velocity_limit;
     float desired_filter_hz;
+    float tracking_tolerance;
 } PositionControllerParam;
 
 typedef struct {

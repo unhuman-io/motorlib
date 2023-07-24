@@ -91,10 +91,6 @@ void PI2Controller::set_param(const PI2Param &pi_param) {
     command_max_ = pi_param.command_max;
 }
 
-float fabsf2(float f) {
-    return f >= 0 ? f : -f;
-}
-
 float PI2Controller::step(float desired, float measured) {
     float error = desired - measured;
     float ratio = (value2_ - fabsf2(desired))*inv_value2_; // 1: all k, 0: all k2

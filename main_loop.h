@@ -169,6 +169,9 @@ class MainLoop {
           break;
         case POSITION:
           iq_des = position_controller_.step(receive_data_, status_);
+          if (position_controller_.tracking_fault()) {
+            status_.error.controller_tracking = true;
+          }
           break;
         case TORQUE:
           iq_des = torque_controller_.step(receive_data_, status_);
@@ -216,6 +219,10 @@ class MainLoop {
             trajectory.position_desired = position_desired+receive_data_.position_tuning.bias;
             trajectory.velocity_desired = velocity_desired;
             iq_des = position_controller_.step(trajectory, status_);
+            if (position_controller_.tracking_fault()) {
+              status_.error.controller_tracking = true;
+            }
+
             break;
           }
         case CURRENT_TUNING:
