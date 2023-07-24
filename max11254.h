@@ -22,8 +22,8 @@ class MAX11254 : public TorqueSensorBase {
         uint8_t word;
     };
 
-    MAX11254(SPIDMA &spi_dma) :
-        TorqueSensorBase(), spi_dma_(spi_dma) {
+    MAX11254(SPIDMA &spi_dma, uint8_t decimation=1) :
+        TorqueSensorBase(), spi_dma_(spi_dma), decimation_(decimation) {
         
         //init();
         register_address dr = {.rw = 1, .addr = 14, .bits2 = 3};
