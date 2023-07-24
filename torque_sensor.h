@@ -17,6 +17,7 @@ class TorqueSensorBase : public SensorBase {
     // void zero(float current_torque_reading) {
     //     bias_ -= current_torque_reading;
     // }
+    float get_value() { return torque_; }
  //protected:
     float gain_ = 0, bias_ = 0, k_temp_ = 0, torque_ = 0;
  //   friend class System;
