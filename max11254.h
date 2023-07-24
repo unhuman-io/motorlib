@@ -107,12 +107,12 @@ class MAX11254 : public TorqueSensorBase {
     }
     bool isol = true;
     uint8_t count_ = 0;
-    uint8_t decimation_ = 1;
+
     int32_t signed_value_ = 0;
     uint32_t raw_value_ = 0;
- private:
+    SPIDMA &spi_dma_;
     static const uint8_t length_ = 5;
     uint8_t data_out_[length_] = {};
     uint8_t data_in_[length_] = {};
-    SPIDMA &spi_dma_;
+    uint8_t decimation_ = 1;
 };
