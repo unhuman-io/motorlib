@@ -37,14 +37,27 @@ class MAX11254 : public TorqueSensorBase {
         logger.log_printf("max11274 stat: %02x %02x %02x", data_in[2], data_in[3], data_in[4]);
         bool ret_val = true;
         //ret_val &= write_reg(8, 0x40); // in 1
-        ret_val &= write_reg(1, 0x3);   // continuous conversion
+        // reset sequence
+        ret_val &= write_reg(1, 0x30); // reset
+        command conv = {.rate=0b1111, .mode=1, .b7=1};
+        spi_dma_.readwrite(&conv.word, data_in, 1);
+        ms_delay(28);
+        spi_dma_.readwrite(data_out, data_in, 5);
+        logger.log_printf("max11274 stat: %02x %02x %02x", data_in[2], data_in[3], data_in[4]);
+
+        ret_val &= write_reg(1, 0x1);   // continuous conversion
         ret_val &= write_reg(2, 0x2F);
         ret_val &= write_reg(9, 0x1); //  GPO0 on
         //ret_val &= write_reg24(7, 0x6);
 
+        spi_dma_.readwrite(data_out, data_in, 5);
+        logger.log_printf("max11274 stat: %02x %02x %02x", data_in[2], data_in[3], data_in[4]);
 
-        command conv = {.rate=0b1111, .mode=3, .b7=1};
-        spi_dma_.readwrite(&conv.word, data_in, 1);
+        command conv2 = {.rate=0b1100, .mode=3, .b7=1}; // 8khz rate
+        spi_dma_.readwrite(&conv2.word, data_in, 1);
+
+        spi_dma_.readwrite(data_out, data_in, 5);
+        logger.log_printf("max11274 stat: %02x %02x %02x", data_in[2], data_in[3], data_in[4]);
         return ret_val;
     }
 
@@ -101,8 +114,8 @@ class MAX11254 : public TorqueSensorBase {
 
         }
         uint8_t data_in;
-        command conv = {.rate=0b1111, .mode=3, .b7=1};
-        spi_dma_.readwrite(&conv.word, &data_in, 1);
+        command conv = {.rate=0b1101, .mode=3, .b7=1};
+        //spi_dma_.readwrite(&conv.word, &data_in, 1);
         return torque_;
     }
     bool isol = true;
