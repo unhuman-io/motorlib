@@ -24,7 +24,7 @@ class SPIDMA {
     }
 
     void reinit() {
-        regs_.CR1 = 0;
+        regs_.CR1 &= ~SPI_CR1_SPE; // disable to change settings
         regs_.CR2 = (7 << SPI_CR2_DS_Pos) | SPI_CR2_FRXTH | SPI_CR2_RXDMAEN | SPI_CR2_TXDMAEN;   // 8 bit
         tx_dma_.CPAR = (uint32_t) &regs_.DR;
         rx_dma_.CPAR = (uint32_t) &regs_.DR;
