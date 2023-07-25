@@ -176,6 +176,7 @@ class System {
         api.add_api_variable("idir", new APIUint8(&actuator_.fast_loop_.current_direction_));
         api.add_api_variable("uptime", new const APIUint32(&actuator_.main_loop_.uptime_));
         api.add_api_variable("menc", new const APIInt32(&actuator_.fast_loop_.motor_enc));
+        api.add_api_variable("usb_reset_count", new APIUint32(&communication_.usb_.reset_count_));
 
         uint32_t t_start = get_clock();
         while(1) {

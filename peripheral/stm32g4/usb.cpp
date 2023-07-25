@@ -6,6 +6,8 @@
 #include "stm32g4xx.h"
 #include "../../util.h"
 #include <cstdio>
+#include "../../messages.h"
+#include "../../logger.h"
 
 extern const char * const name;
 
@@ -328,6 +330,8 @@ void USB1::interrupt() {
     /* Handle Reset Interrupt */
     if (USB->ISTR & USB_ISTR_RESET)
     {
+        reset_count_++;
+        logger.log("usb reset");
         // Set up endpoint 0
         USB->EP0R = USB_EP_CONTROL;
         USBPMA->btable[0].ADDR_TX = offsetof(USBPMA_TypeDef, buffer[0].EP_TX);
