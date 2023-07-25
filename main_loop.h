@@ -15,6 +15,7 @@
 extern "C" {
 void system_init();
 }
+extern volatile uint32_t uptime;
 
 void setup_sleep();
 void finish_sleep();
@@ -52,7 +53,7 @@ class MainLoop {
 
       if (count_ >= frequency_hz_) {
         count_ = 0;
-        uptime_++;
+        uptime++;
       }
       
       last_timestamp_ = timestamp_;
@@ -587,7 +588,6 @@ class MainLoop {
     bool internal_command_received_ = false;
     uint32_t frequency_hz_;
     uint32_t count_ = 0;
-    uint32_t uptime_ = 0;
     uint16_t no_command_ = 0;
     bool safe_mode_ = false;
     bool last_safe_mode_ = false;
