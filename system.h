@@ -174,6 +174,9 @@ class System {
         API_ADD_FILTER(output_output_position_filter, FirstOrderLowPassFilter, actuator_.main_loop_.output_position_filter_);
         API_ADD_FILTER(output_torque_filter, FirstOrderLowPassFilter, actuator_.main_loop_.torque_filter_);
         api.add_api_variable("idir", new APIUint8(&actuator_.fast_loop_.current_direction_));
+        api.add_api_variable("uptime", new const APICallbackUint32(get_uptime));
+        api.add_api_variable("menc", new const APIInt32(&actuator_.fast_loop_.motor_enc));
+        api.add_api_variable("usb_reset_count", new APIUint32(&communication_.usb_.reset_count_));
 
         uint32_t t_start = get_clock();
         while(1) {
@@ -189,6 +192,7 @@ class System {
             }
             system_maintenance();
             actuator_.maintenance();
+            round_robin_logger.log_data(UPTIME_INDEX, get_uptime());
         }
     }
     static void main_loop_interrupt() {

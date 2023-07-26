@@ -213,6 +213,7 @@ private:
     bool new_rx_data_[4] = {};
     uint8_t count_rx_[4] = {};
     uint32_t error_count_ = 0;
+    uint32_t reset_count_ = 0;
 
     friend class System;
 };

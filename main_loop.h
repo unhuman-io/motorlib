@@ -15,6 +15,7 @@
 extern "C" {
 void system_init();
 }
+extern volatile uint32_t uptime;
 
 void setup_sleep();
 void finish_sleep();
@@ -36,7 +37,7 @@ class MainLoop {
           param_(param), fast_loop_(fast_loop), position_controller_(position_controller), torque_controller_(torque_controller), 
           impedance_controller_(impedance_controller), velocity_controller_(velocity_controller), state_controller_(state_controller),  
           joint_position_controller_(joint_position_controller), 
-          communication_(communication), led_(led), output_encoder_(output_encoder), torque_sensor_(torque),
+          communication_(communication), led_(led), frequency_hz_(frequency_hz), output_encoder_(output_encoder), torque_sensor_(torque),
           output_encoder_correction_table_(param_.output_encoder.table), 
           torque_correction_table_(param_.torque_sensor.table), driver_(driver), brake_(brake),
           iq_find_limits_filter_(1.0/frequency_hz, 1), motor_velocity_filter_(1.0/frequency_hz, param.output_filter_hz.motor_velocity), motor_position_filter_(1.0/frequency_hz),
@@ -46,9 +47,14 @@ class MainLoop {
     void init() {} // todo: init filters with first status
     void update() {
       count_++;
+
       output_encoder_.trigger();
-      
       torque_sensor_.trigger();
+
+      if (count_ >= frequency_hz_) {
+        count_ = 0;
+        uptime++;
+      }
       
       last_timestamp_ = timestamp_;
       timestamp_ = get_clock();
@@ -580,7 +586,8 @@ class MainLoop {
     ReceiveData last_receive_data_ = {};
     MotorCommand internal_command_;
     bool internal_command_received_ = false;
-    uint64_t count_ = 0;
+    uint32_t frequency_hz_;
+    uint32_t count_ = 0;
     uint16_t no_command_ = 0;
     bool safe_mode_ = false;
     bool last_safe_mode_ = false;

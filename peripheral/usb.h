@@ -40,6 +40,7 @@ class USB1 {
     uint8_t rx_buffer_[3][64] = {};
     uint32_t error_count_ = 0;
     friend class System;
+    uint32_t reset_count_ = 0;
 };
 
 #endif  // UNHUMAN_MOTORLIB_PERIPHERAL_USB_H_

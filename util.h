@@ -6,11 +6,12 @@
 
 #define US_TO_CPU(t_us) (t_us*(CPU_FREQUENCY_HZ/1000000))
 extern volatile uint32_t * const cpu_clock;
+extern volatile uint32_t uptime;
 
 static inline volatile uint32_t get_clock() { return *cpu_clock; }
 static inline uint8_t get_cpi_count() { return DWT->CPICNT; }
 static inline uint8_t get_lsu_count() { return DWT->LSUCNT; }
-
+static inline volatile uint32_t get_uptime() { return uptime; }
 
 void ms_delay(uint16_t ms);
 void us_delay(uint16_t us);
