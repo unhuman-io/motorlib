@@ -45,7 +45,7 @@ class MAX11254 : public TorqueSensorBase {
         spi_dma_.readwrite(data_out, data_in, 5);
         logger.log_printf("max11274 stat: %02x %02x %02x", data_in[2], data_in[3], data_in[4]);
 
-        ret_val &= write_reg(1, 0x1);   // continuous conversion
+        ret_val &= write_reg(1, 0x2);   // single conversion
         ret_val &= write_reg(2, 0x2F);
         ret_val &= write_reg(9, 0x1); //  GPO0 on
         //ret_val &= write_reg24(7, 0x6);
@@ -114,8 +114,8 @@ class MAX11254 : public TorqueSensorBase {
 
         }
         uint8_t data_in;
-        command conv = {.rate=0b1101, .mode=3, .b7=1};
-        //spi_dma_.readwrite(&conv.word, &data_in, 1);
+        command conv = {.rate=0b1111, .mode=3, .b7=1};
+        spi_dma_.readwrite(&conv.word, &data_in, 1);
         return torque_;
     }
     bool isol = true;
