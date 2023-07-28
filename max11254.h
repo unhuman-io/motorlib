@@ -21,6 +21,42 @@ class MAX11254 : public TorqueSensorBase {
         };
         uint8_t word;
     };
+    union cr2_register {
+        struct {
+            uint8_t pga:3;
+            uint8_t pgaen:1;
+            uint8_t lpmode:1;
+            uint8_t ldoen:1;
+            uint8_t cssen:1;
+            uint8_t extclk:1;
+        };
+        uint8_t word;
+    };
+    union chmap_register {
+        struct {
+            uint8_t gpoen:1;
+            uint8_t en:1;
+            uint8_t ord:3;
+            uint8_t gpio:2;
+        };
+        uint8_t word;
+    };
+    union chmap24_register {
+        struct {
+            chmap_register ch0, ch1, ch2;
+        };
+        uint32_t word;
+    };
+    union seq_register {
+        struct {
+            uint8_t rdyben:1;
+            uint8_t mdren:1;
+            uint8_t gpodren:1;
+            uint8_t mode:2;
+            uint8_t mux:3;
+        };
+        uint8_t word;
+    };
 
     MAX11254(SPIDMA &spi_dma, uint8_t decimation=1) :
         TorqueSensorBase(), spi_dma_(spi_dma), decimation_(decimation) {
@@ -46,9 +82,15 @@ class MAX11254 : public TorqueSensorBase {
         logger.log_printf("max11274 stat: %02x %02x %02x", data_in[2], data_in[3], data_in[4]);
 
         ret_val &= write_reg(1, 0x2);   // single conversion
-        ret_val &= write_reg(2, 0x2F);
+        // pga128
+        //cr1_register cr1 = {.ldoen=1, .pgaen=1, pga=7};
+        // pga off option
+        cr2_register cr1 = {.ldoen=1};
+        ret_val &= write_reg(2, cr1.word);
         ret_val &= write_reg(9, 0x1); //  GPO0 on
-        //ret_val &= write_reg24(7, 0x6);
+        // sample channel 1
+        seq_register seq = {.mux=1};
+        ret_val &= write_reg(8, seq.word);
 
         spi_dma_.readwrite(data_out, data_in, 5);
         logger.log_printf("max11274 stat: %02x %02x %02x", data_in[2], data_in[3], data_in[4]);
