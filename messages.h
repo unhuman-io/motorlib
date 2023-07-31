@@ -137,6 +137,11 @@ typedef struct {
 } JointPositionControllerParam;
 
 typedef struct {
+    VelocityControllerParam velocity;       // inner velocity controller
+    PIDParam torque;                        // outer loop on torque
+} AdmittanceControllerParam;
+
+typedef struct {
 
 } FindLimitsControllerParam;                // note uses the velocity_controller_param of the velocity controller
                                             // and position_controller_param of the position controller
@@ -148,6 +153,7 @@ typedef struct {
     VelocityControllerParam velocity_controller_param;
     StateControllerParam state_controller_param;
     JointPositionControllerParam joint_position_controller_param;
+    AdmittanceControllerParam admittance_controller_param;
     struct {
         float table[OUTPUT_ENCODER_TABLE_LENGTH][4];
         float cpr;                                  // output encoder cpr \sa FastLoopParam.motor_encoder.cpr
