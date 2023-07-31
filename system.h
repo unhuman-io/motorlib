@@ -177,6 +177,9 @@ class System {
         api.add_api_variable("uptime", new const APICallbackUint32(get_uptime));
         api.add_api_variable("menc", new const APIInt32(&actuator_.fast_loop_.motor_enc));
         api.add_api_variable("usb_reset_count", new APIUint32(&communication_.usb_.reset_count_));
+        api.add_api_variable("amax", new APIFloat(&actuator_.main_loop_.admittance_controller_.torque_controller_.command_max_));
+        api.add_api_variable("akp", new APIFloat(&actuator_.main_loop_.admittance_controller_.torque_controller_.kp_));
+        API_ADD_FILTER(a_output_filter, FirstOrderLowPassFilter, actuator_.main_loop_.admittance_controller_.torque_controller_.output_filter_);
 
         uint32_t t_start = get_clock();
         while(1) {
