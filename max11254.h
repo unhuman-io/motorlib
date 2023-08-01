@@ -21,6 +21,18 @@ class MAX11254 : public TorqueSensorBase {
         };
         uint8_t word;
     };
+    union cr1_register {
+        struct {
+            uint8_t contsc:1;
+            uint8_t scycle:1;
+            uint8_t format:1;
+            uint8_t ub:1;
+            uint8_t pd:2;
+            uint8_t cal:2;
+        };
+        uint8_t word;
+    };
+
     union cr2_register {
         struct {
             uint8_t pga:3;
@@ -81,7 +93,8 @@ class MAX11254 : public TorqueSensorBase {
         spi_dma_.readwrite(data_out, data_in, 5);
         logger.log_printf("max11274 stat: %02x %02x %02x", data_in[2], data_in[3], data_in[4]);
 
-        ret_val &= write_reg(1, 0x2);   // single conversion
+        cr1_register cr1 = {.scycle=1, .ub=1};
+        ret_val &= write_reg(1, cr1.word);   // single conversion
         // pga128
         cr2_register cr2 = {.pga=7, .pgaen=1, .ldoen=1};
         // pga off option
