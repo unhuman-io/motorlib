@@ -154,16 +154,36 @@ class MAX11254 : public TorqueSensorBase {
             signed_value_ = s32 >> 8;
             torque_ = signed_value_ * gain_ + bias_;
 
+            // stale values are currently the only fault mechanism
+            if (last_new_signed_value_ != signed_value_) {
+                last_new_signed_value_ = signed_value_;
+                stale_value_count_ = 0;
+            } else {
+                stale_value_count_++;
+                if (stale_value_count_ > 3) {
+                    timeout_error_++;
+                    stale_value_count_ = 0;
+                }
+            }
+
         }
         uint8_t data_in;
         command conv = {.rate=0b1111, .mode=3, .b7=1};
         spi_dma_.readwrite(&conv.word, &data_in, 1);
         return torque_;
     }
+
+    void clear_faults() {
+        timeout_error_ = 0;
+        stale_value_count_ = 0;
+    }
     bool isol = true;
     uint8_t count_ = 0;
 
     int32_t signed_value_ = 0;
+    int32_t last_new_signed_value_ = 0;
+    uint8_t stale_value_count_ = 0;
+    uint32_t timeout_error_ = 0;
     uint32_t raw_value_ = 0;
     SPIDMA &spi_dma_;
     static const uint8_t length_ = 5;
