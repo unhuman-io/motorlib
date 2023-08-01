@@ -83,14 +83,14 @@ class MAX11254 : public TorqueSensorBase {
 
         ret_val &= write_reg(1, 0x2);   // single conversion
         // pga128
-        //cr1_register cr1 = {.ldoen=1, .pgaen=1, pga=7};
+        cr2_register cr2 = {.pga=7, .pgaen=1, .ldoen=1};
         // pga off option
-        cr2_register cr1 = {.ldoen=1};
-        ret_val &= write_reg(2, cr1.word);
+        //cr2_register cr2 = {.ldoen=1};
+        ret_val &= write_reg(2, cr2.word);
         ret_val &= write_reg(9, 0x1); //  GPO0 on
         // sample channel 1
-        seq_register seq = {.mux=1};
-        ret_val &= write_reg(8, seq.word);
+        //seq_register seq = {.mux=1};
+        //ret_val &= write_reg(8, seq.word);
 
         spi_dma_.readwrite(data_out, data_in, 5);
         logger.log_printf("max11274 stat: %02x %02x %02x", data_in[2], data_in[3], data_in[4]);
