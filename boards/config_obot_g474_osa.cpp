@@ -84,6 +84,8 @@ void system_init() {
     System::api.add_api_variable("vam", new const APICallbackFloat([]() { return (33.0+2.0)/2.0 * 3.0/4096 * V_A_DR; }));
     System::api.add_api_variable("vbm", new const APICallbackFloat([]() { return (33.0+2.0)/2.0 * 3.0/4096 * V_B_DR; }));
     System::api.add_api_variable("vcm", new const APICallbackFloat([]() { return (33.0+2.0)/2.0 * 3.0/4096 * V_C_DR; }));
+    System::api.add_api_variable("usb_err", new APIUint32(&config::usb.error_count_));
+    System::api.add_api_variable("usb_reset_count", new APIUint32(&config::usb.reset_count_));
     System::api.add_api_variable("shutdown", new const APICallback([](){
         // requires power cycle to return 
         setup_sleep();

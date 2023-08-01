@@ -94,7 +94,6 @@ class System {
         api.add_api_variable("t_i_correction", new const APIFloat(&actuator_.main_loop_.param_.torque_correction));
         api.add_api_variable("log", new APICallback(get_log, log));
         api.add_api_variable("messages_version", new APICallback([](){ return MOTOR_MESSAGES_VERSION; }, [](std::string s) {} ));
-        api.add_api_variable("usb_err", new APIUint32(&((USBCommunication *) &communication_)->usb_.error_count_));
         api.add_api_variable("index_pos", new APICallback([](){ return std::to_string(actuator_.fast_loop_.encoder_.get_index_pos()); }, [](std::string s) {}));
         api.add_api_variable("index_received", new APICallbackUint32([](){return actuator_.fast_loop_.encoder_.index_received();}, [](uint32_t u) {}));
         api.add_api_variable("index_offset_measured", new const APIFloat(&actuator_.fast_loop_.motor_index_electrical_offset_measured_));
@@ -176,7 +175,6 @@ class System {
         api.add_api_variable("idir", new APIUint8(&actuator_.fast_loop_.current_direction_));
         api.add_api_variable("uptime", new const APICallbackUint32(get_uptime));
         api.add_api_variable("menc", new const APIInt32(&actuator_.fast_loop_.motor_enc));
-        api.add_api_variable("usb_reset_count", new APIUint32(&communication_.usb_.reset_count_));
         api.add_api_variable("amax", new APIFloat(&actuator_.main_loop_.admittance_controller_.torque_controller_.command_max_));
         api.add_api_variable("akp", new APIFloat(&actuator_.main_loop_.admittance_controller_.torque_controller_.kp_));
         API_ADD_FILTER(a_output_filter, FirstOrderLowPassFilter, actuator_.main_loop_.admittance_controller_.torque_controller_.output_filter_);

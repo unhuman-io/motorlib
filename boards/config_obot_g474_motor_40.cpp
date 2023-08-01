@@ -86,6 +86,8 @@ void system_init() {
     System::api.add_api_variable("Tboard", new const APICallbackFloat([](){ return config::board_temperature.get_temperature(); }));
     System::api.add_api_variable("index_mod", new APIInt32(&index_mod));
     System::api.add_api_variable("drv_reset", new const APICallback([](){ return config::driver.reset(); }));
+    System::api.add_api_variable("usb_err", new APIUint32(&config::usb.error_count_));
+    System::api.add_api_variable("usb_reset_count", new APIUint32(&config::usb.reset_count_));
     System::api.add_api_variable("shutdown", new const APICallback([](){
         // requires power cycle to return 
         setup_sleep();

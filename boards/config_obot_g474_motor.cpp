@@ -156,6 +156,8 @@ void system_init() {
     System::api.add_api_variable("IA", new const APIUint32(&ADC3->JDR1));
     System::api.add_api_variable("IB", new const APIUint32(&ADC4->JDR1));
     System::api.add_api_variable("IC", new const APIUint32(&ADC5->JDR1));
+    System::api.add_api_variable("usb_err", new APIUint32(&config::usb.error_count_));
+    System::api.add_api_variable("usb_reset_count", new APIUint32(&config::usb.reset_count_));
     System::api.add_api_variable("shutdown", new const APICallback([](){
         // requires power cycle to return 
         setup_sleep();
