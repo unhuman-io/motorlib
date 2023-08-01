@@ -17,6 +17,7 @@ uint16_t drv_regs_error = 0;
 #include "../controller/velocity_controller.h"
 #include "../controller/state_controller.h"
 #include "../controller/joint_position_controller.h"
+#include "../controller/admittance_controller.h"
 #include "../fast_loop.h"
 #include "../main_loop.h"
 #include "../actuator.h"
@@ -43,7 +44,8 @@ namespace config {
     VelocityController velocity_controller = {(float) (1.0/main_loop_frequency)};
     StateController state_controller = {(float) (1.0/main_loop_frequency)};
     JointPositionController joint_position_controller(1.0/main_loop_frequency);
-    MainLoop main_loop = {main_loop_frequency, fast_loop, position_controller, torque_controller, impedance_controller, velocity_controller, state_controller, joint_position_controller, System::communication_, led, output_encoder, torque_sensor, driver, param->main_loop_param};
+    AdmittanceController admittance_controller = {1.0/main_loop_frequency};
+    MainLoop main_loop = {main_loop_frequency, fast_loop, position_controller, torque_controller, impedance_controller, velocity_controller, state_controller, joint_position_controller, admittance_controller, System::communication_, led, output_encoder, torque_sensor, driver, param->main_loop_param};
 };
 
 Communication System::communication_ = {config::usb};

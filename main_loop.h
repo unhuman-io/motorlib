@@ -31,12 +31,12 @@ class MainLoop {
  public:
     MainLoop(int32_t frequency_hz, FastLoop &fast_loop, PositionController &position_controller,  TorqueController &torque_controller, 
         ImpedanceController &impedance_controller, VelocityController &velocity_controller, StateController &state_controller, 
-        JointPositionController &joint_position_controller, Communication &communication,
+        JointPositionController &joint_position_controller, AdmittanceController &admittance_controller, Communication &communication,
         LED &led, OutputEncoder &output_encoder, TorqueSensor &torque, Driver &driver, const MainLoopParam &param,
         HardwareBrake &brake=no_brake_) : 
           param_(param), fast_loop_(fast_loop), position_controller_(position_controller), torque_controller_(torque_controller), 
           impedance_controller_(impedance_controller), velocity_controller_(velocity_controller), state_controller_(state_controller),  
-          joint_position_controller_(joint_position_controller), 
+          joint_position_controller_(joint_position_controller), admittance_controller_(admittance_controller), 
           communication_(communication), led_(led), frequency_hz_(frequency_hz), output_encoder_(output_encoder), torque_sensor_(torque),
           output_encoder_correction_table_(param_.output_encoder.table), 
           torque_correction_table_(param_.torque_sensor.table), driver_(driver), brake_(brake),
@@ -193,6 +193,9 @@ class MainLoop {
           break;
         case JOINT_POSITION:
           iq_des = joint_position_controller_.step(receive_data_, status_);
+          break;
+        case ADMITTANCE:
+          iq_des = admittance_controller_.step(receive_data_, status_);
           break;
         case STEPPER_VELOCITY:
           vq_des = receive_data_.stepper_velocity.voltage;
@@ -351,6 +354,7 @@ class MainLoop {
       velocity_controller_.set_param(param_.velocity_controller_param);
       state_controller_.set_param(param_.state_controller_param);
       joint_position_controller_.set_param(param_.joint_position_controller_param);
+      admittance_controller_.set_param(param_.admittance_controller_param);
       torque_sensor_.set_param(param_.torque_sensor);
       if (param_.encoder_limits.motor_hard_max == param_.encoder_limits.motor_hard_min) {
         encoder_limits_.motor_hard_max = INFINITY;
@@ -461,6 +465,11 @@ class MainLoop {
             fast_loop_.current_mode();
             joint_position_controller_.init(status_);
             led_.set_color(LED::BLUE);
+            break;
+          case ADMITTANCE:
+            fast_loop_.current_mode();
+            admittance_controller_.init(status_);
+            led_.set_color(LED::ROSE);
             break;
           case FIND_LIMITS:
             fast_loop_.current_mode();
@@ -574,6 +583,7 @@ class MainLoop {
     VelocityController &velocity_controller_;
     StateController &state_controller_;
     JointPositionController &joint_position_controller_;
+    AdmittanceController &admittance_controller_;
     Communication &communication_;
     MainLoopParam::EncoderLimits encoder_limits_;
     MotorError error_mask_;
