@@ -161,7 +161,7 @@ class MAX11254 : public TorqueSensorBase {
             spi_dma_.finish_readwrite();
             raw_value_ = data_in_[1] << 16 | data_in_[2] << 8 | data_in_[3];
             if (isol) {
-                raw_value_ = (data_in_[2] << 24 | data_in_[3] << 16 | data_in_[4] << 8) >> 8;
+                raw_value_ = data_in_[2] << 16 | data_in_[3] << 8 | data_in_[4];
             }
             signed_value_ = raw_value_ - 0x7FFFFF;
             torque_ = signed_value_ * gain_ + bias_;
