@@ -180,8 +180,9 @@ class System {
         API_ADD_FILTER(a_output_filter, FirstOrderLowPassFilter, actuator_.main_loop_.admittance_controller_.torque_controller_.output_filter_);
         api.add_api_variable("fast_loop_status", new const APICallback([](){ 
             FastLoopStatus status = actuator_.fast_loop_.status_.top();
-            char c[256];
-            std::snprintf(c, 256, "%d, %f, %f, %f, %f, %f, %f, %f, %f, %f, %f", 
+            uint8_t len = 192;
+            char c[len];
+            std::snprintf(c, len, "%d, %f, %f, %f, %f, %f, %f, %f, %f, %f, %f", 
                     status.timestamp,
                     status.foc_command.measured.motor_encoder,
                     status.foc_command.desired.i_q,
@@ -193,7 +194,8 @@ class System {
                     status.foc_status.command.v_b,
                     status.foc_status.command.v_c,
                     status.vbus);
-            return c;
+            std::string s(c);
+            return s;
         }));
 
         uint32_t t_start = get_clock();
