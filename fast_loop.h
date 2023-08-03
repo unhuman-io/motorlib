@@ -350,7 +350,7 @@ class FastLoop {
     bool motor_index_pos_set_ = false;
     int32_t motor_electrical_zero_pos_;
     volatile int32_t motor_electrical_zero_dir_pos_;
-    uint8_t current_direction_ = 0;
+    float current_direction_ = 0;
     float motor_index_electrical_offset_measured_ = NAN;
     float inv_motor_encoder_cpr_;
     int32_t frequency_hz_ = 100000;

@@ -125,7 +125,7 @@ class System {
             actuator_.main_loop_.lock_status_log();
             for(int i=0; i<95; i++) {
                 FastLoopStatus &status = actuator_.fast_loop_.status_log_.next();
-                logger.log_printf("%d, %f, %f, %f, %f, %f, %f, %f, %f, %f, %f", 
+                logger.log_printf("%ld, %f, %f, %f, %f, %f, %f, %f, %f, %f, %f", 
                     status.timestamp,
                     status.foc_command.measured.motor_encoder,
                     status.foc_command.desired.i_q,
@@ -172,12 +172,31 @@ class System {
         //API_ADD_FILTER(output_output_velocity_filter, FirstOrderLowPassFilter, actuator_.main_loop_.output_velocity_filter_);
         API_ADD_FILTER(output_output_position_filter, FirstOrderLowPassFilter, actuator_.main_loop_.output_position_filter_);
         API_ADD_FILTER(output_torque_filter, FirstOrderLowPassFilter, actuator_.main_loop_.torque_filter_);
-        api.add_api_variable("idir", new APIUint8(&actuator_.fast_loop_.current_direction_));
+        api.add_api_variable("idir", new APIFloat(&actuator_.fast_loop_.current_direction_));
         api.add_api_variable("uptime", new const APICallbackUint32(get_uptime));
         api.add_api_variable("menc", new const APIInt32(&actuator_.fast_loop_.motor_enc));
         api.add_api_variable("amax", new APIFloat(&actuator_.main_loop_.admittance_controller_.torque_controller_.command_max_));
         api.add_api_variable("akp", new APIFloat(&actuator_.main_loop_.admittance_controller_.torque_controller_.kp_));
         API_ADD_FILTER(a_output_filter, FirstOrderLowPassFilter, actuator_.main_loop_.admittance_controller_.torque_controller_.output_filter_);
+        api.add_api_variable("fast_loop_status", new const APICallback([](){ 
+            FastLoopStatus status = actuator_.fast_loop_.status_.top();
+            uint8_t len = 192;
+            char c[len];
+            std::snprintf(c, len, "%ld, %f, %f, %f, %f, %f, %f, %f, %f, %f, %f", 
+                    status.timestamp,
+                    status.foc_command.measured.motor_encoder,
+                    status.foc_command.desired.i_q,
+                    status.foc_status.measured.i_q,
+                    status.foc_command.measured.i_a,
+                    status.foc_command.measured.i_b,
+                    status.foc_command.measured.i_c,
+                    status.foc_status.command.v_a,
+                    status.foc_status.command.v_b,
+                    status.foc_status.command.v_c,
+                    status.vbus);
+            std::string s(c);
+            return s;
+        }));
 
         uint32_t t_start = get_clock();
         while(1) {
