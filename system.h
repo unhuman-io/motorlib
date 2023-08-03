@@ -172,7 +172,7 @@ class System {
         //API_ADD_FILTER(output_output_velocity_filter, FirstOrderLowPassFilter, actuator_.main_loop_.output_velocity_filter_);
         API_ADD_FILTER(output_output_position_filter, FirstOrderLowPassFilter, actuator_.main_loop_.output_position_filter_);
         API_ADD_FILTER(output_torque_filter, FirstOrderLowPassFilter, actuator_.main_loop_.torque_filter_);
-        api.add_api_variable("idir", new APIUint8(&actuator_.fast_loop_.current_direction_));
+        api.add_api_variable("idir", new APIFloat(&actuator_.fast_loop_.current_direction_));
         api.add_api_variable("uptime", new const APICallbackUint32(get_uptime));
         api.add_api_variable("menc", new const APIInt32(&actuator_.fast_loop_.motor_enc));
         api.add_api_variable("amax", new APIFloat(&actuator_.main_loop_.admittance_controller_.torque_controller_.command_max_));
