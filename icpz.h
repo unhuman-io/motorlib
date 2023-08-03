@@ -7,7 +7,7 @@
 
 class ICPZ : public EncoderBase {
  public:
-    enum Disk{Default, PZ03S};
+    enum Disk{Default, PZ03S, PZ08S};
     ICPZ(SPIDMA &spidma, Disk disk = Default) 
       : spidma_(spidma), disk_(disk) {
       command_[0] = 0xa6; // read position
@@ -28,6 +28,12 @@ class ICPZ : public EncoderBase {
         success = set_register(2, 2, {0, 1}) ? success : false; // fcl = 256
         success = set_register(0, 7, {8 << 4}) ? success : false; // sys_ovr = 8 (don't really need this 8 is default for 2656),
         success = set_register(1, 0xB, {9}) ? success : false; // ai_scale = 9 (1.0048),
+      } else if (disk_ == PZ08S) {
+        // success = set_register(2, 2, {0, 1}) ? success : false; // fcl = 446
+        // success = set_register(0, 7, {8 << 4}) ? success : false; // sys_ovr = 9 (don't really need this 8 is default for 2656),
+        // success = set_register(1, 0xB, {9}) ? success : false; // ai_scale = 9 (.9558),
+        //FCS 216
+        // ai phase -20
       }
 
       //  command[0] = 0xcf;
@@ -173,6 +179,7 @@ class ICPZ : public EncoderBase {
     uint8_t read_register_opcode_ = 0x81;
     uint8_t write_register_opcode_ = 0xcf;
     enum {PZ, MU} type_ = PZ;
+    friend void config_init();
 
 };
 
