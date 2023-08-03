@@ -219,7 +219,7 @@ void USB1::cancel_transfer(uint8_t endpoint) {
     EXTI->PR1 = EXTI_PR1_PIF10;
     uint32_t t_start = get_clock();
     uint16_t idle_count = 0;
-    while((get_clock() - t_start) < 50000/(uint16_t) (1e9/CPU_FREQUENCY_HZ)) {
+    while((get_clock() - t_start) < 5000/(uint16_t) (1e9/CPU_FREQUENCY_HZ)) {
         if (EXTI->PR1 & EXTI_PR1_PIF10) {
             EXTI->PR1 = EXTI_PR1_PIF10;
             idle_count = 0;
