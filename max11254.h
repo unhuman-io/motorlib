@@ -2,6 +2,7 @@
 #include "torque_sensor.h"
 #include "logger.h"
 
+template<bool isolation=true>
 class MAX11254 : public TorqueSensorBase {
  public:
     union register_address {
@@ -160,7 +161,7 @@ class MAX11254 : public TorqueSensorBase {
         if (count_ == 0) {
             spi_dma_.finish_readwrite();
             raw_value_ = data_in_[1] << 16 | data_in_[2] << 8 | data_in_[3];
-            if (isol) {
+            if (isolation) {
                 raw_value_ = data_in_[2] << 16 | data_in_[3] << 8 | data_in_[4];
             }
             signed_value_ = raw_value_ - 0x7FFFFF;
@@ -193,7 +194,6 @@ class MAX11254 : public TorqueSensorBase {
         stale_value_count_ = 0;
         read_error_ = 0;
     }
-    bool isol = true;
     uint8_t count_ = 0;
 
     int32_t signed_value_ = 0;
