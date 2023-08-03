@@ -2,6 +2,7 @@
 #include "torque_sensor.h"
 #include "logger.h"
 
+template<bool isolation=true>
 class MAX11254 : public TorqueSensorBase {
  public:
     union register_address {
@@ -21,6 +22,18 @@ class MAX11254 : public TorqueSensorBase {
         };
         uint8_t word;
     };
+    union cr1_register {
+        struct {
+            uint8_t contsc:1;
+            uint8_t scycle:1;
+            uint8_t format:1;
+            uint8_t ub:1;
+            uint8_t pd:2;
+            uint8_t cal:2;
+        };
+        uint8_t word;
+    };
+
     union cr2_register {
         struct {
             uint8_t pga:3;
@@ -81,7 +94,8 @@ class MAX11254 : public TorqueSensorBase {
         spi_dma_.readwrite(data_out, data_in, 5);
         logger.log_printf("max11274 stat: %02x %02x %02x", data_in[2], data_in[3], data_in[4]);
 
-        ret_val &= write_reg(1, 0x2);   // single conversion
+        cr1_register cr1 = {.scycle=1, .format=1};
+        ret_val &= write_reg(1, cr1.word);   // single conversion
         // pga128
         cr2_register cr2 = {.pga=7, .pgaen=1, .ldoen=1};
         // pga off option
@@ -147,11 +161,10 @@ class MAX11254 : public TorqueSensorBase {
         if (count_ == 0) {
             spi_dma_.finish_readwrite();
             raw_value_ = data_in_[1] << 16 | data_in_[2] << 8 | data_in_[3];
-            if (isol) {
-                raw_value_ = (data_in_[2] << 24 | data_in_[3] << 16 | data_in_[4] << 8) >> 8;
+            if (isolation) {
+                raw_value_ = data_in_[2] << 16 | data_in_[3] << 8 | data_in_[4];
             }
-            int32_t s32 = raw_value_ << 8;
-            signed_value_ = s32 >> 8;
+            signed_value_ = raw_value_ - 0x7FFFFF;
             torque_ = signed_value_ * gain_ + bias_;
 
             // stale values are currently the only fault mechanism
@@ -165,6 +178,9 @@ class MAX11254 : public TorqueSensorBase {
                     stale_value_count_ = 0;
                 }
             }
+            if (raw_value_ == 0 || raw_value_ == 0xFFFFFF) {
+                read_error_++;
+            }
 
         }
         uint8_t data_in;
@@ -176,14 +192,15 @@ class MAX11254 : public TorqueSensorBase {
     void clear_faults() {
         timeout_error_ = 0;
         stale_value_count_ = 0;
+        read_error_ = 0;
     }
-    bool isol = true;
     uint8_t count_ = 0;
 
     int32_t signed_value_ = 0;
     int32_t last_new_signed_value_ = 0;
     uint8_t stale_value_count_ = 0;
     uint32_t timeout_error_ = 0;
+    uint32_t read_error_ = 0;
     uint32_t raw_value_ = 0;
     SPIDMA &spi_dma_;
     static const uint8_t length_ = 5;
