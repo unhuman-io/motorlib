@@ -125,7 +125,7 @@ class System {
             actuator_.main_loop_.lock_status_log();
             for(int i=0; i<95; i++) {
                 FastLoopStatus &status = actuator_.fast_loop_.status_log_.next();
-                logger.log_printf("%d, %f, %f, %f, %f, %f, %f, %f, %f, %f, %f", 
+                logger.log_printf("%ld, %f, %f, %f, %f, %f, %f, %f, %f, %f, %f", 
                     status.timestamp,
                     status.foc_command.measured.motor_encoder,
                     status.foc_command.desired.i_q,
@@ -182,7 +182,7 @@ class System {
             FastLoopStatus status = actuator_.fast_loop_.status_.top();
             uint8_t len = 192;
             char c[len];
-            std::snprintf(c, len, "%d, %f, %f, %f, %f, %f, %f, %f, %f, %f, %f", 
+            std::snprintf(c, len, "%ld, %f, %f, %f, %f, %f, %f, %f, %f, %f, %f", 
                     status.timestamp,
                     status.foc_command.measured.motor_encoder,
                     status.foc_command.desired.i_q,
