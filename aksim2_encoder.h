@@ -4,7 +4,7 @@
 #include "encoder.h"
 #include <cmath>
 
-uint8_t CRC_BiSS_43_24bit(uint32_t w_InputData);
+static uint8_t CRC_BiSS_43_24bit(uint32_t w_InputData);
 
 template<uint8_t nbits_>
 class Aksim2Encoder : public EncoderBase {

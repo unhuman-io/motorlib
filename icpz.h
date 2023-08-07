@@ -5,6 +5,8 @@
 #include "util.h"
 #include <vector>
 
+static uint8_t CRC_BiSS_43_24bit (uint32_t w_InputData);
+
 class ICPZ : public EncoderBase {
  public:
     enum Disk{Default, PZ03S, PZ08S};
@@ -12,6 +14,14 @@ class ICPZ : public EncoderBase {
       : spidma_(spidma), disk_(disk) {
       command_[0] = 0xa6; // read position
     }
+    union Diag {
+      struct {
+        uint8_t crc6:6;
+        uint8_t nWarn:1;
+        uint8_t nErr:1;
+      };
+      uint8_t word;
+    };
     bool init() {
       bool success = true;
       // send reboot (currently not working probably)
@@ -94,17 +104,26 @@ class ICPZ : public EncoderBase {
     void trigger() {
       if (!*register_operation_) {
         ongoing_read_ = true;
-        spidma_.start_readwrite(command_, data_, 4);
+        spidma_.start_readwrite(command_, data_, sizeof(command_));
       }
     }
     int32_t read() {
       if (ongoing_read_) {
         spidma_.finish_readwrite();
         uint32_t data = ((data_[1] << 16) | (data_[2] << 8) | data_[3]) << 8;
-        int32_t diff = (data - last_data_); // rollover summing
-        pos_ += diff/256;
-        //pos_ = data/256;
-        last_data_ = data;
+        raw_value_ = data | data_[4];
+        Diag diag = {.word = data_[4]};
+        uint8_t crc6_calc = CRC_BiSS_43_24bit(data >> 8);
+        error_count_ += !diag.nErr;
+        warn_count_ += !diag.nWarn;
+        uint8_t crc_error = diag.crc6 == crc6_calc ? 0 : 1;
+        crc_error_count_ += crc_error;
+        if (diag.nErr && !crc_error) {
+          int32_t diff = (data - last_data_); // rollover summing
+          pos_ += diff/256;
+          //pos_ = data/256;
+          last_data_ = data;
+        }
         ongoing_read_ = false;
       }
       return get_value();
@@ -165,11 +184,17 @@ class ICPZ : public EncoderBase {
         return retval;
     }
 
+    void clear_faults() {
+        error_count_ = 0;
+        warn_count_ = 0;
+        crc_error_count_ = 0;
+    }
+
  protected:
     SPIDMA &spidma_;
     Disk disk_;
-    uint8_t command_[4] = {};
-    uint8_t data_[4] = {};
+    uint8_t command_[5] = {};
+    uint8_t data_[5] = {};
     int32_t pos_ = 0;
     uint32_t last_data_ = 0;
     volatile int register_operation_local_ = 0;
@@ -179,8 +204,45 @@ class ICPZ : public EncoderBase {
     uint8_t read_register_opcode_ = 0x81;
     uint8_t write_register_opcode_ = 0xcf;
     enum {PZ, MU} type_ = PZ;
+
+    uint32_t error_count_ = 0;
+    uint32_t warn_count_ = 0;
+    uint32_t crc_error_count_ = 0;
+    uint32_t raw_value_ = 0;
     friend void config_init();
+    friend void config_maintenance();
 
 };
+
+uint8_t tableCRC6[64] = {
+ 0x00, 0x03, 0x06, 0x05, 0x0C, 0x0F, 0x0A, 0x09,
+ 0x18, 0x1B, 0x1E, 0x1D, 0x14, 0x17, 0x12, 0x11,
+ 0x30, 0x33, 0x36, 0x35, 0x3C, 0x3F, 0x3A, 0x39,
+ 0x28, 0x2B, 0x2E, 0x2D, 0x24, 0x27, 0x22, 0x21,
+ 0x23, 0x20, 0x25, 0x26, 0x2F, 0x2C, 0x29, 0x2A,
+ 0x3B, 0x38, 0x3D, 0x3E, 0x37, 0x34, 0x31, 0x32,
+ 0x13, 0x10, 0x15, 0x16, 0x1F, 0x1C, 0x19, 0x1A,
+ 0x0B, 0x08, 0x0D, 0x0E, 0x07, 0x04, 0x01, 0x02};
+/*32-bit input data, right alignment, Calculation over 24 bits (mult. of 6) */
+uint8_t CRC_BiSS_43_24bit (uint32_t w_InputData)
+{
+ uint8_t b_Index = 0;
+ uint8_t b_CRC = 0;
+
+ b_Index = (uint8_t )(((uint32_t)w_InputData >> 18u) & 0x0000003Fu);
+
+ b_CRC = (uint8_t )(((uint32_t)w_InputData >> 12u) & 0x0000003Fu);
+ b_Index = b_CRC ^ tableCRC6[b_Index];
+
+ b_CRC = (uint8_t )(((uint32_t)w_InputData >> 6u) & 0x0000003Fu);
+ b_Index = b_CRC ^ tableCRC6[b_Index];
+
+ b_CRC = (uint8_t )((uint32_t)w_InputData & 0x0000003Fu);
+ b_Index = b_CRC ^ tableCRC6[b_Index];
+
+ b_CRC = tableCRC6[b_Index];
+
+ return b_CRC;
+} 
 
 #endif  // UNHUMAN_MOTORLIB_ICPZ_H_
