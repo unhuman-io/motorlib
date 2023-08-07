@@ -5,7 +5,7 @@
 #include "util.h"
 #include <vector>
 
-static uint8_t CRC_BiSS_43_24bit (uint32_t w_InputData);
+static uint8_t CRC_BiSS_43_30bit (uint32_t w_InputData);
 
 class ICPZ : public EncoderBase {
  public:
@@ -31,6 +31,7 @@ class ICPZ : public EncoderBase {
 
       set_register(7, 9, {0});
       success = set_register(7, 9, {0}) ? success : false; // multiturn data length = 0
+      success = set_register(7, 0xA, {0}) ? success : false; // spi_ext = 0
       success = set_register(0, 0, {3}) ? success : false; // fast speed on port a
       success = set_register(0, 0xF, {0}) ? success : false; // 0x00 ran_fld = 0 -> never update position based on absolute track after initial
 
@@ -113,7 +114,7 @@ class ICPZ : public EncoderBase {
         uint32_t data = ((data_[1] << 16) | (data_[2] << 8) | data_[3]) << 8;
         raw_value_ = data | data_[4];
         Diag diag = {.word = data_[4]};
-        uint8_t crc6_calc = CRC_BiSS_43_24bit(data >> 8);
+        uint8_t crc6_calc = ~CRC_BiSS_43_30bit(raw_value_ >> 6) & 0x3f;
         error_count_ += !diag.nErr;
         warn_count_ += !diag.nWarn;
         uint8_t crc_error = diag.crc6 == crc6_calc ? 0 : 1;
@@ -224,13 +225,15 @@ uint8_t tableCRC6[64] = {
  0x13, 0x10, 0x15, 0x16, 0x1F, 0x1C, 0x19, 0x1A,
  0x0B, 0x08, 0x0D, 0x0E, 0x07, 0x04, 0x01, 0x02};
 /*32-bit input data, right alignment, Calculation over 24 bits (mult. of 6) */
-uint8_t CRC_BiSS_43_24bit (uint32_t w_InputData)
+uint8_t CRC_BiSS_43_30bit (uint32_t w_InputData)
 {
  uint8_t b_Index = 0;
  uint8_t b_CRC = 0;
+ b_Index = (uint8_t )(((uint32_t)w_InputData >> 24u) & 0x0000003Fu);
 
- b_Index = (uint8_t )(((uint32_t)w_InputData >> 18u) & 0x0000003Fu);
-
+ b_CRC = (uint8_t )(((uint32_t)w_InputData >> 18u) & 0x0000003Fu);
+ b_Index = b_CRC ^ tableCRC6[b_Index];
+ 
  b_CRC = (uint8_t )(((uint32_t)w_InputData >> 12u) & 0x0000003Fu);
  b_Index = b_CRC ^ tableCRC6[b_Index];
 
