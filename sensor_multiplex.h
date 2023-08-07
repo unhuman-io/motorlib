@@ -45,6 +45,7 @@ class SensorMultiplex : public SensorBase {
     int32_t get_index_pos() const { return primary_.get_index_pos(); }
     bool index_received() const { return primary_.index_received(); }
     bool init() { return primary_.init(); }
+    void clear_faults() { primary_.clear_faults(); }
 
  protected:
     Sensor1 &primary_;
@@ -73,6 +74,7 @@ class TorqueSensorMultiplex : public SensorMultiplex<Sensor1, Sensor2> {
    }
    
    float get_value() const { return this->primary_.get_value(); }
+   void clear_faults() { primary_.clear_faults(); }
  protected:
    float &gain_, &bias_, &k_temp_, &torque_;
    friend class System;
