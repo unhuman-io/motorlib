@@ -1,3 +1,4 @@
+#include "config_obot_g474_motor.h"
 #include "../peripheral/usb.h"
 #include "../usb_communication.h"
 #include "../peripheral/stm32g4/hrpwm.h"
@@ -37,29 +38,14 @@ uint16_t drv_regs_error = 0;
 #include "../peripheral/stm32g4/i2c_dma.h"
 
 
-#if defined(R3) || defined(R4) || defined(MR0) || defined(MR0P)
-#ifndef BROKEN_MAX31875
-#define HAS_MAX31875
+#ifdef HAS_MAX31875
 #include "../peripheral/stm32g4/max31875.h"
 #endif
-#endif
 
-#if defined(MR1)
-#define HAS_MAX31889
+#ifdef HAS_MAX31889
 #include "../peripheral/stm32g4/max31889.h"
 #endif
 
-#if defined(R4) || defined (MR0P) || defined (MR0) || defined(MR1)
-#define HAS_BMI270
-#endif
-
-#if defined(MR0) || defined (MR0P) || defined (MR1)
-#define HAS_BRIDGE_THERMISTORS
-#endif
-
-#if defined (MR1)
-#define HAS_BUS_CURRENT_SENSE
-#endif
 
 namespace config {
     static_assert(((double) CPU_FREQUENCY_HZ * 8 / 2) / pwm_frequency < 65535);    // check pwm frequency
