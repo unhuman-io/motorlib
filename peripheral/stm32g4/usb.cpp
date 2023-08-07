@@ -201,7 +201,8 @@ void USB1::connect() {
     USB->BCDR |= USB_BCDR_DPPU; // device pull up
 }
 
-void USB1::cancel_transfer(uint8_t endpoint) {
+// true if successful cancel
+bool USB1::cancel_transfer(uint8_t endpoint, uint32_t timeout_ns) {
     // set NAK but it doesn't cancel any transfer in progress right now
     uint16_t nak_count = 0;
     while((USBEPR->EP[endpoint].EPR & USB_EPTX_STAT) != USB_EP_TX_NAK) {
@@ -215,11 +216,11 @@ void USB1::cancel_transfer(uint8_t endpoint) {
 
     // wait for any current transfer to complete, checking for activity on an EXTI pin 
     // and checking for CTR_TX
-    // timeout of 50000 ns
+    // timeout of 5000 ns
     EXTI->PR1 = EXTI_PR1_PIF10;
     uint32_t t_start = get_clock();
     uint16_t idle_count = 0;
-    while((get_clock() - t_start) < 5000/(uint16_t) (1e9/CPU_FREQUENCY_HZ)) {
+    while((get_clock() - t_start) < timeout_ns/(uint16_t) (1e9/CPU_FREQUENCY_HZ)) {
         if (EXTI->PR1 & EXTI_PR1_PIF10) {
             EXTI->PR1 = EXTI_PR1_PIF10;
             idle_count = 0;
@@ -228,12 +229,13 @@ void USB1::cancel_transfer(uint8_t endpoint) {
         }
         if (idle_count > 3) { 
             // 3 gives about 2 us right now, usb pins must transition within 7 bits/.58 us
-            break;
+            return true;
         }
         if (USBEPR->EP[endpoint].EPR & USB_EP_CTR_TX) {
-            break;
+            return true;
         }
     }
+    return false;
     // after making it through the endpoint may still be active (NAK was set, but a completed 
     // tranfer will toggle a bit to thus reenable TX_VALID) so return to while(tx_active(endpoint)) 
 }
@@ -247,7 +249,12 @@ void USB1::send_data(uint8_t endpoint, const uint8_t *data, uint16_t length, boo
             // it wil force cancel on timeout
             continue;
         } else {
-            cancel_transfer(endpoint);
+            bool successful_cancel = cancel_transfer(endpoint);
+            if (!successful_cancel && wait) {
+                continue;
+            } else {
+                return;
+            }
         }
     }
     
