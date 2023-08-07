@@ -119,11 +119,14 @@ class ICPZ : public EncoderBase {
         warn_count_ += !diag.nWarn;
         uint8_t crc_error = diag.crc6 == crc6_calc ? 0 : 1;
         crc_error_count_ += crc_error;
-        if (diag.nErr && !crc_error) {
+        if (!crc_error) {
           int32_t diff = (data - last_data_); // rollover summing
           pos_ += diff/256;
           //pos_ = data/256;
           last_data_ = data;
+        }
+        if (!diag.nErr) {
+          clear_diag();
         }
         ongoing_read_ = false;
       }
@@ -148,6 +151,14 @@ class ICPZ : public EncoderBase {
       spidma_.readwrite(data_out, data_in, 10);
       (*register_operation_)--;
       return bytes_to_hex(data_in+2, 8);
+    }
+
+    void clear_diag() {
+      (*register_operation_)++;
+      uint8_t data_out = 0x20;
+      uint8_t data_in;
+      spidma_.readwrite(&data_out, &data_in, 1);
+      (*register_operation_)--;
     }
 
         // non interrupt context
