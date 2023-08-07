@@ -25,7 +25,7 @@ class USB1 {
     bool new_rx_data(uint8_t endpoint) const { return new_rx_data_[endpoint]; }
     bool tx_data_ack(uint8_t endpoint) { bool tx_data_ack = tx_data_ack_[endpoint]; tx_data_ack_[endpoint] = false; return tx_data_ack; }
 
-    void cancel_transfer(uint8_t endpoint);
+    bool cancel_transfer(uint8_t endpoint, uint32_t timeout_ns = 5000);
 
      // send tx stall
     void send_stall(uint8_t endpoint);
