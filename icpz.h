@@ -33,7 +33,7 @@ class ICPZ : public EncoderBase {
       success = set_register(7, 9, {0}) ? success : false; // multiturn data length = 0
       success = set_register(7, 0xA, {0}) ? success : false; // spi_ext = 0
       success = set_register(0, 0, {3}) ? success : false; // fast speed on port a
-      success = set_register(0, 0xF, {0}) ? success : false; // 0x00 ran_fld = 0 -> never update position based on absolute track after initial
+      success = set_register(0, 0xF, {4}) ? success : false; // 0x00 ran_fld = 0 -> never update position based on absolute track after initial, tol 4
 
       if (disk_ == PZ03S) {
         success = set_register(2, 2, {0, 1}) ? success : false; // fcl = 256
@@ -139,6 +139,15 @@ class ICPZ : public EncoderBase {
     }
     void clear_register_operation() {
        (*register_operation_)--;
+    }
+
+    std::string read_diagnosis() {
+      (*register_operation_)++;
+      uint8_t data_out[10] = {0x9C};
+      uint8_t data_in[10];
+      spidma_.readwrite(data_out, data_in, 10);
+      (*register_operation_)--;
+      return bytes_to_hex(data_in+2, 8);
     }
 
         // non interrupt context
