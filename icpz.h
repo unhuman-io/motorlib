@@ -29,10 +29,10 @@ class ICPZ : public EncoderBase {
       // uint8_t data_in[2];
       // spidma_.readwrite(data_out, data_in, 2);
 
-      set_register(7, 9, {0});
+      //set_register(7, 9, {0});
+      success = set_register(0, 0, {3}) ? success : false; // fast speed on port a, set first
       success = set_register(7, 9, {0}) ? success : false; // multiturn data length = 0
       success = set_register(7, 0xA, {0}) ? success : false; // spi_ext = 0
-      success = set_register(0, 0, {3}) ? success : false; // fast speed on port a
       success = set_register(0, 0xF, {4}) ? success : false; // 0x00 ran_fld = 0 -> never update position based on absolute track after initial, tol 4
 
       if (disk_ == PZ03S) {
