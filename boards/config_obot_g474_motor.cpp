@@ -80,7 +80,7 @@ namespace config {
     NTC temp_bridge(TSENSE);
     NTC temp_bridge2(TSENSE2);
 #endif
-    HRPWM motor_pwm = {pwm_frequency, *HRTIM1, 3, 5, 4, false, 200, 1000, 0};
+    HRPWM motor_pwm = {pwm_frequency, *HRTIM1, 3, 5, 4, false, 50, 1000, 1000};
     USB1 usb;
     FastLoop fast_loop = {(int32_t) pwm_frequency, motor_pwm, motor_encoder, param->fast_loop_param, &I_A_DR, &I_B_DR, &I_C_DR, &V_BUS_DR};
     LED led = {const_cast<uint16_t*>(reinterpret_cast<volatile uint16_t *>(&TIM_R)), 
