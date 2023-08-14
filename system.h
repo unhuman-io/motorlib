@@ -177,6 +177,7 @@ class System {
         api.add_api_variable("menc", new const APIInt32(&actuator_.fast_loop_.motor_enc));
         api.add_api_variable("amax", new APIFloat(&actuator_.main_loop_.admittance_controller_.torque_controller_.command_max_));
         api.add_api_variable("akp", new APIFloat(&actuator_.main_loop_.admittance_controller_.torque_controller_.kp_));
+        api.add_api_variable("Tmotor_est", new const APIFloat(&actuator_.main_loop_.status_.motor_temperature_estimate));
         API_ADD_FILTER(a_output_filter, FirstOrderLowPassFilter, actuator_.main_loop_.admittance_controller_.torque_controller_.output_filter_);
         api.add_api_variable("fast_loop_status", new const APICallback([](){ 
             FastLoopStatus status = actuator_.fast_loop_.status_.top();

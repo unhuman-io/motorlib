@@ -11,6 +11,7 @@
 #include "torque_sensor.h"
 #include "hardware_brake.h"
 #include "round_robin_logger.h"
+#include "temperature_model.h"
 
 extern "C" {
 void system_init();
@@ -61,6 +62,11 @@ class MainLoop {
       dt_ = (timestamp_ - last_timestamp_) * (1.0f/CPU_FREQUENCY_HZ);
 
       status_.fast_loop = fast_loop_.get_status();
+      if (!driver_.is_enabled()) {
+        status_.fast_loop.energy_uJ = 0;
+        status_.fast_loop.foc_status.measured.i_d = 0;
+        status_.fast_loop.foc_status.measured.i_q = 0;
+      }
 
       ReceiveData receive_data;
       int count_received = communication_.receive_data(&receive_data);
@@ -157,6 +163,12 @@ class MainLoop {
       status_.output_velocity_filtered = output_velocity_filter_.update(status_.output_position);//(output_velocity);
       status_.torque_filtered = torque_filter_.update(status_.torque);
 
+      status_.motor_temperature_estimate = motor_temperature_model_.step(status_.fast_loop.foc_status.measured.i_d, status_.fast_loop.foc_status.measured.i_q);
+      round_robin_logger.log_data(MOTOR_TEMPERATURE_ESTIMATE_INDEX, status_.motor_temperature_estimate);
+
+      if (status_.motor_temperature_estimate > motor_temperature_limit_) {
+         status_.error.motor_temperature = 1;
+      }
 
       if (status_.error.all & error_mask_.all && !(receive_data_.mode_desired == DRIVER_ENABLE || receive_data_.mode_desired == CLEAR_FAULTS)) {
           status_.error.fault = 1;
@@ -380,7 +392,12 @@ class MainLoop {
         encoder_limits_.output_hard_max = param_.encoder_limits.output_hard_max;
         encoder_limits_.output_hard_min = param_.encoder_limits.output_hard_min;
       }
-
+      if (param_.motor_temperature_model.resistance != 0 && param_.motor_temperature_model.Cp != 0 &&
+        param_.motor_temperature_model.Rth !=0) {
+        motor_temperature_model_.set_param(param_.motor_temperature_model.resistance, param_.motor_temperature_model.Cp, 
+          param_.motor_temperature_model.Rth, 1.0/frequency_hz_);
+      }
+      motor_temperature_limit_ = param_.motor_temperature_limit == 0 ? 140 : param_.motor_temperature_limit;
       output_encoder_bias_ = param_.output_encoder.bias;
       error_mask_.all = param_.error_mask.all == 0 ? ERROR_MASK_ALL : (param_.error_mask.all && ERROR_MASK_ALL);
       output_encoder_dir_ = param_.output_encoder.dir == 0 ? 1 : param_.output_encoder.dir;
@@ -640,6 +657,9 @@ class MainLoop {
     FirstOrderLowPassFilter output_position_filter_;
     FIRFilter<> output_velocity_filter_;
     FirstOrderLowPassFilter torque_filter_;
+
+    TemperatureModel motor_temperature_model_;
+    float motor_temperature_limit_;
 
     friend class System;
     friend class Actuator;
