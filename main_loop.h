@@ -317,10 +317,13 @@ class MainLoop {
             (status_.motor_position < encoder_limits_.motor_controlled_min && iq_des <= 0)) && started_) {
             if (mode_ != VELOCITY && mode_ != param_.safe_mode) {
               set_mode(VELOCITY);
+              status_.error.motor_soft_limit = 1;
             }
             MotorCommand tmp_receive_data = receive_data_;
             tmp_receive_data.velocity_desired = 0;
             iq_des = velocity_controller_.step(tmp_receive_data, status_);
+        } else {
+          status_.error.motor_soft_limit = 0;
         }
       }
 
@@ -379,7 +382,7 @@ class MainLoop {
       }
 
       output_encoder_bias_ = param_.output_encoder.bias;
-      error_mask_.all = param_.error_mask.all == 0 ? ERROR_MASK_ALL : param_.error_mask.all;
+      error_mask_.all = param_.error_mask.all == 0 ? ERROR_MASK_ALL : (param_.error_mask.all && ERROR_MASK_ALL);
       output_encoder_dir_ = param_.output_encoder.dir == 0 ? 1 : param_.output_encoder.dir;
       torque_sensor_dir_ = param_.torque_sensor.dir == 0 ? 1 : param_.torque_sensor.dir;
       vbus_min_ = param_.vbus_min == 0 ? 8 : param_.vbus_min;
