@@ -158,7 +158,7 @@ class MainLoop {
       status_.torque_filtered = torque_filter_.update(status_.torque);
 
 
-      if (status_.error.all & error_mask_.all && !(receive_data_.mode_desired == DRIVER_ENABLE)) {
+      if (status_.error.all & error_mask_.all && !(receive_data_.mode_desired == DRIVER_ENABLE || receive_data_.mode_desired == CLEAR_FAULTS)) {
           status_.error.fault = 1;
           if (safe_mode_ != true) {
             logger.log_printf("fault detected, error: %08x", status_.error.all);
@@ -315,12 +315,15 @@ class MainLoop {
       if (!position_limits_disable_) {
         if (((status_.motor_position > encoder_limits_.motor_controlled_max && iq_des >= 0) ||
             (status_.motor_position < encoder_limits_.motor_controlled_min && iq_des <= 0)) && started_) {
-            if (mode_ != VELOCITY && mode_ != param_.safe_mode) {
+            if (mode_ != VELOCITY && mode_ != param_.safe_mode && first_command_received()) {
               set_mode(VELOCITY);
+              status_.error.motor_soft_limit = 1;
             }
             MotorCommand tmp_receive_data = receive_data_;
             tmp_receive_data.velocity_desired = 0;
             iq_des = velocity_controller_.step(tmp_receive_data, status_);
+        } else {
+          status_.error.motor_soft_limit = 0;
         }
       }
 
@@ -379,7 +382,7 @@ class MainLoop {
       }
 
       output_encoder_bias_ = param_.output_encoder.bias;
-      error_mask_.all = param_.error_mask.all == 0 ? ERROR_MASK_ALL : param_.error_mask.all;
+      error_mask_.all = param_.error_mask.all == 0 ? ERROR_MASK_ALL : (param_.error_mask.all && ERROR_MASK_ALL);
       output_encoder_dir_ = param_.output_encoder.dir == 0 ? 1 : param_.output_encoder.dir;
       torque_sensor_dir_ = param_.torque_sensor.dir == 0 ? 1 : param_.torque_sensor.dir;
       vbus_min_ = param_.vbus_min == 0 ? 8 : param_.vbus_min;
