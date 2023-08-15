@@ -158,7 +158,7 @@ class MainLoop {
       status_.torque_filtered = torque_filter_.update(status_.torque);
 
 
-      if (status_.error.all & error_mask_.all && !(receive_data_.mode_desired == DRIVER_ENABLE)) {
+      if (status_.error.all & error_mask_.all && !(receive_data_.mode_desired == DRIVER_ENABLE || receive_data_.mode_desired == CLEAR_FAULTS)) {
           status_.error.fault = 1;
           if (safe_mode_ != true) {
             logger.log_printf("fault detected, error: %08x", status_.error.all);
@@ -315,7 +315,7 @@ class MainLoop {
       if (!position_limits_disable_) {
         if (((status_.motor_position > encoder_limits_.motor_controlled_max && iq_des >= 0) ||
             (status_.motor_position < encoder_limits_.motor_controlled_min && iq_des <= 0)) && started_) {
-            if (mode_ != VELOCITY && mode_ != param_.safe_mode) {
+            if (mode_ != VELOCITY && mode_ != param_.safe_mode && first_command_received()) {
               set_mode(VELOCITY);
               status_.error.motor_soft_limit = 1;
             }
