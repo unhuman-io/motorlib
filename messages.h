@@ -177,6 +177,7 @@ typedef struct {
     float torque_correction;
     float vbus_min;
     float vbus_max;
+    float motor_temperature_limit;
     MotorError error_mask;              // can set to ERROR_MASK_ALL or ERROR_MASK_NONE or others
     uint8_t safe_mode_driver_disable;   // driver is disabled in safe mode
     uint8_t no_latch_driver_fault;      // 1 allows for the driver_fault to be reset by software
@@ -188,6 +189,12 @@ typedef struct {
         float motor_position;
         float torque;
     } output_filter_hz;
+
+    struct {
+        float resistance;
+        float Rth;
+        float Cp;
+    } motor_temperature_model;
 
 } MainLoopParam;
 
@@ -268,6 +275,7 @@ typedef struct {
     float motor_position;
     float motor_position_filtered;
     float motor_velocity_filtered;
+    float motor_temperature_estimate;
     MotorMode mode;
     MotorError error;
     RoundRobinData rr_data;
