@@ -204,6 +204,8 @@ class System {
         api.add_api_variable("iki2", new APIFloat(&actuator_.fast_loop_.foc_->pi_iq_.ki2_));
         api.add_api_variable("idkp2", new APIFloat(&actuator_.fast_loop_.foc_->pi_id_.kp2_));
         api.add_api_variable("idki2", new APIFloat(&actuator_.fast_loop_.foc_->pi_id_.ki2_));
+        api.add_api_variable("id_des", new APIFloat(&actuator_.fast_loop_.foc_command_.desired.i_d));
+        api.add_api_variable("trigger_fast_log", new const APICallback([](){ actuator_.fast_loop_.trigger_status_log(); return "triggered"; }));
 
         uint32_t t_start = get_clock();
         while(1) {
