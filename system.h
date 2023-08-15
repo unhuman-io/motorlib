@@ -79,6 +79,8 @@ class System {
         api.add_api_variable("idiq", new APICallbackFloat([](){return 0;}, 
             [](float f){actuator_.fast_loop_.foc_->pi_id_.kp_ = actuator_.fast_loop_.foc_->pi_iq_.kp_;
                 actuator_.fast_loop_.foc_->pi_id_.ki_ = actuator_.fast_loop_.foc_->pi_iq_.ki_;
+                actuator_.fast_loop_.foc_->pi_id_.kp2_ = actuator_.fast_loop_.foc_->pi_iq_.kp2_;
+                actuator_.fast_loop_.foc_->pi_id_.ki2_ = actuator_.fast_loop_.foc_->pi_iq_.ki2_;
                 actuator_.fast_loop_.foc_->pi_id_.ki_limit_ = actuator_.fast_loop_.foc_->pi_iq_.ki_limit_;
                 actuator_.fast_loop_.foc_->pi_id_.command_max_ = actuator_.fast_loop_.foc_->pi_iq_.command_max_;}));
         api.add_api_variable("tkp", new APIFloat(&actuator_.main_loop_.torque_controller_.controller_.kp_));
@@ -198,6 +200,10 @@ class System {
             std::string s(c);
             return s;
         }));
+        api.add_api_variable("ikp2", new APIFloat(&actuator_.fast_loop_.foc_->pi_iq_.kp2_));
+        api.add_api_variable("iki2", new APIFloat(&actuator_.fast_loop_.foc_->pi_iq_.ki2_));
+        api.add_api_variable("idkp2", new APIFloat(&actuator_.fast_loop_.foc_->pi_id_.kp2_));
+        api.add_api_variable("idki2", new APIFloat(&actuator_.fast_loop_.foc_->pi_id_.ki2_));
 
         uint32_t t_start = get_clock();
         while(1) {
