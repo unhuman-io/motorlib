@@ -288,6 +288,9 @@ class MainLoop {
                 // record positive limit
                 //motor_positive_limit_ = status_.motor_position;
                 //output_positive_limit_ = status_.output_position;
+                adjust_output_encoder(-(status_.output_position - encoder_limits_.output_hard_max));
+                adjust_motor_encoder(-(status_.motor_position - encoder_limits_.motor_hard_max));
+                velocity_controller_.init(status_);
               }
               iq_des = velocity_controller_.step(command, status_);
               break;
@@ -297,8 +300,10 @@ class MainLoop {
                 find_limits_state_ = VELOCITY_TO_POSITION;
                 // record negative limit
                 // change encoder biases around
+                logger.log_printf("negative limit measured: output: %f, motor: %f", status_.output_position, status_.motor_position);
                 adjust_output_encoder(-(status_.output_position - encoder_limits_.output_hard_min));
                 adjust_motor_encoder(-(status_.motor_position - encoder_limits_.motor_hard_min));
+                logger.log_printf("obias: %f", output_encoder_bias_);
                 velocity_controller_.init(status_);
               }
               iq_des = velocity_controller_.step(command, status_);
@@ -309,14 +314,20 @@ class MainLoop {
                 find_limits_state_ = GOTO_POSITION;
                 // record negative limit
                 // change encoder biases around
-                position_controller_.init(status_);
+                joint_position_controller_.init(status_);
+                find_limits_count_ = count_;
               }
               iq_des = velocity_controller_.step(command, status_);
               break;
             case GOTO_POSITION:
               position_limits_disable_ = false;
               command.position_desired = receive_data_.position_desired;
-              iq_des = position_controller_.step(command, status_);
+              iq_des = joint_position_controller_.step(command, status_);
+              if (count_ - find_limits_count_ == 10000) {
+                // set startup bias 0
+                // set startup bias negative measured
+                logger.log_printf("mbias: %f", motor_encoder_bias_);
+              }
               break;
           }
           
