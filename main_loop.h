@@ -66,6 +66,7 @@ class MainLoop {
         status_.fast_loop.energy_uJ = 0;
         status_.fast_loop.foc_status.measured.i_d = 0;
         status_.fast_loop.foc_status.measured.i_q = 0;
+        status_.fast_loop.iq_filtered = 0;
       }
 
       ReceiveData receive_data;
