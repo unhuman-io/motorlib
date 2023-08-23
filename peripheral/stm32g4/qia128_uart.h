@@ -51,6 +51,10 @@ class QIA128_UART : public TorqueSensorBase {
         full_scale_ = uart_rx_uint32();
         uart_rx_uint8();
 
+#ifdef IGNORE_QIA128_CALIBRATION
+        offset_ = 0;
+        full_scale_ = 1;
+#endif
         logger.log_printf("qia128 offset: %d, full scale: %d", offset_, full_scale_);
 
         ms_delay(10);
