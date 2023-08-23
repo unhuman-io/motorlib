@@ -51,9 +51,25 @@ class QIA128_UART : public TorqueSensorBase {
         full_scale_ = uart_rx_uint32();
         uart_rx_uint8();
 
+        ms_delay(10);
+        uart_tx({0, 5, 1, 0, 0xd}); // get device serial number
+        uart_rx_uint32();
+        uint32_t serial_number = uart_rx_uint32();
+        uart_rx_uint8();
+
+        logger.log_printf("qia128 serial number: %d", serial_number);
+
+        ms_delay(10);
+        uart_tx({0, 5, 1, 0, 0xd}); // get device serial number
+        uart_rx_uint32();
+        uint32_t profile_serial_number = uart_rx_uint32();
+        uart_rx_uint8();
+
+        logger.log_printf("qia128 profile_serial number: %d", profile_serial_number);
+
 #ifdef IGNORE_QIA128_CALIBRATION
-        offset_ = 0;
-        full_scale_ = 1;
+        offset_ = 8388608;
+        full_scale_ = offset_+1;
 #endif
         logger.log_printf("qia128 offset: %d, full scale: %d", offset_, full_scale_);
 
