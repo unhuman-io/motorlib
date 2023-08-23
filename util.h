@@ -102,6 +102,7 @@ std::string byte_to_hex(const uint8_t byte);
 std::string u16_to_hex(const uint16_t w);
 std::string u32_to_hex(const uint32_t w);
 std::string bytes_to_hex(const std::vector<char>& bytes);
+std::string bytes_to_hex(const std::vector<uint8_t>& bytes);
 std::string bytes_to_hex(const uint8_t bytes[], const uint8_t length);
 
 #endif  // __cplusplus
