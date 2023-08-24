@@ -48,6 +48,8 @@ typedef struct {
     float current_filter_frequency_hz;  // First order filter on current measurements
     float num_poles;        // number of motor pole pairs - i.e. number of motor magnets/2
                             // for linear encoders set to poles per mm * 2 * pi
+    float id_rate_limit;    // A/s rate limit on the current d
+    float iq_rate_limit;    // A/s rate limit on the current q
 } FOCParam;
 
 #define COGGING_TABLE_SIZE 128  // must be multiple of 2
@@ -243,7 +245,7 @@ typedef struct {
     struct {
         float i_d, i_q, i_0;                    // measured processed currents, A filtered
     } measured;
-    struct { float v_a, v_b, v_c, v_d, v_q; } command;  // command in V to PWM
+    struct { float v_a, v_b, v_c, v_d, v_q, i_d, i_q; } command;  // command in V to PWM
 } FOCStatus;
 
 typedef struct {
