@@ -28,16 +28,6 @@ class QIA128_UART : public TorqueSensorBase {
         logger.log_printf("qia128 gain: %d", gain);
         ms_delay(10);
 
-        if (gain != 7) {
-            logger.log_printf("setting qia128 gain to 7");
-            uart_tx({00, 0x08, 04, 0x11, 00, 00, 0x07, 0x91});
-            ms_delay(100);
-            uart_tx({00, 07, 03, 0x11, 00, 00, 0x5B}); 
-            uint8_t gain = uart_rx(6)[4];
-            logger.log_printf("qia128 gain: %d", gain);
-            ms_delay(10);
-        }
-
         // normal initialization
         uart_tx({0, 6, 0, 0x0c, 0, 0x3c}); // set stream state off
 
@@ -112,6 +102,17 @@ class QIA128_UART : public TorqueSensorBase {
         } else {
             return false;
         }
+    }
+
+    uint8_t set_gain() {
+        logger.log_printf("setting qia128 gain to 7");
+        uart_tx({00, 0x08, 04, 0x11, 00, 00, 0x07, 0x91});
+        ms_delay(100);
+        uart_tx({00, 07, 03, 0x11, 00, 00, 0x5B}); 
+        uint8_t gain = uart_rx(6)[4];
+        logger.log_printf("qia128 gain: %d", gain);
+        ms_delay(10);
+        return gain;
     }
 
     // fifo size 8 bytes
