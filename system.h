@@ -211,6 +211,7 @@ class System {
             [](float f){ actuator_.fast_loop_.foc_->set_iq_limit(f); }));
         api.add_api_variable("idlimit", new APICallbackFloat([](){ return actuator_.fast_loop_.foc_->get_id_limit(); },
             [](float f){ actuator_.fast_loop_.foc_->set_id_limit(f); }));
+        api.add_api_variable("num_poles", new APIFloat(&actuator_.fast_loop_.foc_->num_poles_));
 
         uint32_t t_start = get_clock();
         while(1) {
