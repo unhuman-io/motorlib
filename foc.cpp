@@ -41,8 +41,11 @@ FOCStatus * const FOC::step(const FOCCommand &command) {
     float i_d_measured_filtered = id_filter_.update(i_d_measured);
     float i_q_measured_filtered = iq_filter_.update(i_q_measured);
 
-    float v_d_desired = i_gain_*pi_id_.step(status_.desired.i_d, i_d_measured_filtered);
-    float v_q_desired = i_gain_*pi_iq_.step(status_.desired.i_q, i_q_measured_filtered) + command.desired.v_q;
+    float i_d_desired_limited = id_limiter_.step(status_.desired.i_d);
+    float i_q_desired_limited = iq_limiter_.step(status_.desired.i_q);
+
+    float v_d_desired = i_gain_*pi_id_.step(i_d_desired_limited, i_d_measured_filtered);
+    float v_q_desired = i_gain_*pi_iq_.step(i_q_desired_limited, i_q_measured_filtered) + command.desired.v_q;
 
     float v_alpha_desired = cos_t * v_d_desired + sin_t * v_q_desired;
     float v_beta_desired = -sin_t * v_d_desired + cos_t * v_q_desired;
@@ -56,6 +59,8 @@ FOCStatus * const FOC::step(const FOCCommand &command) {
     status_.command.v_c = v_c_desired;
     status_.command.v_d = v_d_desired;
     status_.command.v_q = v_q_desired;
+    status_.command.i_d = i_d_desired_limited;
+    status_.command.i_q = i_q_desired_limited;
     status_.measured.i_d = i_d_measured_filtered;
     status_.measured.i_q = i_q_measured_filtered;
     status_.measured.i_0 = i_abc_measured[0] + i_abc_measured[1] + i_abc_measured[2];
@@ -69,6 +74,8 @@ void FOC::set_param(const FOCParam &param) {
     num_poles_ = param.num_poles;
     id_filter_.set_frequency(param.current_filter_frequency_hz);
     iq_filter_.set_frequency(param.current_filter_frequency_hz);
+    set_id_limit(param.id_rate_limit);
+    set_iq_limit(param.iq_rate_limit);
 }
 
 void FOC::voltage_mode() { 

@@ -82,7 +82,8 @@ class System {
                 actuator_.fast_loop_.foc_->pi_id_.kp2_ = actuator_.fast_loop_.foc_->pi_iq_.kp2_;
                 actuator_.fast_loop_.foc_->pi_id_.ki2_ = actuator_.fast_loop_.foc_->pi_iq_.ki2_;
                 actuator_.fast_loop_.foc_->pi_id_.ki_limit_ = actuator_.fast_loop_.foc_->pi_iq_.ki_limit_;
-                actuator_.fast_loop_.foc_->pi_id_.command_max_ = actuator_.fast_loop_.foc_->pi_iq_.command_max_;}));
+                actuator_.fast_loop_.foc_->pi_id_.command_max_ = actuator_.fast_loop_.foc_->pi_iq_.command_max_;
+                actuator_.fast_loop_.foc_->set_id_limit(actuator_.fast_loop_.foc_->get_iq_limit()); }));
         api.add_api_variable("tkp", new APIFloat(&actuator_.main_loop_.torque_controller_.controller_.kp_));
         api.add_api_variable("tkd", new APIFloat(&actuator_.main_loop_.torque_controller_.controller_.kd_));
         api.add_api_variable("tki", new APIFloat(&actuator_.main_loop_.torque_controller_.controller_.ki_));
@@ -130,7 +131,7 @@ class System {
                 logger.log_printf("%ld, %f, %f, %f, %f, %f, %f, %f, %f, %f, %f", 
                     status.timestamp,
                     status.foc_command.measured.motor_encoder,
-                    status.foc_command.desired.i_q,
+                    status.foc_status.command.i_q,
                     status.foc_status.measured.i_q,
                     status.foc_command.measured.i_a,
                     status.foc_command.measured.i_b,
@@ -206,6 +207,11 @@ class System {
         api.add_api_variable("idki2", new APIFloat(&actuator_.fast_loop_.foc_->pi_id_.ki2_));
         api.add_api_variable("id_des", new APIFloat(&actuator_.fast_loop_.foc_command_.desired.i_d));
         api.add_api_variable("trigger_fast_log", new const APICallback([](){ actuator_.fast_loop_.trigger_status_log(); return "triggered"; }));
+        api.add_api_variable("ilimit", new APICallbackFloat([](){ return actuator_.fast_loop_.foc_->get_iq_limit(); },
+            [](float f){ actuator_.fast_loop_.foc_->set_iq_limit(f); }));
+        api.add_api_variable("idlimit", new APICallbackFloat([](){ return actuator_.fast_loop_.foc_->get_id_limit(); },
+            [](float f){ actuator_.fast_loop_.foc_->set_id_limit(f); }));
+        api.add_api_variable("num_poles", new APIFloat(&actuator_.fast_loop_.foc_->num_poles_));
 
         uint32_t t_start = get_clock();
         while(1) {
