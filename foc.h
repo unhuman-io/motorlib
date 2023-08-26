@@ -4,6 +4,48 @@
 #include "messages.h"
 #include "control_fun.h"
 
+class MotorModel {
+ public:
+    MotorModel(float dt): dt_(dt) {}
+    float step(float v, float i);
+    void set_param(float R, float L);
+ private:
+    float i_ = 0;
+    float Ad_, Bd_;
+    float dt_;
+};
+
+class MotorEstimator {
+ public:
+    MotorEstimator(float dt): dt_(dt), motor_model_(dt), v_emf_filter_(dt), z_filter_(dt) {}
+    void update(float i, float v);
+    float v_emf() const { return v_emf_; }
+ private:
+    float dt_;
+    MotorModel motor_model_;
+    FirstOrderLowPassFilter v_emf_filter_;
+    FirstOrderLowPassFilter z_filter_;
+    float K_;
+    float v_emf_;
+};
+
+class SensorlessEstimator {
+ public:
+    SensorlessEstimator(float dt): dt_(dt), estimator_alpha_(dt), estimator_beta_(dt), velocity_filter_(dt) {
+        frequency_hz_ = 1/dt;
+    }
+    void update(float i_alpha, float i_beta, float v_alpha, float v_beta);
+    float angle_estimate() const { return angle_estimate_; }
+ private:
+    float dt_;
+    float frequency_hz_;
+    MotorEstimator estimator_alpha_, estimator_beta_;
+    int32_t angle_last_ = 0;
+    FirstOrderLowPassFilter velocity_filter_;
+    float Kspeed_;
+    float angle_estimate_;
+};
+
 class FOC {
 public:
     FOC(float dt);
@@ -33,6 +75,7 @@ private:
     FirstOrderLowPassFilter id_filter_, iq_filter_;
     RateLimiter id_limiter_, iq_limiter_;
     FOCParam param_;
+    SensorlessEstimator sensorless_estimator_;
 
     friend class System;
 };

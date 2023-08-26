@@ -246,6 +246,9 @@ typedef struct {
         float i_d, i_q, i_0;                    // measured processed currents, A filtered
     } measured;
     struct { float v_a, v_b, v_c, v_d, v_q, i_d, i_q; } command;  // command in V to PWM
+    struct {
+        float angle;                            // electrical angle in rad
+    } estimated;
 } FOCStatus;
 
 typedef struct {

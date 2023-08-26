@@ -6,7 +6,8 @@
 
 FOC::FOC(float dt) : dt_(dt), 
     id_filter_(dt),
-    iq_filter_(dt)
+    iq_filter_(dt),
+    sensorless_estimator_(dt)
 {}
 
 FOC::~FOC() {
@@ -50,6 +51,8 @@ FOCStatus * const FOC::step(const FOCCommand &command) {
     float v_alpha_desired = cos_t * v_d_desired + sin_t * v_q_desired;
     float v_beta_desired = -sin_t * v_d_desired + cos_t * v_q_desired;
 
+    sensorless_estimator_.update(i_alpha_measured, i_beta_measured, v_alpha_desired, v_beta_desired);
+
     float v_a_desired = Kc[0][0] * v_alpha_desired + Kc[1][0] * v_beta_desired;
     float v_b_desired = Kc[0][1] * v_alpha_desired + Kc[1][1] * v_beta_desired;
     float v_c_desired = Kc[0][2] * v_alpha_desired + Kc[1][2] * v_beta_desired;
@@ -64,6 +67,7 @@ FOCStatus * const FOC::step(const FOCCommand &command) {
     status_.measured.i_d = i_d_measured_filtered;
     status_.measured.i_q = i_q_measured_filtered;
     status_.measured.i_0 = i_abc_measured[0] + i_abc_measured[1] + i_abc_measured[2];
+    status_.estimated.angle = sensorless_estimator_.angle_estimate();
     return &status_;
 }
 
@@ -75,7 +79,7 @@ void FOC::set_param(const FOCParam &param) {
     id_filter_.set_frequency(param.current_filter_frequency_hz);
     iq_filter_.set_frequency(param.current_filter_frequency_hz);
     set_id_limit(param.id_rate_limit);
-    set_iq_limit(param.iq_rate_limit);
+    set_iq_limit(param.iq_rate_limit); 
 }
 
 void FOC::voltage_mode() { 
@@ -100,4 +104,45 @@ void FOC::calculate_vdq0(Vdq0 *const vdq0, float cos, float sin, float va, float
     vdq0->vd = cos * v_alpha - sin * v_beta;
     vdq0->vq = sin * v_alpha + cos * v_beta;
     vdq0->v0 = (1.0/3)*(va + vb + vc);
+}
+
+int32_t atan2f_q31(float y, float x) {
+    float a = atan2f(y,x);
+    return a * (float) 0x80000000;
+}
+
+#define TO_RAD(x) (M_PI * ((float) x * (1.0/0x8000000)))
+
+void SensorlessEstimator::update(float i_alpha, float i_beta, float v_alpha, float v_beta) {
+    estimator_alpha_.update(i_alpha, v_alpha);
+    estimator_beta_.update(i_beta, v_beta);
+    
+    int32_t angle = atan2f_q31(estimator_alpha_.v_emf(), estimator_beta_.v_emf());
+    int32_t diff = angle - angle_last_;
+    angle_last_ = angle;
+    float velocity_rad_s = TO_RAD(diff) * frequency_hz_; 
+    velocity_filter_.update(velocity_rad_s);
+
+    angle_estimate_ = TO_RAD(angle) + Kspeed_ * velocity_filter_.get_value();
+}
+
+void MotorEstimator::update(float v, float i) {
+    float i_estimate = motor_model_.step(v - v_emf_, i);
+    float z = K_*fsignf(i - i_estimate);
+    z_filter_.update(z);
+    v_emf_ = v_emf_filter_.update(v + z_filter_.get_value());
+}
+
+void MotorModel::set_param(float R, float L) {
+    Ad_ = std::exp(-R/L*dt_);
+    Bd_ = -1/R*(Ad_-1);
+}
+
+float MotorModel::step(float v, float i) {
+    // di/dt = 1/L*(v) - R/L*i
+    // i1 = Ad*i + Bd*v
+    // Ad_ = exp(-R/L*dt)
+    // Bd_ = -L/R*(Ad-1)*1/L
+    i_ = Ad_*i_ + Bd_*v;
+    return i_;
 }
