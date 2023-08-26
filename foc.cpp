@@ -4,6 +4,9 @@
 
 #include <cmath>
 
+// TODO
+#include "../obot_g474/st_device.h"
+
 FOC::FOC(float dt) : dt_(dt), 
     id_filter_(dt),
     iq_filter_(dt),
@@ -106,10 +109,10 @@ void FOC::calculate_vdq0(Vdq0 *const vdq0, float cos, float sin, float va, float
     vdq0->v0 = (1.0/3)*(va + vb + vc);
 }
 
-int32_t atan2f_q31(float y, float x) {
-    float a = atan2f(y,x);
-    return a * (float) 0x80000000;
-}
+// int32_t atan2f_q31(float y, float x) {
+//     float a = atan2f(y,x);
+//     return a * (float) 0x80000000;
+// }
 
 #define TO_RAD(x) (M_PI * ((float) x * (1.0/0x8000000)))
 
