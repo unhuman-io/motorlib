@@ -218,10 +218,18 @@ class FastLoop {
       foc_->voltage_mode();
       mode_ = VOLTAGE_MODE;
     }
-    void stepper_mode() {
+    void stepper_mode(StepperMode mode) {
       phase_mode_ = phase_mode_desired_;
       pwm_.voltage_mode();
-      foc_->voltage_mode();
+      switch (mode) {
+        case STEPPER_CURRENT:
+        default:
+          foc_->current_mode();
+          break;
+        case STEPPER_VOLTAGE:
+          foc_->voltage_mode();
+          break;
+      }
       mode_ = STEPPER_TUNING_MODE;
     }
     void brake_mode() {

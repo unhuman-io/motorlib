@@ -518,8 +518,11 @@ class MainLoop {
             led_.set_color(LED::AZURE);
             break;
           case STEPPER_VELOCITY:
+            fast_loop_.stepper_mode(static_cast<StepperMode>(receive_data_.stepper_velocity.stepper_mode));
+            led_.set_color(LED::CYAN);
+            break;
           case STEPPER_TUNING:
-            fast_loop_.stepper_mode();
+            fast_loop_.stepper_mode(static_cast<StepperMode>(receive_data_.stepper_tuning.stepper_mode));
             led_.set_color(LED::CYAN);
             break;
           case FAULT:
