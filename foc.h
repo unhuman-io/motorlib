@@ -13,6 +13,7 @@ class MotorModel {
     float i_ = 0;
     float Ad_, Bd_;
     float dt_;
+    friend class System;
 };
 
 class MotorEstimator {
@@ -20,6 +21,7 @@ class MotorEstimator {
     MotorEstimator(float dt): dt_(dt), motor_model_(dt), v_emf_filter_(dt), z_filter_(dt) {}
     void update(float i, float v);
     float v_emf() const { return v_emf_; }
+    void set_param(const MotorEstimatorParam &);
  private:
     float dt_;
     MotorModel motor_model_;
@@ -27,6 +29,7 @@ class MotorEstimator {
     FirstOrderLowPassFilter z_filter_;
     float K_;
     float v_emf_;
+    friend class System;
 };
 
 class SensorlessEstimator {
@@ -36,6 +39,7 @@ class SensorlessEstimator {
     }
     void update(float i_alpha, float i_beta, float v_alpha, float v_beta);
     float angle_estimate() const { return angle_estimate_; }
+    void set_param(const SensorlessEstimatorParam &);
  private:
     float dt_;
     float frequency_hz_;
@@ -44,6 +48,7 @@ class SensorlessEstimator {
     FirstOrderLowPassFilter velocity_filter_;
     float Kspeed_;
     float angle_estimate_;
+    friend class System;
 };
 
 class FOC {

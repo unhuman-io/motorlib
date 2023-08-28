@@ -74,6 +74,13 @@ FOCStatus * const FOC::step(const FOCCommand &command) {
     return &status_;
 }
 
+void SensorlessEstimator::set_param(const SensorlessEstimatorParam &param) {
+    velocity_filter_.set_frequency(param.velocity_filter_hz);
+    Kspeed_ = param.Kspeed;
+    estimator_alpha_.set_param(param.motor_estimator_alpha);
+    estimator_beta_.set_param(param.motor_estimator_beta);
+}
+
 void FOC::set_param(const FOCParam &param) {
     param_ = param;
     pi_id_.set_param(param.pi_d);
@@ -82,7 +89,8 @@ void FOC::set_param(const FOCParam &param) {
     id_filter_.set_frequency(param.current_filter_frequency_hz);
     iq_filter_.set_frequency(param.current_filter_frequency_hz);
     set_id_limit(param.id_rate_limit);
-    set_iq_limit(param.iq_rate_limit); 
+    set_iq_limit(param.iq_rate_limit);
+    sensorless_estimator_.set_param(param.sensorless_estimator);
 }
 
 void FOC::voltage_mode() { 
@@ -148,4 +156,10 @@ float MotorModel::step(float v, float i) {
     // Bd_ = -L/R*(Ad-1)*1/L
     i_ = Ad_*i_ + Bd_*v;
     return i_;
+}
+
+void MotorEstimator::set_param(const MotorEstimatorParam &param) {
+    v_emf_filter_.set_frequency(param.v_emf_filter_hz);
+    z_filter_.set_frequency(param.z_filter_hz);
+    motor_model_.set_param(param.motor_model.R, param.motor_model.L);
 }

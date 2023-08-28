@@ -214,6 +214,14 @@ class System {
             [](float f){ actuator_.fast_loop_.foc_->set_id_limit(f); }));
         api.add_api_variable("num_poles", new APIFloat(&actuator_.fast_loop_.foc_->num_poles_));
         api.add_api_variable("timestamp", new const APICallbackUint32(get_clock));
+        API_ADD_FILTER(evelocity_filter, FirstOrderLowPassFilter, actuator_.fast_loop_.foc_->sensorless_estimator_.velocity_filter_);
+        api.add_api_variable("ekspeed", new APIFloat(&actuator_.fast_loop_.foc_->sensorless_estimator_.Kspeed_));
+        API_ADD_FILTER(eavemf_filter, FirstOrderLowPassFilter, actuator_.fast_loop_.foc_->sensorless_estimator_.estimator_alpha_.v_emf_filter_);
+        API_ADD_FILTER(eaz_filter, FirstOrderLowPassFilter, actuator_.fast_loop_.foc_->sensorless_estimator_.estimator_alpha_.z_filter_);
+        api.add_api_variable("eaK", new APIFloat(&actuator_.fast_loop_.foc_->sensorless_estimator_.estimator_alpha_.K_));
+        API_ADD_FILTER(ebvemf_filter, FirstOrderLowPassFilter, actuator_.fast_loop_.foc_->sensorless_estimator_.estimator_beta_.v_emf_filter_);
+        API_ADD_FILTER(ebz_filter, FirstOrderLowPassFilter, actuator_.fast_loop_.foc_->sensorless_estimator_.estimator_beta_.z_filter_);
+        api.add_api_variable("ebK", new APIFloat(&actuator_.fast_loop_.foc_->sensorless_estimator_.estimator_beta_.K_));
 
         uint32_t t_start = get_clock();
         while(1) {

@@ -43,6 +43,23 @@ typedef struct {
 } PIDParam;
 
 typedef struct {
+    float L, R;
+} MotorModelParam;
+
+typedef struct {
+    float v_emf_filter_hz;
+    float z_filter_hz;
+    MotorModelParam motor_model;
+} MotorEstimatorParam;
+
+typedef struct {
+    float Kspeed;
+    float velocity_filter_hz;
+    MotorEstimatorParam motor_estimator_alpha;
+    MotorEstimatorParam motor_estimator_beta;
+ } SensorlessEstimatorParam;
+
+typedef struct {
     PI2Param pi_d;           // PIParam for d axis current - often make the same as pi_q
     PI2Param pi_q;           // PIParam for q axis current
     float current_filter_frequency_hz;  // First order filter on current measurements
@@ -50,6 +67,7 @@ typedef struct {
                             // for linear encoders set to poles per mm * 2 * pi
     float id_rate_limit;    // A/s rate limit on the current d
     float iq_rate_limit;    // A/s rate limit on the current q
+    SensorlessEstimatorParam sensorless_estimator;
 } FOCParam;
 
 #define COGGING_TABLE_SIZE 128  // must be multiple of 2
