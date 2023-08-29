@@ -46,13 +46,13 @@ class SPIDMA {
         regs_.CR1 = old_cr1_;
     }
 
-    void readwrite(const uint8_t * const data_out, uint8_t * const data_in, uint8_t length) {
-        start_readwrite(data_out, data_in, length);
-        finish_readwrite();
+    void readwrite(const uint8_t * const data_out, uint8_t * const data_in, uint8_t length, bool register_operation = false) {
+        start_readwrite(data_out, data_in, length, register_operation);
+        finish_readwrite(register_operation);
     }
 
-    void start_readwrite(const uint8_t * const data_out, uint8_t * const data_in, uint8_t length) {
-        if (!*register_operation_) {
+    void start_readwrite(const uint8_t * const data_out, uint8_t * const data_in, uint8_t length, bool register_operation = false) {
+        if (!*register_operation_ || register_operation) {
             reinit();
             gpio_cs_.clear();
             ns_delay(start_cs_delay_ns_);
@@ -67,8 +67,8 @@ class SPIDMA {
         }
     }
 
-    void start_write(const uint8_t * const data_out, uint16_t length) {
-        if (!*register_operation_) {
+    void start_write(const uint8_t * const data_out, uint16_t length, bool register_operation = false) {
+        if (!*register_operation_ || register_operation) {
             gpio_cs_.clear();
             ns_delay(start_cs_delay_ns_);
             tx_dma_.CCR = 0;
@@ -82,8 +82,8 @@ class SPIDMA {
         }
     }
 
-    void finish_readwrite() {
-        if (!*register_operation_) {
+    void finish_readwrite(bool register_operation = false) {
+        if (!*register_operation_ || register_operation) {
             while(rx_dma_.CNDTR);
             ns_delay(end_cs_delay_ns_);
             gpio_cs_.set();

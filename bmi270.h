@@ -35,11 +35,11 @@ class BMI270 {
         write_reg(0x7C, 0x02);
     }
 
-    void read() {
+    void read(bool register_operation = false) {
         //data_out_[0] = 0x80; // chip id
 
         data_out_[0] = 0x8c;
-        spi_dma_.readwrite(data_out_, data_in_, 14);
+        spi_dma_.readwrite(data_out_, data_in_, 14, register_operation);
         // logger.log(bytes_to_hex(data_in_, 14));
         data_.acc_x = (int16_t) (data_in_[3] << 8 | data_in_[2]);
         data_.acc_y = (int16_t) (data_in_[5] << 8 | data_in_[4]);
@@ -55,7 +55,7 @@ class BMI270 {
     void read_with_restore() {
         (*register_operation_)++;
         spi_dma_.save_state();
-        read();
+        read(true);
         spi_dma_.restore_state();
         (*register_operation_)--;
     }
