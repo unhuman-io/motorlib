@@ -177,7 +177,7 @@ class FastLoop {
       pwm_.set_vbus(fmaxf(7, v_bus_));
     }
     void set_id_des(float id) { foc_command_.desired.i_d = id; }
-    void set_iq_des(float iq) { if (mode_ == CURRENT_MODE) iq_des = iq; }
+    void set_iq_des(float iq) { if (mode_ == CURRENT_MODE || mode_ == STEPPER_TUNING_MODE) iq_des = iq; }
     void set_vq_des(float vq) { foc_command_.desired.v_q = vq; }
     void set_tuning_amplitude(float amplitude) { tuning_amplitude_ = amplitude; }
     void set_tuning_frequency(float frequency) { tuning_frequency_ = frequency; }
@@ -219,15 +219,13 @@ class FastLoop {
       mode_ = VOLTAGE_MODE;
     }
     void stepper_mode(StepperMode mode) {
-      phase_mode_ = phase_mode_desired_;
-      pwm_.voltage_mode();
       switch (mode) {
         case STEPPER_CURRENT:
         default:
-          foc_->current_mode();
+          current_mode();
           break;
         case STEPPER_VOLTAGE:
-          foc_->voltage_mode();
+          voltage_mode();
           break;
       }
       mode_ = STEPPER_TUNING_MODE;

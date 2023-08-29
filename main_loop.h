@@ -212,6 +212,7 @@ class MainLoop {
           break;
         case STEPPER_VELOCITY:
           vq_des = receive_data_.stepper_velocity.voltage;
+          iq_des = receive_data_.stepper_velocity.current;
           fast_loop_.set_stepper_velocity(receive_data_.stepper_velocity.velocity);
           break;
         case STEPPER_TUNING:
