@@ -38,6 +38,10 @@ uint16_t drv_regs_error = 0;
 #include "../peripheral/stm32g4/i2c_dma.h"
 
 
+#ifdef HAS_BMI270
+#include "../bmi270.h"
+#endif
+
 #ifdef HAS_MAX31875
 #include "../peripheral/stm32g4/max31875.h"
 #endif
@@ -65,6 +69,12 @@ namespace config {
 #ifdef HAS_BRIDGE_THERMISTORS
     NTC temp_bridge(TSENSE);
     NTC temp_bridge2(TSENSE2);
+#endif
+#ifdef HAS_BMI270
+    GPIO imu_cs(*GPIOC, 4, GPIO::OUTPUT);
+    SPIDMA spi1_dma_bmi270(*SPI1, imu_cs, *DMA1_Channel3, *DMA1_Channel4, 40, 40, drv.register_operation_,
+        SPI_CR1_MSTR | (4 << SPI_CR1_BR_Pos) | SPI_CR1_SSI | SPI_CR1_SSM);    // baud = clock/32
+    BMI270 imu(spi1_dma_bmi270);
 #endif
     HRPWM motor_pwm = {pwm_frequency, *HRTIM1, 3, 5, 4, false, 50, 1000, 1000};
     USB1 usb;
@@ -97,6 +107,8 @@ void config_init();
 void system_init() {
     DMAMUX1_Channel6->CCR =  DMA_REQUEST_I2C1_TX;
     DMAMUX1_Channel7->CCR =  DMA_REQUEST_I2C1_RX;
+    DMAMUX1_Channel2->CCR =  DMA_REQUEST_SPI1_TX;
+    DMAMUX1_Channel3->CCR =  DMA_REQUEST_SPI1_RX;
     if (config::motor_encoder.init()) {
         System::log("Motor encoder init success");
     } else {
@@ -117,6 +129,9 @@ void system_init() {
     } else {
         System::log("torque sensor init failure");
     }
+#ifdef HAS_BMI270
+    config::imu.init();
+#endif
 
     System::api.add_api_variable("3v3", new APIFloat(&v3v3));
     std::function<float()> get_t = std::bind(&TempSensor::get_value, &config::temp_sensor);
@@ -154,6 +169,16 @@ void system_init() {
     }));
     System::api.add_api_variable("deadtime", new APICallbackUint16([](){ 
         return config::motor_pwm.deadtime_ns_; }, [](uint16_t u) {config::motor_pwm.set_deadtime(u); }));
+
+#ifdef HAS_BMI270
+    System::api.add_api_variable("imu_read", new const APICallback([](){ config::imu.read_with_restore(); return config::imu.get_string(); }));
+    System::api.add_api_variable("ax", new const APICallbackFloat([](){ return config::imu.data_.acc_x*8./pow(2,15); }));
+    System::api.add_api_variable("ay", new const APICallbackFloat([](){ return config::imu.data_.acc_y*8./pow(2,15); }));
+    System::api.add_api_variable("az", new const APICallbackFloat([](){ return config::imu.data_.acc_z*8./pow(2,15); }));
+    System::api.add_api_variable("gx", new const APICallbackFloat([](){ return config::imu.data_.gyr_x*2000.*M_PI/180/pow(2,15); }));
+    System::api.add_api_variable("gy", new const APICallbackFloat([](){ return config::imu.data_.gyr_y*2000.*M_PI/180/pow(2,15); }));
+    System::api.add_api_variable("gz", new const APICallbackFloat([](){ return config::imu.data_.gyr_z*2000.*M_PI/180/pow(2,15); }));
+#endif
 
     for (auto regs : std::vector<ADC_TypeDef*>{ADC1, ADC2, ADC3, ADC4, ADC5}) {
         regs->CR = ADC_CR_ADVREGEN;

@@ -6,13 +6,18 @@
 // bits 0:6: address
 // if read 1 byte of 0 follows
 
+extern "C" {
+void system_init();
+}
 class BMI270 {
  public:
     struct bmi270_data {
         int16_t acc_x, acc_y, acc_z;
         int16_t gyr_x, gyr_y, gyr_z;
     };
-    BMI270(SPIDMA &spi_dma) : spi_dma_(spi_dma) {}
+    BMI270(SPIDMA &spi_dma) : spi_dma_(spi_dma) {
+        register_operation_ = spi_dma_.register_operation_;
+    }
     void init() {
         write_reg(0x7C, 0x00);
         us_delay(450);
@@ -47,7 +52,16 @@ class BMI270 {
         //     data_.gyr_x, data_.gyr_y, data_.gyr_z);
     }
 
+    void read_with_restore() {
+        (*register_operation_)++;
+        spi_dma_.save_state();
+        read();
+        spi_dma_.restore_state();
+        (*register_operation_)--;
+    }
+
     void burst_write(uint8_t address, const uint8_t data[], uint16_t length) {
+        (*register_operation_)++;
         uint8_t data_out[1] = {address};
         uint8_t data_in[1];
         spi_dma_.start_readwrite(data_out, data_in, 1);
@@ -55,28 +69,36 @@ class BMI270 {
         spi_dma_.start_write(data, length);
         spi_dma_.finish_readwrite();
         us_delay(3);
+        (*register_operation_)--;
     }
 
     void write_reg(uint8_t address, uint8_t value) {
+        (*register_operation_)++;
         uint8_t data_out[2] = {address, value};
         uint8_t data_in[2];
         spi_dma_.readwrite(data_out, data_in, 2);
         us_delay(3);
+        (*register_operation_)--;
     }
 
     uint8_t read_reg(uint8_t address) {
+        (*register_operation_)++;
         uint8_t data_out[3] = {(uint8_t) (address | 0x80)};
         uint8_t data_in[3];
         spi_dma_.readwrite(data_out, data_in, 3);
         us_delay(3);
+        (*register_operation_)--;
         return data_in[2];
     }
 
     std::string get_string() const { char s[100]; std::sprintf(s, "0x%02X", data_in_[2]); return s; }
+
+    volatile int *register_operation_;
  private:
     SPIDMA &spi_dma_;
     uint8_t data_out_[14] = {};
     uint8_t data_in_[14] = {};
     bmi270_data data_;
     friend void config_init();
+    friend void system_init();
 };

@@ -7,8 +7,6 @@
 #include <vector>
 #include "pin_config.h"
 
-extern "C" { void system_init(); }
-
 class HRPWM : public PWMBase {
  public:
     HRPWM(HRTIM_TypeDef &regs, volatile uint32_t &pwm_a, volatile uint32_t &pwm_b, volatile uint32_t &pwm_c) : 
