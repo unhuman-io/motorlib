@@ -30,7 +30,7 @@ class BMI270 {
         logger.log_printf("bmi270 init status: %02x", init_status);
 
         write_reg(0x7D, 0x0E);
-        write_reg(0x40, 0xA8);
+        write_reg(0x40, 0xAA);  // high performance osr2? filter, output rate 400 Hz
         write_reg(0x42, 0xE9);
         write_reg(0x7C, 0x02);
     }
@@ -64,10 +64,10 @@ class BMI270 {
         (*register_operation_)++;
         uint8_t data_out[1] = {address};
         uint8_t data_in[1];
-        spi_dma_.start_readwrite(data_out, data_in, 1);
+        spi_dma_.start_readwrite(data_out, data_in, 1, true);
         us_delay(2);
-        spi_dma_.start_write(data, length);
-        spi_dma_.finish_readwrite();
+        spi_dma_.start_write(data, length, true);
+        spi_dma_.finish_readwrite(true);
         us_delay(3);
         (*register_operation_)--;
     }
@@ -76,7 +76,7 @@ class BMI270 {
         (*register_operation_)++;
         uint8_t data_out[2] = {address, value};
         uint8_t data_in[2];
-        spi_dma_.readwrite(data_out, data_in, 2);
+        spi_dma_.readwrite(data_out, data_in, 2, true);
         us_delay(3);
         (*register_operation_)--;
     }
@@ -85,7 +85,7 @@ class BMI270 {
         (*register_operation_)++;
         uint8_t data_out[3] = {(uint8_t) (address | 0x80)};
         uint8_t data_in[3];
-        spi_dma_.readwrite(data_out, data_in, 3);
+        spi_dma_.readwrite(data_out, data_in, 3, true);
         us_delay(3);
         (*register_operation_)--;
         return data_in[2];

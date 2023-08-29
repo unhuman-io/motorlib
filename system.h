@@ -178,6 +178,7 @@ class System {
         api.add_api_variable("idir", new APIFloat(&actuator_.fast_loop_.current_direction_));
         api.add_api_variable("uptime", new const APICallbackUint32(get_uptime));
         api.add_api_variable("menc", new const APIInt32(&actuator_.fast_loop_.motor_enc));
+        api.add_api_variable("oenc", new const APICallbackUint32([](){ return actuator_.main_loop_.output_encoder_.get_value(); }));
         api.add_api_variable("amax", new APIFloat(&actuator_.main_loop_.admittance_controller_.torque_controller_.command_max_));
         api.add_api_variable("akp", new APIFloat(&actuator_.main_loop_.admittance_controller_.torque_controller_.kp_));
         api.add_api_variable("Tmotor_est", new const APIFloat(&actuator_.main_loop_.status_.motor_temperature_estimate));
