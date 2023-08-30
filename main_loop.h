@@ -212,6 +212,7 @@ class MainLoop {
           break;
         case STEPPER_VELOCITY:
           vq_des = receive_data_.stepper_velocity.voltage;
+          iq_des = receive_data_.stepper_velocity.current;
           fast_loop_.set_stepper_velocity(receive_data_.stepper_velocity.velocity);
           break;
         case STEPPER_TUNING:
@@ -518,8 +519,11 @@ class MainLoop {
             led_.set_color(LED::AZURE);
             break;
           case STEPPER_VELOCITY:
+            fast_loop_.stepper_mode(static_cast<StepperMode>(receive_data_.stepper_velocity.stepper_mode));
+            led_.set_color(LED::CYAN);
+            break;
           case STEPPER_TUNING:
-            fast_loop_.stepper_mode();
+            fast_loop_.stepper_mode(static_cast<StepperMode>(receive_data_.stepper_tuning.stepper_mode));
             led_.set_color(LED::CYAN);
             break;
           case FAULT:
