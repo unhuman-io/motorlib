@@ -64,7 +64,8 @@ class FastLoop {
       motor_enc = encoder_.read();
       int32_t motor_enc_diff;
       float motor_x;
-      motor_position_ = motor_enc_to_position(motor_enc, motor_enc_diff, motor_x);
+      //motor_position_ = motor_enc_to_position(motor_enc, motor_enc_diff, motor_x);
+      motor_position_ = motor_pos_sensorless_to_position(status_.top().foc_status.estimated.angle, motor_enc_diff, motor_x);
       motor_position_filtered_ = motor_position_filter_.update(motor_position_);//(1-alpha10)*motor_position_filtered_ + alpha10*motor_position_;
       motor_velocity_ =  motor_encoder_dir_ * (motor_enc_diff)*(2*(float) M_PI * inv_motor_encoder_cpr_ * frequency_hz_);
       motor_velocity_filtered_ = motor_velocity_filter_.update(motor_velocity_);
@@ -138,6 +139,18 @@ class FastLoop {
       motor_enc_wrap_ = wrap1(motor_enc_wrap_ + motor_enc_diff, param_.motor_encoder.rollover);
       motor_mechanical_position_ = (motor_enc_wrap_ - motor_index_pos_);
       motor_x = motor_mechanical_position_*inv_motor_encoder_cpr_;
+
+      motor_position_ = motor_encoder_dir_ * (2 * (float) M_PI * inv_motor_encoder_cpr_ * motor_enc_wrap_ 
+                          + motor_index_pos_set_*motor_correction_table_.table_interp(motor_x));
+      last_motor_enc = motor_enc;
+      return motor_position_;
+    }
+
+    float motor_pos_sensorless_to_position(float motor_pos, int32_t &motor_enc_diff, float &motor_x) {
+      motor_enc_diff = motor_enc-last_motor_enc;
+      motor_enc_wrap_ = wrap1(motor_enc_wrap_ + motor_enc_diff, param_.motor_encoder.rollover);
+      motor_mechanical_position_ = (motor_enc_wrap_ - motor_index_pos_);
+      motor_x = motor_mechanical_position_*(1/(2*M_PI*param_.foc_param.num_poles));
 
       motor_position_ = motor_encoder_dir_ * (2 * (float) M_PI * inv_motor_encoder_cpr_ * motor_enc_wrap_ 
                           + motor_index_pos_set_*motor_correction_table_.table_interp(motor_x));

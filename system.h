@@ -219,9 +219,24 @@ class System {
         API_ADD_FILTER(eavemf_filter, FirstOrderLowPassFilter, actuator_.fast_loop_.foc_->sensorless_estimator_.estimator_alpha_.v_emf_filter_);
         API_ADD_FILTER(eaz_filter, FirstOrderLowPassFilter, actuator_.fast_loop_.foc_->sensorless_estimator_.estimator_alpha_.z_filter_);
         api.add_api_variable("eaK", new APIFloat(&actuator_.fast_loop_.foc_->sensorless_estimator_.estimator_alpha_.K_));
+        api.add_api_variable("ea", new const APIFloat(&actuator_.fast_loop_.foc_->sensorless_estimator_.estimator_alpha_.v_emf_));
         API_ADD_FILTER(ebvemf_filter, FirstOrderLowPassFilter, actuator_.fast_loop_.foc_->sensorless_estimator_.estimator_beta_.v_emf_filter_);
         API_ADD_FILTER(ebz_filter, FirstOrderLowPassFilter, actuator_.fast_loop_.foc_->sensorless_estimator_.estimator_beta_.z_filter_);
         api.add_api_variable("ebK", new APIFloat(&actuator_.fast_loop_.foc_->sensorless_estimator_.estimator_beta_.K_));
+        api.add_api_variable("eb", new const APIFloat(&actuator_.fast_loop_.foc_->sensorless_estimator_.estimator_beta_.v_emf_));
+        api.add_api_variable("epos", new const APIFloat(&actuator_.fast_loop_.foc_->sensorless_estimator_.angle_estimate_));
+        // cordic debug
+        api.add_api_variable("eai", new const APIFloat(&actuator_.fast_loop_.foc_->sensorless_estimator_.i_alpha_));
+        api.add_api_variable("ebi", new const APIFloat(&actuator_.fast_loop_.foc_->sensorless_estimator_.i_beta_));
+        api.add_api_variable("eav", new const APIFloat(&actuator_.fast_loop_.foc_->sensorless_estimator_.v_alpha_));
+        api.add_api_variable("ebv", new const APIFloat(&actuator_.fast_loop_.foc_->sensorless_estimator_.v_beta_));
+        // api.add_api_variable("epos_q31", new const APIInt32(&actuator_.fast_loop_.foc_->sensorless_estimator_.angle_last_));
+        // api.add_api_variable("ex", new const APIFloat(&actuator_.fast_loop_.foc_->sensorless_estimator_.x));
+        // api.add_api_variable("ey", new const APIFloat(&actuator_.fast_loop_.foc_->sensorless_estimator_.y));
+        // api.add_api_variable("emax", new const APIFloat(&actuator_.fast_loop_.foc_->sensorless_estimator_.max));
+        // api.add_api_variable("eone_max", new const APIFloat(&actuator_.fast_loop_.foc_->sensorless_estimator_.one_max));
+        // api.add_api_variable("exq", new const APIInt32(&actuator_.fast_loop_.foc_->sensorless_estimator_.x_q31));
+        // api.add_api_variable("eyq", new const APIInt32(&actuator_.fast_loop_.foc_->sensorless_estimator_.y_q31));
 
         uint32_t t_start = get_clock();
         while(1) {

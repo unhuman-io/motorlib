@@ -122,11 +122,16 @@ void FOC::calculate_vdq0(Vdq0 *const vdq0, float cos, float sin, float va, float
 //     return a * (float) 0x80000000;
 // }
 
-#define TO_RAD(x) (M_PI * ((float) x * (1.0/0x8000000)))
+#define TO_RAD(x) (M_PI * ((float) x * (1.0/0x80000000)))
 
 void SensorlessEstimator::update(float i_alpha, float i_beta, float v_alpha, float v_beta) {
-    estimator_alpha_.update(i_alpha, v_alpha);
-    estimator_beta_.update(i_beta, v_beta);
+    estimator_alpha_.update(v_alpha, i_alpha);
+    estimator_beta_.update(v_beta, i_beta);
+
+    v_alpha_ = v_alpha;
+    v_beta_ = v_beta;
+    i_alpha_ = i_alpha;
+    i_beta_ = i_beta;
     
     int32_t angle = atan2f_q31(estimator_alpha_.v_emf(), estimator_beta_.v_emf());
     int32_t diff = angle - angle_last_;

@@ -48,6 +48,8 @@ class SensorlessEstimator {
     FirstOrderLowPassFilter velocity_filter_;
     float Kspeed_;
     float angle_estimate_;
+
+    float i_alpha_, i_beta_, v_alpha_, v_beta_;
     friend class System;
 };
 
