@@ -51,9 +51,9 @@ std::string bytes_to_hex(const std::vector<char>& bytes) {
     return s;
 }
 
-std::string bytes_to_hex(const uint8_t *bytes, uint16_t length) { 
+std::string bytes_to_hex(const uint8_t bytes[], const uint8_t length) { 
     std::string s;   
-    for (uint16_t i=0; i<length; i++) {
+    for (int i=0; i<length; i++) {
         s += byte_to_hex(bytes[i]);
     }
     return s;

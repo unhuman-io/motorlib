@@ -31,13 +31,28 @@ class SPIDMA {
         regs_.CR1 = regs_cr1_ | SPI_CR1_SPE; // enable
     }
 
-    void readwrite(const uint8_t * const data_out, uint8_t * const data_in, uint8_t length) {
-        start_readwrite(data_out, data_in, length);
-        finish_readwrite();
+    void save_state() {
+        old_cr1_ = regs_.CR1;
+        old_cr2_ = regs_.CR2;
+        old_tx_cpar_ = tx_dma_.CPAR;
+        old_rx_cpar_ = rx_dma_.CPAR;
     }
 
-    void start_readwrite(const uint8_t * const data_out, uint8_t * const data_in, uint8_t length) {
-        if (!*register_operation_) {
+    void restore_state() {
+        regs_.CR1 &= ~SPI_CR1_SPE; // disable to change settings
+        regs_.CR2 = old_cr2_;
+        tx_dma_.CPAR = old_tx_cpar_;
+        rx_dma_.CPAR = old_rx_cpar_;
+        regs_.CR1 = old_cr1_;
+    }
+
+    void readwrite(const uint8_t * const data_out, uint8_t * const data_in, uint8_t length, bool register_operation = false) {
+        start_readwrite(data_out, data_in, length, register_operation);
+        finish_readwrite(register_operation);
+    }
+
+    void start_readwrite(const uint8_t * const data_out, uint8_t * const data_in, uint8_t length, bool register_operation = false) {
+        if (!*register_operation_ || register_operation) {
             reinit();
             gpio_cs_.clear();
             ns_delay(start_cs_delay_ns_);
@@ -52,8 +67,23 @@ class SPIDMA {
         }
     }
 
-    void finish_readwrite() {
-        if (!*register_operation_) {
+    void start_write(const uint8_t * const data_out, uint16_t length, bool register_operation = false) {
+        if (!*register_operation_ || register_operation) {
+            gpio_cs_.clear();
+            ns_delay(start_cs_delay_ns_);
+            tx_dma_.CCR = 0;
+            rx_dma_.CCR = 0;
+            tx_dma_.CNDTR = length;
+            rx_dma_.CNDTR = length;
+            tx_dma_.CMAR = (uint32_t) data_out;
+            rx_dma_.CMAR = (uint32_t) tmp_rx_;        
+            rx_dma_.CCR = DMA_CCR_EN;
+            tx_dma_.CCR = DMA_CCR_EN | DMA_CCR_MINC | DMA_CCR_DIR; // DIR = 1 > read from memory
+        }
+    }
+
+    void finish_readwrite(bool register_operation = false) {
+        if (!*register_operation_ || register_operation) {
             while(rx_dma_.CNDTR);
             ns_delay(end_cs_delay_ns_);
             gpio_cs_.set();
@@ -68,6 +98,9 @@ class SPIDMA {
     uint16_t start_cs_delay_ns_;
     uint16_t end_cs_delay_ns_;
     uint32_t regs_cr1_;
+    uint32_t tmp_rx_;
+
+    volatile uint32_t old_cr1_, old_cr2_, old_tx_cpar_, old_rx_cpar_;
 
     friend class System;
 };
