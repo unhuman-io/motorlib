@@ -12,5 +12,10 @@ inline int32_t atan2f_q31(float y, float x) {
     int32_t x_q31 = TO_Q31(x*one_max);
     CORDIC->WDATA = x_q31;
     CORDIC->WDATA = y_q31;
+
     return CORDIC->RDATA;
 }
+
+// inline int32_t atan2f_q31(float y, float x) {
+//     return TO_Q31(atan2f(y, x)*(1.0/(3.14159)));
+// }
