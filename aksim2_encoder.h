@@ -31,6 +31,7 @@ class Aksim2Encoder : public EncoderBase {
     void trigger() {
         spi_dma_.start_readwrite(data_out_, data_in_, length_);
     }
+    bool init() { return true; }
     int32_t read() {
         spi_dma_.finish_readwrite();
         // 17 bits of nothing, then number of data bits 18-20, then error bit, warn bit, and crc6
