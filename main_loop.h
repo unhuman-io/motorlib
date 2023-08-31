@@ -315,7 +315,7 @@ class MainLoop {
                 // record negative limit
                 // change encoder biases around
                 joint_position_controller_.init(status_);
-                find_limits_count_ = count_;
+                find_limits_count_ = 0;
               }
               iq_des = velocity_controller_.step(command, status_);
               break;
@@ -323,10 +323,13 @@ class MainLoop {
               position_limits_disable_ = false;
               command.position_desired = receive_data_.position_desired;
               iq_des = joint_position_controller_.step(command, status_);
-              if (count_ - find_limits_count_ == 10000) {
+              if (find_limits_count_ == 10000) {
                 // set startup bias 0
+
                 // set startup bias negative measured
                 logger.log_printf("mbias: %f", motor_encoder_bias_);
+              } else {
+                find_limits_count_++;
               }
               break;
           }
@@ -653,6 +656,7 @@ class MainLoop {
     uint32_t *reserved0_ = reinterpret_cast<uint32_t *>(&status_.fast_loop.vbus);
     uint32_t *reserved1_ = &timestamp_;
     uint32_t *reserved2_ = &last_timestamp_;
+    uint32_t find_limits_count_ = 0;
     PChipTable<OUTPUT_ENCODER_TABLE_LENGTH> output_encoder_correction_table_;
     PChipTable<TORQUE_TABLE_LENGTH> torque_correction_table_;
     CStack<MainLoopStatus,2> status_stack_;
