@@ -62,10 +62,11 @@ class FastLoop {
       
       // get encoder value, may wait a little
       motor_enc = encoder_.read();
+      motor_enc = foc_->sensorless_estimator_.angle_estimate()*(1/(2*M_PI*10))*pow(2,19);
       int32_t motor_enc_diff;
       float motor_x;
-      //motor_position_ = motor_enc_to_position(motor_enc, motor_enc_diff, motor_x);
-      motor_position_ = motor_pos_sensorless_to_position(status_.top().foc_status.estimated.angle, motor_enc_diff, motor_x);
+      motor_position_ = motor_enc_to_position(motor_enc, motor_enc_diff, motor_x);
+      //motor_position_ = motor_pos_sensorless_to_position(foc_->sensorless_estimator_.angle_estimate(), motor_enc_diff, motor_x);
       motor_position_filtered_ = motor_position_filter_.update(motor_position_);//(1-alpha10)*motor_position_filtered_ + alpha10*motor_position_;
       motor_velocity_ =  motor_encoder_dir_ * (motor_enc_diff)*(2*(float) M_PI * inv_motor_encoder_cpr_ * frequency_hz_);
       motor_velocity_filtered_ = motor_velocity_filter_.update(motor_velocity_);
@@ -103,6 +104,7 @@ class FastLoop {
 
       // update FOC
       foc_command_.measured.motor_encoder = phase_mode_*(motor_enc_wrap_ - motor_electrical_zero_dir_pos_)*(2*(float) M_PI  * inv_motor_encoder_cpr_);
+      //foc_command_.measured.motor_encoder = phase_mode_*motor_position_;
       foc_command_.desired.i_q = iq_des_gain_ * (iq_des + iq_ff);
 
       if (mode_ == STEPPER_TUNING_MODE) {

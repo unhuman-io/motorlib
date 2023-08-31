@@ -72,7 +72,7 @@ public:
     float get_id_limit() const { return id_limiter_.get_limit()/dt_; }
     float get_iq_limit() const { return iq_limiter_.get_limit()/dt_; }
 
-private:
+//private:
     float num_poles_ = 7;
     volatile float i_gain_ = 0;
     PI2Controller pi_id_, pi_iq_;
