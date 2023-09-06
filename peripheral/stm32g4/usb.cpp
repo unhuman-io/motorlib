@@ -460,7 +460,7 @@ void USB1::interrupt() {
                                     break;
                                 }
                                 case 0x04:
-                                    send_string(0, GIT_HASH " " BUILD_DATETIME, std::strlen(GIT_HASH " " BUILD_DATETIME));
+                                    send_string(0, GIT_VERSION " " BUILD_DATETIME, std::strlen(GIT_VERSION " " BUILD_DATETIME));
                                     break;
                                 case 0x05:
                                     send_string(0, const_cast<const char*>(name), std::strlen(const_cast<const char*>(name)));

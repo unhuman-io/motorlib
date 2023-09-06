@@ -23,6 +23,18 @@ void system_maintenance();
 class System {
  public:
     static void run() {
+        // check parameter version
+        if (GIT_HASH != std::string(param->git_hash)) {
+            logger.log_printf("param version error, firmware: %s, param: %s", GIT_HASH, param->git_hash);
+            actuator_.main_loop_.led_.set_color(LED::RED);
+            actuator_.main_loop_.led_.set_mode(LED::BLINKING);
+            while(1) {
+                go_to_bootloader = 0xB007;
+                NVIC_SystemReset();
+            }
+        } else {
+            logger.log_printf("param version match: %s", GIT_HASH);
+        }
         actuator_.start();
 
         log("finished startup");
