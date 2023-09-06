@@ -1,3 +1,7 @@
+GIT_HASH := $(shell git rev-parse HEAD)
+override CFLAGS +=  \
+-DGIT_HASH=\"$(GIT_HASH)\"
+
 ifdef PARAM_OVERRIDE
 PARAM_SUFFIX=$(addprefix _,$(notdir $(PARAM_OVERRIDE:.h=)))
 PARAM_OUT = $(foreach suf,$(PARAM_SUFFIX),$(PARAM_BUILD_DIR)/$(notdir $(PARAM_FILE:.c=))$(suf).bin)
