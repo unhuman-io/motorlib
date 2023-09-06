@@ -29,7 +29,8 @@ class System {
             actuator_.main_loop_.led_.set_color(LED::RED);
             actuator_.main_loop_.led_.set_mode(LED::BLINKING);
             while(1) {
-                IWDG->KR = 0xAAAA;
+                go_to_bootloader = 0xB007;
+                NVIC_SystemReset();
             }
         } else {
             logger.log_printf("param version match: %s", GIT_HASH);
