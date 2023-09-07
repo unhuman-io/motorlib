@@ -11,19 +11,28 @@ class QIA128_UART : public TorqueSensorBase {
  public:
     QIA128_UART(USART_TypeDef &regs) : regs_(regs) {}
     bool init() {
-
-        //uart_tx({0, 5, 0, 1, 0xE}); // check for loopback on this value
-
-        //ms_delay(100);
         for (int i=0; i<1; i++) {
             // takes a while for this sensor to turn on
             ms_delay(200);
             IWDG->KR = 0xAAAA;
-        }
+        }        
+        
+        clear_uart_receive_buffer();
+        uart_tx({0, 5, 0, 1, 0xE}); // check for loopback on this value
+        uart_rx_print(5);
+        ms_delay(10);
+
+        // other stuff
+        uart_tx({00, 07, 03, 0x11, 00, 00, 0x5B}); 
+        uint8_t gain = uart_rx(6)[4];
+        logger.log_printf("qia128 gain: %d", gain);
+        ms_delay(10);
+
+        // normal initialization
         uart_tx({0, 6, 0, 0x0c, 0, 0x3c}); // set stream state off
 
         ms_delay(100);
-        clear_uart_receive_buffer();
+        
 
         uart_tx({0, 7, 3, 0x19, 0, 0, 0x7b}); // get adc cal 0
 
@@ -95,8 +104,23 @@ class QIA128_UART : public TorqueSensorBase {
         }
     }
 
+    uint8_t set_gain() {
+        logger.log_printf("setting qia128 gain to 7");
+        uart_tx({00, 0x08, 04, 0x11, 00, 00, 0x07, 0x91});
+        ms_delay(100);
+        uart_tx({00, 07, 03, 0x11, 00, 00, 0x5B}); 
+        uint8_t gain = uart_rx(6)[4];
+        logger.log_printf("qia128 gain: %d", gain);
+        ms_delay(10);
+        return gain;
+    }
+
     // fifo size 8 bytes
     void uart_tx(std::initializer_list<uint8_t> data) {
+        // std::vector<uint8_t> bytes{data};
+        // std::string s = bytes_to_hex(bytes);
+        // logger.log_printf("qia128 tx");
+        // logger.log(bytes_to_hex(bytes));
         for (uint8_t b : data) {
             regs_.TDR = b;
         }
@@ -105,6 +129,20 @@ class QIA128_UART : public TorqueSensorBase {
     uint8_t uart_rx_uint8() {
         wait_while_false_with_timeout_us(regs_.ISR & USART_ISR_RXNE, 10000);
         return regs_.RDR;
+    }
+
+    std::vector<uint8_t> uart_rx(uint8_t count) {
+        std::vector<uint8_t> bytes(count);
+        for (int i=0; i<count; i++) {
+            bytes[i] = uart_rx_uint8();
+        }
+        return bytes;
+    }
+
+    void uart_rx_print(uint8_t count) {
+        std::vector<uint8_t> bytes = uart_rx(count);
+        logger.log_printf("qia128 rx %d", count);
+        logger.log(bytes_to_hex(bytes));
     }
 
     uint32_t uart_rx_uint32() {
@@ -119,6 +157,10 @@ class QIA128_UART : public TorqueSensorBase {
         while(regs_.ISR & USART_ISR_RXNE) {
             regs_.RDR;
         }
+        uart_rx_flush();
+    }
+
+    void uart_rx_flush() {
         regs_.RQR = USART_RQR_RXFRQ;
     }
 
@@ -126,7 +168,7 @@ class QIA128_UART : public TorqueSensorBase {
         if (state_ == WAIT) {
             // read character
             if (regs_.ISR & USART_ISR_RXNE) {
-                regs_.RQR = USART_RQR_RXFRQ; // maybe switch to clear
+                uart_rx_flush();
                 wait_count_ = 0;
                 wait_error_++;
             } else {
