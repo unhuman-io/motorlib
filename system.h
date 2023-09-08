@@ -218,6 +218,18 @@ class System {
         api.add_api_variable("iki2", new APIFloat(&actuator_.fast_loop_.foc_->pi_iq_.ki2_));
         api.add_api_variable("idkp2", new APIFloat(&actuator_.fast_loop_.foc_->pi_id_.kp2_));
         api.add_api_variable("idki2", new APIFloat(&actuator_.fast_loop_.foc_->pi_id_.ki2_));
+        api.add_api_variable("ivalue2", new APICallbackFloat([](){ return actuator_.fast_loop_.foc_->pi_iq_.value2_; },
+             [](float f){ 
+                PI2Param param = actuator_.fast_loop_.foc_->pi_iq_.get_param();
+                param.value2 = f;
+                actuator_.fast_loop_.foc_->pi_iq_.set_param(param);
+        }));
+        api.add_api_variable("idvalue2", new APICallbackFloat([](){ return actuator_.fast_loop_.foc_->pi_id_.value2_; },
+             [](float f){ 
+                PI2Param param = actuator_.fast_loop_.foc_->pi_id_.get_param();
+                param.value2 = f;
+                actuator_.fast_loop_.foc_->pi_id_.set_param(param);
+        }));
         api.add_api_variable("id_des", new APIFloat(&actuator_.fast_loop_.foc_command_.desired.i_d));
         api.add_api_variable("trigger_fast_log", new const APICallback([](){ actuator_.fast_loop_.trigger_status_log(); return "triggered"; }));
         api.add_api_variable("ilimit", new APICallbackFloat([](){ return actuator_.fast_loop_.foc_->get_iq_limit(); },
