@@ -128,6 +128,7 @@ class QIA128_UART : public TorqueSensorBase {
 
     uint8_t uart_rx_uint8() {
         wait_while_false_with_timeout_us(regs_.ISR & USART_ISR_RXNE, 10000);
+        IWDG->KR = 0xAAAA;
         return regs_.RDR;
     }
 
