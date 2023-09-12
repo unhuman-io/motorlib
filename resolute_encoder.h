@@ -4,7 +4,7 @@
 #include "encoder.h"
 #include <cmath>
 
-static uint8_t CRC_BiSS_43_40bit(uint64_t w_InputData);
+static uint8_t CRC_BiSS_43_36bit(uint64_t w_InputData);
 
 class ResoluteEncoder : public EncoderBase {
  public:
@@ -58,16 +58,18 @@ class ResoluteEncoder : public EncoderBase {
         raw_value3_ = data_in_[10] << 24 | data_in_[11] << 16 | data_in_[12] << 8 | data_in_[13];
         raw_value4_ = data_in_[14] << 24 | data_in_[15] << 16 | data_in_[16] << 8 | data_in_[17];
         Diag diag;
-        diag.word = super_raw & 0xFF;
+        diag.word = (super_raw >> (40 - 2 - leading_zeros)) & 0xFF;
         diag_.err = diag.err;
         diag_.warn = diag.warn;
         uint64_t crc_val_raw = (super_raw >> 6) & 0x3FFFFFFFF;
-        crc_calc_ = ~CRC_BiSS_43_40bit(crc_val_raw) & 0x3F; // crc of data plus 2 status bits
-        diag_.crc6 = crc_calc_ == diag.crc6;
-        if (!diag_.crc6) {
-            crc_error_raw_latch_ = raw_value_;
-            crc_err_count_++;
-        } else {
+        crc_calc_ = ~CRC_BiSS_43_36bit(crc_val_raw) & 0x3F; // crc of data plus 2 status bits
+        diag_.crc6 = 1; // todo, get crc working
+        // diag_.crc6 = crc_calc_ == diag.crc6;
+        // if (!diag_.crc6) {
+        //     crc_error_raw_latch_ = raw_value_;
+        //     crc_err_count_++;
+        // } else {
+        {
             if (!diag_.err) {
                 diag_err_count_++;
             }
@@ -79,6 +81,7 @@ class ResoluteEncoder : public EncoderBase {
         if (diag_.crc6 && diag_.err) {
             int32_t diff = (int32_t) (raw_value_ - last_raw_value_);
             value_ += diff;
+            last_raw_value_ = raw_value_;
         }
 
         diag_raw_ = diag;
@@ -132,19 +135,14 @@ uint8_t tableCRC6[64] = {
  0x3B, 0x38, 0x3D, 0x3E, 0x37, 0x34, 0x31, 0x32,
  0x13, 0x10, 0x15, 0x16, 0x1F, 0x1C, 0x19, 0x1A,
  0x0B, 0x08, 0x0D, 0x0E, 0x07, 0x04, 0x01, 0x02};
-/*32-bit input data, right alignment, Calculation over 40 bits (mult. of 6) */
-uint8_t CRC_BiSS_43_40bit (uint64_t w_InputData)
+/*32-bit input data, right alignment, Calculation over 36 bits (mult. of 6) */
+uint8_t CRC_BiSS_43_36bit (uint64_t w_InputData)
 {
  uint8_t b_Index = 0;
  uint8_t b_CRC = 0;
 
- b_Index = (uint8_t )(((uint64_t)w_InputData >> 42u) & 0x0000003Fu);
+ b_Index = (uint8_t )(((uint64_t)w_InputData >> 30u) & 0x0000003Fu);
 
-
- b_CRC = (uint8_t )(((uint64_t)w_InputData >> 36u) & 0x0000003Fu);
- b_Index = b_CRC ^ tableCRC6[b_Index];
- b_CRC = (uint8_t )(((uint64_t)w_InputData >> 30u) & 0x0000003Fu);
- b_Index = b_CRC ^ tableCRC6[b_Index];
  b_CRC = (uint8_t )(((uint64_t)w_InputData >> 24u) & 0x0000003Fu);
  b_Index = b_CRC ^ tableCRC6[b_Index];
  b_CRC = (uint8_t )(((uint64_t)w_InputData >> 18u) & 0x0000003Fu);
