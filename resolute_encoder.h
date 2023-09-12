@@ -4,7 +4,7 @@
 #include "encoder.h"
 #include <cmath>
 
-static uint8_t CRC_BiSS_43_24bit(uint32_t w_InputData);
+static uint8_t CRC_BiSS_43_40bit(uint64_t w_InputData);
 
 class ResoluteEncoder : public EncoderBase {
  public:
@@ -36,18 +36,33 @@ class ResoluteEncoder : public EncoderBase {
         GPIOC->BSRR = GPIO_BSRR_BS0;
         spi_dma_.finish_readwrite();
         GPIOC->BSRR = GPIO_BSRR_BR0;
-        // 17 bits of nothing, then number of data bits 18-20, then error bit, warn bit, and crc6
-        // 17+20+2+6 = 45 -> 6 bytes
-        // raw value will be 31 bits with a leading zero
-        raw_value_ = data_in_[2] << 24 | data_in_[3] << 16 | data_in_[4] << 8 | data_in_[5];
+
+        uint64_t super_raw;
+        //uint32_t leading_zeros;
+        // variable ack length. Find start bit. Skip a few bytes to save time
+        
+        for (int i=4; i<length_; i++) {
+            if (data_in_[i]) {
+                super_raw = (((uint64_t) data_in_[i]) & 0xFF) << 48 | (((uint64_t) data_in_[i+1]) & 0xFF) << 40 | (((uint64_t) data_in_[i+2]) & 0xFF) << 32  
+                    | (uint64_t) data_in_[i+3] << 24 | (uint64_t) data_in_[i+4] << 16 | (uint64_t) data_in_[i+5] << 8 | (uint64_t) data_in_[i+6];
+                leading_zeros = clz(data_in_[i]);
+                byte_ind = i;
+                break;
+            }
+        }
+        // leading zeros example start bit in bit 2 (0000 010X)
+        // leading zeros => 24+5=29
+        // right shift 9 = 32-29-2+16
+        raw_value_ = super_raw >> (48 - 2 - leading_zeros);
         raw_value2_ = data_in_[6] << 24 | data_in_[7] << 16 | data_in_[8] << 8 | data_in_[9];
         raw_value3_ = data_in_[10] << 24 | data_in_[11] << 16 | data_in_[12] << 8 | data_in_[13];
         raw_value4_ = data_in_[14] << 24 | data_in_[15] << 16 | data_in_[16] << 8 | data_in_[17];
         Diag diag;
-     //   diag.word = (raw_value_ >> (31 - 8 - nbits_)) & 0xFF;
+        diag.word = super_raw & 0xFF;
         diag_.err = diag.err;
         diag_.warn = diag.warn;
-   //     crc_calc_ = ~CRC_BiSS_43_24bit(raw_value_ >> (31 - 2 - nbits_)) & 0x3F; // crc of data plus 2 status bits
+        uint64_t crc_val_raw = (super_raw >> 6) & 0x3FFFFFFFF;
+        crc_calc_ = ~CRC_BiSS_43_40bit(crc_val_raw) & 0x3F; // crc of data plus 2 status bits
         diag_.crc6 = crc_calc_ == diag.crc6;
         if (!diag_.crc6) {
             crc_error_raw_latch_ = raw_value_;
@@ -62,14 +77,17 @@ class ResoluteEncoder : public EncoderBase {
         }
 
         if (diag_.crc6 && diag_.err) {
-            // uint32_t shift_value = (raw_value_ >> (31 - nbits_)) << (32 - nbits_);
-            // int32_t diff = (int32_t) (shift_value - last_shift_value_) >> (32 - nbits_);
-            // last_shift_value_ = shift_value;
-            // value_ += diff;
+            int32_t diff = (int32_t) (raw_value_ - last_raw_value_);
+            value_ += diff;
         }
 
         diag_raw_ = diag;
         return get_value();
+    }
+    uint32_t clz(uint32_t val) {
+        uint32_t zeros;
+        asm("clz %[zeros], %[val]": [zeros] "=r" (zeros) : [val] "r" (val));
+        return zeros;
     }
     void clear_faults() {
         crc_err_count_ = 0;
@@ -89,7 +107,8 @@ class ResoluteEncoder : public EncoderBase {
         uint32_t raw_value3_ = 0;
         uint32_t raw_value4_ = 0;
     uint32_t crc_error_raw_latch_ = 0;
-
+    uint32_t leading_zeros=0;
+    uint8_t byte_ind=0;
 
  private:
     SPIDMA &spi_dma_;
@@ -97,7 +116,7 @@ class ResoluteEncoder : public EncoderBase {
     uint8_t data_out_[20] = {};
     uint8_t data_in_[20] = {};
     int32_t value_ = 0;
-    uint32_t last_shift_value_ = 0;
+    uint32_t last_raw_value_ = 0;
 
     friend void config_init();
 };
@@ -113,21 +132,31 @@ uint8_t tableCRC6[64] = {
  0x3B, 0x38, 0x3D, 0x3E, 0x37, 0x34, 0x31, 0x32,
  0x13, 0x10, 0x15, 0x16, 0x1F, 0x1C, 0x19, 0x1A,
  0x0B, 0x08, 0x0D, 0x0E, 0x07, 0x04, 0x01, 0x02};
-/*32-bit input data, right alignment, Calculation over 24 bits (mult. of 6) */
-uint8_t CRC_BiSS_43_24bit (uint32_t w_InputData)
+/*32-bit input data, right alignment, Calculation over 40 bits (mult. of 6) */
+uint8_t CRC_BiSS_43_40bit (uint64_t w_InputData)
 {
  uint8_t b_Index = 0;
  uint8_t b_CRC = 0;
 
- b_Index = (uint8_t )(((uint32_t)w_InputData >> 18u) & 0x0000003Fu);
+ b_Index = (uint8_t )(((uint64_t)w_InputData >> 42u) & 0x0000003Fu);
 
- b_CRC = (uint8_t )(((uint32_t)w_InputData >> 12u) & 0x0000003Fu);
+
+ b_CRC = (uint8_t )(((uint64_t)w_InputData >> 36u) & 0x0000003Fu);
+ b_Index = b_CRC ^ tableCRC6[b_Index];
+ b_CRC = (uint8_t )(((uint64_t)w_InputData >> 30u) & 0x0000003Fu);
+ b_Index = b_CRC ^ tableCRC6[b_Index];
+ b_CRC = (uint8_t )(((uint64_t)w_InputData >> 24u) & 0x0000003Fu);
+ b_Index = b_CRC ^ tableCRC6[b_Index];
+ b_CRC = (uint8_t )(((uint64_t)w_InputData >> 18u) & 0x0000003Fu);
  b_Index = b_CRC ^ tableCRC6[b_Index];
 
- b_CRC = (uint8_t )(((uint32_t)w_InputData >> 6u) & 0x0000003Fu);
+ b_CRC = (uint8_t )(((uint64_t)w_InputData >> 12u) & 0x0000003Fu);
  b_Index = b_CRC ^ tableCRC6[b_Index];
 
- b_CRC = (uint8_t )((uint32_t)w_InputData & 0x0000003Fu);
+ b_CRC = (uint8_t )(((uint64_t)w_InputData >> 6u) & 0x0000003Fu);
+ b_Index = b_CRC ^ tableCRC6[b_Index];
+
+ b_CRC = (uint8_t )((uint64_t)w_InputData & 0x0000003Fu);
  b_Index = b_CRC ^ tableCRC6[b_Index];
 
  b_CRC = tableCRC6[b_Index];
