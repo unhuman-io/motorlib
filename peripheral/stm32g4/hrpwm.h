@@ -50,9 +50,11 @@ class HRPWM : public PWMBase {
    void set_frequency_multiplier(uint8_t frequency_multiplier);
    uint8_t get_frequency_multiplier() const;
    void set_voltage(float v_abc[3])  __attribute__((section (".ccmram")));
+   void set_damped_voltage(float v);
    void set_vbus(float vbus);
    void open_mode();
    void brake_mode();
+   void damped_mode();
    void voltage_mode();
    void set_deadtime(uint16_t deadtime_ns) {
       deadtime_ns_ = deadtime_ns;

@@ -184,6 +184,7 @@ class MainLoop {
       float vq_des = 0;
       switch (mode_) {
         case CURRENT:
+        case DAMPED_CURRENT:
           iq_des = receive_data_.current_desired;
           break;
         case POSITION:
@@ -493,6 +494,10 @@ class MainLoop {
             admittance_controller_.init(status_);
             led_.set_color(LED::ROSE);
             break;
+          case DAMPED_CURRENT:
+            fast_loop_.damped_mode();
+            led_.set_color(LED::ORANGE);
+            break;
           case FIND_LIMITS:
             fast_loop_.current_mode();
             position_limits_disable_ = true;
@@ -560,7 +565,11 @@ class MainLoop {
             driver_.disable();
           }
         } else {
-          led_.set_rate(1);
+          if (mode == DAMPED_CURRENT) {
+            led_.set_rate(0.5);
+          } else {
+            led_.set_rate(1);
+          }
         }
       }
       mode_ = mode;

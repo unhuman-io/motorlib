@@ -9,6 +9,13 @@ void HRPWM::set_voltage(float v_abc[3]) {
     pwm_c_ = fsat2(v_abc[2] * v_to_pwm_ + half_period_, pwm_min_, pwm_max_);
 }
 
+void HRPWM::set_damped_voltage(float v) {
+    uint32_t pwm = fsat2(v * v_to_pwm_, 0, pwm_max_);
+    pwm_a_ = pwm;
+    pwm_b_ = pwm;
+    pwm_c_ = pwm;
+}
+
 void HRPWM::set_vbus(float vbus) {
     v_to_pwm_ = period_/vbus;
 }
@@ -30,6 +37,13 @@ void HRPWM::brake_mode() {
     regs_.sTimerxRegs[ch_a_].RSTx1R = HRTIM_RST1R_SRT; // set inactive state again for some reason
     regs_.sTimerxRegs[ch_b_].RSTx1R = HRTIM_RST1R_SRT;
     regs_.sTimerxRegs[ch_c_].RSTx1R = HRTIM_RST1R_SRT;
+}
+
+// only allow bottom fets to prevent any chance of non passivity
+void HRPWM::damped_mode() {
+    voltage_mode();
+    regs_.sCommonRegs.ODISR = 0x555;
+    regs_.sCommonRegs.OENR = 0xAAA;
 }
 
 void HRPWM::voltage_mode() {

@@ -17,6 +17,7 @@ public:
     void get_status(FOCStatus *status) const { *status = status_; }
     void voltage_mode();
     void current_mode();
+    void damped_mode() { current_mode(); }
     static void calculate_vdq0(Vdq0 *const, float cos, float sin, float va, float vb, float vc);
     void set_id_limit(float limit) { id_limiter_.set_limit(limit*dt_); }
     void set_iq_limit(float limit) { iq_limiter_.set_limit(limit*dt_); }

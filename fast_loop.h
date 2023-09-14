@@ -114,7 +114,11 @@ class FastLoop {
       FOCStatus *foc_status = foc_->step(foc_command_);
 
       // output pwm
-      pwm_.set_voltage(&foc_status->command.v_a);
+      if (mode_ == DAMPED_MODE) {
+        pwm_.set_damped_voltage(fabsf2(foc_status->command.v_q));
+      } else {
+        pwm_.set_voltage(&foc_status->command.v_a);
+      }
 
       dt_ = (timestamp_ - last_timestamp_)*(float) (1.0f/CPU_FREQUENCY_HZ);
       last_timestamp_ = timestamp_;
@@ -235,6 +239,11 @@ class FastLoop {
       foc_->voltage_mode();
       mode_ = BRAKE_MODE;
     }
+    void damped_mode() {
+      pwm_.damped_mode();
+      foc_->damped_mode();
+      mode_ = DAMPED_MODE;
+    }
     void open_mode() {
       pwm_.open_mode();
       foc_->voltage_mode();
@@ -332,7 +341,7 @@ class FastLoop {
 
     FOC *foc_;
     PWM &pwm_;
-    enum {OPEN_MODE, BRAKE_MODE, CURRENT_MODE, PHASE_LOCK_MODE, VOLTAGE_MODE, CURRENT_TUNING_MODE, STEPPER_TUNING_MODE} mode_ = CURRENT_MODE;
+    enum {OPEN_MODE, BRAKE_MODE, CURRENT_MODE, PHASE_LOCK_MODE, VOLTAGE_MODE, CURRENT_TUNING_MODE, STEPPER_TUNING_MODE, DAMPED_MODE} mode_ = CURRENT_MODE;
 
     float motor_encoder_dir_;
     int32_t motor_enc;
