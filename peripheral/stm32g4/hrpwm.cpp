@@ -10,7 +10,7 @@ void HRPWM::set_voltage(float v_abc[3]) {
 }
 
 void HRPWM::set_damped_voltage(float v) {
-    uint32_t pwm = fsat2(v * v_to_pwm_, 0, pwm_max_);
+    uint32_t pwm = fsat2(v * v_to_pwm_, pwm_min_, pwm_max_);
     pwm_a_ = pwm;
     pwm_b_ = pwm;
     pwm_c_ = pwm;

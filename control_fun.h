@@ -215,7 +215,9 @@ public:
     ~PIController() {}
     float step(float desired, float measured);
     void set_param(const PIParam &pi_param);
-    void initialize() { ki_sum_ = 0; }
+    void initialize(float current_output = 0) { 
+        ki_sum_ = current_output;
+    }
 private:
     float kp_ = 0, ki_ = 0, ki_sum_ = 0, ki_limit_ = 0, command_max_ = 0;
 
@@ -227,7 +229,9 @@ public:
     ~PI2Controller() {}
     float step(float desired, float measured);
     void set_param(const PI2Param &pi_param);
-    void initialize() { ki_sum_ = 0; }
+    void initialize(float current_output = 0) { 
+        ki_sum_ = current_output;
+    }
     PI2Param get_param() const;
 private:
     float kp_ = 0, ki_ = 0, ki_sum_ = 0, ki_limit_ = 0, command_max_ = 0, kp2_ = 0, ki2_ = 0, value2_ = 0, inv_value2_ = 1;

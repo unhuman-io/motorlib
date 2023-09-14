@@ -83,8 +83,8 @@ void FOC::voltage_mode() {
 }
 
 void FOC::current_mode() {
-    pi_id_.initialize();
-    pi_iq_.initialize();
+    pi_id_.initialize(status_.command.v_d);
+    pi_iq_.initialize(status_.command.v_q);
     i_gain_ = 1;
 
 }
