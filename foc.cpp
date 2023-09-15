@@ -28,6 +28,9 @@ FOCStatus * const FOC::step(const FOCCommand &command) {
     Sincos sincos = sincos1(electrical_angle);
     float &sin_t = sincos.sin;
     float &cos_t = sincos.cos;
+    Sincos sincos2 = sincos1(electrical_angle*harmonic_);
+    float &sin2 = sincos2.sin;
+    float &cos2 = sincos2.cos;
     float  i_alpha_measured = Kc[0][0] * i_abc_measured[0] +
             Kc[0][1] * i_abc_measured[1] +
             Kc[0][2] * i_abc_measured[2];
@@ -35,8 +38,8 @@ FOCStatus * const FOC::step(const FOCCommand &command) {
                      Kc[1][1] * i_abc_measured[1] +
                      Kc[1][2] * i_abc_measured[2];
 
-    float i_d_measured = cos_t * i_alpha_measured - sin_t * i_beta_measured;
-    float i_q_measured = sin_t * i_alpha_measured + cos_t * i_beta_measured;
+    float i_d_measured = (cos_t + harmonic_amplitude_ * cos2) * i_alpha_measured - (sin_t + harmonic_amplitude_ * sin2) * i_beta_measured;
+    float i_q_measured = (sin_t + harmonic_amplitude_ * sin2) * i_alpha_measured + (cos_t + harmonic_amplitude_ * cos2) * i_beta_measured;
 
     float i_d_measured_filtered = id_filter_.update(i_d_measured);
     float i_q_measured_filtered = iq_filter_.update(i_q_measured);
@@ -47,8 +50,8 @@ FOCStatus * const FOC::step(const FOCCommand &command) {
     float v_d_desired = i_gain_*pi_id_.step(i_d_desired_limited, i_d_measured_filtered);
     float v_q_desired = i_gain_*pi_iq_.step(i_q_desired_limited, i_q_measured_filtered) + command.desired.v_q;
 
-    float v_alpha_desired = cos_t * v_d_desired + sin_t * v_q_desired;
-    float v_beta_desired = -sin_t * v_d_desired + cos_t * v_q_desired;
+    float v_alpha_desired = (cos_t + harmonic_amplitude_ * cos2) * v_d_desired + (sin_t + harmonic_amplitude_ * sin2) * v_q_desired;
+    float v_beta_desired = -(sin_t + harmonic_amplitude_ * sin2) * v_d_desired + (cos_t + harmonic_amplitude_ * cos2) * v_q_desired;
 
     float v_a_desired = Kc[0][0] * v_alpha_desired + Kc[1][0] * v_beta_desired;
     float v_b_desired = Kc[0][1] * v_alpha_desired + Kc[1][1] * v_beta_desired;

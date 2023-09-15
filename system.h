@@ -238,6 +238,8 @@ class System {
             [](float f){ actuator_.fast_loop_.foc_->set_id_limit(f); }));
         api.add_api_variable("num_poles", new APIFloat(&actuator_.fast_loop_.foc_->num_poles_));
         api.add_api_variable("timestamp", new const APICallbackUint32(get_clock));
+        api.add_api_variable("hamp", new APIFloat(&actuator_.fast_loop_.foc_->harmonic_amplitude_));
+        api.add_api_variable("hc", new APIFloat(&actuator_.fast_loop_.foc_->harmonic_));
 
         uint32_t t_start = get_clock();
         while(1) {

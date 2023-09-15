@@ -33,6 +33,8 @@ private:
     FirstOrderLowPassFilter id_filter_, iq_filter_;
     RateLimiter id_limiter_, iq_limiter_;
     FOCParam param_;
+    float harmonic_ = 5;
+    float harmonic_amplitude_ = 0;
 
     friend class System;
 };
