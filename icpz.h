@@ -22,6 +22,8 @@ class ICPZ : public EncoderBase {
       };
       uint8_t word;
     };
+    enum Addr {CMD_STAT=0x76, COMMANDS=0x77};
+    enum CMD {CONF_WRITE_ALL=0x41, AUTO_ADJ_ANA=0xB0, AUTO_ADJ_DIG=0xB1, AUTO_READJ_DIG=0xB2, AUTO_ADJ_ECC=0xB3};
     bool init() {
       bool success = true;
       // send reboot (currently not working probably)
@@ -209,6 +211,37 @@ class ICPZ : public EncoderBase {
         error_count_ = 0;
         warn_count_ = 0;
         crc_error_count_ = 0;
+    }
+
+    std::string write_conf() {
+        set_register(0, Addr::COMMANDS, {CMD::CONF_WRITE_ALL});
+        wait_while_false_with_timeout_us(read_register(Addr::COMMANDS, 1)[0] == 0, 100);
+        auto data = read_register(Addr::CMD_STAT, 1);
+        if (data[0] == 0) {
+          return "conf write success";
+        } else {
+          return "conf error: " + std::to_string(data[0]);
+        }
+    }
+
+    void start_auto_adj_ana() {
+        set_register(0, Addr::COMMANDS, {CMD::AUTO_ADJ_ANA});
+    }
+
+    void start_auto_adj_dig() {
+        set_register(0, Addr::COMMANDS, {CMD::AUTO_ADJ_DIG});
+    }
+
+    void start_auto_readj_dig() {
+        set_register(0, Addr::COMMANDS, {CMD::AUTO_READJ_DIG});
+    }
+
+    void start_auto_adj_ecc() {
+        set_register(0, Addr::COMMANDS, {CMD::AUTO_ADJ_ECC});
+    }
+
+    std::string get_cmd_result() {
+        return "command: " + std::to_string(read_register(Addr::COMMANDS, 1)[0]) + ", result: " + std::to_string(read_register(Addr::CMD_STAT, 1)[0]);
     }
 
  protected:
