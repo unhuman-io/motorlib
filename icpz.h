@@ -374,8 +374,8 @@ class ICPZ : public EncoderBase {
 
     std::string get_cal_string() {
         char c[200];
-        std::snprintf(c, 200, "cos_off: %f, sin_off: %f, sc_gain, %f, sc_phase: %f ai_phase: %f, ai_scale: %f, ecc_amp: %f", 
-          get_cos_off(), get_sin_off(), get_sc_gain(), get_sc_phase(), get_ai_phase(), get_ai_scale(), get_ecc_um());
+        std::snprintf(c, 200, "cos_off: %f, sin_off: %f, sc_gain, %f, sc_phase: %f ai_phase: %f, ai_scale: %f, ecc_amp: %f, ecc_phase: %f", 
+          get_cos_off(), get_sin_off(), get_sc_gain(), get_sc_phase(), get_ai_phase(), get_ai_scale(), get_ecc_um(), get_ecc_phase());
         return std::string(c);
     }
 
@@ -401,7 +401,14 @@ class ICPZ : public EncoderBase {
         std::map<Disk, float> ropt_map{{PZ03S, 10700},{PZ08S, 18600}, {Default, 1}};
         uint32_t ecc_amp_raw = data[3] << 24 | data[2] << 16 | data[1] << 8 | data[0];
         float ecc_amp  = ecc_amp_raw * ropt_map[disk_] * 1.407e-9;
-        return ecc_amp_raw;
+        return ecc_amp;
+    }
+
+    float get_ecc_phase() {
+        auto data = read_register(2, 8, 2);
+        int16_t phase_raw = ((int16_t) (data[1] << 8 | data[0])) >> 2;
+        float phase =  (float) phase_raw/std::pow(2, 14) * 360; 
+        return phase;
     }
 
     std::string get_cmd_result() {
