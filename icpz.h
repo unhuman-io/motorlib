@@ -39,6 +39,8 @@ class ICPZ : public EncoderBase {
       success = set_register(7, 9, {0}) ? success : false; // multiturn data length = 0
       success = set_register(7, 0xA, {0}) ? success : false; // spi_ext = 0
       success = set_register(0, 0xF, {4}) ? success : false; // 0x00 ran_fld = 0 -> never update position based on absolute track after initial, tol 4
+      success = set_register(2, 3, {0x77}) ? success : false; // moderate dynamic digital calibration
+      success = set_register(2, 0, {0x77, 0x7}) ? success: false; // moderate dynamic analog calibration
 
       if (disk_ == PZ03S) {
         success = set_register(2, 2, {0, 1}) ? success : false; // fcl = 256
@@ -328,10 +330,59 @@ class ICPZ : public EncoderBase {
         return phase;
     }
 
+    float get_ai_phases() {
+        auto data = read_register(1, 0x28, 2);
+        int16_t ai_phase_raw = ((int16_t) (data[1] << 8 | data[0])) >> 6;
+        float ai_phase = (float) ai_phase_raw/512*180;
+        return ai_phase;
+    }
+
+    float get_ai_scales() {
+        auto data = read_register(1, 0x2a, 2);
+        int16_t ai_scale_raw = ((int16_t) (data[1] << 8 | data[0])) >> 7;
+        float ai_scale = (float) ai_scale_raw/1820 + 1;
+        return ai_scale;
+    }
+
+    float get_cos_offs() {
+        auto data = read_register(1, 0x20, 2);
+        int16_t off_raw = ((int16_t) (data[1] << 8 | data[0])) >> 6;
+        float off = off_raw * 0.235; // offset in mV
+        return off;
+    }
+
+    float get_sin_offs() {
+        auto data = read_register(1, 0x22, 2);
+        int16_t off_raw = ((int16_t) (data[1] << 8 | data[0])) >> 6;
+        float off = off_raw * 0.235; // offset in mV
+        return off;
+    }
+
+    float get_sc_gains() {
+        auto data = read_register(1, 0x24, 2);
+        int16_t gain_raw = ((int16_t) (data[1] << 8 | data[0])) >> 6;
+        float gain = std::pow((float) 14.0/11, (float) gain_raw/511); 
+        return gain;
+    }
+
+    float get_sc_phases() {
+        auto data = read_register(1, 0x26, 2);
+        int16_t phase_raw = ((int16_t) (data[1] << 8 | data[0])) >> 6;
+        float phase =  (float) phase_raw/511 * 11.4; 
+        return phase;
+    }
+
     std::string get_cal_string() {
         char c[200];
+        std::snprintf(c, 200, "cos_off: %f, sin_off: %f, sc_gain, %f, sc_phase: %f ai_phase: %f, ai_scale: %f, ecc_amp: %f", 
+          get_cos_off(), get_sin_off(), get_sc_gain(), get_sc_phase(), get_ai_phase(), get_ai_scale(), get_ecc_um());
+        return std::string(c);
+    }
+
+    std::string get_cals_string() {
+        char c[200];
         std::snprintf(c, 200, "cos_off: %f, sin_off: %f, sc_gain, %f, sc_phase: %f ai_phase: %f, ai_scale: %f", 
-          get_cos_off(), get_sin_off(), get_sc_gain(), get_sc_phase(), get_ai_phase(), get_ai_scale());
+          get_cos_offs(), get_sin_offs(), get_sc_gains(), get_sc_phases(), get_ai_phases(), get_ai_scales());
         return std::string(c);
     }
 
@@ -348,8 +399,9 @@ class ICPZ : public EncoderBase {
     float get_ecc_um() {
         auto data = read_register(2, 4, 4);
         std::map<Disk, float> ropt_map{{PZ03S, 10700},{PZ08S, 18600}, {Default, 1}};
-        uint32_t ecc_amp = data[3] << 24 | data[2] << 16 | data[1] << 8 | data[0];
-        return ecc_amp * ropt_map[disk_] * 1.407e-9;
+        uint32_t ecc_amp_raw = data[3] << 24 | data[2] << 16 | data[1] << 8 | data[0];
+        float ecc_amp  = ecc_amp_raw * ropt_map[disk_] * 1.407e-9;
+        return ecc_amp_raw;
     }
 
     std::string get_cmd_result() {
