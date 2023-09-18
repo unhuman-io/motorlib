@@ -4,6 +4,7 @@
 #include "encoder.h"
 #include "util.h"
 #include <vector>
+#include <map>
 
 static uint8_t CRC_BiSS_43_30bit (uint32_t w_InputData);
 
@@ -24,6 +25,7 @@ class ICPZ : public EncoderBase {
     };
     enum Addr {CMD_STAT=0x76, COMMANDS=0x77};
     enum CMD {CONF_WRITE_ALL=0x41, AUTO_ADJ_ANA=0xB0, AUTO_ADJ_DIG=0xB1, AUTO_READJ_DIG=0xB2, AUTO_ADJ_ECC=0xB3};
+
     bool init() {
       bool success = true;
       // send reboot (currently not working probably)
@@ -185,11 +187,10 @@ class ICPZ : public EncoderBase {
         }
     }
 
-    // non interrupt context
-    bool set_register(uint8_t bank, uint8_t address, const std::vector<uint8_t> &value) {
+    bool set_bank(uint8_t bank) {
         (*register_operation_)++;
-        uint8_t data_in[std::max(value.size(),(std::size_t) 3)];
         if (bank != bank_) {
+          uint8_t data_in[3];
           uint8_t data_out[] = {write_register_opcode_, 0x40, bank};
           spidma_.readwrite(data_out, data_in, 3);
           if (read_register(0x40, 1) != std::vector<uint8_t>{bank}) {
@@ -198,6 +199,42 @@ class ICPZ : public EncoderBase {
             return false;
           }
           bank_ = bank;
+        }
+        (*register_operation_)--;
+        return true;
+    }
+
+    std::vector<uint8_t> read_register(uint8_t bank, uint8_t address, uint8_t length) {
+        (*register_operation_)++;
+        std::vector<uint8_t> data_out(length+3, 0);
+        data_out[0] = read_register_opcode_;
+        data_out[1] = address;
+        uint8_t data_in[length+3];
+        if (!set_bank(bank)) {
+          (*register_operation_)--;
+          return std::vector<uint8_t>(1,0xff);
+        }
+        if (type_ == PZ) {
+          spidma_.readwrite(data_out.data(), data_in, length+3);
+          (*register_operation_)--;
+          return std::vector<uint8_t>(&data_in[3], &data_in[3+length]);
+        } else {
+          spidma_.readwrite(data_out.data(), data_in, 2);
+          data_out[0] = 0xad;
+          data_out[1] = 0;
+          spidma_.readwrite(data_out.data(), data_in, length+2);
+          (*register_operation_)--;
+          return std::vector<uint8_t>(&data_in[2], &data_in[2+length]);
+        }
+    }
+
+    // non interrupt context
+    bool set_register(uint8_t bank, uint8_t address, const std::vector<uint8_t> &value) {
+        (*register_operation_)++;
+        uint8_t data_in[std::max(value.size(),(std::size_t) 3)];
+        if (!set_bank(bank)) {
+          (*register_operation_)--;
+          return false;
         }
         std::vector<uint8_t> data_out = {write_register_opcode_, address};
         data_out.insert(data_out.end(), value.begin(), value.end());
@@ -238,6 +275,31 @@ class ICPZ : public EncoderBase {
 
     void start_auto_adj_ecc() {
         set_register(0, Addr::COMMANDS, {CMD::AUTO_ADJ_ECC});
+    }
+
+    void set_ecc_correction(uint8_t on = 1) {
+        set_register(2, 0xa, {on});
+    }
+
+    bool get_ecc_correction() {
+        return read_register(2, 0xa, 1)[0];
+    }
+
+    // set ac_eto for 10x longer timeout on calibration
+    void set_ac_eto(uint8_t on = 1) {
+        auto data = read_register(0, 0x5d, 1);
+        set_register(0, 0x5d, {(uint8_t) (on << 7 | data[0])});
+    }
+
+    bool get_ac_eto() {
+        return read_register(0x5d, 1)[0] >> 7;
+    }
+
+    float get_ecc_um() {
+        auto data = read_register(2, 4, 4);
+        std::map<Disk, float> ropt_map{{PZ03S, 10700},{PZ08S, 18600}, {Default, 1}};
+        uint32_t ecc_amp = data[3] << 24 | data[2] << 16 | data[1] << 8 | data[0];
+        return ecc_amp * ropt_map[disk_] * 1.407e-9;
     }
 
     std::string get_cmd_result() {
