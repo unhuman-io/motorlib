@@ -6,6 +6,9 @@
 
 extern uint16_t drv_regs_error;
 
+static const std::string drv8323_status1_bits[11] = {"vds_lc", "vds_hc", "vds_lb", "vds_hb", "vds_la", "vds_ha", "otsd", "uvlo", "gdf", "vds_ocp", "fault"};
+static const std::string drv8323_status2_bits[11] = {"vgs_lc", "vgs_hc", "vgs_lb", "vgs_hb", "vgs_la", "vgs_ha", "cpuv", "otw", "sc_oc", "sb_oc", "sa_oc"};
+
 class DRV8323S : public DriverBase {
  public:
     DRV8323S(SPI_TypeDef &regs, volatile int* register_operation = nullptr, void (*spi_reinit_callback)() = nullptr)
@@ -39,8 +42,17 @@ class DRV8323S : public DriverBase {
 
     void disable() {
         uint32_t status = get_drv_status();
-        logger.log_printf("drv8323 disabled, status: %04x", status);
-        logger.log("drv disable");
+        logger.log_printf("drv8323 disabled, status1: %03x status2: %03x", status & 0xFFFF, status >> 16);
+        std::string s = "drv8323 status bits";
+        for(int i=0; i<11; i++) {
+            if ((status >> i) & 0x1)
+                s += " " + drv8323_status1_bits[i];
+        }
+        for(int i=0; i<11; i++) {
+            if ((status >> (16+i)) & 0x1)
+                s += " " + drv8323_status2_bits[i];
+        }
+        logger.log(s);
         GPIOC->BSRR = GPIO_BSRR_BR13; // drv disable
         DriverBase::disable();
     }
@@ -104,6 +116,7 @@ class DRV8323S : public DriverBase {
             return value;
     }
     volatile int *register_operation_ = &register_operation_local_;
+
  private:
     SPI_TypeDef &regs_;
     volatile int register_operation_local_ = 0;
