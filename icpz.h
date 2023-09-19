@@ -6,6 +6,7 @@
 #include <vector>
 #include <map>
 #include <cmath>
+#include "logger.h"
 
 static uint8_t CRC_BiSS_43_30bit (uint32_t w_InputData);
 
@@ -388,13 +389,23 @@ class ICPZ : public EncoderBase {
 
     // set ac_eto for 10x longer timeout on calibration
     void set_ac_eto(uint8_t on = 1) {
-        auto data = read_register(0, 0x5d, 1);
-        set_register(0, 0x5d, {(uint8_t) (on << 7 | data[0])});
+        auto data = read_register(0x5d, 1);
+        set_register(0, 0x5d, {(uint8_t) (on << 7 | data[0] & 0xF)});
     }
 
     bool get_ac_eto() {
         return read_register(0x5d, 1)[0] >> 7;
     }
+
+    void set_ac_count(uint8_t count = 8) {
+        auto data = read_register(0x5d, 1);
+        set_register(0, 0x5d, {(uint8_t) ((data[0] & 0x80) | (count & 0xF))});
+    }
+
+    uint8_t get_ac_count() {
+        return read_register(0x5d, 1)[0];// & 0xf;
+    }
+
 
     float get_ecc_um() {
         auto data = read_register(2, 4, 4);
@@ -409,6 +420,13 @@ class ICPZ : public EncoderBase {
         int16_t phase_raw = ((int16_t) (data[1] << 8 | data[0])) >> 2;
         float phase =  (float) phase_raw/std::pow(2, 14) * 360; 
         return phase;
+    }
+
+    void set_ecc_um(float ecc) {
+        std::map<Disk, float> ropt_map{{PZ03S, 10700},{PZ08S, 18600}, {Default, 1}};
+        uint32_t ecc_raw = ecc/ropt_map[disk_] / 1.407e-9;
+        set_register(2, 4, {(uint8_t) (ecc_raw & 0xff), (uint8_t) ((ecc_raw >> 8) & 0xff), 
+          (uint8_t) ((ecc_raw >> 16) & 0xff), (uint8_t) ((ecc_raw >> 24) & 0xff)});
     }
 
     std::string get_cmd_result() {
