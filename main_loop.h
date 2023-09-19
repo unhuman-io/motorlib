@@ -13,6 +13,8 @@
 #include "round_robin_logger.h"
 #include "temperature_model.h"
 
+static const std::string error_bit_strings[32] = ERROR_BIT_STRINGS;
+
 extern "C" {
 void system_init();
 }
@@ -175,6 +177,13 @@ class MainLoop {
           status_.error.fault = 1;
           if (safe_mode_ != true) {
             logger.log_printf("fault detected, error: %08x", status_.error.all);
+            std::string s = "fault bits:";
+            for (int i=0; i<32; i++) {
+              if ((status_.error.all >> i) & 0x1) {
+                s += " " + error_bit_strings[i];
+              }
+            }
+            logger.log(s);
           }
           safe_mode_ = true;
           set_mode(param_.safe_mode);
