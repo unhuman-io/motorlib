@@ -338,6 +338,7 @@ void USB1::interrupt() {
     if (USB->ISTR & USB_ISTR_RESET)
     {
         reset_count_++;
+        error_count_ = 0;
         logger.log("usb reset");
         // Set up endpoint 0
         USB->EP0R = USB_EP_CONTROL;
