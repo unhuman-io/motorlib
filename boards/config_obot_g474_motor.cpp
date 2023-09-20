@@ -21,13 +21,27 @@ uint16_t drv_regs_error = 0;
 #endif
 
 #include "../led.h"
+#ifndef POSITION_CONTROLLER_OVERRIDE
 #include "../controller/position_controller.h"
+#endif
+#ifndef TORQUE_CONTROLLER_OVERRIDE
 #include "../controller/torque_controller.h"
+#endif
+#ifndef IMPEDANCE_CONTROLLER_OVERRIDE
 #include "../controller/impedance_controller.h"
+#endif
+#ifndef VELOCITY_CONTROLLER_OVERRIDE
 #include "../controller/velocity_controller.h"
+#endif
+#ifndef STATE_CONTROLLER_OVERRIDE
 #include "../controller/state_controller.h"
+#endif
+#ifndef JOINT_POSITION_CONTROLLER_OVERRIDE
 #include "../controller/joint_position_controller.h"
+#endif
+#ifndef ADMITTANCE_CONTROLLER_OVERRIDE
 #include "../controller/admittance_controller.h"
+#endif
 #include "../fast_loop.h"
 #include "../main_loop.h"
 #include "../actuator.h"
@@ -82,13 +96,27 @@ namespace config {
     LED led = {const_cast<uint16_t*>(reinterpret_cast<volatile uint16_t *>(&TIM_R)), 
                const_cast<uint16_t*>(reinterpret_cast<volatile uint16_t *>(&TIM_G)),
                const_cast<uint16_t*>(reinterpret_cast<volatile uint16_t *>(&TIM_B))};
+#ifndef POSITION_CONTROLLER_OVERRIDE
     PositionController position_controller = {(float) (1.0/main_loop_frequency)};
+#endif
+#ifndef TORQUE_CONTROLLER_OVERRIDE
     TorqueController torque_controller = {(float) (1.0/main_loop_frequency)};
+#endif
+#ifndef IMPEDANCE_CONTROLLER_OVERRIDE
     ImpedanceController impedance_controller = {(float) (1.0/main_loop_frequency)};
+#endif
+#ifndef VELOCITY_CONTROLLER_OVERRIDE
     VelocityController velocity_controller = {(float) (1.0/main_loop_frequency)};
+#endif
+#ifndef STATE_CONTROLLER_OVERRIDE
     StateController state_controller = {(float) (1.0/main_loop_frequency)};
+#endif
+#ifndef JOINT_POSITION_CONTROLLER_OVERRIDE
     JointPositionController joint_position_controller(1.0/main_loop_frequency);
+#endif
+#ifndef ADMITTANCE_CONTROLLER_OVERRIDE
     AdmittanceController admittance_controller = {1.0/main_loop_frequency};
+#endif
     MainLoop main_loop = {main_loop_frequency, fast_loop, position_controller, torque_controller, impedance_controller, velocity_controller, state_controller, joint_position_controller, admittance_controller, System::communication_, led, output_encoder, torque_sensor, drv, param->main_loop_param};
 };
 
