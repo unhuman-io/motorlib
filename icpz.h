@@ -26,14 +26,15 @@ class ICPZ : public EncoderBase {
       uint8_t word;
     };
     enum Addr {CMD_STAT=0x76, COMMANDS=0x77};
-    enum CMD {CONF_WRITE_ALL=0x41, AUTO_ADJ_ANA=0xB0, AUTO_ADJ_DIG=0xB1, AUTO_READJ_DIG=0xB2, AUTO_ADJ_ECC=0xB3};
+    enum CMD {REBOOT=0x10, CONF_WRITE_ALL=0x41, AUTO_ADJ_ANA=0xB0, AUTO_ADJ_DIG=0xB1, AUTO_READJ_DIG=0xB2, AUTO_ADJ_ECC=0xB3};
 
     bool init() {
       bool success = true;
-      // send reboot (currently not working probably)
-      // uint8_t data_out[2] = {0x77, 0x10};
-      // uint8_t data_in[2];
-      // spidma_.readwrite(data_out, data_in, 2);
+      // send reboot (still not working)
+      set_register(0, 0, {3});
+      set_register(bank_, Addr::COMMANDS, {REBOOT});
+      ms_delay(40);
+      IWDG->KR = 0xAAAA;
 
       //set_register(7, 9, {0});
       success = set_register(0, 0, {3}) ? success : false; // fast speed on port a, set first
