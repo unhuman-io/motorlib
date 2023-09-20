@@ -4,6 +4,9 @@
 #include "encoder.h"
 #include "util.h"
 #include <vector>
+#include <map>
+#include <cmath>
+#include "logger.h"
 
 static uint8_t CRC_BiSS_43_30bit (uint32_t w_InputData);
 
@@ -22,18 +25,24 @@ class ICPZ : public EncoderBase {
       };
       uint8_t word;
     };
+    enum Addr {CMD_STAT=0x76, COMMANDS=0x77};
+    enum CMD {REBOOT=0x10, CONF_WRITE_ALL=0x41, AUTO_ADJ_ANA=0xB0, AUTO_ADJ_DIG=0xB1, AUTO_READJ_DIG=0xB2, AUTO_ADJ_ECC=0xB3};
+
     bool init() {
       bool success = true;
-      // send reboot (currently not working probably)
-      // uint8_t data_out[2] = {0x77, 0x10};
-      // uint8_t data_in[2];
-      // spidma_.readwrite(data_out, data_in, 2);
+      // send reboot (still not working)
+      set_register(0, 0, {3});
+      set_register(bank_, Addr::COMMANDS, {REBOOT});
+      ms_delay(40);
+      IWDG->KR = 0xAAAA;
 
       //set_register(7, 9, {0});
       success = set_register(0, 0, {3}) ? success : false; // fast speed on port a, set first
       success = set_register(7, 9, {0}) ? success : false; // multiturn data length = 0
       success = set_register(7, 0xA, {0}) ? success : false; // spi_ext = 0
       success = set_register(0, 0xF, {4}) ? success : false; // 0x00 ran_fld = 0 -> never update position based on absolute track after initial, tol 4
+      success = set_register(2, 3, {0x77}) ? success : false; // moderate dynamic digital calibration
+      success = set_register(2, 0, {0x77, 0x7}) ? success: false; // moderate dynamic analog calibration
 
       if (disk_ == PZ03S) {
         success = set_register(2, 2, {0, 1}) ? success : false; // fcl = 256
@@ -148,7 +157,7 @@ class ICPZ : public EncoderBase {
       (*register_operation_)++;
       uint8_t data_out[10] = {0x9C};
       uint8_t data_in[10];
-      spidma_.readwrite(data_out, data_in, 10);
+      spidma_.readwrite(data_out, data_in, 10, true);
       (*register_operation_)--;
       return bytes_to_hex(data_in+2, 8);
     }
@@ -157,7 +166,7 @@ class ICPZ : public EncoderBase {
       (*register_operation_)++;
       uint8_t data_out = 0x20;
       uint8_t data_in;
-      spidma_.readwrite(&data_out, &data_in, 1);
+      spidma_.readwrite(&data_out, &data_in, 1, true);
       (*register_operation_)--;
     }
 
@@ -170,14 +179,55 @@ class ICPZ : public EncoderBase {
         uint8_t data_in[length+3];
         
         if (type_ == PZ) {
-          spidma_.readwrite(data_out.data(), data_in, length+3);
+          spidma_.readwrite(data_out.data(), data_in, length+3, true);
           (*register_operation_)--;
           return std::vector<uint8_t>(&data_in[3], &data_in[3+length]);
         } else {
-          spidma_.readwrite(data_out.data(), data_in, 2);
+          spidma_.readwrite(data_out.data(), data_in, 2, true);
           data_out[0] = 0xad;
           data_out[1] = 0;
-          spidma_.readwrite(data_out.data(), data_in, length+2);
+          spidma_.readwrite(data_out.data(), data_in, length+2, true);
+          (*register_operation_)--;
+          return std::vector<uint8_t>(&data_in[2], &data_in[2+length]);
+        }
+    }
+
+    bool set_bank(uint8_t bank) {
+        (*register_operation_)++;
+        if (bank != bank_) {
+          uint8_t data_in[3];
+          uint8_t data_out[] = {write_register_opcode_, 0x40, bank};
+          spidma_.readwrite(data_out, data_in, 3, true);
+          if (read_register(0x40, 1) != std::vector<uint8_t>{bank}) {
+            system_log("ichaus bank " + std::to_string(read_register(0x40, 1)[0]) + " not " + std::to_string(bank));
+            (*register_operation_)--;
+            return false;
+          }
+          bank_ = bank;
+        }
+        (*register_operation_)--;
+        return true;
+    }
+
+    std::vector<uint8_t> read_register(uint8_t bank, uint8_t address, uint8_t length) {
+        (*register_operation_)++;
+        std::vector<uint8_t> data_out(length+3, 0);
+        data_out[0] = read_register_opcode_;
+        data_out[1] = address;
+        uint8_t data_in[length+3];
+        if (!set_bank(bank)) {
+          (*register_operation_)--;
+          return std::vector<uint8_t>(1,0xff);
+        }
+        if (type_ == PZ) {
+          spidma_.readwrite(data_out.data(), data_in, length+3, true);
+          (*register_operation_)--;
+          return std::vector<uint8_t>(&data_in[3], &data_in[3+length]);
+        } else {
+          spidma_.readwrite(data_out.data(), data_in, 2, true);
+          data_out[0] = 0xad;
+          data_out[1] = 0;
+          spidma_.readwrite(data_out.data(), data_in, length+2, true);
           (*register_operation_)--;
           return std::vector<uint8_t>(&data_in[2], &data_in[2+length]);
         }
@@ -187,19 +237,13 @@ class ICPZ : public EncoderBase {
     bool set_register(uint8_t bank, uint8_t address, const std::vector<uint8_t> &value) {
         (*register_operation_)++;
         uint8_t data_in[std::max(value.size(),(std::size_t) 3)];
-        if (bank != bank_) {
-          uint8_t data_out[] = {write_register_opcode_, 0x40, bank};
-          spidma_.readwrite(data_out, data_in, 3);
-          if (read_register(0x40, 1) != std::vector<uint8_t>{bank}) {
-            system_log("ichaus bank " + std::to_string(read_register(0x40, 1)[0]) + " not " + std::to_string(bank));
-            (*register_operation_)--;
-            return false;
-          }
-          bank_ = bank;
+        if (!set_bank(bank)) {
+          (*register_operation_)--;
+          return false;
         }
         std::vector<uint8_t> data_out = {write_register_opcode_, address};
         data_out.insert(data_out.end(), value.begin(), value.end());
-        spidma_.readwrite(data_out.data(), data_in, data_out.size());
+        spidma_.readwrite(data_out.data(), data_in, data_out.size(), true);
         bool retval = read_register(address, value.size()) == value;
         (*register_operation_)--;
         return retval;
@@ -209,6 +253,185 @@ class ICPZ : public EncoderBase {
         error_count_ = 0;
         warn_count_ = 0;
         crc_error_count_ = 0;
+    }
+
+    std::string write_conf() {
+        set_register(0, Addr::COMMANDS, {CMD::CONF_WRITE_ALL});
+        wait_while_false_with_timeout_us(read_register(Addr::COMMANDS, 1)[0] == 0, 100);
+        auto data = read_register(Addr::CMD_STAT, 1);
+        if (data[0] == 0) {
+          return "conf write success";
+        } else {
+          return "conf error: " + std::to_string(data[0]);
+        }
+    }
+
+    void start_auto_adj_ana() {
+        set_register(0, Addr::COMMANDS, {CMD::AUTO_ADJ_ANA});
+    }
+
+    void start_auto_adj_dig() {
+        set_register(0, Addr::COMMANDS, {CMD::AUTO_ADJ_DIG});
+    }
+
+    void start_auto_readj_dig() {
+        set_register(0, Addr::COMMANDS, {CMD::AUTO_READJ_DIG});
+    }
+
+    void start_auto_adj_ecc() {
+        set_register(0, Addr::COMMANDS, {CMD::AUTO_ADJ_ECC});
+    }
+
+    void set_ecc_correction(uint8_t on = 1) {
+        set_register(2, 0xa, {on});
+    }
+
+    bool get_ecc_correction() {
+        return read_register(2, 0xa, 1)[0];
+    }
+
+    float get_ai_phase() {
+        auto data = read_register(1, 0x8, 2);
+        int16_t ai_phase_raw = ((int16_t) (data[1] << 8 | data[0])) >> 6;
+        float ai_phase = (float) ai_phase_raw/512*180;
+        return ai_phase;
+    }
+
+    float get_ai_scale() {
+        auto data = read_register(1, 0xa, 2);
+        int16_t ai_scale_raw = ((int16_t) (data[1] << 8 | data[0])) >> 7;
+        float ai_scale = (float) ai_scale_raw/1820 + 1;
+        return ai_scale;
+    }
+
+    float get_cos_off() {
+        auto data = read_register(1, 0, 2);
+        int16_t off_raw = ((int16_t) (data[1] << 8 | data[0])) >> 6;
+        float off = off_raw * 0.235; // offset in mV
+        return off;
+    }
+
+    float get_sin_off() {
+        auto data = read_register(1, 2, 2);
+        int16_t off_raw = ((int16_t) (data[1] << 8 | data[0])) >> 6;
+        float off = off_raw * 0.235; // offset in mV
+        return off;
+    }
+
+    float get_sc_gain() {
+        auto data = read_register(1, 4, 2);
+        int16_t gain_raw = ((int16_t) (data[1] << 8 | data[0])) >> 6;
+        float gain = std::pow((float) 14.0/11, (float) gain_raw/511); 
+        return gain;
+    }
+
+    float get_sc_phase() {
+        auto data = read_register(1, 6, 2);
+        int16_t phase_raw = ((int16_t) (data[1] << 8 | data[0])) >> 6;
+        float phase =  (float) phase_raw/511 * 11.4; 
+        return phase;
+    }
+
+    float get_ai_phases() {
+        auto data = read_register(1, 0x28, 2);
+        int16_t ai_phase_raw = ((int16_t) (data[1] << 8 | data[0])) >> 6;
+        float ai_phase = (float) ai_phase_raw/512*180;
+        return ai_phase;
+    }
+
+    float get_ai_scales() {
+        auto data = read_register(1, 0x2a, 2);
+        int16_t ai_scale_raw = ((int16_t) (data[1] << 8 | data[0])) >> 7;
+        float ai_scale = (float) ai_scale_raw/1820 + 1;
+        return ai_scale;
+    }
+
+    float get_cos_offs() {
+        auto data = read_register(1, 0x20, 2);
+        int16_t off_raw = ((int16_t) (data[1] << 8 | data[0])) >> 6;
+        float off = off_raw * 0.235; // offset in mV
+        return off;
+    }
+
+    float get_sin_offs() {
+        auto data = read_register(1, 0x22, 2);
+        int16_t off_raw = ((int16_t) (data[1] << 8 | data[0])) >> 6;
+        float off = off_raw * 0.235; // offset in mV
+        return off;
+    }
+
+    float get_sc_gains() {
+        auto data = read_register(1, 0x24, 2);
+        int16_t gain_raw = ((int16_t) (data[1] << 8 | data[0])) >> 6;
+        float gain = std::pow((float) 14.0/11, (float) gain_raw/511); 
+        return gain;
+    }
+
+    float get_sc_phases() {
+        auto data = read_register(1, 0x26, 2);
+        int16_t phase_raw = ((int16_t) (data[1] << 8 | data[0])) >> 6;
+        float phase =  (float) phase_raw/511 * 11.4; 
+        return phase;
+    }
+
+    std::string get_cal_string() {
+        char c[200];
+        std::snprintf(c, 200, "cos_off: %f, sin_off: %f, sc_gain, %f, sc_phase: %f ai_phase: %f, ai_scale: %f, ecc_amp: %f, ecc_phase: %f", 
+          get_cos_off(), get_sin_off(), get_sc_gain(), get_sc_phase(), get_ai_phase(), get_ai_scale(), get_ecc_um(), get_ecc_phase());
+        return std::string(c);
+    }
+
+    std::string get_cals_string() {
+        char c[200];
+        std::snprintf(c, 200, "cos_off: %f, sin_off: %f, sc_gain, %f, sc_phase: %f ai_phase: %f, ai_scale: %f", 
+          get_cos_offs(), get_sin_offs(), get_sc_gains(), get_sc_phases(), get_ai_phases(), get_ai_scales());
+        return std::string(c);
+    }
+
+    // set ac_eto for 10x longer timeout on calibration
+    void set_ac_eto(uint8_t on = 1) {
+        auto data = read_register(0x5d, 1);
+        set_register(0, 0x5d, {(uint8_t) (on << 7 | data[0] & 0xF)});
+    }
+
+    bool get_ac_eto() {
+        return read_register(0x5d, 1)[0] >> 7;
+    }
+
+    void set_ac_count(uint8_t count = 8) {
+        auto data = read_register(0x5d, 1);
+        set_register(0, 0x5d, {(uint8_t) ((data[0] & 0x80) | (count & 0xF))});
+    }
+
+    uint8_t get_ac_count() {
+        return read_register(0x5d, 1)[0];// & 0xf;
+    }
+
+
+    float get_ecc_um() {
+        auto data = read_register(2, 4, 4);
+        std::map<Disk, float> ropt_map{{PZ03S, 10700},{PZ08S, 18600}, {Default, 1}};
+        uint32_t ecc_amp_raw = data[3] << 24 | data[2] << 16 | data[1] << 8 | data[0];
+        float ecc_amp  = ecc_amp_raw * ropt_map[disk_] * 1.407e-9;
+        return ecc_amp;
+    }
+
+    float get_ecc_phase() {
+        auto data = read_register(2, 8, 2);
+        int16_t phase_raw = ((int16_t) (data[1] << 8 | data[0])) >> 2;
+        float phase =  (float) phase_raw/std::pow(2, 14) * 360; 
+        return phase;
+    }
+
+    void set_ecc_um(float ecc) {
+        std::map<Disk, float> ropt_map{{PZ03S, 10700},{PZ08S, 18600}, {Default, 1}};
+        uint32_t ecc_raw = ecc/ropt_map[disk_] / 1.407e-9;
+        set_register(2, 4, {(uint8_t) (ecc_raw & 0xff), (uint8_t) ((ecc_raw >> 8) & 0xff), 
+          (uint8_t) ((ecc_raw >> 16) & 0xff), (uint8_t) ((ecc_raw >> 24) & 0xff)});
+    }
+
+    std::string get_cmd_result() {
+        return "command: " + std::to_string(read_register(Addr::COMMANDS, 1)[0]) + ", result: " + std::to_string(read_register(Addr::CMD_STAT, 1)[0]);
     }
 
  protected:
