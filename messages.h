@@ -102,22 +102,29 @@ typedef struct {
     float dir;
 } TorqueSensorParam;
 
+#ifndef POSITION_CONTROLLER_OVERRIDE
 typedef struct {
     PIDParam position;
     float velocity_limit;
     float desired_filter_hz;
     float tracking_tolerance;
 } PositionControllerParam;
+#endif
 
+#ifndef TORQUE_CONTROLLER_OVERRIDE
 typedef struct {
     PIDParam torque;
 } TorqueControllerParam;
+#endif
 
+#ifndef IMPEDANCE_CONTROLLER_OVERRIDE
 typedef struct {
     PIDParam impedance;
     PIDParam torque;
 } ImpedanceControllerParam;
+#endif
 
+#ifndef STATE_CONTROLLER_OVERRIDE
 typedef struct {
     float velocity_filter_frequency_hz;
     float torque_filter_frequency_hz;
@@ -127,21 +134,28 @@ typedef struct {
     float ff_tau;
     float command_max;
 } StateControllerParam;
+#endif
 
+#ifndef VELOCITY_CONTROLLER_OVERRIDE
 typedef struct {
     PIDParam velocity;
     float acceleration_limit;
 } VelocityControllerParam;
+#endif
 
+#ifndef JOINT_POSITION_CONTROLLER_OVERRIDE
 typedef struct {
     VelocityControllerParam velocity;       // inner velocity controller
     float kpj;                              // outer loop gain on joint position (motor rad/s)/(joint rad)
 } JointPositionControllerParam;
+#endif
 
+#ifndef ADMITTANCE_CONTROLLER_OVERRIDE
 typedef struct {
     VelocityControllerParam velocity;       // inner velocity controller
     PIDParam torque;                        // outer loop on torque
 } AdmittanceControllerParam;
+#endif
 
 typedef struct {
 
