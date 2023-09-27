@@ -18,6 +18,8 @@
 #define HAS_BRIDGE_THERMISTORS
 #endif
 
-#if defined (MR1)
-#define HAS_BUS_CURRENT_SENSE
+#if defined(MR1)
+#define HAS_5V_SENSE
+#define HAS_I5V_SENSE
+#define HAS_I48V_SENSE
 #endif
