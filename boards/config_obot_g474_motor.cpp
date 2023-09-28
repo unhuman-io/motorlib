@@ -127,6 +127,7 @@ void usb_interrupt() {
 Actuator System::actuator_ = {config::fast_loop, config::main_loop, param->startup_param};
 
 float v3v3 = 3.3;
+float v5v, i5v, i48v;
 
 int32_t index_mod = 0;
 
@@ -207,6 +208,14 @@ void system_init() {
     System::api.add_api_variable("gy", new const APICallbackFloat([](){ return config::imu.data_.gyr_y*2000.*M_PI/180/pow(2,15); }));
     System::api.add_api_variable("gz", new const APICallbackFloat([](){ return config::imu.data_.gyr_z*2000.*M_PI/180/pow(2,15); }));
 #endif
+
+#ifdef HAS_I5V_SENSE
+    System::api.add_api_variable("i5V", new const APIFloat(&i5v));
+#endif
+#ifdef HAS_I48V_SENSE
+    System::api.add_api_variable("i48V", new const APIFloat(&i48v));
+#endif
+
 
     for (auto regs : std::vector<ADC_TypeDef*>{ADC1, ADC2, ADC3, ADC4, ADC5}) {
         regs->CR = ADC_CR_ADVREGEN;
@@ -304,6 +313,20 @@ void system_maintenance() {
     } else if (param->main_loop_param.no_latch_driver_fault) {
         driver_fault = false;
     }
+
+#ifdef HAS_5V_SENSE
+    v5v = (float) V5V/4096*v3v3*2;
+    round_robin_logger.log_data(VOLTAGE_5V_INDEX, v5v);
+#endif
+#ifdef HAS_I5V_SENSE
+    i5v = (float) I5V/4096*v3v3;
+    round_robin_logger.log_data(CURRENT_5V_INDEX, i5v);
+#endif
+#ifdef HAS_I48V_SENSE
+    i48v = -((float) I_BUS_DR-2048)/4096*v3v3/20/.0005;
+    round_robin_logger.log_data(BUS_CURRENT_INDEX, i48v);
+#endif
+
     round_robin_logger.log_data(BUS_VOLTAGE_INDEX, config::main_loop.status_.fast_loop.vbus);
     round_robin_logger.log_data(USB_ERROR_COUNT_INDEX, config::usb.error_count_);
     config::main_loop.status_.error.driver_fault |= driver_fault;    // maybe latch driver fault until reset

@@ -7,6 +7,7 @@
 #include <map>
 #include <cmath>
 #include "logger.h"
+#include "parameter_api.h"
 
 static uint8_t CRC_BiSS_43_30bit (uint32_t w_InputData);
 
@@ -45,70 +46,17 @@ class ICPZ : public EncoderBase {
       success = set_register(2, 0, {0x77, 0x7}) ? success: false; // moderate dynamic analog calibration
 
       if (disk_ == PZ03S) {
-        success = set_register(2, 2, {0, 1}) ? success : false; // fcl = 256
-        success = set_register(0, 7, {8 << 4}) ? success : false; // sys_ovr = 8 (don't really need this 8 is default for 2656),
-        success = set_register(1, 0xB, {9}) ? success : false; // ai_scale = 9 (1.0048),
+        success = set_register(8, 0, {0, 1}) ? success : false; // fcl = 256
+        success = set_register(8, 2, {0, 0}) ? success : false; // fcs = 0
+        success = set_register(0, 7, {8 << 4}) ? success : false; // sys_ovr = 8
+        //success = set_register(1, 0xB, {9}) ? success : false; // ai_scale = 9 (1.0048),
       } else if (disk_ == PZ08S) {
-        // success = set_register(2, 2, {0, 1}) ? success : false; // fcl = 446
-        // success = set_register(0, 7, {8 << 4}) ? success : false; // sys_ovr = 9 (don't really need this 8 is default for 2656),
-        // success = set_register(1, 0xB, {9}) ? success : false; // ai_scale = 9 (.9558),
-        //FCS 216
+        success = set_register(8, 0, {0xBE, 1}) ? success : false; // fcl = 446 (0x1BE)
+        success = set_register(8, 2, {216, 0}) ? success : false; // fcs = 216
+        success = set_register(0, 7, {9 << 4}) ? success : false; // sys_ovr = 9
         // ai phase -20
       }
 
-      //  command[0] = 0xcf;
-      //  command[1] = 0x40;
-      //  command[2] = 0x08;     // memory bank 8
-      //  spidma_.readwrite(command, data_in, 3);
-      //  command[0] = 0xcf;
-      //  command[1] = 0x00;
-      //  command[2] = 0xbe;     // flexcode 446, 216
-      //  command[3] = 0x01;
-      //  command[4] = 216;
-      //  command[5] = 0x00;
-      //  spidma_.readwrite(command, data_in, 6);
-      //  command[0] = 0xcf;
-      //  command[1] = 0x40;
-      //  command[2] = 0x00;     // memory bank 0
-      //  spidma_.readwrite(command, data_in, 3);
-      //  command[0] = 0xcf;
-      //  command[1] = 0x00;
-      //  command[2] = 0x03;     
-      //  spidma_.readwrite(command, data_in, 3);
-      //  command[0] = 0xcf;
-      //  command[1] = 0x07;
-      //  command[2] = 0x90;     // now 8 // sys_ovr = 9 bit
-      //  spidma_.readwrite(command, data_in, 3);
-      //  command[0] = 0xcf;
-      //  command[1] = 0x0F;
-      //  command[2] = 0x00;     // 0x00 ran_fld = 0 -> never update position based on absolute track after initial
-      //  spidma_.readwrite(command, data_in, 3);
-      //  command[0] = 0xcf;
-      //  command[1] = 0x40;
-      //  command[2] = 0x01;     // memory bank 1
-      //  spidma_.readwrite(command, data_in, 3);
-      //  command[0] = 0xcf;
-      //  command[1] = 0x08;
-      //  command[2] = 0xc0;     // ai_phase 
-      //  command[3] = 0xd1;
-      //  spidma_.readwrite(command, data_in, 4);
-      //  command[0] = 0xcf;
-      //  command[1] = 0x0a;
-      //  command[2] = 0x00;     // ai_scale
-      //  command[3] = 0xcd;
-      //  spidma_.readwrite(command, data_in, 4);
-      //  command[0] = 0xd9;
-      //  command[1] = 0x41;     // write command conf write all    
-      //  spidma_.readwrite(command, data_in, 2);
-      //  ms_delay(10);
-      //  command[0] = 0x81;
-      //  command[1] = 0x76;
-      //  command[2] = 0x00;     // cmd stat
-      //  command[3] = 0x00;
-      //  spidma_.readwrite(command, data_in, 4);
-      //  if (data_in[3] == 0) { // cmd succeeded
-      //    return true;
-      //  }
        return success;
     }
     void trigger() {
@@ -391,7 +339,7 @@ class ICPZ : public EncoderBase {
     // set ac_eto for 10x longer timeout on calibration
     void set_ac_eto(uint8_t on = 1) {
         auto data = read_register(0x5d, 1);
-        set_register(0, 0x5d, {(uint8_t) (on << 7 | data[0] & 0xF)});
+        set_register(0, 0x5d, {(uint8_t) ((on << 7) | (data[0] & 0xF))});
     }
 
     bool get_ac_eto() {
@@ -432,6 +380,42 @@ class ICPZ : public EncoderBase {
 
     std::string get_cmd_result() {
         return "command: " + std::to_string(read_register(Addr::COMMANDS, 1)[0]) + ", result: " + std::to_string(read_register(Addr::CMD_STAT, 1)[0]);
+    }
+
+    void set_debug_variables(std::string prefix, ParameterAPI &api) {
+        api.add_api_variable(prefix + "ai_phase", new const APICallbackFloat([this](){ return this->get_ai_phase(); }));
+        api.add_api_variable(prefix + "ai_scale", new const APICallbackFloat([this](){ return this->get_ai_scale(); }));
+        api.add_api_variable(prefix + "cos_off", new const APICallbackFloat([this](){ return this->get_cos_off(); }));
+        api.add_api_variable(prefix + "sc_gain", new const APICallbackFloat([this](){ return this->get_sc_gain(); }));
+        api.add_api_variable(prefix + "sc_phase", new const APICallbackFloat([this](){ return this->get_sc_phase(); }));
+        api.add_api_variable(prefix + "ai_phases", new const APICallbackFloat([this](){ return this->get_ai_phases(); }));
+        api.add_api_variable(prefix + "ai_scales", new const APICallbackFloat([this](){ return this->get_ai_scales(); }));
+        api.add_api_variable(prefix + "cos_offs", new const APICallbackFloat([this](){ return this->get_cos_offs(); }));
+        api.add_api_variable(prefix + "sin_offs", new const APICallbackFloat([this](){ return this->get_sin_offs(); }));
+        api.add_api_variable(prefix + "sc_gains", new const APICallbackFloat([this](){ return this->get_sc_gains(); }));
+        api.add_api_variable(prefix + "sc_phases", new const APICallbackFloat([this](){ return this->get_sc_phases(); }));
+        api.add_api_variable(prefix + "err", new APIUint32(&error_count_));
+        api.add_api_variable(prefix + "warn", new APIUint32(&warn_count_));
+        api.add_api_variable(prefix + "crc_cnt", new APIUint32(&crc_error_count_));
+        api.add_api_variable(prefix + "raw", new APIUint32(&raw_value_));
+        api.add_api_variable(prefix + "rawh", new const APICallback([this](){ return u32_to_hex(this->raw_value_); }));
+        api.add_api_variable(prefix + "diag", new const APICallback([this](){ return this->read_diagnosis(); }));
+        api.add_api_variable(prefix + "conf_write", new const APICallback([this](){ return this->write_conf(); }));
+        api.add_api_variable(prefix + "auto_ana", new const APICallback([this](){ this->start_auto_adj_ana(); return "ok"; }));
+        api.add_api_variable(prefix + "auto_dig", new const APICallback([this](){ this->start_auto_adj_dig(); return "ok"; }));
+        api.add_api_variable(prefix + "readj_dig", new const APICallback([this](){ this->start_auto_readj_dig(); return "ok"; }));
+        api.add_api_variable(prefix + "auto_ecc", new const APICallback([this](){ this->start_auto_adj_ecc(); return "ok"; }));
+        api.add_api_variable(prefix + "ecc_correction", new APICallbackUint8([this](){ return this->get_ecc_correction(); }, 
+            [this](uint8_t u){ this->set_ecc_correction(u); }));
+        api.add_api_variable(prefix + "ecc_um", new APICallbackFloat([this](){ return this->get_ecc_um(); },
+            [this](float f){ this->set_ecc_um(f); }));
+        api.add_api_variable(prefix + "low", new APICallbackUint8([this](){ return this->get_ac_eto(); }, 
+            [this](uint8_t u){ this->set_ac_eto(u); }));
+        api.add_api_variable(prefix + "ac_count", new APICallbackUint8([this](){ return this->get_ac_count(); }, 
+            [this](uint8_t u){ this->set_ac_count(u); }));
+        api.add_api_variable(prefix + "cal", new const APICallback([this](){ return this->get_cal_string(); }));
+        api.add_api_variable(prefix + "cals", new const APICallback([this](){ return this->get_cals_string(); }));
+        api.add_api_variable(prefix + "cmd_result", new const APICallback([this](){ return this->get_cmd_result(); }));
     }
 
  protected:
