@@ -189,66 +189,72 @@ class MainLoop {
           set_mode(param_.safe_mode);
       }
 
+      if (receive_data_.mode_desired == TUNING) {
+          command_current_ = set_tuning_command(receive_data_, count_received);
+      } else {
+          command_current_ = receive_data_;
+      }
+
       float iq_des = 0;
       float vq_des = 0;
       switch (mode_) {
         case CURRENT:
-          iq_des = receive_data_.current_desired;
+          iq_des = command_current_.current_desired;
           break;
         case POSITION:
-          iq_des = position_controller_.step(receive_data_, status_);
+          iq_des = position_controller_.step(command_current_, status_);
           if (position_controller_.tracking_fault()) {
             status_.error.controller_tracking = true;
           }
           break;
         case TORQUE:
-          iq_des = torque_controller_.step(receive_data_, status_);
+          iq_des = torque_controller_.step(command_current_, status_);
           break;
         case IMPEDANCE:
-          iq_des = impedance_controller_.step(receive_data_, status_);
+          iq_des = impedance_controller_.step(command_current_, status_);
           break;
         case VELOCITY:
-          iq_des = velocity_controller_.step(receive_data_, status_);
+          iq_des = velocity_controller_.step(command_current_, status_);
           break;
         case STATE:
-          iq_des = state_controller_.step(receive_data_, status_);
+          iq_des = state_controller_.step(command_current_, status_);
           break;
         case JOINT_POSITION:
-          iq_des = joint_position_controller_.step(receive_data_, status_);
+          iq_des = joint_position_controller_.step(command_current_, status_);
           break;
         case ADMITTANCE:
-          iq_des = admittance_controller_.step(receive_data_, status_);
+          iq_des = admittance_controller_.step(command_current_, status_);
           break;
         case STEPPER_VELOCITY:
-          vq_des = receive_data_.stepper_velocity.voltage;
-          iq_des = receive_data_.stepper_velocity.current;
-          fast_loop_.set_stepper_velocity(receive_data_.stepper_velocity.velocity);
+          vq_des = command_current_.stepper_velocity.voltage;
+          iq_des = command_current_.stepper_velocity.current;
+          fast_loop_.set_stepper_velocity(command_current_.stepper_velocity.velocity);
           break;
         case STEPPER_TUNING:
           {
             if (count_received) {
-              position_trajectory_generator_.set_amplitude(receive_data_.stepper_tuning.amplitude);
-              position_trajectory_generator_.set_frequency(receive_data_.stepper_tuning.frequency);
-              position_trajectory_generator_.set_mode((TuningMode) receive_data_.stepper_tuning.mode);
+              position_trajectory_generator_.set_amplitude(command_current_.stepper_tuning.amplitude);
+              position_trajectory_generator_.set_frequency(command_current_.stepper_tuning.frequency);
+              position_trajectory_generator_.set_mode((TuningMode) command_current_.stepper_tuning.mode);
             }
             TrajectoryGenerator::TrajectoryValue traj = position_trajectory_generator_.step(dt_);
             fast_loop_.set_stepper_position(traj.value);
             fast_loop_.set_stepper_velocity(traj.value_dot);
-            vq_des = receive_data_.stepper_tuning.kv*traj.value_dot;
+            vq_des = command_current_.stepper_tuning.kv*traj.value_dot;
             break;
           }
         case POSITION_TUNING: 
           {
             if (count_received) {
-              position_trajectory_generator_.set_amplitude(receive_data_.position_tuning.amplitude);
-              position_trajectory_generator_.set_frequency(receive_data_.position_tuning.frequency);
-              position_trajectory_generator_.set_mode((TuningMode) receive_data_.position_tuning.mode);
+              position_trajectory_generator_.set_amplitude(command_current_.position_tuning.amplitude);
+              position_trajectory_generator_.set_frequency(command_current_.position_tuning.frequency);
+              position_trajectory_generator_.set_mode((TuningMode) command_current_.position_tuning.mode);
             }
             TrajectoryGenerator::TrajectoryValue traj = position_trajectory_generator_.step(dt_);
             ReceiveData trajectory = {};
             float position_desired = traj.value;
             float velocity_desired = traj.value_dot;
-            trajectory.position_desired = position_desired+receive_data_.position_tuning.bias;
+            trajectory.position_desired = position_desired+command_current_.position_tuning.bias;
             trajectory.velocity_desired = velocity_desired;
             iq_des = position_controller_.step(trajectory, status_);
             if (position_controller_.tracking_fault()) {
@@ -259,12 +265,12 @@ class MainLoop {
           }
         case CURRENT_TUNING:
           if (count_received) {
-            fast_loop_.set_tuning_amplitude(receive_data_.current_tuning.amplitude);
-            fast_loop_.set_tuning_frequency(receive_data_.current_tuning.frequency);
-            fast_loop_.set_tuning_bias(receive_data_.current_tuning.bias);
-            fast_loop_.set_tuning_square(receive_data_.current_tuning.mode == TuningMode::SQUARE);
-            if (receive_data_.current_tuning.mode == TuningMode::CHIRP) { // flag for chirp mode
-              fast_loop_.set_tuning_chirp(true, receive_data_.current_tuning.frequency);
+            fast_loop_.set_tuning_amplitude(command_current_.current_tuning.amplitude);
+            fast_loop_.set_tuning_frequency(command_current_.current_tuning.frequency);
+            fast_loop_.set_tuning_bias(command_current_.current_tuning.bias);
+            fast_loop_.set_tuning_square(command_current_.current_tuning.mode == TuningMode::SQUARE);
+            if (command_current_.current_tuning.mode == TuningMode::CHIRP) { // flag for chirp mode
+              fast_loop_.set_tuning_chirp(true, command_current_.current_tuning.frequency);
             } else {
               fast_loop_.set_tuning_chirp(false, 0);
             }
@@ -281,18 +287,18 @@ class MainLoop {
           }
           break;
         case VOLTAGE:
-          vq_des = receive_data_.voltage.voltage_desired;
+          vq_des = command_current_.voltage.voltage_desired;
           break;
         case PHASE_LOCK:
-          fast_loop_.set_id_des(receive_data_.current_desired);
+          fast_loop_.set_id_des(command_current_.current_desired);
           break;
         case FIND_LIMITS:
         {
           ReceiveData command = {};
           switch (find_limits_state_) {
             case FIND_FIRST_LIMIT:
-              command.velocity_desired = receive_data_.velocity_desired;
-              if (iq_find_limits_filter_.get_value() > receive_data_.current_desired) {
+              command.velocity_desired = command_current_.velocity_desired;
+              if (iq_find_limits_filter_.get_value() > command_current_.current_desired) {
                 find_limits_state_ = FIND_SECOND_LIMIT;
                 // record positive limit
                 //motor_positive_limit_ = status_.motor_position;
@@ -301,8 +307,8 @@ class MainLoop {
               iq_des = velocity_controller_.step(command, status_);
               break;
             case FIND_SECOND_LIMIT:
-              command.velocity_desired = -receive_data_.velocity_desired;
-              if (iq_find_limits_filter_.get_value() < -receive_data_.current_desired) {
+              command.velocity_desired = -command_current_.velocity_desired;
+              if (iq_find_limits_filter_.get_value() < -command_current_.current_desired) {
                 find_limits_state_ = VELOCITY_TO_POSITION;
                 // record negative limit
                 // change encoder biases around
@@ -313,8 +319,8 @@ class MainLoop {
               iq_des = velocity_controller_.step(command, status_);
               break;
             case VELOCITY_TO_POSITION:
-              command.velocity_desired = receive_data_.velocity_desired;
-              if (status_.motor_position >= receive_data_.position_desired) {
+              command.velocity_desired = command_current_.velocity_desired;
+              if (status_.motor_position >= command_current_.position_desired) {
                 find_limits_state_ = GOTO_POSITION;
                 // record negative limit
                 // change encoder biases around
@@ -324,7 +330,7 @@ class MainLoop {
               break;
             case GOTO_POSITION:
               position_limits_disable_ = false;
-              command.position_desired = receive_data_.position_desired;
+              command.position_desired = command_current_.position_desired;
               iq_des = position_controller_.step(command, status_);
               break;
           }
@@ -342,7 +348,7 @@ class MainLoop {
               set_mode(VELOCITY);
               status_.error.motor_soft_limit = 1;
             }
-            MotorCommand tmp_receive_data = receive_data_;
+            MotorCommand tmp_receive_data = command_current_;
             tmp_receive_data.velocity_desired = 0;
             iq_des = velocity_controller_.step(tmp_receive_data, status_);
         } else {
@@ -368,7 +374,7 @@ class MainLoop {
       }
       status_stack_.push(status_);
       led_.update();
-      last_receive_data_ = receive_data_;
+      //last_receive_data_ = receive_data_;
       IWDG->KR = 0xAAAA;
     }
 
@@ -502,6 +508,16 @@ class MainLoop {
             admittance_controller_.init(status_);
             led_.set_color(LED::ROSE);
             break;
+          case TUNING:
+            if (receive_data_.tuning_command.mode == POSITION ||
+                receive_data_.tuning_command.mode == VELOCITY ||
+                receive_data_.tuning_command.mode == TORQUE) {
+              tuning_trajectory_generator_.init();
+              reserved0_ = tuning_trajectory_generator_.value();
+              set_mode(static_cast<MainControlMode>(receive_data_.tuning_command.mode));
+              mode = static_cast<MainControlMode>(receive_data_.tuning_command.mode);
+            }
+            break;
           case FIND_LIMITS:
             fast_loop_.current_mode();
             position_limits_disable_ = true;
@@ -575,8 +591,38 @@ class MainLoop {
       mode_ = mode;
       last_safe_mode_ = safe_mode_;
       status_.mode = mode;
-      receive_data_.mode_desired = mode; // todo: what is this for?
+      //receive_data_.mode_desired = mode; // todo: what is this for?
     }
+
+    MotorCommand set_tuning_command(ReceiveData &receive_data, bool update_parameters) {
+      MotorCommand command = {};
+      if (update_parameters) {
+        tuning_trajectory_generator_.set_amplitude(receive_data.tuning_command.amplitude);
+        tuning_trajectory_generator_.set_frequency(receive_data.tuning_command.frequency);
+        tuning_trajectory_generator_.set_mode(static_cast<TuningMode>(receive_data.tuning_command.tuning_mode));
+      }
+      TrajectoryGenerator::TrajectoryValue traj = tuning_trajectory_generator_.step(dt_);
+      switch (receive_data.tuning_command.mode) {
+        case POSITION:
+          command.position_desired = traj.value + receive_data.tuning_command.bias;
+          command.velocity_desired = traj.value_dot;
+          command.mode_desired = POSITION;
+          break;
+        case VELOCITY:
+          command.velocity_desired = traj.value + receive_data.tuning_command.bias;
+          command.mode_desired = VELOCITY;
+          break;
+        case TORQUE:
+          command.torque_desired = traj.value + receive_data.tuning_command.bias;
+          command.torque_dot_desired = traj.value_dot;
+          command.mode_desired = TORQUE;
+          break;
+        default:
+          break;
+      }
+      return command;
+    }
+
     bool driver_enable_triggered() {
       if (driver_enable_triggered_) {
         driver_enable_triggered_ = false;
@@ -626,6 +672,7 @@ class MainLoop {
     float output_encoder_dir_;
     LED &led_;
     ReceiveData receive_data_ = {};
+    MotorCommand command_current_ = {};
     mcu_time host_timestamp_ = {};
     ReceiveData last_receive_data_ = {};
     MotorCommand internal_command_;
@@ -646,11 +693,10 @@ class MainLoop {
     bool fast_log_ready_ = true;
     float dt_ = 0;
     TrajectoryGenerator position_trajectory_generator_;
+    TrajectoryGenerator tuning_trajectory_generator_;
     uint32_t timestamp_ = 0;
     uint32_t last_timestamp_ = 0;
-    uint32_t *reserved0_ = reinterpret_cast<uint32_t *>(&status_.fast_loop.vbus);
-    uint32_t *reserved1_ = &timestamp_;
-    uint32_t *reserved2_ = &last_timestamp_;
+    float *reserved0_ = &status_.fast_loop.vbus;
     PChipTable<OUTPUT_ENCODER_TABLE_LENGTH> output_encoder_correction_table_;
     PChipTable<TORQUE_TABLE_LENGTH> torque_correction_table_;
     CStack<MainLoopStatus,2> status_stack_;
@@ -696,7 +742,7 @@ void load_send_data(const MainLoop &main_loop, SendData * const data) {
     data->joint_velocity = main_loop.status_.output_velocity_filtered;
     data->torque = main_loop.status_.torque_filtered;
     data->rr_data = main_loop.status_.rr_data;
-    data->reserved = *reinterpret_cast<float *>(main_loop.reserved0_);
+    data->reserved = *main_loop.reserved0_;
     data->iq_desired = main_loop.status_.fast_loop.foc_status.command.i_q;
     data->flags.mode = main_loop.status_.mode;
     data->flags.error = main_loop.status_.error;

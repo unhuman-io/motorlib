@@ -367,6 +367,7 @@ class TrajectoryGenerator {
         }
         return trajectory_value_;
     }
+    float * value() { return &trajectory_value_.value; }
  private:
     TuningMode mode_ = TuningMode::SINE;
     float frequency_, amplitude_;
