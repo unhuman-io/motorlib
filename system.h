@@ -91,15 +91,7 @@ class System {
                 actuator_.fast_loop_.foc_->pi_id_.ki_limit_ = actuator_.fast_loop_.foc_->pi_iq_.ki_limit_;
                 actuator_.fast_loop_.foc_->pi_id_.command_max_ = actuator_.fast_loop_.foc_->pi_iq_.command_max_;
                 actuator_.fast_loop_.foc_->set_id_limit(actuator_.fast_loop_.foc_->get_iq_limit()); }));
-#ifndef TORQUE_CONTROLLER_OVERRIDE
-        api.add_api_variable("tkp", new APIFloat(&actuator_.main_loop_.torque_controller_.controller_.kp_));
-        api.add_api_variable("tkd", new APIFloat(&actuator_.main_loop_.torque_controller_.controller_.kd_));
-        api.add_api_variable("tki", new APIFloat(&actuator_.main_loop_.torque_controller_.controller_.ki_));
-        api.add_api_variable("tki_limit", new APIFloat(&actuator_.main_loop_.torque_controller_.controller_.ki_limit_));
-        API_ADD_FILTER(t_velocity_filter, SecondOrderLowPassFilter, actuator_.main_loop_.torque_controller_.controller_.velocity_filter_);
-        API_ADD_FILTER(t_output_filter, FirstOrderLowPassFilter, actuator_.main_loop_.torque_controller_.controller_.output_filter_);
-        api.add_api_variable("tmax", new APIFloat(&actuator_.main_loop_.torque_controller_.controller_.command_max_));
-#endif
+        actuator_.main_loop_.torque_controller_.set_debug_variables(api);
         actuator_.main_loop_.state_controller_.set_debug_variables(api);
         api.add_api_variable("tgain", new APIFloat(&actuator_.main_loop_.torque_sensor_.gain_));
         api.add_api_variable("tbias", new APIFloat(&actuator_.main_loop_.torque_sensor_.bias_));
