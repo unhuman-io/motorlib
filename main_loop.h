@@ -591,7 +591,7 @@ class MainLoop {
       mode_ = mode;
       last_safe_mode_ = safe_mode_;
       status_.mode = mode;
-      receive_data_.mode_desired = mode; // todo: what is this for?
+      //receive_data_.mode_desired = mode; // todo: what is this for?
     }
 
     MotorCommand set_tuning_command(ReceiveData &receive_data, bool update_parameters) {
@@ -599,20 +599,23 @@ class MainLoop {
       if (update_parameters) {
         tuning_trajectory_generator_.set_amplitude(receive_data.tuning_command.amplitude);
         tuning_trajectory_generator_.set_frequency(receive_data.tuning_command.frequency);
-        tuning_trajectory_generator_.set_mode(static_cast<TuningMode>(receive_data.tuning_command.mode));
+        tuning_trajectory_generator_.set_mode(static_cast<TuningMode>(receive_data.tuning_command.tuning_mode));
       }
       TrajectoryGenerator::TrajectoryValue traj = tuning_trajectory_generator_.step(dt_);
       switch (receive_data.tuning_command.mode) {
         case POSITION:
           command.position_desired = traj.value + receive_data.tuning_command.bias;
           command.velocity_desired = traj.value_dot;
+          command.mode_desired = POSITION;
           break;
         case VELOCITY:
           command.velocity_desired = traj.value + receive_data.tuning_command.bias;
+          command.mode_desired = VELOCITY;
           break;
         case TORQUE:
           command.torque_desired = traj.value + receive_data.tuning_command.bias;
           command.torque_dot_desired = traj.value_dot;
+          command.mode_desired = TORQUE;
           break;
         default:
           break;
