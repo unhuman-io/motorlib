@@ -14,11 +14,6 @@ extern uint32_t t_period_mainloop;
 
 void system_maintenance();
 
-#define API_ADD_FILTER(name, type, location) \
-    std::function<void(float)> set_filt_##name = std::bind(&type::set_frequency, &location, std::placeholders::_1); \
-    std::function<float(void)> get_filt_##name = std::bind(&type::get_frequency, &location); \
-    api.add_api_variable(#name, new APICallbackFloat(get_filt_##name, set_filt_##name))
-
 
 class System {
  public:
@@ -105,6 +100,7 @@ class System {
         API_ADD_FILTER(t_output_filter, FirstOrderLowPassFilter, actuator_.main_loop_.torque_controller_.controller_.output_filter_);
         api.add_api_variable("tmax", new APIFloat(&actuator_.main_loop_.torque_controller_.controller_.command_max_));
 #endif
+        actuator_.main_loop_.state_controller_.set_debug_variables(api);
         api.add_api_variable("tgain", new APIFloat(&actuator_.main_loop_.torque_sensor_.gain_));
         api.add_api_variable("tbias", new APIFloat(&actuator_.main_loop_.torque_sensor_.bias_));
         api.add_api_variable("torque", new const APIFloat(&actuator_.main_loop_.torque_sensor_.torque_));
@@ -122,13 +118,7 @@ class System {
         api.add_api_variable("stack_used", new const APICallbackUint32(get_stack_used));
         api.add_api_variable("heap_free", new const APICallbackUint32(get_heap_free));
         api.add_api_variable("heap_used", new const APICallbackUint32(get_heap_used));
-        api.add_api_variable("state_command_max", new APIFloat(&actuator_.main_loop_.state_controller_.param_.command_max));
-        api.add_api_variable("state_ff_tau", new APIFloat(&actuator_.main_loop_.state_controller_.param_.ff_tau));
-        API_ADD_FILTER(state_output_filter, FirstOrderLowPassFilter, actuator_.main_loop_.state_controller_.output_filter_);
-        API_ADD_FILTER(state_velocity_error_filter, FirstOrderLowPassFilter, actuator_.main_loop_.state_controller_.velocity_error_filter_);
-        API_ADD_FILTER(state_torque_error_filter, FirstOrderLowPassFilter, actuator_.main_loop_.state_controller_.torque_error_filter_);
-        API_ADD_FILTER(state_torque_dot_error_filter, FirstOrderLowPassFilter, actuator_.main_loop_.state_controller_.torque_dot_error_filter_);
-        API_ADD_FILTER(state_position_desired_filter, SecondOrderLowPassFilter, actuator_.main_loop_.state_controller_.position_desired_filter_);
+
         api.add_api_variable("vbus_min", new APIFloat(&actuator_.main_loop_.vbus_min_));
         api.add_api_variable("vbus_max", new APIFloat(&actuator_.main_loop_.vbus_max_));
         api.add_api_variable("ia_bias", new APIFloat(&actuator_.fast_loop_.ia_bias_));
