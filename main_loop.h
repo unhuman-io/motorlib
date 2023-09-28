@@ -513,6 +513,7 @@ class MainLoop {
                 receive_data_.tuning_command.mode == VELOCITY ||
                 receive_data_.tuning_command.mode == TORQUE) {
               tuning_trajectory_generator_.init();
+              reserved0_ = tuning_trajectory_generator_.value();
               set_mode(static_cast<MainControlMode>(receive_data_.tuning_command.mode));
               mode = static_cast<MainControlMode>(receive_data_.tuning_command.mode);
             }
@@ -593,9 +594,9 @@ class MainLoop {
       receive_data_.mode_desired = mode; // todo: what is this for?
     }
 
-    MotorCommand set_tuning_command(ReceiveData &receive_data, bool update_paramters) {
+    MotorCommand set_tuning_command(ReceiveData &receive_data, bool update_parameters) {
       MotorCommand command = {};
-      if (update_paramters) {
+      if (update_parameters) {
         tuning_trajectory_generator_.set_amplitude(receive_data.tuning_command.amplitude);
         tuning_trajectory_generator_.set_frequency(receive_data.tuning_command.frequency);
         tuning_trajectory_generator_.set_mode(static_cast<TuningMode>(receive_data.tuning_command.mode));
@@ -692,9 +693,7 @@ class MainLoop {
     TrajectoryGenerator tuning_trajectory_generator_;
     uint32_t timestamp_ = 0;
     uint32_t last_timestamp_ = 0;
-    uint32_t *reserved0_ = reinterpret_cast<uint32_t *>(&status_.fast_loop.vbus);
-    uint32_t *reserved1_ = &timestamp_;
-    uint32_t *reserved2_ = &last_timestamp_;
+    float *reserved0_ = &status_.fast_loop.vbus;
     PChipTable<OUTPUT_ENCODER_TABLE_LENGTH> output_encoder_correction_table_;
     PChipTable<TORQUE_TABLE_LENGTH> torque_correction_table_;
     CStack<MainLoopStatus,2> status_stack_;
@@ -740,7 +739,7 @@ void load_send_data(const MainLoop &main_loop, SendData * const data) {
     data->joint_velocity = main_loop.status_.output_velocity_filtered;
     data->torque = main_loop.status_.torque_filtered;
     data->rr_data = main_loop.status_.rr_data;
-    data->reserved = *reinterpret_cast<float *>(main_loop.reserved0_);
+    data->reserved = *main_loop.reserved0_;
     data->iq_desired = main_loop.status_.fast_loop.foc_status.command.i_q;
     data->flags.mode = main_loop.status_.mode;
     data->flags.error = main_loop.status_.error;
