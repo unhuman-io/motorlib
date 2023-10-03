@@ -266,25 +266,28 @@ class RateLimiter {
 
 class PIDController {
 public:
-    PIDController(float dt) : dt_(dt), velocity_filter_(dt), output_filter_(dt) {}
+    PIDController(float dt) : velocity_filter_(dt), output_filter_(dt), dt_(dt) {}
     virtual ~PIDController() {}
     void init(float measured) { rate_limit_.init(measured), ki_sum_ = 0; measured_last_ = measured; velocity_filter_.init(0); output_filter_.init(0); } // todo init to current output 
     virtual float step(float desired, float velocity_desired, float measured, float velocity_limit = INFINITY);
     void set_param(const PIDParam &param);
     float get_error() const { return error_last_; }
     void set_rollover(float rollover) { rollover_ = rollover; }
+    
+    float kp_ = 0, kd_ = 0, ki_ = 0, ki_sum_ = 0, ki_limit_ = 0, command_max_ = 0;
+    SecondOrderLowPassFilter velocity_filter_;
+    FirstOrderLowPassFilter output_filter_;
 protected:
     float error_ = 0, velocity_measured_ = 0;
     float measured_last_ = 0;
-    float kp_ = 0, kd_ = 0, ki_ = 0, ki_sum_ = 0, ki_limit_ = 0, command_max_ = 0;
+    
     float error_last_ = 0;
     float last_desired_ = 0;
     float dt_;
     float rollover_ = 0;
     Hysteresis hysteresis_;
     RateLimiter rate_limit_;
-    SecondOrderLowPassFilter velocity_filter_;
-    FirstOrderLowPassFilter output_filter_;
+
 
     friend class System;
     friend void config_init();

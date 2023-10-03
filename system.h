@@ -14,11 +14,6 @@ extern uint32_t t_period_mainloop;
 
 void system_maintenance();
 
-#define API_ADD_FILTER(name, type, location) \
-    std::function<void(float)> set_filt_##name = std::bind(&type::set_frequency, &location, std::placeholders::_1); \
-    std::function<float(void)> get_filt_##name = std::bind(&type::get_frequency, &location); \
-    api.add_api_variable(#name, new APICallbackFloat(get_filt_##name, set_filt_##name))
-
 
 class System {
  public:
@@ -81,11 +76,13 @@ class System {
         api.add_api_variable("iq", new APIFloat(&actuator_.main_loop_.status_.fast_loop.foc_status.measured.i_q));
         api.add_api_variable("i0", new APIFloat(&actuator_.main_loop_.status_.fast_loop.foc_status.measured.i_0));
         api.add_api_variable("ikp", new APIFloat(&actuator_.fast_loop_.foc_->pi_iq_.kp_));
-        api.add_api_variable("iki", new APIFloat(&actuator_.fast_loop_.foc_->pi_iq_.ki_));
+        api.add_api_variable("iki", new APICallbackFloat([](){ return actuator_.fast_loop_.foc_->pi_iq_.ki_; },
+            [](float f){ if (f == 0) { actuator_.fast_loop_.foc_->pi_iq_.ki_sum_ = 0; } actuator_.fast_loop_.foc_->pi_iq_.ki_ = f; }));
         api.add_api_variable("iki_limit", new APIFloat(&actuator_.fast_loop_.foc_->pi_iq_.ki_limit_));
         api.add_api_variable("imax", new APIFloat(&actuator_.fast_loop_.foc_->pi_iq_.command_max_));
         api.add_api_variable("idkp", new APIFloat(&actuator_.fast_loop_.foc_->pi_id_.kp_));
-        api.add_api_variable("idki", new APIFloat(&actuator_.fast_loop_.foc_->pi_id_.ki_));
+        api.add_api_variable("idki", new APICallbackFloat([](){ return actuator_.fast_loop_.foc_->pi_id_.ki_; },
+            [](float f){ if (f == 0) { actuator_.fast_loop_.foc_->pi_id_.ki_sum_ = 0; } actuator_.fast_loop_.foc_->pi_id_.ki_ = f; }));
         api.add_api_variable("idki_limit", new APIFloat(&actuator_.fast_loop_.foc_->pi_id_.ki_limit_));
         api.add_api_variable("idmax", new APIFloat(&actuator_.fast_loop_.foc_->pi_id_.command_max_));
         api.add_api_variable("idiq", new APICallbackFloat([](){return 0;}, 
@@ -96,15 +93,8 @@ class System {
                 actuator_.fast_loop_.foc_->pi_id_.ki_limit_ = actuator_.fast_loop_.foc_->pi_iq_.ki_limit_;
                 actuator_.fast_loop_.foc_->pi_id_.command_max_ = actuator_.fast_loop_.foc_->pi_iq_.command_max_;
                 actuator_.fast_loop_.foc_->set_id_limit(actuator_.fast_loop_.foc_->get_iq_limit()); }));
-#ifndef TORQUE_CONTROLLER_OVERRIDE
-        api.add_api_variable("tkp", new APIFloat(&actuator_.main_loop_.torque_controller_.controller_.kp_));
-        api.add_api_variable("tkd", new APIFloat(&actuator_.main_loop_.torque_controller_.controller_.kd_));
-        api.add_api_variable("tki", new APIFloat(&actuator_.main_loop_.torque_controller_.controller_.ki_));
-        api.add_api_variable("tki_limit", new APIFloat(&actuator_.main_loop_.torque_controller_.controller_.ki_limit_));
-        API_ADD_FILTER(t_velocity_filter, SecondOrderLowPassFilter, actuator_.main_loop_.torque_controller_.controller_.velocity_filter_);
-        API_ADD_FILTER(t_output_filter, FirstOrderLowPassFilter, actuator_.main_loop_.torque_controller_.controller_.output_filter_);
-        api.add_api_variable("tmax", new APIFloat(&actuator_.main_loop_.torque_controller_.controller_.command_max_));
-#endif
+        actuator_.main_loop_.torque_controller_.set_debug_variables(api);
+        actuator_.main_loop_.state_controller_.set_debug_variables(api);
         api.add_api_variable("tgain", new APIFloat(&actuator_.main_loop_.torque_sensor_.gain_));
         api.add_api_variable("tbias", new APIFloat(&actuator_.main_loop_.torque_sensor_.bias_));
         api.add_api_variable("torque", new const APIFloat(&actuator_.main_loop_.torque_sensor_.torque_));
@@ -122,13 +112,7 @@ class System {
         api.add_api_variable("stack_used", new const APICallbackUint32(get_stack_used));
         api.add_api_variable("heap_free", new const APICallbackUint32(get_heap_free));
         api.add_api_variable("heap_used", new const APICallbackUint32(get_heap_used));
-        api.add_api_variable("state_command_max", new APIFloat(&actuator_.main_loop_.state_controller_.param_.command_max));
-        api.add_api_variable("state_ff_tau", new APIFloat(&actuator_.main_loop_.state_controller_.param_.ff_tau));
-        API_ADD_FILTER(state_output_filter, FirstOrderLowPassFilter, actuator_.main_loop_.state_controller_.output_filter_);
-        API_ADD_FILTER(state_velocity_error_filter, FirstOrderLowPassFilter, actuator_.main_loop_.state_controller_.velocity_error_filter_);
-        API_ADD_FILTER(state_torque_error_filter, FirstOrderLowPassFilter, actuator_.main_loop_.state_controller_.torque_error_filter_);
-        API_ADD_FILTER(state_torque_dot_error_filter, FirstOrderLowPassFilter, actuator_.main_loop_.state_controller_.torque_dot_error_filter_);
-        API_ADD_FILTER(state_position_desired_filter, SecondOrderLowPassFilter, actuator_.main_loop_.state_controller_.position_desired_filter_);
+
         api.add_api_variable("vbus_min", new APIFloat(&actuator_.main_loop_.vbus_min_));
         api.add_api_variable("vbus_max", new APIFloat(&actuator_.main_loop_.vbus_max_));
         api.add_api_variable("ia_bias", new APIFloat(&actuator_.fast_loop_.ia_bias_));
@@ -159,6 +143,8 @@ class System {
             actuator_.main_loop_.unlock_status_log();
             return "ok"; }));
         api.add_api_variable("beep", new APICallbackFloat([](){ return 0; }, [](float f){ actuator_.fast_loop_.beep_on(f); }));
+        api.add_api_variable("beep_frequency", new APIFloat(&actuator_.fast_loop_.param_.beep_frequency));
+        api.add_api_variable("beep_amplitude", new APIFloat(&actuator_.fast_loop_.param_.beep_amplitude));
         api.add_api_variable("zero_current_sensors", new APICallbackFloat([](){ return 0; }, [](float f){ actuator_.fast_loop_.zero_current_sensors_on(f); }));
         api.add_api_variable("disable_safe_mode", new const APICallback([](){ actuator_.main_loop_.error_mask_.all = ERROR_MASK_NONE; return "ok"; }));
         api.add_api_variable("error_mask", new APICallback([](){ return u32_to_hex(actuator_.main_loop_.error_mask_.all); },

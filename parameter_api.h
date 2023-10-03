@@ -8,6 +8,11 @@
 #include <algorithm>
 #include "autocomplete.h"
 
+#define API_ADD_FILTER(name, type, location) \
+    std::function<void(float)> set_filt_##name = std::bind(&type::set_frequency, &location, std::placeholders::_1); \
+    std::function<float(void)> get_filt_##name = std::bind(&type::get_frequency, &location); \
+    api.add_api_variable(#name, new APICallbackFloat(get_filt_##name, set_filt_##name))
+
 
 class APIVariable {
  public:
