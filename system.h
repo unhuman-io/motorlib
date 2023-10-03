@@ -76,11 +76,13 @@ class System {
         api.add_api_variable("iq", new APIFloat(&actuator_.main_loop_.status_.fast_loop.foc_status.measured.i_q));
         api.add_api_variable("i0", new APIFloat(&actuator_.main_loop_.status_.fast_loop.foc_status.measured.i_0));
         api.add_api_variable("ikp", new APIFloat(&actuator_.fast_loop_.foc_->pi_iq_.kp_));
-        api.add_api_variable("iki", new APIFloat(&actuator_.fast_loop_.foc_->pi_iq_.ki_));
+        api.add_api_variable("iki", new APICallbackFloat([](){ return actuator_.fast_loop_.foc_->pi_iq_.ki_; },
+            [](float f){ if (f == 0) { actuator_.fast_loop_.foc_->pi_iq_.ki_sum_ = 0; } actuator_.fast_loop_.foc_->pi_iq_.ki_ = f; }));
         api.add_api_variable("iki_limit", new APIFloat(&actuator_.fast_loop_.foc_->pi_iq_.ki_limit_));
         api.add_api_variable("imax", new APIFloat(&actuator_.fast_loop_.foc_->pi_iq_.command_max_));
         api.add_api_variable("idkp", new APIFloat(&actuator_.fast_loop_.foc_->pi_id_.kp_));
-        api.add_api_variable("idki", new APIFloat(&actuator_.fast_loop_.foc_->pi_id_.ki_));
+        api.add_api_variable("idki", new APICallbackFloat([](){ return actuator_.fast_loop_.foc_->pi_id_.ki_; },
+            [](float f){ if (f == 0) { actuator_.fast_loop_.foc_->pi_id_.ki_sum_ = 0; } actuator_.fast_loop_.foc_->pi_id_.ki_ = f; }));
         api.add_api_variable("idki_limit", new APIFloat(&actuator_.fast_loop_.foc_->pi_id_.ki_limit_));
         api.add_api_variable("idmax", new APIFloat(&actuator_.fast_loop_.foc_->pi_id_.command_max_));
         api.add_api_variable("idiq", new APICallbackFloat([](){return 0;}, 
