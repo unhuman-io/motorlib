@@ -344,15 +344,20 @@ class MainLoop {
       if (!position_limits_disable_) {
         if (((status_.motor_position > encoder_limits_.motor_controlled_max && iq_des >= 0) ||
             (status_.motor_position < encoder_limits_.motor_controlled_min && iq_des <= 0)) && started_) {
+          if (receive_data_.mode_desired != DRIVER_ENABLE && receive_data_.mode_desired != CLEAR_FAULTS) {
             if (mode_ != VELOCITY && mode_ != param_.safe_mode && first_command_received()) {
               set_mode(VELOCITY);
-              status_.error.motor_soft_limit = 1;
             }
             MotorCommand tmp_receive_data = command_current_;
             tmp_receive_data.velocity_desired = 0;
             iq_des = velocity_controller_.step(tmp_receive_data, status_);
+            status_.error.motor_soft_limit = 1;
+          }
         } else {
-          status_.error.motor_soft_limit = 0;
+          if (status_.motor_position < encoder_limits_.motor_controlled_max &&
+              status_.motor_position > encoder_limits_.motor_controlled_min) {
+            status_.error.motor_soft_limit = 0;
+          }
         }
       }
 
