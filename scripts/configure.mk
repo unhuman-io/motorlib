@@ -64,10 +64,10 @@ AS_INCLUDES =
 # C includes
 C_INCLUDES =  \
 -IInc \
--IDrivers/CMSIS/Include \
 -I../motorlib/device/stm32g4/Include \
 -I$(DRIVERS)/CMSIS/Include
 
+# -IDrivers/CMSIS/Include \
 # -I$(DRIVERS)/STM32G4xx_HAL_Driver/Inc \
 # -I$(DRIVERS)/STM32G4xx_HAL_Driver/Inc/Legacy \
 #######################################
@@ -77,7 +77,7 @@ C_INCLUDES =  \
 LDSCRIPT = $(SELF_DIR)../peripheral/stm32g4/STM32G474RETx_FLASH.ld
 
 ifndef DRIVERS
-DRIVERS = ../boost_g474/Drivers
+DRIVERS = ../drivers
 endif
 
 endif # MCU_TARGET
