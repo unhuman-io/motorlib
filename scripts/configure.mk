@@ -26,12 +26,12 @@ C_SOURCES =  \
 Src/main.c \
 Src/stm32g4xx_it.c \
 Src/system_stm32g4xx.c \
-$(DRIVERS)/STM32G4xx_HAL_Driver/Src/stm32g4xx_hal.c \
-$(DRIVERS)/STM32G4xx_HAL_Driver/Src/stm32g4xx_hal_rcc.c \
-$(DRIVERS)/STM32G4xx_HAL_Driver/Src/stm32g4xx_hal_rcc_ex.c \
-$(DRIVERS)/STM32G4xx_HAL_Driver/Src/stm32g4xx_hal_pwr.c \
-$(DRIVERS)/STM32G4xx_HAL_Driver/Src/stm32g4xx_hal_pwr_ex.c \
-$(DRIVERS)/STM32G4xx_HAL_Driver/Src/stm32g4xx_hal_cortex.c \
+# $(DRIVERS)/STM32G4xx_HAL_Driver/Src/stm32g4xx_hal.c \
+# $(DRIVERS)/STM32G4xx_HAL_Driver/Src/stm32g4xx_hal_rcc.c \
+# $(DRIVERS)/STM32G4xx_HAL_Driver/Src/stm32g4xx_hal_rcc_ex.c \
+# $(DRIVERS)/STM32G4xx_HAL_Driver/Src/stm32g4xx_hal_pwr.c \
+# $(DRIVERS)/STM32G4xx_HAL_Driver/Src/stm32g4xx_hal_pwr_ex.c \
+# $(DRIVERS)/STM32G4xx_HAL_Driver/Src/stm32g4xx_hal_cortex.c \
 
 
 
@@ -47,7 +47,6 @@ AS_DEFS =
 # C defines
 override C_DEFS +=  \
 -DGIT_VERSION=\"$(GIT_VERSION)\" \
--DUSE_HAL_DRIVER \
 -DSTM32G474xx \
 -DGIT_HASH=\"$(GIT_HASH)\"
 ifdef NOTES
@@ -57,6 +56,7 @@ else
 override C_DEFS += \
 -DNOTES=\"$(shell git branch --show-current)\"
 endif
+#-DUSE_HAL_DRIVER \
 
 # AS includes
 AS_INCLUDES = 
@@ -64,12 +64,12 @@ AS_INCLUDES =
 # C includes
 C_INCLUDES =  \
 -IInc \
--IDrivers/CMSIS/Include \
--I$(DRIVERS)/STM32G4xx_HAL_Driver/Inc \
--I$(DRIVERS)/STM32G4xx_HAL_Driver/Inc/Legacy \
 -I../motorlib/device/stm32g4/Include \
 -I$(DRIVERS)/CMSIS/Include
 
+# -IDrivers/CMSIS/Include \
+# -I$(DRIVERS)/STM32G4xx_HAL_Driver/Inc \
+# -I$(DRIVERS)/STM32G4xx_HAL_Driver/Inc/Legacy \
 #######################################
 # LDFLAGS
 #######################################
@@ -77,7 +77,7 @@ C_INCLUDES =  \
 LDSCRIPT = $(SELF_DIR)../peripheral/stm32g4/STM32G474RETx_FLASH.ld
 
 ifndef DRIVERS
-DRIVERS = ../boost_g474/Drivers
+DRIVERS = ../drivers
 endif
 
 endif # MCU_TARGET

@@ -565,7 +565,7 @@ class MainLoop {
             led_.set_on_dim();
             fast_loop_.open_mode();
             setup_sleep();
-            while(!communication_.new_rx_data()) {
+            while(!communication_.any_new_rx_data()) {
               __WFI();
             }
             finish_sleep();

@@ -3,7 +3,7 @@
 
 #include "../pwm.h"
 #include <cstdint>
-#include "../../../st_device.h"
+#include "stm32g474xx.h"
 #include <vector>
 #include "pin_config.h"
 
