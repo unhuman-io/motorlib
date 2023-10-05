@@ -226,11 +226,11 @@ void pin_config_obot_g474_motor_r0() {
 
 }
 
+uint32_t sleep_count = 0;
 extern "C" void RTC_WKUP_IRQHandler() {
     IWDG->KR = 0xAAAA;
-    static int count = 0;
-    count++;
-    EXTI->PR1 = EXTI_PR1_PIF20;
+    sleep_count++;
+    EXTI->PR1 = EXTI_PR1_PIF20; // RTC wakeup line
     RTC->SCR = RTC_SCR_CWUTF;
 }
 
