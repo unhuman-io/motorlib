@@ -346,7 +346,9 @@ void setup_sleep() {
 
 void finish_sleep() {
     MASK_SET(RCC->CFGR, RCC_CFGR_SW, 3); // PLL is system clock source
-    config::drv.enable();
+    if (!param->main_loop_param.safe_mode_driver_disable) {
+        config::drv.enable();
+    }
     NVIC_DisableIRQ(RTC_WKUP_IRQn);
     NVIC_SetPriority(USB_LP_IRQn, NVIC_EncodePriority(NVIC_GetPriorityGrouping(), 2, 0));
     NVIC_EnableIRQ(TIM1_UP_TIM16_IRQn);
