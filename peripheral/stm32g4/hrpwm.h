@@ -87,6 +87,7 @@ class HRPWM3 : public HRPWM {
       ch_b_ = ch_b;
       ch_c_ = ch_c;
       pwm3_mode_ = true;
+      base_frequency_hz_ = frequency_hz;
       set_frequency_hz(frequency_hz, min_off_ns, min_on_ns);
       set_vbus(12);
       init();
