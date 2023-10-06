@@ -209,6 +209,9 @@ void system_init() {
     System::api.add_api_variable("gz", new const APICallbackFloat([](){ return config::imu.data_.gyr_z*2000.*M_PI/180/pow(2,15); }));
 #endif
 
+#ifdef HAS_5V_SENSE
+    System::api.add_api_variable("5V", new const APIFloat(&v5v));
+#endif
 #ifdef HAS_I5V_SENSE
     System::api.add_api_variable("i5V", new const APIFloat(&i5v));
 #endif
@@ -267,7 +270,7 @@ void config_maintenance();
 void system_maintenance() {
     static bool driver_fault = false;
     if (zero_rate.run()) {
-        if (config::drv.is_enabled()) {
+        if (config::drv.is_enabled() && !(config::main_loop.mode_ == DAMPED)) {
             config::fast_loop.zero_current_sensors(I_A0_DR, I_B0_DR, I_C0_DR);
         }
     }
