@@ -64,6 +64,10 @@ uint16_t drv_regs_error = 0;
 #include "../peripheral/stm32g4/max31889.h"
 #endif
 
+#if defined(HAS_MB85RC64)
+#include "../mb85rc64.h"
+#endif
+
 
 namespace config {
     static_assert(((double) CPU_FREQUENCY_HZ * 8 / 2) / pwm_frequency < 65535);    // check pwm frequency
@@ -89,6 +93,9 @@ namespace config {
     SPIDMA spi1_dma_bmi270(*SPI1, imu_cs, *DMA1_Channel3, *DMA1_Channel4, 40, 40, drv.register_operation_,
         SPI_CR1_MSTR | (4 << SPI_CR1_BR_Pos) | SPI_CR1_SSI | SPI_CR1_SSM);    // baud = clock/32
     BMI270 imu(spi1_dma_bmi270);
+#endif
+#if defined(HAS_MB85RC64)
+    MB85RC64 mb85rc64(i2c1, 4);
 #endif
     HRPWM motor_pwm = {pwm_frequency, *HRTIM1, 3, 5, 4, false, 50, 1000, 1000};
     USB1 usb;
@@ -128,6 +135,11 @@ Actuator System::actuator_ = {config::fast_loop, config::main_loop, param->start
 
 float v3v3 = 3.3;
 float v5v, i5v, i48v;
+
+#if defined(HAS_MB85RC64)
+uint32_t total_uptime_start;
+uint32_t total_uptime;
+#endif
 
 int32_t index_mod = 0;
 
@@ -219,6 +231,27 @@ void system_init() {
     System::api.add_api_variable("i48V", new const APIFloat(&i48v));
 #endif
 
+#if defined(HAS_MB85RC64)
+    config::mb85rc64.init();
+    config::mb85rc64.read_block(0, &total_uptime_start);
+    logger.log_printf("total_uptime_start: %u", total_uptime_start);
+    {
+        std::string s = "startup at " + std::to_string(total_uptime_start) + "\n";
+        config::mb85rc64.write_log((uint8_t*) s.c_str(), s.size());
+    }
+    System::api.add_api_variable("total_uptime", new const APIUint32(&total_uptime));
+    System::api.add_api_variable("fram_log", new APICallback([](){
+        config::i2c1.init(1000);
+        std::string s = config::mb85rc64.get_log();
+        config::i2c1.init(400);
+        return s;
+    }, [](std::string s){
+        config::i2c1.init(1000);
+        config::mb85rc64.write_log((uint8_t *) s.c_str(), s.size());
+        config::i2c1.init(400);
+    }));
+#endif
+
 
     for (auto regs : std::vector<ADC_TypeDef*>{ADC1, ADC2, ADC3, ADC4, ADC5}) {
         regs->CR = ADC_CR_ADVREGEN;
@@ -303,6 +336,22 @@ void system_maintenance() {
         if (Tmosfet2 > 150) {
             config::main_loop.status_.error.board_temperature = 1;
         }
+#endif
+#if defined(HAS_MB85RC64)
+        static bool last_fault = false;
+        config::i2c1.init(1000);
+        total_uptime = total_uptime_start + get_uptime();
+        config::mb85rc64.write_block(0, total_uptime);
+        config::mb85rc64.next_block();
+
+        if (config::main_loop.status_.error.fault && !last_fault) {
+            char s[100];
+            std::sprintf(s, "fault detected, error: %08lx\n", config::main_loop.status_.error.all);
+            config::mb85rc64.write_log((uint8_t *) s, std::strlen(s));
+        }
+        last_fault = config::main_loop.status_.error.fault;
+
+        config::i2c1.init(400);
 #endif
     }   
     
