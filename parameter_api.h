@@ -112,6 +112,9 @@ class APICallbackUint : public APIVariable {
 typedef APICallbackUint<uint32_t> APICallbackUint32;
 typedef APICallbackUint<uint16_t> APICallbackUint16;
 typedef APICallbackUint<uint8_t> APICallbackUint8;
+typedef APICallbackUint<int32_t> APICallbackInt32;
+typedef APICallbackUint<int16_t> APICallbackInt16;
+typedef APICallbackUint<int8_t> APICallbackInt8;
 
 // allows for setting variables through text commands
 class ParameterAPI {
