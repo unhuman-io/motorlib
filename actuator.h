@@ -68,10 +68,10 @@ class Actuator {
     }
     void set_bias() {
       MainLoopStatus status = main_loop_.get_status();
-      if (status.output_position > startup_param_.output_encoder_rollover) {
+      if (startup_param_.output_encoder_rollover > 0 && status.output_position > startup_param_.output_encoder_rollover) {
          main_loop_.adjust_output_encoder(-2*M_PI);
          status.output_position -= 2*M_PI;
-      } else if (status.output_position < -startup_param_.output_encoder_rollover) {
+      } else if (startup_param_.output_encoder_rollover < 0 && status.output_position < startup_param_.output_encoder_rollover) {
          main_loop_.adjust_output_encoder(2*M_PI);
          status.output_position += 2*M_PI;
       }
