@@ -235,7 +235,16 @@ void system_init() {
     config::mb85rc64.init();
     config::mb85rc64.read_block(0, &total_uptime_start);
     logger.log_printf("total_uptime_start: %u", total_uptime_start);
+    {
+        std::string s = "startup at " + std::to_string(total_uptime_start) + "\n";
+        config::mb85rc64.write_log((uint8_t*) s.c_str(), s.size());
+    }
     System::api.add_api_variable("total_uptime", new const APIUint32(&total_uptime));
+    System::api.add_api_variable("fram_log", new APICallback([](){ 
+        return config::mb85rc64.get_log();
+    }, [](std::string s){
+        config::mb85rc64.write_log((uint8_t *) s.c_str(), s.size());
+    }));
 #endif
 
 

@@ -34,7 +34,7 @@ class I2C_DMA {
     }
 
     // return 1 for not ready, 0 for success
-    int async_write(uint8_t address, int8_t nbytes, uint8_t *data, bool stop = false) {
+    int async_write(uint8_t address, int8_t nbytes, const uint8_t *data, bool stop = false) {
         if (!(regs_.CR2 & I2C_CR2_AUTOEND)) {
             // this will be new or a repeat start, still need to wait for dma to be complete
             if(tx_dma_.CNDTR != 0) {
@@ -92,7 +92,7 @@ class I2C_DMA {
     }
 
     // return <= 0 for error, nbytes for success
-    int write(uint8_t address, int8_t nbytes, uint8_t *data, bool stop=false, uint16_t timeout_us=1000) {
+    int write(uint8_t address, int8_t nbytes, const uint8_t *data, bool stop=false, uint16_t timeout_us=1000) {
         bool error;
         uint32_t t_start = get_clock();
         bool timeout = false;

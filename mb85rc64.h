@@ -1,6 +1,7 @@
 #ifndef UNHUMAN_MOTORLIB_MB85RC64_H_
 #define UNHUMAN_MOTORLIB_MB85RC64_H_
 #include "logger.h"
+#include <cstring>
 
 class MB85RC64 {
  public:
@@ -70,6 +71,24 @@ class MB85RC64 {
       write(current_block_->word + block_length_ - 4, sequence_num_);
     }
 
+    void write_log(const uint8_t *bytes, uint8_t length) {
+      uint32_t log_pointer;
+      read(log_address_.word, &log_pointer);
+      if (log_pointer+length >= log_max_) {
+         log_pointer = 0;
+      }
+      uint32_t new_log_pointer = log_pointer + length;
+      write(log_address_.word + log_pointer + 4, bytes, length);
+      write(log_address_.word, new_log_pointer);
+    }
+
+    std::string get_log() {
+      char c[255];
+      read(log_address_.word+4, (uint8_t*) c, 255);
+      std::string s(c);
+      return s;
+    }
+
 
     void read(uint16_t address, uint32_t *value) {
       Address addr = {.word = address};
@@ -81,11 +100,25 @@ class MB85RC64 {
       *value = word.word;
     }
 
+   void read(uint16_t address, uint8_t *bytes, uint8_t length) {
+      Address addr = {.word = address};
+      uint8_t data[2] = {addr.high, addr.low};
+      i2c_dma_.write(address_, 2, data, false);
+      i2c_dma_.read(address_, length, bytes);
+    }
+
     void write(uint16_t address, uint32_t value) {
       Address addr = {.word = address};
       Uint32 word = {.word = value};
       uint8_t data[6] = {addr.high, addr.low, word.byte4, word.byte3, word.byte2, word.byte1};
       i2c_dma_.write(address_, 6, data, true);
+    }
+
+    void write(uint16_t address, const uint8_t *bytes, uint8_t length) {
+      Address addr = {.word = address};
+      uint8_t data[2+length] = {addr.high, addr.low};
+      std::memcpy(data+2, bytes, length);
+      i2c_dma_.write(address_, length+2, data, true);
     }
  private:
     I2C_DMA &i2c_dma_;
@@ -95,6 +128,9 @@ class MB85RC64 {
     const uint16_t block_length_ = 0x100;
     const Address block2_ = {.word = (uint16_t) (block1_.word + block_length_)};
     const Address *current_block_ = &block1_;
+    const Address log_address_ = {.word = (uint16_t) (block2_.word + block_length_)};
+    //const uint16_t log_max_ = 0x2000 - 4 - log_address_.word; // todo: figure out longer log
+    const uint16_t log_max_ = 256;
  
 };
 
