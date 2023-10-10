@@ -338,10 +338,19 @@ void system_maintenance() {
         }
 #endif
 #if defined(HAS_MB85RC64)
+        static bool last_fault = false;
         config::i2c1.init(1000);
         total_uptime = total_uptime_start + get_uptime();
         config::mb85rc64.write_block(0, total_uptime);
         config::mb85rc64.next_block();
+
+        if (config::main_loop.status_.error.fault && !last_fault) {
+            char s[100];
+            std::sprintf(s, "fault detected, error: %08lx\n", config::main_loop.status_.error.all);
+            config::mb85rc64.write_log((uint8_t *) s, std::strlen(s));
+        }
+        last_fault = config::main_loop.status_.error.fault;
+
         config::i2c1.init(400);
 #endif
     }   
