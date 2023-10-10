@@ -107,7 +107,7 @@ class MAX11254 : public TorqueSensorBase {
         //ret_val &= write_reg(8, seq.word);
 
         spi_dma_.readwrite(data_out, data_in, 5);
-        logger.log_printf("max11274 stat: %02x %02x %02x", data_in[2], data_in[3], data_in[4]);
+        logger.log_printf("max11254 stat: %02x %02x %02x", data_in[2], data_in[3], data_in[4]);
 
         command conv2 = {.rate=0b1100, .mode=3, .b7=1}; // 8khz rate
         spi_dma_.readwrite(&conv2.word, data_in, 1);

@@ -95,7 +95,7 @@ namespace config {
     BMI270 imu(spi1_dma_bmi270);
 #endif
 #if defined(HAS_MB85RC64)
-    MB85RC64 mb85rc64(4);
+    MB85RC64 mb85rc64(i2c1, 4);
 #endif
     HRPWM motor_pwm = {pwm_frequency, *HRTIM1, 3, 5, 4, false, 50, 1000, 1000};
     USB1 usb;
@@ -232,7 +232,8 @@ void system_init() {
 #endif
 
 #if defined(HAS_MB85RC64)
-    config::mb85rc64.read(0, &total_uptime_start);
+    config::mb85rc64.read(4, &total_uptime_start);
+    logger.log_printf("total_uptime_start: %u", total_uptime_start);
     System::api.add_api_variable("total_uptime", new const APIUint32(&total_uptime));
 #endif
 
@@ -323,7 +324,7 @@ void system_maintenance() {
 #endif
 #if defined(HAS_MB85RC64)
         total_uptime = total_uptime_start + get_uptime();
-        config::mb85rc64.write(0, total_uptime);
+        config::mb85rc64.write(4, total_uptime);
 #endif
     }   
     
