@@ -232,7 +232,8 @@ void system_init() {
 #endif
 
 #if defined(HAS_MB85RC64)
-    config::mb85rc64.read(4, &total_uptime_start);
+    config::mb85rc64.init();
+    config::mb85rc64.read_block(0, &total_uptime_start);
     logger.log_printf("total_uptime_start: %u", total_uptime_start);
     System::api.add_api_variable("total_uptime", new const APIUint32(&total_uptime));
 #endif
@@ -323,8 +324,11 @@ void system_maintenance() {
         }
 #endif
 #if defined(HAS_MB85RC64)
+        config::i2c1.init(1000);
         total_uptime = total_uptime_start + get_uptime();
-        config::mb85rc64.write(4, total_uptime);
+        config::mb85rc64.write_block(0, total_uptime);
+        config::mb85rc64.next_block();
+        config::i2c1.init(400);
 #endif
     }   
     
