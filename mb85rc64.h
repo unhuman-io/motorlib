@@ -78,13 +78,13 @@ class MB85RC64 {
          log_pointer = 0;
       }
       uint32_t new_log_pointer = log_pointer + length;
-      write(log_address_.word + log_pointer + 4, bytes, length);
+      write(log_address_.word + log_pointer + 4, bytes, length, 10000);
       write(log_address_.word, new_log_pointer);
     }
 
     std::string get_log() {
       char c[255];
-      read(log_address_.word+4, (uint8_t*) c, 255);
+      read(log_address_.word+4, (uint8_t*) c, 255, 10000);
       std::string s(c);
       return s;
     }
@@ -100,11 +100,11 @@ class MB85RC64 {
       *value = word.word;
     }
 
-   void read(uint16_t address, uint8_t *bytes, uint8_t length) {
+   void read(uint16_t address, uint8_t *bytes, uint8_t length, uint16_t timeout_us = 1000) {
       Address addr = {.word = address};
       uint8_t data[2] = {addr.high, addr.low};
       i2c_dma_.write(address_, 2, data, false);
-      i2c_dma_.read(address_, length, bytes);
+      i2c_dma_.read(address_, length, bytes, timeout_us);
     }
 
     void write(uint16_t address, uint32_t value) {
@@ -114,11 +114,11 @@ class MB85RC64 {
       i2c_dma_.write(address_, 6, data, true);
     }
 
-    void write(uint16_t address, const uint8_t *bytes, uint8_t length) {
+    void write(uint16_t address, const uint8_t *bytes, uint8_t length, uint16_t timeout_us = 1000) {
       Address addr = {.word = address};
       uint8_t data[2+length] = {addr.high, addr.low};
       std::memcpy(data+2, bytes, length);
-      i2c_dma_.write(address_, length+2, data, true);
+      i2c_dma_.write(address_, length+2, data, true, timeout_us);
     }
  private:
     I2C_DMA &i2c_dma_;

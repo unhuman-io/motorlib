@@ -240,10 +240,15 @@ void system_init() {
         config::mb85rc64.write_log((uint8_t*) s.c_str(), s.size());
     }
     System::api.add_api_variable("total_uptime", new const APIUint32(&total_uptime));
-    System::api.add_api_variable("fram_log", new APICallback([](){ 
-        return config::mb85rc64.get_log();
+    System::api.add_api_variable("fram_log", new APICallback([](){
+        config::i2c1.init(1000);
+        std::string s = config::mb85rc64.get_log();
+        config::i2c1.init(400);
+        return s;
     }, [](std::string s){
+        config::i2c1.init(1000);
         config::mb85rc64.write_log((uint8_t *) s.c_str(), s.size());
+        config::i2c1.init(400);
     }));
 #endif
 
