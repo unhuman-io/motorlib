@@ -1,6 +1,9 @@
 #include "util.h"
+#include <cstring>
 
 volatile uint32_t uptime = 0;
+
+
 
 void ms_delay(uint16_t ms) {
     uint32_t t_start = get_clock();

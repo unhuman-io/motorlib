@@ -63,7 +63,7 @@ class MainLoop {
       timestamp_ = get_clock();
       dt_ = (timestamp_ - last_timestamp_) * (1.0f/CPU_FREQUENCY_HZ);
 
-      status_.fast_loop = fast_loop_.get_status();
+      fast_memcpy(&status_.fast_loop, &fast_loop_.get_status(), sizeof(status_.fast_loop));
       if (!driver_.is_enabled()) {
         status_.fast_loop.energy_uJ = 0;
         status_.fast_loop.foc_status.measured.i_d = 0;

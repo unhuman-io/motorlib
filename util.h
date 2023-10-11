@@ -3,6 +3,7 @@
 
 #include "../st_device.h"
 #include "core_cm4.h"
+#include <cstring>
 
 #define US_TO_CPU(t_us) (t_us*(CPU_FREQUENCY_HZ/1000000))
 extern volatile uint32_t * const cpu_clock;
@@ -39,6 +40,18 @@ inline uint32_t get_heap_free() {
 }
 inline uint32_t get_heap_used() {
     return (uint32_t) &_Min_Heap_Size - get_heap_free();
+}
+
+//void fast_memcpy(void* dest, const void* src, size_t num);
+
+inline void fast_memcpy(void* dest, const void* src, size_t num) {
+    int chunks = num >> 6;
+    size_t offset = 0;
+    for (int i=0; i<(chunks-1); i++) {
+        std::memcpy(dest+offset, src+offset, 64);
+        offset += 64;
+    }
+    std::memcpy(dest+offset, src+offset, num-offset);
 }
 
 #define wait_while_false(condition) while(!(condition))
