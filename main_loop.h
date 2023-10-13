@@ -191,6 +191,8 @@ class MainLoop {
 
       if (receive_data_.mode_desired == TUNING) {
           command_current_ = set_tuning_command(receive_data_, count_received);
+          float desired = *tuning_trajectory_generator_.value();
+          dft_desired_.step(desired, tuning_trajectory_generator_.get_frequency());
       } else {
           command_current_ = receive_data_;
       }
@@ -715,6 +717,8 @@ class MainLoop {
     enum FindLimitsState {FIND_FIRST_LIMIT, FIND_SECOND_LIMIT, VELOCITY_TO_POSITION, GOTO_POSITION} find_limits_state_;
     FirstOrderLowPassFilter iq_find_limits_filter_;
     bool position_limits_disable_ = false;
+
+    DFT dft_desired_;
 
     float output_position_last_ = 0;
     FIRFilter<> motor_velocity_filter_;

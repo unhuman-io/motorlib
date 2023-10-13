@@ -186,3 +186,19 @@ float PIDDeadbandController::step(float desired, float velocity_desired, float d
     float desired_with_deadband = fsignf(desired-measured)*fmaxf(fabsf(desired-measured) - deadband, 0) + measured;
     return PIDController::step(desired_with_deadband, velocity_desired, measured, velocity_limit);
 }
+
+void DFT::step(float value, float frequency_hz) {
+    real_ += value * std::cos(-2*M_PI*frequency_hz/num_points_*count_);
+    imag_ += value * std::sin(-2*M_PI*frequency_hz/num_points_*count_);
+    frequency_ += frequency_hz/num_points_;
+    count_++;
+    if (count_ > num_points_) {
+        count_ = 1;
+        frequency_last_ = frequency_;
+        magnitude_last_ = std::sqrt(real_ * real_ + imag_ + imag_);
+        phase_last_ = std::atan2(imag_, real_);
+        frequency_ = 0;
+        imag_ = 0;
+        real_ = 0;
+    }
+}
