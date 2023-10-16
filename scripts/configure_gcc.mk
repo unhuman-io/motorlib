@@ -33,6 +33,7 @@ BIN = $(CP) -O binary -S
 #######################################
 # CFLAGS
 #######################################
+
 # cpu
 CPU = -mcpu=cortex-m4
 
@@ -42,8 +43,12 @@ FPU = -mfpu=fpv4-sp-d16
 # float-abi
 FLOAT-ABI = -mfloat-abi=hard
 
-# mcu
-MCU = $(CPU) -mthumb $(FPU) $(FLOAT-ABI)
+ifneq ($(CC), clang)
+	# mcu
+	MCU = $(CPU) -mthumb $(FPU) $(FLOAT-ABI)
+else
+	MCU = -target arm-none-eabi $(CPU) $(FLOAT-ABI) $(FPU) --sysroot=$(GCC_PATH)/../arm-none-eabi -I$(GCC_PATH)/../arm-none-eabi/include/c++/12.3.1/arm-none-eabi/thumb/v7e-m+fp/hard/
+endif
 
 # compile gcc flags
 ASFLAGS = $(MCU) $(AS_DEFS) $(AS_INCLUDES) $(OPT) -Wall -fdata-sections -ffunction-sections $(LTO)
@@ -62,14 +67,16 @@ CPPFLAGS = $(CFLAGS)
 LIBS = -lc -lm -lnosys 
 LIBDIR = 
 LDFLAGS = $(MCU) -specs=nosys.specs -T$(LDSCRIPT) $(LIBDIR) $(LIBS) -Wl,-Map=$(BUILD_DIR)/$(TARGET).map,--cref -Wl,--gc-sections,--print-memory-usage -u _printf_float
-	
-GCC_VERSION := $(shell $(CC) -dumpversion)
-GCC_MAJOR_VERSION := $(word 1, $(subst ., ,$(GCC_VERSION)))
 
-ifeq ($(GCC_MAJOR_VERSION), $(filter $(GCC_MAJOR_VERSION),10 11 12))
-$(info gcc version $(GCC_VERSION))
-else
-$(error gcc version $(GCC_VERSION), 10, 11, or 12 required)
+ifneq ($(CC), clang)	
+	GCC_VERSION := $(shell $(CC) -dumpversion)
+	GCC_MAJOR_VERSION := $(word 1, $(subst ., ,$(GCC_VERSION)))
+
+	ifeq ($(GCC_MAJOR_VERSION), $(filter $(GCC_MAJOR_VERSION),10 11 12))
+	$(info gcc version $(GCC_VERSION))
+	else
+	$(error gcc version $(GCC_VERSION), 10, 11, or 12 required)
+	endif
 endif
 
 ifeq ($(OS),Windows_NT)
