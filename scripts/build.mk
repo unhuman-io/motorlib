@@ -1,6 +1,7 @@
 
 # default action: build all
-all::  
+.DEFAULT_GOAL = all
+all:: $(CC)
 	$(MAKE) clean 
 	$(MAKE) build_all 
 

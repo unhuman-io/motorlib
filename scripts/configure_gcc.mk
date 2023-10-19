@@ -12,7 +12,15 @@ LTO = -flto=auto
 #######################################
 PREFIX = arm-none-eabi-
 # The gcc compiler bin path can be either defined in make command via GCC_PATH variable (> make GCC_PATH=xxx)
-# either it can be added to the PATH environment variable.
+# either it can be added to the PATH environment variable. 
+
+# Install GCC automatically if GCC_PATH is not specified and it's not already installed.
+
+ifndef GCC_PATH
+$(dir $(lastword $(MAKEFILE_LIST)))/../gcc/bin/$(PREFIX)gcc:
+	$(dir $(lastword $(MAKEFILE_LIST)))/install_gcc.sh
+endif
+
 GCC_PATH=$(dir $(lastword $(MAKEFILE_LIST)))/../gcc/bin
 ifdef GCC_PATH
 CC = $(GCC_PATH)/$(PREFIX)gcc
