@@ -13,7 +13,8 @@ static uint8_t CRC_BiSS_43_30bit (uint32_t w_InputData);
 
 class ICPZ : public EncoderBase {
  public:
-    enum Disk{Default, PZ03S, PZ08S};
+    const char *disk_names[4] = {"default", "pz03s", "pz08s", "pz16s"};
+    enum Disk{Default, PZ03S, PZ08S, PZ16S};
     ICPZ(SPIDMA &spidma, Disk disk = Default) 
       : spidma_(spidma), disk_(disk) {
       command_[0] = 0xa6; // read position
@@ -31,6 +32,7 @@ class ICPZ : public EncoderBase {
 
     bool init() {
       bool success = true;
+      logger.log_printf("icpz init start with disk: %s", disk_names[disk_]);
       // send reboot (still not working)
       set_register(0, 0, {3});
       set_register(bank_, Addr::COMMANDS, {REBOOT});
@@ -55,8 +57,11 @@ class ICPZ : public EncoderBase {
         success = set_register(8, 2, {216, 0}) ? success : false; // fcs = 216
         success = set_register(0, 7, {9 << 4}) ? success : false; // sys_ovr = 9
         // ai phase -20
+      } else if (disk_ == PZ16S) {
+        success = set_register(8, 0, {172, 0}) ? success : false; // fcl = 172
+        success = set_register(8, 2, {27, 0}) ? success : false; // fcs = 27
+        success = set_register(0, 7, {8 << 4}) ? success : false; // sys_ovr = 8
       }
-
        return success;
     }
     void trigger() {
@@ -83,7 +88,7 @@ class ICPZ : public EncoderBase {
           last_data_ = data;
         }
         if (!diag.nErr) {
-          clear_diag();
+          //clear_diag();
         }
         ongoing_read_ = false;
       }
