@@ -11,6 +11,8 @@
 
 static uint8_t CRC_BiSS_43_30bit (uint32_t w_InputData);
 
+#define ROPT_MAP std::map<Disk, float> ropt_map{{PZ03S, 10700},{PZ08S, 18600}, {PZ16S, 7200}, {Default, 1}}
+
 class ICPZ : public EncoderBase {
  public:
     const char *disk_names[4] = {"default", "pz03s", "pz08s", "pz16s"};
@@ -245,11 +247,13 @@ class ICPZ : public EncoderBase {
 
     void set_ran_tol(uint8_t val) {
         uint8_t tmp = read_register(0, 0xF, 1)[0] & 0xF0;
-        set_register(0, 0xF, {(uint8_t) (tmp & (val & 0xF))});
+        tmp |= val & 0xF;
+        set_register(0, 0xF, {tmp});
     }
 
     uint8_t get_ran_tol() {
-        return read_register(0, 0xF, 1)[0] & 0xF;
+        uint8_t ran_reg = read_register(0, 0xF, 1)[0];
+        return ran_reg & 0xF;
     }
 
     float get_ai_phase() {
@@ -372,7 +376,7 @@ class ICPZ : public EncoderBase {
 
     float get_ecc_um() {
         auto data = read_register(2, 4, 4);
-        std::map<Disk, float> ropt_map{{PZ03S, 10700},{PZ08S, 18600}, {Default, 1}};
+        ROPT_MAP;
         uint32_t ecc_amp_raw = data[3] << 24 | data[2] << 16 | data[1] << 8 | data[0];
         float ecc_amp  = ecc_amp_raw * ropt_map[disk_] * 1.407e-9;
         return ecc_amp;
@@ -386,7 +390,7 @@ class ICPZ : public EncoderBase {
     }
 
     void set_ecc_um(float ecc) {
-        std::map<Disk, float> ropt_map{{PZ03S, 10700},{PZ08S, 18600}, {Default, 1}};
+        ROPT_MAP;
         uint32_t ecc_raw = ecc/ropt_map[disk_] / 1.407e-9;
         set_register(2, 4, {(uint8_t) (ecc_raw & 0xff), (uint8_t) ((ecc_raw >> 8) & 0xff), 
           (uint8_t) ((ecc_raw >> 16) & 0xff), (uint8_t) ((ecc_raw >> 24) & 0xff)});
