@@ -28,7 +28,7 @@ class ICPZ : public EncoderBase {
       uint8_t word;
     };
     enum Addr {CMD_STAT=0x76, COMMANDS=0x77};
-    enum CMD {REBOOT=0x10, CONF_WRITE_ALL=0x41, AUTO_ADJ_ANA=0xB0, AUTO_ADJ_DIG=0xB1, AUTO_READJ_DIG=0xB2, AUTO_ADJ_ECC=0xB3};
+    enum CMD {REBOOT=0x10, SCLEAR=0x20, CONF_WRITE_ALL=0x41, AUTO_ADJ_ANA=0xB0, AUTO_ADJ_DIG=0xB1, AUTO_READJ_DIG=0xB2, AUTO_ADJ_ECC=0xB3};
 
     bool init() {
       bool success = true;
@@ -112,14 +112,13 @@ class ICPZ : public EncoderBase {
       uint8_t data_in[10];
       spidma_.readwrite(data_out, data_in, 10, true);
       (*register_operation_)--;
+      clear_diag();
       return bytes_to_hex(data_in+2, 8);
     }
 
     void clear_diag() {
       (*register_operation_)++;
-      uint8_t data_out = 0x20;
-      uint8_t data_in;
-      spidma_.readwrite(&data_out, &data_in, 1, true);
+      set_register(bank_, Addr::COMMANDS, {SCLEAR});
       (*register_operation_)--;
     }
 
@@ -203,6 +202,7 @@ class ICPZ : public EncoderBase {
     }
 
     void clear_faults() {
+        clear_diag();
         error_count_ = 0;
         warn_count_ = 0;
         crc_error_count_ = 0;
@@ -241,6 +241,15 @@ class ICPZ : public EncoderBase {
 
     bool get_ecc_correction() {
         return read_register(2, 0xa, 1)[0];
+    }
+
+    void set_ran_tol(uint8_t val) {
+        uint8_t tmp = read_register(0, 0xF, 1)[0] & 0xF0;
+        set_register(0, 0xF, {(uint8_t) (tmp & (val & 0xF))});
+    }
+
+    uint8_t get_ran_tol() {
+        return read_register(0, 0xF, 1)[0] & 0xF;
     }
 
     float get_ai_phase() {
@@ -412,6 +421,8 @@ class ICPZ : public EncoderBase {
         api.add_api_variable(prefix + "auto_ecc", new const APICallback([this](){ this->start_auto_adj_ecc(); return "ok"; }));
         api.add_api_variable(prefix + "ecc_correction", new APICallbackUint8([this](){ return this->get_ecc_correction(); }, 
             [this](uint8_t u){ this->set_ecc_correction(u); }));
+        api.add_api_variable(prefix + "ran_tol", new APICallbackUint8([this](){ return this->get_ran_tol(); }, 
+            [this](uint8_t u){ this->set_ran_tol(u); }));
         api.add_api_variable(prefix + "ecc_um", new APICallbackFloat([this](){ return this->get_ecc_um(); },
             [this](float f){ this->set_ecc_um(f); }));
         api.add_api_variable(prefix + "low", new APICallbackUint8([this](){ return this->get_ac_eto(); }, 
