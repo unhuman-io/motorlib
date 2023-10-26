@@ -18,6 +18,7 @@ class SensorMultiplex : public SensorBase {
         int32_t read() { return get_value(); }
         bool init() { return secondary_->init(); }
         bool index_received() const { return secondary_->index_received(); }
+        void clear_faults() { secondary_->clear_faults(); }
      private:
         Sensor2 *secondary_;
     };

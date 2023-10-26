@@ -104,7 +104,7 @@ class System {
         api.add_api_variable("index_pos", new APICallback([](){ return std::to_string(actuator_.fast_loop_.encoder_.get_index_pos()); }, [](std::string s) {}));
         api.add_api_variable("index_received", new APICallbackUint32([](){return actuator_.fast_loop_.encoder_.index_received();}, [](uint32_t u) {}));
         api.add_api_variable("index_offset_measured", new const APIFloat(&actuator_.fast_loop_.motor_index_electrical_offset_measured_));
-        api.add_api_variable("electrical_zero_pos", new const APIInt32(&actuator_.fast_loop_.motor_electrical_zero_pos_));
+        api.add_api_variable("electrical_zero_pos", new APIInt32(&actuator_.fast_loop_.motor_electrical_zero_pos_));
         api.add_api_variable("mcpr", new const APIUint32(&param->fast_loop_param.motor_encoder.cpr));
         api.add_api_variable("ocpr", new const APIFloat(&param->main_loop_param.output_encoder.cpr));
         api.add_api_variable("irange", new const APICallbackFloat([](){ return 2048*param->fast_loop_param.adc1_gain; }));

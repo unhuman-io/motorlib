@@ -11,9 +11,12 @@
 
 static uint8_t CRC_BiSS_43_30bit (uint32_t w_InputData);
 
+#define ROPT_MAP std::map<Disk, float> ropt_map{{PZ03S, 10700},{PZ08S, 18600}, {PZ16S, 7200}, {Default, 1}}
+
 class ICPZ : public EncoderBase {
  public:
-    enum Disk{Default, PZ03S, PZ08S};
+    const char *disk_names[4] = {"default", "pz03s", "pz08s", "pz16s"};
+    enum Disk{Default, PZ03S, PZ08S, PZ16S};
     ICPZ(SPIDMA &spidma, Disk disk = Default) 
       : spidma_(spidma), disk_(disk) {
       command_[0] = 0xa6; // read position
@@ -27,10 +30,11 @@ class ICPZ : public EncoderBase {
       uint8_t word;
     };
     enum Addr {CMD_STAT=0x76, COMMANDS=0x77};
-    enum CMD {REBOOT=0x10, CONF_WRITE_ALL=0x41, AUTO_ADJ_ANA=0xB0, AUTO_ADJ_DIG=0xB1, AUTO_READJ_DIG=0xB2, AUTO_ADJ_ECC=0xB3};
+    enum CMD {REBOOT=0x10, SCLEAR=0x20, CONF_WRITE_ALL=0x41, AUTO_ADJ_ANA=0xB0, AUTO_ADJ_DIG=0xB1, AUTO_READJ_DIG=0xB2, AUTO_ADJ_ECC=0xB3};
 
     bool init() {
       bool success = true;
+      logger.log_printf("icpz init start with disk: %s", disk_names[disk_]);
       // send reboot (still not working)
       set_register(0, 0, {3});
       set_register(bank_, Addr::COMMANDS, {REBOOT});
@@ -55,8 +59,11 @@ class ICPZ : public EncoderBase {
         success = set_register(8, 2, {216, 0}) ? success : false; // fcs = 216
         success = set_register(0, 7, {9 << 4}) ? success : false; // sys_ovr = 9
         // ai phase -20
+      } else if (disk_ == PZ16S) {
+        success = set_register(8, 0, {172, 0}) ? success : false; // fcl = 172
+        success = set_register(8, 2, {27, 0}) ? success : false; // fcs = 27
+        success = set_register(0, 7, {8 << 4}) ? success : false; // sys_ovr = 8
       }
-
        return success;
     }
     void trigger() {
@@ -83,7 +90,7 @@ class ICPZ : public EncoderBase {
           last_data_ = data;
         }
         if (!diag.nErr) {
-          clear_diag();
+          //clear_diag();
         }
         ongoing_read_ = false;
       }
@@ -107,14 +114,13 @@ class ICPZ : public EncoderBase {
       uint8_t data_in[10];
       spidma_.readwrite(data_out, data_in, 10, true);
       (*register_operation_)--;
+      clear_diag();
       return bytes_to_hex(data_in+2, 8);
     }
 
     void clear_diag() {
       (*register_operation_)++;
-      uint8_t data_out = 0x20;
-      uint8_t data_in;
-      spidma_.readwrite(&data_out, &data_in, 1, true);
+      set_register(bank_, Addr::COMMANDS, {SCLEAR});
       (*register_operation_)--;
     }
 
@@ -198,6 +204,7 @@ class ICPZ : public EncoderBase {
     }
 
     void clear_faults() {
+        clear_diag();
         error_count_ = 0;
         warn_count_ = 0;
         crc_error_count_ = 0;
@@ -236,6 +243,17 @@ class ICPZ : public EncoderBase {
 
     bool get_ecc_correction() {
         return read_register(2, 0xa, 1)[0];
+    }
+
+    void set_ran_tol(uint8_t val) {
+        uint8_t tmp = read_register(0, 0xF, 1)[0] & 0xF0;
+        tmp |= val & 0xF;
+        set_register(0, 0xF, {tmp});
+    }
+
+    uint8_t get_ran_tol() {
+        uint8_t ran_reg = read_register(0, 0xF, 1)[0];
+        return ran_reg & 0xF;
     }
 
     float get_ai_phase() {
@@ -358,7 +376,7 @@ class ICPZ : public EncoderBase {
 
     float get_ecc_um() {
         auto data = read_register(2, 4, 4);
-        std::map<Disk, float> ropt_map{{PZ03S, 10700},{PZ08S, 18600}, {Default, 1}};
+        ROPT_MAP;
         uint32_t ecc_amp_raw = data[3] << 24 | data[2] << 16 | data[1] << 8 | data[0];
         float ecc_amp  = ecc_amp_raw * ropt_map[disk_] * 1.407e-9;
         return ecc_amp;
@@ -372,7 +390,7 @@ class ICPZ : public EncoderBase {
     }
 
     void set_ecc_um(float ecc) {
-        std::map<Disk, float> ropt_map{{PZ03S, 10700},{PZ08S, 18600}, {Default, 1}};
+        ROPT_MAP;
         uint32_t ecc_raw = ecc/ropt_map[disk_] / 1.407e-9;
         set_register(2, 4, {(uint8_t) (ecc_raw & 0xff), (uint8_t) ((ecc_raw >> 8) & 0xff), 
           (uint8_t) ((ecc_raw >> 16) & 0xff), (uint8_t) ((ecc_raw >> 24) & 0xff)});
@@ -407,6 +425,8 @@ class ICPZ : public EncoderBase {
         api.add_api_variable(prefix + "auto_ecc", new const APICallback([this](){ this->start_auto_adj_ecc(); return "ok"; }));
         api.add_api_variable(prefix + "ecc_correction", new APICallbackUint8([this](){ return this->get_ecc_correction(); }, 
             [this](uint8_t u){ this->set_ecc_correction(u); }));
+        api.add_api_variable(prefix + "ran_tol", new APICallbackUint8([this](){ return this->get_ran_tol(); }, 
+            [this](uint8_t u){ this->set_ran_tol(u); }));
         api.add_api_variable(prefix + "ecc_um", new APICallbackFloat([this](){ return this->get_ecc_um(); },
             [this](float f){ this->set_ecc_um(f); }));
         api.add_api_variable(prefix + "low", new APICallbackUint8([this](){ return this->get_ac_eto(); }, 
