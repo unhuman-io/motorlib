@@ -77,7 +77,7 @@ C_INCLUDES =  \
 LDSCRIPT = $(SELF_DIR)../peripheral/stm32g4/STM32G474RETx_FLASH.ld
 
 ifndef DRIVERS
-DRIVERS = ../drivers
+DRIVERS = ../motorlib/drivers
 endif
 
 endif # MCU_TARGET

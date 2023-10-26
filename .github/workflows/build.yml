@@ -1,0 +1,22 @@
+name: Arm build
+
+on:
+  push:
+  pull_request:
+    types: [assigned]
+
+jobs:
+  build:
+    timeout-minutes: 10
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@master
+      with:
+        fetch-depth: 0
+        submodules: recursive
+    - name: make g474 syntax
+      run: make -C test/test_g474/project syntax
+    - name: make test
+      run: |
+        make -C test
+        ./test/test_control_fun

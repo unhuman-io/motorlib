@@ -147,7 +147,7 @@ class ICPZ : public EncoderBase {
           uint8_t data_out[] = {write_register_opcode_, 0x40, bank};
           spidma_.readwrite(data_out, data_in, 3, true);
           if (read_register(0x40, 1) != std::vector<uint8_t>{bank}) {
-            system_log("ichaus bank " + std::to_string(read_register(0x40, 1)[0]) + " not " + std::to_string(bank));
+            logger.log("ichaus bank " + std::to_string(read_register(0x40, 1)[0]) + " not " + std::to_string(bank));
             (*register_operation_)--;
             return false;
           }

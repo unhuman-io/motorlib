@@ -5,6 +5,7 @@
 #include <queue>
 #include <stdarg.h>
 #include "util.h"
+#include "motor_messages/motor_messages.h"
 
 class Logger {
  public:
