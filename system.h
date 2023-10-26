@@ -226,6 +226,8 @@ class System {
             [](float f){ actuator_.fast_loop_.foc_->set_id_limit(f); }));
         api.add_api_variable("num_poles", new APIFloat(&actuator_.fast_loop_.foc_->num_poles_));
         api.add_api_variable("timestamp", new const APICallbackUint32(get_clock));
+        api.add_api_variable("mrollover", new const APICallbackFloat([](){ return actuator_.fast_loop_.get_rollover(); }));
+        api.add_api_variable("gear_ratio", new const APIFloat(&param->startup_param.gear_ratio));
 
         uint32_t t_start = get_clock();
         while(1) {
