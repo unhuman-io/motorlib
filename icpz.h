@@ -11,12 +11,11 @@
 
 static uint8_t CRC_BiSS_43_30bit (uint32_t w_InputData);
 
-#define ROPT_MAP std::map<Disk, float> ropt_map{{PZ03S, 10700},{PZ08S, 18600}, {PZ16S, 7200}, {Default, 1}}
-
 class ICPZ : public EncoderBase {
  public:
     const char *disk_names[4] = {"default", "pz03s", "pz08s", "pz16s"};
     enum Disk{Default, PZ03S, PZ08S, PZ16S};
+    const float r_disk_um[4] = {1, 10700, 18600, 7200};
     ICPZ(SPIDMA &spidma, Disk disk = Default) 
       : spidma_(spidma), disk_(disk) {
       command_[0] = 0xa6; // read position
@@ -376,9 +375,8 @@ class ICPZ : public EncoderBase {
 
     float get_ecc_um() {
         auto data = read_register(2, 4, 4);
-        ROPT_MAP;
         uint32_t ecc_amp_raw = data[3] << 24 | data[2] << 16 | data[1] << 8 | data[0];
-        float ecc_amp  = ecc_amp_raw * ropt_map[disk_] * 1.407e-9;
+        float ecc_amp  = ecc_amp_raw * r_disk_um[disk_] * 1.407e-9;
         return ecc_amp;
     }
 
@@ -390,8 +388,7 @@ class ICPZ : public EncoderBase {
     }
 
     void set_ecc_um(float ecc) {
-        ROPT_MAP;
-        uint32_t ecc_raw = ecc/ropt_map[disk_] / 1.407e-9;
+        uint32_t ecc_raw = ecc/r_disk_um[disk_] / 1.407e-9;
         set_register(2, 4, {(uint8_t) (ecc_raw & 0xff), (uint8_t) ((ecc_raw >> 8) & 0xff), 
           (uint8_t) ((ecc_raw >> 16) & 0xff), (uint8_t) ((ecc_raw >> 24) & 0xff)});
     }
@@ -436,6 +433,7 @@ class ICPZ : public EncoderBase {
         api.add_api_variable(prefix + "cal", new const APICallback([this](){ return this->get_cal_string(); }));
         api.add_api_variable(prefix + "cals", new const APICallback([this](){ return this->get_cals_string(); }));
         api.add_api_variable(prefix + "cmd_result", new const APICallback([this](){ return this->get_cmd_result(); }));
+        api.add_api_variable(prefix + "disk_um", new const APICallbackFloat([this](){ return this->r_disk_um[this->disk_]; }));
     }
 
  protected:
