@@ -228,6 +228,10 @@ class System {
         api.add_api_variable("timestamp", new const APICallbackUint32(get_clock));
         api.add_api_variable("mrollover", new const APICallbackFloat([](){ return actuator_.fast_loop_.get_rollover(); }));
         api.add_api_variable("gear_ratio", new const APIFloat(&param->startup_param.gear_ratio));
+        api.add_api_variable("version", new const APICallback([](){ return GIT_VERSION; }));
+        api.add_api_variable("git_sha", new const APICallback([](){ return GIT_HASH; }));
+        api.add_api_variable("motorlib_sha", new const APICallback([](){ return MOTORLIB_HASH; }));
+        api.add_api_variable("name", new const APICallback([](){ return param->name; }));
 
         uint32_t t_start = get_clock();
         while(1) {

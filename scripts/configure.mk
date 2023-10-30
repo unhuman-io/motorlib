@@ -8,7 +8,9 @@ BUILD_DIR = build
 GIT_VERSION := $(shell git describe --long --dirty --always --abbrev=7)
 GIT_HASH := $(shell git rev-parse HEAD)
 
+
 SELF_DIR := $(dir $(lastword $(MAKEFILE_LIST)))
+MOTORLIB_HASH := $(shell git -C $(SELF_DIR) rev-parse HEAD)
 
 ifndef TARGET_MCU
 $(error need to define TARGET_MCU)
@@ -48,7 +50,8 @@ AS_DEFS =
 override C_DEFS +=  \
 -DGIT_VERSION=\"$(GIT_VERSION)\" \
 -DSTM32G474xx \
--DGIT_HASH=\"$(GIT_HASH)\"
+-DGIT_HASH=\"$(GIT_HASH)\" \
+-DMOTORLIB_HASH=\"$(MOTORLIB_HASH)\"
 ifdef NOTES
 override C_DEFS += \
 -DNOTES=\"-$(NOTES)\"
