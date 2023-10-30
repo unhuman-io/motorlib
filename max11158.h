@@ -2,6 +2,7 @@
 #define UNHUMAN_MOTORLIB_MAX11158_H_
 #include "torque_sensor.h"
 #include "logger.h"
+#include "parameter_api.h"
 
 class MAX11158 : public TorqueSensorBase {
  public:
@@ -53,6 +54,15 @@ class MAX11158 : public TorqueSensorBase {
         stale_value_count_ = 0;
         read_error_ = 0;
     }
+
+    void set_debug_variables(std::string prefix, ParameterAPI &api) {
+        api.add_api_variable(prefix + "raw", new const APIUint32(&raw_value_));
+        api.add_api_variable(prefix + "int", new const APIInt32(&signed_value_));
+        api.add_api_variable(prefix + "timeout_error", new const APIUint32(&timeout_error_));
+        api.add_api_variable(prefix + "read_error", new const APIUint32(&read_error_));
+        api.add_api_variable(prefix + "read_error", new const APIUint32(&read_error_));
+    }
+
     uint8_t count_ = 0;
 
     int32_t signed_value_ = 0;
@@ -63,7 +73,7 @@ class MAX11158 : public TorqueSensorBase {
     uint32_t raw_value_ = 0;
     SPIDMA &spi_dma_;
     static const uint8_t length_ = 5;
-    uint8_t data_out_[length_] = {};
+    uint8_t data_out_[length_] = {0xFF, 0xFF, 0xFF, 0xFF, 0xFF};
     uint8_t data_in_[length_] = {};
     uint8_t decimation_ = 0;
 };
