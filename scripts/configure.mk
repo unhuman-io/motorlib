@@ -42,7 +42,7 @@ $(SELF_DIR)../peripheral/stm32g4/startup_stm32g474xx.s
 
 # macros for gcc
 # AS defines
-AS_DEFS = 
+AS_DEFS =
 
 # C defines
 override C_DEFS +=  \
@@ -65,7 +65,9 @@ AS_INCLUDES =
 C_INCLUDES =  \
 -IInc \
 -I../motorlib/device/stm32g4/Include \
--I$(DRIVERS)/CMSIS/Include
+-I$(DRIVERS)/CMSIS/Include \
+-I$(SELF_DIR)../peripheral \
+-I$(SELF_DIR)../peripheral/stm32g4
 
 # -IDrivers/CMSIS/Include \
 # -I$(DRIVERS)/STM32G4xx_HAL_Driver/Inc \
@@ -90,7 +92,12 @@ sincos.cpp\
 util.cpp\
 hall.cpp\
 $(SELF_DIR)../peripheral/spi_encoder.cpp\
+$(SELF_DIR)../peripheral/spi_protocol.cpp\
+$(SELF_DIR)../peripheral/spi_mailbox.cpp\
+$(SELF_DIR)../peripheral/spi_protocol_states.cpp\
+$(SELF_DIR)../peripheral/spi_protocol_commands.cpp\
 $(SELF_DIR)../peripheral/stm32g4/usb.cpp\
+$(SELF_DIR)../peripheral/stm32g4/spi_slave.cpp\
 hrpwm.cpp\
 ams_encoder.cpp\
 parameter_api.cpp\

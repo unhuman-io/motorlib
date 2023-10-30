@@ -531,11 +531,11 @@ g_pfnVectors:
 	.weak	TIM7_DAC_IRQHandler
 	.thumb_set TIM7_DAC_IRQHandler,Default_Handler
 
-	.weak	DMA2_Channel1_IRQHandler
-	.thumb_set DMA2_Channel1_IRQHandler,Default_Handler
+	//.weak	DMA2_Channel1_IRQHandler
+	//.thumb_set DMA2_Channel1_IRQHandler,Default_Handler
 
-	.weak	DMA2_Channel2_IRQHandler
-	.thumb_set DMA2_Channel2_IRQHandler,Default_Handler
+	//.weak	DMA2_Channel2_IRQHandler
+	//.thumb_set DMA2_Channel2_IRQHandler,Default_Handler
 
 	.weak	DMA2_Channel3_IRQHandler
 	.thumb_set DMA2_Channel3_IRQHandler,Default_Handler
