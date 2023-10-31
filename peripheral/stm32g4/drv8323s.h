@@ -97,6 +97,11 @@ class DRV8323S : public DriverBase {
         uint16_t reg_in = regs_.DR;
         return reg_in;
     }
+    
+    uint16_t write_reg(uint8_t address, uint16_t reg_out) {
+        reg_out |= address << 11;
+        return write_reg(reg_out);
+    }
 
     uint16_t read_reg(uint8_t address) {
         uint16_t out_value = 1<<15 | address<<11;
@@ -116,6 +121,28 @@ class DRV8323S : public DriverBase {
             return value;
     }
     volatile int *register_operation_ = &register_operation_local_;
+
+    void set_debug_variables(ParameterAPI &api) {
+        api.add_api_variable("drv_idrivep_hs", new APICallbackUint8([this](){ return this->get_idrivep_hs(); },
+            [this](uint8_t val){ this->set_idrivep_hs(val); }));
+    }
+
+    uint8_t get_idrivep_hs() {
+        drv_spi_start();
+        uint16_t tmp = read_reg(3);
+        drv_spi_end();
+        return (tmp & 0xF0) >> 4;
+    }
+
+    void set_idrivep_hs(uint8_t val) {
+        drv_spi_start();
+        uint16_t tmp = read_reg(3);
+        logger.log_printf("drv idrivep %02x", tmp);
+        tmp &= ~0xF0;
+        tmp |= val << 4;
+        write_reg(3, tmp);
+        drv_spi_end();
+    }
 
  private:
     SPI_TypeDef &regs_;

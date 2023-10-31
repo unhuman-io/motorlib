@@ -174,6 +174,8 @@ void system_init() {
     config::imu.init();
 #endif
 
+    config::drv.set_debug_variables(System::api);
+
     System::api.add_api_variable("3v3", new APIFloat(&v3v3));
     std::function<float()> get_t = std::bind(&TempSensor::get_value, &config::temp_sensor);
     std::function<void(float)> set_t = std::bind(&TempSensor::set_value, &config::temp_sensor, std::placeholders::_1);
