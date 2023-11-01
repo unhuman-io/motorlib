@@ -3,6 +3,7 @@
 
 #include "../../driver.h"
 #include "../../logger.h"
+#include "../../parameter_api.h"
 
 extern uint16_t drv_regs_error;
 

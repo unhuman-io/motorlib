@@ -232,11 +232,14 @@ class System {
         api.add_api_variable("git_sha", new const APICallback([](){ return GIT_HASH; }));
         api.add_api_variable("motorlib_sha", new const APICallback([](){ return MOTORLIB_HASH; }));
         api.add_api_variable("name", new const APICallback([](){ return param->name; }));
+        uint32_t api_timeout_us = 10000;
+        api.add_api_variable("api_timeout", new APIUint32(&api_timeout_us));
+
 
         uint32_t t_start = get_clock();
         while(1) {
             count_++;
-            if (communication_.send_string_active() && get_clock() - t_start > US_TO_CPU(10000)) {
+            if (communication_.send_string_active() && get_clock() - t_start > US_TO_CPU(api_timeout_us)) {
                 communication_.cancel_send_string();
             }
             char *s = System::get_string();
