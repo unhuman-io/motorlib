@@ -122,7 +122,7 @@ class System {
         api.add_api_variable("power_avg", new const APIFloat(&actuator_.main_loop_.status_.power));
         api.add_api_variable("energy", new const APIUint32(&actuator_.main_loop_.status_.fast_loop.energy_uJ));
         api.add_api_variable("fast_log", new const APICallback([](){
-            //logger.log_printf("timestamp, position, iq_des, iq_meas_filt, ia, ib, ic, va, vb, vc, vbus");
+            static uint8_t fast_state = 0;
             actuator_.main_loop_.lock_status_log();
             FastLog log;
             std::string out;
@@ -139,11 +139,16 @@ class System {
                 log.command_vb = status.foc_status.command.v_b;
                 log.command_vc = status.foc_status.command.v_c;
                 log.vbus = status.vbus;
-
                 std::string s((char *) &log, sizeof(log));
+                actuator_.fast_loop_.status_log_.finish();
                 out += s;
+                
             }
-            actuator_.main_loop_.unlock_status_log();
+            fast_state++;
+            if (fast_state > 3) {
+                fast_state = 0;
+                actuator_.main_loop_.unlock_status_log();
+            }
             return out; }));
         api.add_api_variable("beep", new APICallbackFloat([](){ return 0; }, [](float f){ actuator_.fast_loop_.beep_on(f); }));
         api.add_api_variable("beep_frequency", new APIFloat(&actuator_.fast_loop_.param_.beep_frequency));
