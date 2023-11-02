@@ -145,7 +145,7 @@ class System {
                 
             }
             fast_state++;
-            if (fast_state > 3) {
+            if (fast_state > 4) {
                 fast_state = 0;
                 actuator_.main_loop_.unlock_status_log();
             }
