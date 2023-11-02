@@ -126,7 +126,7 @@ class System {
             actuator_.main_loop_.lock_status_log();
             FastLog log;
             std::string out;
-            for(int i=0; i<22; i++) {
+            for(int i=0; i<10; i++) {
                 FastLoopStatus &status = actuator_.fast_loop_.status_log_.next();
                 log.timestamp = status.timestamp;
                 log.measured_motor_position = status.foc_command.measured.motor_encoder;
@@ -145,7 +145,7 @@ class System {
                 
             }
             fast_state++;
-            if (fast_state > 4) {
+            if (fast_state > 9) {
                 fast_state = 0;
                 actuator_.main_loop_.unlock_status_log();
             }
