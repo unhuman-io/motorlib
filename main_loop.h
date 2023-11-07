@@ -379,6 +379,7 @@ class MainLoop {
 
       fast_loop_.set_iq_des(iq_des);
       fast_loop_.set_vq_des(vq_des);
+      fast_loop_.set_motor_velocity_measured(status_.motor_velocity_filtered);
       
       if (communication_.tx_data_ack()) {
         round_robin_logger.get_next_data(&status_.rr_data);

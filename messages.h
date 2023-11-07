@@ -50,6 +50,7 @@ typedef struct {
                             // for linear encoders set to poles per mm * 2 * pi
     float id_rate_limit;    // A/s rate limit on the current d
     float iq_rate_limit;    // A/s rate limit on the current q
+    float L;
 } FOCParam;
 
 #define COGGING_TABLE_SIZE 128  // must be multiple of 2
@@ -250,7 +251,7 @@ typedef struct {
 
 typedef struct {
     struct { float i_d, i_q, v_q; } desired;         // desired current in A, i_d typically 0, i_q creates torque, v_q in V is a feedforward
-    struct { float i_a, i_b, i_c, motor_encoder; } measured;    // sensor currents in A, motor_encoder in mechanical rad referenced to electrical zero
+    struct { float i_a, i_b, i_c, motor_encoder, motor_velocity; } measured;    // sensor currents in A, motor_encoder in mechanical rad referenced to electrical zero
 } FOCCommand;
 
 typedef struct {
