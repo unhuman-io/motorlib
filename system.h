@@ -242,6 +242,7 @@ class System {
         api.add_api_variable("name", new const APICallback([](){ return param->name; }));
         uint32_t api_timeout_us = 10000;
         api.add_api_variable("api_timeout", new APIUint32(&api_timeout_us));
+        api.add_api_variable("id_iq_mult", new APIFloat(&actuator_.fast_loop_.id_iq_mult_));
 
 
         uint32_t t_start = get_clock();

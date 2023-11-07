@@ -103,6 +103,7 @@ class FastLoop {
       // update FOC
       foc_command_.measured.motor_encoder = phase_mode_*(motor_enc_wrap_ - motor_electrical_zero_dir_pos_)*(2*(float) M_PI  * inv_motor_encoder_cpr_);
       foc_command_.desired.i_q = iq_des_gain_ * (iq_des + iq_ff);
+      foc_command_.desired.i_d = id_iq_mult_ * iq_des_gain_ * iq_des;
 
       if (mode_ == STEPPER_TUNING_MODE) {
         foc_command_.measured.motor_encoder = stepper_position_;
@@ -395,6 +396,7 @@ class FastLoop {
    uint32_t zero_current_sensors_end_ = 0;
    float phi_beep_ = 0;
    uint32_t energy_uJ_ = 0;
+   float id_iq_mult_ = 0;
   
    FirstOrderLowPassFilter iq_filter_;
    FirstOrderLowPassFilter motor_velocity_filter_;
