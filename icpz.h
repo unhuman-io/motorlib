@@ -339,6 +339,24 @@ class ICPZ : public EncoderBase {
         return phase;
     }
 
+    uint8_t get_led_cur() {
+        return (read_register(3, 0, 1)[0] & 0xE) >> 1;
+    }
+
+    void set_led_cur(uint8_t led_cur) {
+        // 0: 40 mA
+        // 1: 0  mA
+        // 2: 1  mA
+        // 3: 2  mA
+        // 4: 4  mA
+        // 5: 8  mA
+        // 6: 16 mA
+        // 7: 32 mA
+        uint8_t tmp = read_register(3, 0, 1)[0] & 0x11;
+        tmp |= (led_cur << 1) & 0xE;
+        set_register(3, 0, {tmp});
+    }
+
     std::string get_cal_string() {
         char c[200];
         std::snprintf(c, 200, "cos_off: %f, sin_off: %f, sc_gain, %f, sc_phase: %f ai_phase: %f, ai_scale: %f, ecc_amp: %f, ecc_phase: %f", 
@@ -430,6 +448,8 @@ class ICPZ : public EncoderBase {
             [this](uint8_t u){ this->set_ac_eto(u); }));
         api.add_api_variable(prefix + "ac_count", new APICallbackUint8([this](){ return this->get_ac_count(); }, 
             [this](uint8_t u){ this->set_ac_count(u); }));
+        api.add_api_variable(prefix + "led_cur", new APICallbackUint8([this](){ return this->get_led_cur(); }, 
+            [this](uint8_t u){ this->set_led_cur(u); }));
         api.add_api_variable(prefix + "cal", new const APICallback([this](){ return this->get_cal_string(); }));
         api.add_api_variable(prefix + "cals", new const APICallback([this](){ return this->get_cals_string(); }));
         api.add_api_variable(prefix + "cmd_result", new const APICallback([this](){ return this->get_cmd_result(); }));
