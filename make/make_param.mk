@@ -25,7 +25,7 @@ build_param: $(PARAM_OUT)
 
 ifndef PARAM_OVERRIDE
 $(PARAM_OUT): $(PARAM_FILE) | $(PARAM_BUILD_DIR)
-	$(CC) -c $(GIT_DEFINE) $< -o $(PARAM_BUILD_DIR)/$(notdir $(<:c=o)) 
+	$(CC) -I param -c $(GIT_DEFINE) $< -o $(PARAM_BUILD_DIR)/$(notdir $(<:c=o)) 
 	$(CP) -O binary -S -j flash_param $(PARAM_BUILD_DIR)/$(notdir $(<:c=o)) $@ 
 endif
 
@@ -33,7 +33,7 @@ endif
 define generateRules
 a = $(PARAM_BUILD_DIR)/$(notdir $(PARAM_FILE:.c=))_$(1:.h=)
 $(a).bin: $(PARAM_FILE) $(1) | $(PARAM_BUILD_DIR)
-	$(CC) -include $(1) -c $(GIT_DEFINE) $(PARAM_FILE) -o $(a).o 
+	$(CC) -I param -include $(1) -c $(GIT_DEFINE) $(PARAM_FILE) -o $(a).o 
 	$(CP) -O binary -S -j flash_param $(a).o $(a).bin
 endef
 
