@@ -17,6 +17,11 @@ PREFIX = arm-none-eabi-
 # Install GCC automatically if GCC_PATH is not specified and it's not already installed.
 
 ifndef GCC_PATH
+upgrade_gcc:
+	$(SELF_DIR)../scripts/install_gcc.sh
+
+.PHONY: upgrade_gcc
+
 $(SELF_DIR)../gcc/bin/$(PREFIX)gcc:
 	$(SELF_DIR)../scripts/install_gcc.sh
 endif
