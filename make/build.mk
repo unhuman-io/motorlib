@@ -1,13 +1,18 @@
 
-# default action: build all
-.DEFAULT_GOAL = all
-all:: $(CC)
+.DEFAULT_GOAL = clean_build
+clean_build::
 	$(MAKE) clean 
-	$(MAKE) build_all 
+	$(MAKE) all 
 
-build_all: $(BUILD_DIR)/$(TARGET).elf $(BUILD_DIR)/$(TARGET).hex $(BUILD_DIR)/$(TARGET).bin $(BUILD_TGZ)
+all:: $(BUILD_DIR)/$(TARGET).elf $(BUILD_DIR)/$(TARGET).hex $(BUILD_DIR)/$(TARGET).bin $(BUILD_TGZ)
 
-SELF_DIR := $(dir $(lastword $(MAKEFILE_LIST)))
+
+FORCE:
+
+.PHONY: FORCE
+
+# always build the config since C_DEFS may be different
+$(BUILD_DIR)/$(notdir $(CONFIG_FILE:cpp=o)): FORCE
 
 #######################################
 # build the application
@@ -25,7 +30,7 @@ $(BUILD_DIR)/%.o: %.c Makefile | $(BUILD_DIR)
 	$(CC) $(PARAM_INCLUDE) -c $(CFLAGS) -Wa,-a,-ad,-alms=$(BUILD_DIR)/lto.lst $< -o $@
 
 $(BUILD_DIR)/%.o: %.cpp Makefile | $(BUILD_DIR) 
-	$(CXX) -include $(SELF_DIR)../system_log.h -c $(CPPFLAGS) -std=c++11 -Wa,-a,-ad,-alms=$(BUILD_DIR)/lto.lst $< -o $@
+	$(CXX) -c $(CPPFLAGS) -std=c++11 -Wa,-a,-ad,-alms=$(BUILD_DIR)/lto.lst $< -o $@
 
 $(BUILD_DIR)/%.o: %.s Makefile | $(BUILD_DIR)
 	$(AS) -c $(CFLAGS) $< -o $@
@@ -37,7 +42,6 @@ $(BUILD_DIR)/$(TARGET).elf: $(OBJECTS) Makefile
 $(BUILD_DIR)/%.hex: $(BUILD_DIR)/%.elf | $(BUILD_DIR)
 	$(HEX) $< $@
 	
-include $(SELF_DIR)firmware_installer.mk
 	
 $(BUILD_DIR):
 	$(MKDIR) $@
