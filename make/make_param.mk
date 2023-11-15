@@ -3,9 +3,9 @@ GIT_DEFINE := -DGIT_HASH=\"$(GIT_HASH)\"
 
 ifdef PARAM_OVERRIDE
 PARAM_SUFFIX=$(addprefix _,$(notdir $(PARAM_OVERRIDE:.h=)))
-PARAM_OUT = $(foreach suf,$(PARAM_SUFFIX),$(PARAM_BUILD_DIR)/$(notdir $(PARAM_FILE:.c=))$(suf).bin)
+PARAM_OUT = $(foreach suf,$(PARAM_SUFFIX),$(PARAM_BUILD_DIR)$(notdir $(PARAM_FILE:.c=))$(suf).bin)
 else
-PARAM_OUT = $(PARAM_BUILD_DIR)/$(notdir $(PARAM_FILE:c=bin))
+PARAM_OUT = $(PARAM_BUILD_DIR)$(notdir $(PARAM_FILE:c=bin))
 endif
 
 ifndef PARAM_BUILD_DIR
@@ -14,8 +14,6 @@ endif
 
 $(info PARAM_BUILD_DIR: $(PARAM_BUILD_DIR))
 $(info $(PARAM_OUT))
-
-all:: param
 
 .PHONY: param
 
@@ -42,4 +40,6 @@ endef
 $(foreach ovr, $(PARAM_OVERRIDE), $(eval $(call generateRules, $(ovr))))
 
 $(PARAM_BUILD_DIR):
+ifneq "$(PARAM_BUILD_DIR)" "build"
 	$(MKDIR) $@
+endif
