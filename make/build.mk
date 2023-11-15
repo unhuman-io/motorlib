@@ -1,8 +1,8 @@
 
 .DEFAULT_GOAL = clean_build
 clean_build::
-	$(MAKE) clean 
-	$(MAKE) all 
+	$(MAKE) -e clean 
+	$(MAKE) -e all 
 
 all:: $(BUILD_DIR)/$(TARGET).elf $(BUILD_DIR)/$(TARGET).hex $(BUILD_DIR)/$(TARGET).bin $(BUILD_TGZ)
 

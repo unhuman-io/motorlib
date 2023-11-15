@@ -19,7 +19,7 @@ $(info $(PARAM_OUT))
 
 param:
 	-$(RM) $(PARAM_BUILD_DIR)
-	$(MAKE) build_param
+	$(MAKE) -e build_param
 
 build_param: $(PARAM_OUT)
 
