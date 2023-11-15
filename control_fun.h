@@ -267,9 +267,9 @@ class RateLimiter {
 class PIDController {
 public:
     PIDController(float dt) : velocity_filter_(dt), output_filter_(dt), dt_(dt) {}
-    virtual ~PIDController() {}
+    ~PIDController() {}
     void init(float measured) { rate_limit_.init(measured), ki_sum_ = 0; measured_last_ = measured; velocity_filter_.init(0); output_filter_.init(0); } // todo init to current output 
-    virtual float step(float desired, float velocity_desired, float measured, float velocity_limit = INFINITY);
+    float step(float desired, float velocity_desired, float measured, float velocity_limit = INFINITY);
     void set_param(const PIDParam &param);
     float get_error() const { return error_last_; }
     void set_rollover(float rollover) { rollover_ = rollover; }
@@ -295,21 +295,21 @@ protected:
 
 class PIDWrapController : public PIDController {
  public:
-    virtual float step(float desired, float velocity_desired, float measured, float velocity_limit = INFINITY);
+    float step(float desired, float velocity_desired, float measured, float velocity_limit = INFINITY);
 };
 
 class PIDDeadbandController : public PIDController {
 public:
     PIDDeadbandController(float dt) : PIDController(dt) {}
-    virtual ~PIDDeadbandController() {}
-    virtual float step(float desired, float velocity_desired, float deadband, float measured, float velocity_limit = INFINITY);
+    ~PIDDeadbandController() {}
+    float step(float desired, float velocity_desired, float deadband, float measured, float velocity_limit = INFINITY);
 };
 
 class PIDInterpolateController : public PIDController {
  public:
     PIDInterpolateController(float dt, float filter_hz) : PIDController(dt), filt1_(dt, filter_hz), filt2_(dt, filter_hz) {}
-    virtual ~PIDInterpolateController() {}
-    virtual float step(float desired, float velocity_desired, float measured, float velocity_limit = INFINITY) {
+    ~PIDInterpolateController() {}
+    float step(float desired, float velocity_desired, float measured, float velocity_limit = INFINITY) {
         desired = filt2_.update(filt1_.update(desired));
         return PIDController::step(desired, velocity_desired, measured, velocity_limit);
     }
