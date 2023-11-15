@@ -17,11 +17,11 @@ PREFIX = arm-none-eabi-
 # Install GCC automatically if GCC_PATH is not specified and it's not already installed.
 
 ifndef GCC_PATH
-$(SELF_DIR)/../gcc/bin/$(PREFIX)gcc:
-	$(SELF_DIR)/install_gcc.sh
+$(SELF_DIR)../gcc/bin/$(PREFIX)gcc:
+	$(SELF_DIR)../scripts/install_gcc.sh
 endif
 
-GCC_PATH=$(dir $(lastword $(MAKEFILE_LIST)))../gcc/bin
+GCC_PATH=$(SELF_DIR)../gcc/bin
 CC = $(GCC_PATH)/$(PREFIX)gcc
 AS = $(GCC_PATH)/$(PREFIX)gcc -x assembler-with-cpp
 CP = $(GCC_PATH)/$(PREFIX)objcopy
