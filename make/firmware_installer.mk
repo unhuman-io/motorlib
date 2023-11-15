@@ -18,7 +18,7 @@ $(BUILD_DIR)/%.tgz: $(BUILD_DIR)/%.bin | $(BUILD_DIR)
 	chmod +x $(BUILD_DIR)/$(TARGET)/load_$(TARGET)_param.sh
 	tar czvf $@ -C $(BUILD_DIR) $(TARGET)
 
-load: $(BUILD_DIR)/$(TARGET).tgz
+load: $(BUILD_TGZ)
 	$(BUILD_DIR)/$(TARGET)/load_$(TARGET).sh
 
 .PHONY: load

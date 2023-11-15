@@ -40,4 +40,6 @@ endef
 $(foreach ovr, $(PARAM_OVERRIDE), $(eval $(call generateRules, $(ovr))))
 
 $(PARAM_BUILD_DIR):
+ifneq "$(PARAM_BUILD_DIR)" "build"
 	$(MKDIR) $@
+endif

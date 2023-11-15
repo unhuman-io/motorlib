@@ -5,6 +5,10 @@ clean_build::
 	$(MAKE) clean
 	$(MAKE) all
 
+ifneq "$(OS)" "Windows_NT"
+BUILD_TGZ = $(BUILD_DIR)/$(TARGET).tgz
+endif
+
 all:: $(BUILD_DIR)/$(TARGET).elf $(BUILD_DIR)/$(TARGET).hex $(BUILD_DIR)/$(TARGET).bin $(BUILD_TGZ)
 
 
@@ -23,20 +27,19 @@ OBJECTS = $(addprefix $(BUILD_DIR)/,$(notdir $(C_SOURCES:.c=.o)))
 vpath %.c $(sort $(dir $(C_SOURCES)))
 OBJECTS += $(addprefix $(BUILD_DIR)/,$(notdir $(CPP_SOURCES:.cpp=.o)))
 vpath %.cpp $(sort $(dir $(CPP_SOURCES)))
-# list of ASM program objects
 OBJECTS += $(addprefix $(BUILD_DIR)/,$(notdir $(ASM_SOURCES:.s=.o)))
 vpath %.s $(sort $(dir $(ASM_SOURCES)))
 
-$(BUILD_DIR)/%.o: %.c Makefile | $(BUILD_DIR) 
+$(BUILD_DIR)/%.o: %.c | $(BUILD_DIR) 
 	$(CC) $(PARAM_INCLUDE) -c $(CFLAGS) -Wa,-a,-ad,-alms=$(BUILD_DIR)/lto.lst $< -o $@
 
-$(BUILD_DIR)/%.o: %.cpp Makefile | $(BUILD_DIR) 
+$(BUILD_DIR)/%.o: %.cpp | $(BUILD_DIR) 
 	$(CXX) -c $(CPPFLAGS) -std=c++11 -Wa,-a,-ad,-alms=$(BUILD_DIR)/lto.lst $< -o $@
 
-$(BUILD_DIR)/%.o: %.s Makefile | $(BUILD_DIR)
+$(BUILD_DIR)/%.o: %.s | $(BUILD_DIR)
 	$(AS) -c $(CFLAGS) $< -o $@
 
-$(BUILD_DIR)/$(TARGET).elf: $(OBJECTS) Makefile
+$(BUILD_DIR)/$(TARGET).elf: $(OBJECTS)
 	$(CXX) $(OBJECTS) $(LDFLAGS) -o $@
 	$(SZ) $@
 
@@ -47,9 +50,6 @@ $(BUILD_DIR)/%.hex: $(BUILD_DIR)/%.elf | $(BUILD_DIR)
 $(BUILD_DIR):
 	$(MKDIR) $@
 
-ifneq "$(OS)" "Windows_NT"
-BUILD_TGZ = $(BUILD_DIR)/$(TARGET).tgz
-endif
 
 #######################################
 # clean up
