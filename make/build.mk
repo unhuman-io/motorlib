@@ -9,7 +9,7 @@ all:: $(BUILD_DIR)/$(TARGET).elf $(BUILD_DIR)/$(TARGET).hex $(BUILD_DIR)/$(TARGE
 
 FORCE:
 
-.PHONY: FORCE
+.PHONY: FORCE clean all clean_build
 
 # always build the config since C_DEFS may be different
 $(BUILD_DIR)/$(notdir $(CONFIG_FILE:cpp=o)): FORCE
