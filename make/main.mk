@@ -1,6 +1,4 @@
 SELF_DIR := $(dir $(lastword $(MAKEFILE_LIST)))
-export
-
 
 include $(SELF_DIR)configure_gcc.mk
 include $(SELF_DIR)configure.mk

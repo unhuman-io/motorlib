@@ -1,8 +1,9 @@
 
 .DEFAULT_GOAL = clean_build
+
 clean_build::
-	$(MAKE) -e clean 
-	$(MAKE) -e all 
+	$(MAKE) clean
+	$(MAKE) all
 
 all:: $(BUILD_DIR)/$(TARGET).elf $(BUILD_DIR)/$(TARGET).hex $(BUILD_DIR)/$(TARGET).bin $(BUILD_TGZ)
 
@@ -59,4 +60,5 @@ clean:
 #######################################
 # dependencies
 #######################################
+# note this seems like it will be behind one build
 -include $(wildcard $(BUILD_DIR)/*.d)
