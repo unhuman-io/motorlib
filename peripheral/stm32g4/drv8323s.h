@@ -73,7 +73,7 @@ class DRV8323S : public DriverBase {
             if ((reg_in & 0x7FF) != (reg_out & 0x7FF)) {
                 drv_regs_error |= 1 << i;
             }
-            logger.log_printf("address: %d, reg_out: %x, reg_in: %x", address, reg_out, reg_in);
+            logger.log_printf("address: %d, reg_out: %03x, reg_in: %03x", address, reg_out & 0x7FF, reg_in);
         }
 
         drv_spi_end();
@@ -126,6 +126,21 @@ class DRV8323S : public DriverBase {
     void set_debug_variables(ParameterAPI &api) {
         api.add_api_variable("drv_idrivep_hs", new APICallbackUint8([this](){ return this->get_idrivep_hs(); },
             [this](uint8_t val){ this->set_idrivep_hs(val); }));
+        api.add_api_variable("drv_csa_reg", new APICallbackHex<uint16_t>([this](){ return this->get_csa_reg(); },
+            [this](uint16_t val){ this->set_csa_reg(val); }));
+    }
+
+    uint16_t get_csa_reg() {
+        drv_spi_start();
+        uint16_t tmp = read_reg(6);
+        drv_spi_end();
+        return tmp;
+    }
+
+    void set_csa_reg(uint16_t reg) {
+        drv_spi_start();
+        write_reg(6, reg);
+        drv_spi_end();
     }
 
     uint8_t get_idrivep_hs() {

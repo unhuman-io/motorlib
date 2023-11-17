@@ -116,6 +116,23 @@ typedef APICallbackUint<int32_t> APICallbackInt32;
 typedef APICallbackUint<int16_t> APICallbackInt16;
 typedef APICallbackUint<int8_t> APICallbackInt8;
 
+template<class T>
+class APICallbackHex : public APIVariable {
+ public:
+   APICallbackHex(std::function<T()> getfun , std::function<void(T)> setfun) : getfun_(getfun), setfun_(setfun) {}
+   APICallbackHex(std::function<T()> getfun) : getfun_(getfun) {}
+   void set(std::string s) { setfun_(std::stoi(s, nullptr, 16)); }
+   std::string get() const {
+      T value = getfun_();
+      std::vector<char>bytes((char *) &value,(char *) &value+sizeof(T)); 
+      std::reverse(bytes.begin(),bytes.end());
+      return bytes_to_hex(bytes);
+   }
+ private:
+   std::function<T()> getfun_;
+   std::function<void(T)> setfun_;
+};
+
 // allows for setting variables through text commands
 class ParameterAPI {
  public:
