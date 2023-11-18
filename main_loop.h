@@ -43,6 +43,7 @@ class MainLoop {
           communication_(communication), led_(led), frequency_hz_(frequency_hz), output_encoder_(output_encoder), torque_sensor_(torque),
           output_encoder_correction_table_(param_.output_encoder.table), 
           torque_correction_table_(param_.torque_sensor.table), driver_(driver), brake_(brake),
+          dft_desired_(1.0/frequency_hz), dft_measured_(1.0/frequency_hz_),
           iq_find_limits_filter_(1.0/frequency_hz, 1), motor_velocity_filter_(1.0/frequency_hz, param.output_filter_hz.motor_velocity), motor_position_filter_(1.0/frequency_hz),
           output_position_filter_(1.0/frequency_hz), output_velocity_filter_(1.0/frequency_hz, param.output_filter_hz.output_velocity), torque_filter_(1.0/frequency_hz) {
           set_param();
@@ -193,6 +194,19 @@ class MainLoop {
           command_current_ = set_tuning_command(receive_data_, count_received);
           float desired = *tuning_trajectory_generator_.value();
           dft_desired_.step(desired, tuning_trajectory_generator_.get_frequency());
+          float measured = 0;
+          switch (command_current_.mode_desired) {
+            case POSITION:
+              measured = status_.motor_position;
+              break;
+            case VELOCITY:
+              measured = status_.motor_velocity_filtered;
+              break;
+            case TORQUE:
+              measured = status_.torque;
+              break;
+          }
+          dft_measured_.step(measured, tuning_trajectory_generator_.get_frequency());
       } else {
           command_current_ = receive_data_;
       }
@@ -716,11 +730,12 @@ class MainLoop {
     volatile bool driver_enable_triggered_ = false;
     volatile bool driver_disable_triggered_ = false;
     uint32_t last_energy_uJ_ = 0;
+
+    DFT dft_desired_, dft_measured_;
+
     enum FindLimitsState {FIND_FIRST_LIMIT, FIND_SECOND_LIMIT, VELOCITY_TO_POSITION, GOTO_POSITION} find_limits_state_;
     FirstOrderLowPassFilter iq_find_limits_filter_;
     bool position_limits_disable_ = false;
-
-    DFT dft_desired_, dft_measured_;
 
     float output_position_last_ = 0;
     FIRFilter<> motor_velocity_filter_;

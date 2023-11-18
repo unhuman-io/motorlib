@@ -422,13 +422,14 @@ inline T wrap1_diff(T value, T value2, T rollover) {
 
 class DFT {
  public:
-    DFT(int num_points = 128) : num_points_(num_points) {}
+    DFT(float dt, int num_points = 128) : dt_(dt), num_points_(num_points) {}
     void step(float value, float frequency_hz);
     float magnitude_last_ = 0;
     float phase_last_ = 0;
     float frequency_last_ = 0; 
     float real_last_, imag_last_;
  private:
+    float dt_;
     float real_ = 0;
     float imag_ = 0;
     float frequency_ = 0;
