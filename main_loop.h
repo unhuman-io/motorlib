@@ -43,7 +43,6 @@ class MainLoop {
           communication_(communication), led_(led), frequency_hz_(frequency_hz), output_encoder_(output_encoder), torque_sensor_(torque),
           output_encoder_correction_table_(param_.output_encoder.table), 
           torque_correction_table_(param_.torque_sensor.table), driver_(driver), brake_(brake),
-          dft_desired_(1.0/frequency_hz), dft_measured_(1.0/frequency_hz_),
           iq_find_limits_filter_(1.0/frequency_hz, 1), motor_velocity_filter_(1.0/frequency_hz, param.output_filter_hz.motor_velocity), motor_position_filter_(1.0/frequency_hz),
           output_position_filter_(1.0/frequency_hz), output_velocity_filter_(1.0/frequency_hz, param.output_filter_hz.output_velocity), torque_filter_(1.0/frequency_hz) {
           set_param();
@@ -193,7 +192,7 @@ class MainLoop {
       if (receive_data_.mode_desired == TUNING) {
           command_current_ = set_tuning_command(receive_data_, count_received);
           float desired = *tuning_trajectory_generator_.value();
-          dft_desired_.step(desired, tuning_trajectory_generator_.get_frequency());
+          dft_desired_.step(desired, tuning_trajectory_generator_.get_frequency(), timestamp_);
           float measured = 0;
           switch (command_current_.mode_desired) {
             case POSITION:
@@ -206,7 +205,7 @@ class MainLoop {
               measured = status_.torque;
               break;
           }
-          dft_measured_.step(measured, tuning_trajectory_generator_.get_frequency());
+          dft_measured_.step(measured, tuning_trajectory_generator_.get_frequency(), timestamp_);
       } else {
           command_current_ = receive_data_;
       }
@@ -301,8 +300,8 @@ class MainLoop {
               }
             }
           }
-          dft_desired_.step(status_.fast_loop.foc_command.desired.i_q, fast_loop_.get_tuning_frequency());
-          dft_measured_.step(status_.fast_loop.foc_status.measured.i_q, fast_loop_.get_tuning_frequency());
+          dft_desired_.step(status_.fast_loop.foc_command.desired.i_q, fast_loop_.get_tuning_frequency(), status_.fast_loop.timestamp);
+          dft_measured_.step(status_.fast_loop.foc_status.measured.i_q, fast_loop_.get_tuning_frequency(), status_.fast_loop.timestamp);
           break;
         case VOLTAGE:
           vq_des = command_current_.voltage.voltage_desired;

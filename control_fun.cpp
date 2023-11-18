@@ -1,5 +1,6 @@
 #include "control_fun.h"
 //#include "hal_fun.h"
+#include "util.h"
 #include <cmath>
 
 // 11 point Savitzky-Golay linear polynomial filter, first derivative (for velocity)
@@ -187,9 +188,10 @@ float PIDDeadbandController::step(float desired, float velocity_desired, float d
     return PIDController::step(desired_with_deadband, velocity_desired, measured, velocity_limit);
 }
 
-void DFT::step(float value, float frequency_hz) {
-    real_ += value * std::cos(-2*M_PI*frequency_hz*count_*dt_)/num_points_;
-    imag_ += value * std::sin(-2*M_PI*frequency_hz*count_*dt_)/num_points_;
+void DFT::step(float value, float frequency_hz, mcu_time time) {
+    float t_seconds = (time - time_start_)*(1.0/CPU_FREQUENCY_HZ);
+    real_ += value * std::cos(-2*M_PI*frequency_hz*t_seconds)/num_points_;
+    imag_ += value * std::sin(-2*M_PI*frequency_hz*t_seconds)/num_points_;
     frequency_ += frequency_hz/num_points_;
     count_++;
     if (count_ > num_points_) {
@@ -199,6 +201,7 @@ void DFT::step(float value, float frequency_hz) {
         phase_last_ = std::atan2(imag_, real_);
         real_last_ = real_;
         imag_last_ = imag_;
+        time_start_ = time;
         frequency_ = 0;
         imag_ = 0;
         real_ = 0;
