@@ -243,6 +243,12 @@ class System {
         uint32_t api_timeout_us = 10000;
         api.add_api_variable("api_timeout", new APIUint32(&api_timeout_us));
         api.add_api_variable("notes", new const APICallback([](){ return NOTES; }));
+        api.add_api_variable("tuning_desired", new const APIFloat(&actuator_.main_loop_.tuning_trajectory_generator_.trajectory_value_.value ));
+        api.add_api_variable("dft_frequency", new const APIFloat(&actuator_.main_loop_.dft_.desired_.frequency_last_));
+        api.add_api_variable("dft_desired_magnitude", new const APIFloat(&actuator_.main_loop_.dft_.desired_.magnitude_last_));
+        api.add_api_variable("dft_phase", new const APIFloat(&actuator_.main_loop_.dft_.phase_));
+        api.add_api_variable("dft_magnitude", new const APIFloat(&actuator_.main_loop_.dft_.magnitude_));
+
 
 
         uint32_t t_start = get_clock();

@@ -181,6 +181,7 @@ class FastLoop {
     void set_vq_des(float vq) { foc_command_.desired.v_q = vq; }
     void set_tuning_amplitude(float amplitude) { tuning_amplitude_ = amplitude; }
     void set_tuning_frequency(float frequency) { tuning_frequency_ = frequency; }
+    float get_tuning_frequency() const { return tuning_frequency_; }
     void set_tuning_chirp(bool on, float chirp_rate) { 
       current_tuning_chirp_ = on; 
       chirp_rate_ = chirp_rate; 

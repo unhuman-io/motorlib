@@ -191,6 +191,20 @@ class MainLoop {
 
       if (receive_data_.mode_desired == TUNING) {
           command_current_ = set_tuning_command(receive_data_, count_received);
+          float desired = *tuning_trajectory_generator_.value();
+          float measured = 0;
+          switch (command_current_.mode_desired) {
+            case POSITION:
+              measured = status_.motor_position;
+              break;
+            case VELOCITY:
+              measured = status_.motor_velocity_filtered;
+              break;
+            case TORQUE:
+              measured = status_.torque;
+              break;
+          }
+          dft_.step(desired, measured, tuning_trajectory_generator_.get_frequency(), timestamp_);
       } else {
           command_current_ = receive_data_;
       }
@@ -285,6 +299,8 @@ class MainLoop {
               }
             }
           }
+          dft_.step(status_.fast_loop.foc_command.desired.i_q, status_.fast_loop.foc_status.measured.i_q, 
+            fast_loop_.get_tuning_frequency(), status_.fast_loop.timestamp);
           break;
         case VOLTAGE:
           vq_des = command_current_.voltage.voltage_desired;
@@ -712,6 +728,9 @@ class MainLoop {
     volatile bool driver_enable_triggered_ = false;
     volatile bool driver_disable_triggered_ = false;
     uint32_t last_energy_uJ_ = 0;
+
+    DFTResponse dft_;
+
     enum FindLimitsState {FIND_FIRST_LIMIT, FIND_SECOND_LIMIT, VELOCITY_TO_POSITION, GOTO_POSITION} find_limits_state_;
     FirstOrderLowPassFilter iq_find_limits_filter_;
     bool position_limits_disable_ = false;
