@@ -426,7 +426,8 @@ class DFT {
     void step(float value, float frequency_hz);
     float magnitude_last_ = 0;
     float phase_last_ = 0;
-    float frequency_last_ = 0;
+    float frequency_last_ = 0; 
+    float real_last_, imag_last_;
  private:
     float real_ = 0;
     float imag_ = 0;

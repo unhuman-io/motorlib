@@ -287,6 +287,7 @@ class MainLoop {
               }
             }
           }
+          dft_desired_.step(status_.fast_loop.foc_status.measured.i_q, fast_loop_.get_tuning_frequency());
           break;
         case VOLTAGE:
           vq_des = command_current_.voltage.voltage_desired;
