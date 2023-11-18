@@ -197,7 +197,7 @@ void DFT::step(float value, float frequency_hz, mcu_time time) {
     if (count_ > num_points_) {
         count_ = 1;
         frequency_last_ = frequency_;
-        magnitude_last_ = std::sqrt(real_ * real_ + imag_ * imag_);
+        magnitude_last_ = std::sqrt(real_ * real_ + imag_ * imag_) * 2;
         phase_last_ = std::atan2(imag_, real_);
         real_last_ = real_;
         imag_last_ = imag_;

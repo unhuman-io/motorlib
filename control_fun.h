@@ -428,13 +428,34 @@ class DFT {
     float phase_last_ = 0;
     float frequency_last_ = 0; 
     float real_last_, imag_last_;
+    int count_ = 1;
  private:
     mcu_time time_start_;
     float real_ = 0;
     float imag_ = 0;
     float frequency_ = 0;
-    int count_ = 1;
     int num_points_;
+};
+
+class DFTResponse {
+ public:
+    DFTResponse(int num_points = 128) : desired_(num_points), measured_(num_points) {}
+    void step(float desired, float measured, float frequency, mcu_time time) {
+        desired_.step(desired, frequency, time);
+        measured_.step(measured, frequency, time);
+        if (desired_.count_ == 1) {
+            magnitude_ = measured_.magnitude_last_ / desired_.magnitude_last_;
+            phase_ = measured_.phase_last_ - desired_.phase_last_;
+            if (phase_ > M_PI) {
+                phase_ -= 2*M_PI;
+            } else if (phase_ < -M_PI) {
+                phase_ += 2*M_PI;
+            }
+        }
+    }
+
+    DFT desired_, measured_;
+    float magnitude_, phase_;
 };
 
 
