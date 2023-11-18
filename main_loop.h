@@ -287,7 +287,8 @@ class MainLoop {
               }
             }
           }
-          dft_desired_.step(status_.fast_loop.foc_status.measured.i_q, fast_loop_.get_tuning_frequency());
+          dft_desired_.step(status_.fast_loop.foc_command.desired.i_q, fast_loop_.get_tuning_frequency());
+          dft_measured_.step(status_.fast_loop.foc_status.measured.i_q, fast_loop_.get_tuning_frequency());
           break;
         case VOLTAGE:
           vq_des = command_current_.voltage.voltage_desired;
@@ -719,7 +720,7 @@ class MainLoop {
     FirstOrderLowPassFilter iq_find_limits_filter_;
     bool position_limits_disable_ = false;
 
-    DFT dft_desired_;
+    DFT dft_desired_, dft_measured_;
 
     float output_position_last_ = 0;
     FIRFilter<> motor_velocity_filter_;
