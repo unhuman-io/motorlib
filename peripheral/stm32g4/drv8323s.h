@@ -126,6 +126,10 @@ class DRV8323S : public DriverBase {
     void set_debug_variables(ParameterAPI &api) {
         api.add_api_variable("drv_idrivep_hs", new APICallbackUint8([this](){ return this->get_idrivep_hs(); },
             [this](uint8_t val){ this->set_idrivep_hs(val); }));
+        api.add_api_variable("drv_idrivep_ls", new APICallbackUint8([this](){ return this->get_idrivep_ls(); },
+            [this](uint8_t val){ this->set_idrivep_ls(val); }));
+        api.add_api_variable("drv_tdrive", new APICallbackUint8([this](){ return this->get_tdrive(); },
+            [this](uint8_t val){ this->set_tdrive(val); }));
         api.add_api_variable("drv_csa_reg", new APICallbackHex<uint16_t>([this](){ return this->get_csa_reg(); },
             [this](uint16_t val){ this->set_csa_reg(val); }));
     }
@@ -144,19 +148,43 @@ class DRV8323S : public DriverBase {
     }
 
     uint8_t get_idrivep_hs() {
-        drv_spi_start();
-        uint16_t tmp = read_reg(3);
-        drv_spi_end();
-        return (tmp & 0xF0) >> 4;
+        return get_reg_bits(3, 0xF0);
     }
 
     void set_idrivep_hs(uint8_t val) {
+        set_reg_bits(3, 0xF0, val);
+    }
+
+    uint8_t get_idrivep_ls() {
+        return get_reg_bits(4, 0xF0);
+    }
+
+    void set_idrivep_ls(uint8_t val) {
+        set_reg_bits(4, 0xF0, val);
+    }
+
+    uint8_t get_tdrive() {
+        return get_reg_bits(4, 0x300);
+    }
+
+    void set_tdrive(uint8_t val) {
+        set_reg_bits(4, 0x300, val);
+    }
+
+    uint8_t get_reg_bits(uint8_t address, uint16_t mask) {
         drv_spi_start();
-        uint16_t tmp = read_reg(3);
-        logger.log_printf("drv idrivep %02x", tmp);
-        tmp &= ~0xF0;
-        tmp |= val << 4;
-        write_reg(3, tmp);
+        uint16_t tmp = read_reg(address);
+        uint8_t right_shift = __builtin_ctz(mask);
+        drv_spi_end();
+        return (tmp & mask) >> right_shift;
+    }
+
+    void set_reg_bits(uint8_t address, uint16_t mask, uint16_t val) {
+        drv_spi_start();
+        uint16_t tmp = read_reg(address) & ~mask;
+        uint8_t right_shift = __builtin_ctz(mask);
+        tmp |= val << right_shift;
+        write_reg(address, tmp);
         drv_spi_end();
     }
 
