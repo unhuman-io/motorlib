@@ -175,8 +175,11 @@ typedef struct {
         float cpr;                                  // output encoder cpr \sa FastLoopParam.motor_encoder.cpr
         float bias;
         float dir;                                  // -1 or 1
-        float disagreement_tolerance;               // fault if |output_encoder - startup_param.gear_ratio*motor_encoder| > disagreement_tolerance
-                                                    // 0 to disable
+        float disagreement_tolerance;               // fault if |output_encoder * startup_param.gear_ratio - motor_encoder| > disagreement_tolerance
+                                                    // 0 to disable. Units are motor rad
+        float disagreement_tolerance_with_stiffness;// fault if |output_encoder * startup_param.gear_ratio - motor_encoder + torque/k*gear_ratio| >
+                                                    // > disagreement_tolerance_with_stiffness. 0 to disable. This tolerance could be lower than
+                                                    // disagreement tolerance alone. Units are motor rad
     } output_encoder;
     struct EncoderLimits {
         float motor_hard_max;         // will switch to safe mode if going past these limits

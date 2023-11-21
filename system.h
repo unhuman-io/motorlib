@@ -256,8 +256,11 @@ class System {
         api.add_api_variable("gpioe", new APICallbackHex<uint32_t>([](){ return GPIOE->IDR; }, [](uint32_t u){ GPIOE->ODR = u; }));
         api.add_api_variable("board_name", new const APICallback([]() { return otp->name; }));
         api.add_api_variable("board_rev", new const APICallback([]() { return otp->rev; }));
-
-
+        api.add_api_variable("output_position", new const APIFloat(&actuator_.main_loop_.status_.output_position));
+        api.add_api_variable("motor_position", new const APIFloat(&actuator_.main_loop_.status_.motor_position));
+        api.add_api_variable("encoder_disagreement", new const APIFloat(&actuator_.encoder_disagreement_));
+        api.add_api_variable("encoder_disagreement_with_stiffness", new const APIFloat(&actuator_.encoder_disagreement_with_stiffness_));
+        api.add_api_variable("motor_position_with_stiffness", new const APIFloat(&actuator_.motor_position_with_stiffness_));
 
         uint32_t t_start = get_clock();
         while(1) {
