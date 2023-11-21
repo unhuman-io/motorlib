@@ -61,8 +61,16 @@ class Actuator {
       }
 
       MainLoopStatus status = main_loop_.get_status();
+
+      encoder_disagreement_ = status.output_position / startup_param_.gear_ratio - status.motor_position;
+      motor_position_with_stiffness_ = status.motor_position + status.torque / startup_param_.transmission_stiffness * startup_param_.gear_ratio;
+      encoder_disagreement_with_stiffness_ = status.output_position / startup_param_.gear_ratio - motor_position_with_stiffness_;
       if (main_loop_.param_.output_encoder.disagreement_tolerance > 0 &&
-          std::abs(status.output_position - status.motor_position / startup_param_.gear_ratio) > main_loop_.param_.output_encoder.disagreement_tolerance) {
+          std::abs(encoder_disagreement_) > main_loop_.param_.output_encoder.disagreement_tolerance) {
+        main_loop_.status_.error.encoder_disagreement = 1;
+      }
+      if (main_loop_.param_.output_encoder.disagreement_tolerance_with_stiffness > 0 &&
+          std::abs(encoder_disagreement_with_stiffness_) > main_loop_.param_.output_encoder.disagreement_tolerance_with_stiffness) {
         main_loop_.status_.error.encoder_disagreement = 1;
       }
     }
@@ -141,6 +149,10 @@ private:
     MainLoop &main_loop_;
     const volatile StartupParam &startup_param_;
     float startup_motor_bias_;
+
+    float encoder_disagreement_;
+    float motor_position_with_stiffness_;
+    float encoder_disagreement_with_stiffness_;
 
     friend class System;
     friend void system_init();
