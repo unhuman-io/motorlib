@@ -1,3 +1,5 @@
+SELF_DIR := $(dir $(lastword $(MAKEFILE_LIST)))
+
 ######################################
 # building variables
 ######################################
@@ -18,6 +20,7 @@ PREFIX = arm-none-eabi-
 
 ifndef GCC_PATH
 upgrade_gcc:
+	@echo upgrading gcc
 	$(SELF_DIR)../scripts/install_gcc.sh
 
 .PHONY: upgrade_gcc
