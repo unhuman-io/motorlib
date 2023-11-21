@@ -248,6 +248,11 @@ class System {
         api.add_api_variable("dft_desired_magnitude", new const APIFloat(&actuator_.main_loop_.dft_.desired_.magnitude_last_));
         api.add_api_variable("dft_phase", new const APIFloat(&actuator_.main_loop_.dft_.phase_));
         api.add_api_variable("dft_magnitude", new const APIFloat(&actuator_.main_loop_.dft_.magnitude_));
+        api.add_api_variable("gpioa", new APICallbackHex<uint32_t>([](){ return GPIOA->IDR; }, [](uint32_t u){ GPIOA->ODR = u; }));
+        api.add_api_variable("gpiob", new APICallbackHex<uint32_t>([](){ return GPIOB->IDR; }, [](uint32_t u){ GPIOB->ODR = u; }));
+        api.add_api_variable("gpioc", new APICallbackHex<uint32_t>([](){ return GPIOC->IDR; }, [](uint32_t u){ GPIOC->ODR = u; }));
+        api.add_api_variable("gpiod", new APICallbackHex<uint32_t>([](){ return GPIOD->IDR; }, [](uint32_t u){ GPIOD->ODR = u; }));
+        api.add_api_variable("gpioe", new APICallbackHex<uint32_t>([](){ return GPIOE->IDR; }, [](uint32_t u){ GPIOE->ODR = u; }));
 
 
 
