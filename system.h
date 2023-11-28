@@ -256,6 +256,12 @@ class System {
         api.add_api_variable("gpioe", new APICallbackHex<uint32_t>([](){ return GPIOE->IDR; }, [](uint32_t u){ GPIOE->ODR = u; }));
         api.add_api_variable("board_name", new const APICallback([]() { return otp->name; }));
         api.add_api_variable("board_rev", new const APICallback([]() { return otp->rev; }));
+        api.add_api_variable("olimit_max", new APIFloat(&actuator_.main_loop_.encoder_limits_.output_hard_max));
+        api.add_api_variable("olimit_min", new APIFloat(&actuator_.main_loop_.encoder_limits_.output_hard_min));
+        api.add_api_variable("mlimit_max", new APIFloat(&actuator_.main_loop_.encoder_limits_.motor_hard_max));
+        api.add_api_variable("mlimit_min", new APIFloat(&actuator_.main_loop_.encoder_limits_.motor_hard_min));
+        api.add_api_variable("msoftlimit_max", new APIFloat(&actuator_.main_loop_.encoder_limits_.motor_controlled_max));
+        api.add_api_variable("msoftlimit_min", new APIFloat(&actuator_.main_loop_.encoder_limits_.motor_controlled_min));
 
 
 
