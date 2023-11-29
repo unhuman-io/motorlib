@@ -33,13 +33,6 @@
 
 .global	g_pfnVectors
 .global	Default_Handler
-//.global rcc_csr_copy
-
-.data
-rcc_csr_copy_addr:
-	.word rcc_csr_copy
-
-.text
 
 /* start address for the initialization values of the .data section.
 defined in linker script */
@@ -84,8 +77,8 @@ defined in linker script */
 Reset_Handler:
 	ldr r0, =RCC_BASE
 	ldr r1, [r0, #RCC_CSR_OFFSET]
-	ldr r0, rcc_csr_copy_addr
-	str r1, [r0]
+	ldr r2, =rcc_csr_copy
+	str r1, [r2]
 	orr r1, #(1<<RCC_CSR_RMVF_POS)
 	str r1, [r0, #RCC_CSR_OFFSET]			// clear reset flags
 
