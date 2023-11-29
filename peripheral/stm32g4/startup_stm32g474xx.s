@@ -33,6 +33,13 @@
 
 .global	g_pfnVectors
 .global	Default_Handler
+//.global rcc_csr_copy
+
+.data
+rcc_csr_copy_addr:
+	.word rcc_csr_copy
+
+.text
 
 /* start address for the initialization values of the .data section.
 defined in linker script */
@@ -45,6 +52,8 @@ defined in linker script */
 .word	_sbss
 /* end address for the .bss section. defined in linker script */
 .word	_ebss
+
+
 
 .equ  BootRAM,        0xF1E0F85F
 /**
@@ -75,6 +84,8 @@ defined in linker script */
 Reset_Handler:
 	ldr r0, =RCC_BASE
 	ldr r1, [r0, #RCC_CSR_OFFSET]
+	ldr r0, rcc_csr_copy_addr
+	str r1, [r0]
 	orr r1, #(1<<RCC_CSR_RMVF_POS)
 	str r1, [r0, #RCC_CSR_OFFSET]			// clear reset flags
 
@@ -677,5 +688,3 @@ g_pfnVectors:
 
 	.weak	FMAC_IRQHandler
 	.thumb_set FMAC_IRQHandler,Default_Handler
-
-/************************ (C) COPYRIGHT STMicroelectronics *****END OF FILE****/

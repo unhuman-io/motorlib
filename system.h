@@ -13,6 +13,7 @@ extern uint32_t t_exec_fastloop;
 extern uint32_t t_exec_mainloop;
 extern uint32_t t_period_fastloop;
 extern uint32_t t_period_mainloop;
+extern uint32_t rcc_csr_copy;
 
 void system_maintenance();
 void main_maintenance();
@@ -37,6 +38,7 @@ class System {
         } else {
             logger.log_printf("param version match: %s", OBOT_HASH);
         }
+    logger.log_printf("rcc_csr: %08x", rcc_csr_copy);
         actuator_.start();
 
         log("finished startup");
