@@ -82,7 +82,7 @@ class MainLoop {
           no_command_ = 0;
           first_command_received_ = true;
           host_timestamp_ = receive_data.host_timestamp;
-          if (!safe_mode_) {
+          if (!safe_mode_ && mode_ != DRIVER_DISABLE) {
             command_received = true;
             receive_data_ = receive_data;
           } else if (receive_data.mode_desired == CLEAR_FAULTS ||
@@ -674,6 +674,18 @@ class MainLoop {
     }
     bool is_started() const { return started_; }
     bool first_command_received() const { return first_command_received_; }
+
+// sets a new trajectory command
+MotorCommand tuning_command(MotorCommand &command) {
+  MotorCommand = {};
+  
+  switch (command.tuning_mode.mode) {
+    case POSITION:
+      
+      break;
+  }
+}
+
  private:
     LED* led() { return &led_; }
     const MainLoopParam &param_;
