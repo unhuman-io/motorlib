@@ -1,7 +1,7 @@
 #include "otp.h"
 
-#if !defined(NAME) || !defined(REV)
-#error Must define NAME and REV to use this file
+#if !defined(NAME) || !defined(REV) || !defined(NUM)
+#error Must define NAME, REV, and NUM to use this file
 #endif
 
 static_assert(NAME == "motor_molex" || NAME == "motor");
@@ -14,6 +14,7 @@ static_assert(NAME == "motor_molex" ?
 const volatile OTP __attribute__ ((section ("otp"), used)) otp1 = {
     .version = 1,
     .name = NAME,
-    .rev = REV
+    .rev = REV,
+    .num = NUM,
 };
 
