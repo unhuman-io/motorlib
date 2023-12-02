@@ -254,8 +254,8 @@ class System {
         api.add_api_variable("gpioc", new APICallbackHex<uint32_t>([](){ return GPIOC->IDR; }, [](uint32_t u){ GPIOC->ODR = u; }));
         api.add_api_variable("gpiod", new APICallbackHex<uint32_t>([](){ return GPIOD->IDR; }, [](uint32_t u){ GPIOD->ODR = u; }));
         api.add_api_variable("gpioe", new APICallbackHex<uint32_t>([](){ return GPIOE->IDR; }, [](uint32_t u){ GPIOE->ODR = u; }));
-        api.add_api_variable("board_name", new const APICallback([]() { return otp->name; }));
-        api.add_api_variable("board_rev", new const APICallback([]() { return otp->rev; }));
+        api.add_api_variable("board_name", new const APICallback([]() { return otp->version == 1 ? otp->name : ""; }));
+        api.add_api_variable("board_rev", new const APICallback([]() { return otp->version == 1 ? otp->rev : ""; }));
         api.add_api_variable("board_num", new const APIInt32(&otp->num));
         api.add_api_variable("olimit_max", new APIFloat(&actuator_.main_loop_.encoder_limits_.output_hard_max));
         api.add_api_variable("olimit_min", new APIFloat(&actuator_.main_loop_.encoder_limits_.output_hard_min));
