@@ -68,7 +68,8 @@ endif # MCU_TARGET == stm32g474
 override C_DEFS +=  \
 -DGIT_VERSION=\"$(GIT_VERSION)\" \
 -DGIT_HASH=\"$(GIT_HASH)\" \
--DMOTORLIB_HASH=\"$(MOTORLIB_HASH)\"
+-DMOTORLIB_HASH=\"$(MOTORLIB_HASH)\" \
+-DCONFIG=\"$(CONFIG)\"
 ifdef NOTES
 override C_DEFS += \
 -DNOTES=\"-$(NOTES)\"
