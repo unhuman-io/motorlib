@@ -361,7 +361,7 @@ class MainLoop {
         if (((status_.motor_position > encoder_limits_.motor_controlled_max && iq_des >= 0) ||
             (status_.motor_position < encoder_limits_.motor_controlled_min && iq_des <= 0)) && started_) {
           if (receive_data_.mode_desired != DRIVER_ENABLE && receive_data_.mode_desired != CLEAR_FAULTS) {
-            if (mode_ != VELOCITY && mode_ != param_.safe_mode && first_command_received()) {
+            if (mode_ != VELOCITY && mode_ != param_.safe_mode && mode_ != DRIVER_DISABLE && first_command_received()) {
               set_mode(VELOCITY);
             }
             MotorCommand tmp_receive_data = command_current_;
