@@ -674,18 +674,6 @@ class MainLoop {
     }
     bool is_started() const { return started_; }
     bool first_command_received() const { return first_command_received_; }
-
-// sets a new trajectory command
-MotorCommand tuning_command(MotorCommand &command) {
-  MotorCommand = {};
-  
-  switch (command.tuning_mode.mode) {
-    case POSITION:
-      
-      break;
-  }
-}
-
  private:
     LED* led() { return &led_; }
     const MainLoopParam &param_;
