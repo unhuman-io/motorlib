@@ -9,6 +9,12 @@ void HRPWM::set_voltage(float v_abc[3]) {
     pwm_c_ = fsat2(v_abc[2] * v_to_pwm_ + half_period_, pwm_min_, pwm_max_);
 }
 
+bool HRPWM::is_voltage_saturated() const {
+    return pwm_a_ == pwm_min_ || pwm_a_ == pwm_max_ ||
+           pwm_b_ == pwm_min_ || pwm_b_ == pwm_max_ ||
+           pwm_c_ == pwm_min_ || pwm_c_ == pwm_max_;
+}
+
 void HRPWM::set_vbus(float vbus) {
     v_to_pwm_ = period_/vbus;
 }

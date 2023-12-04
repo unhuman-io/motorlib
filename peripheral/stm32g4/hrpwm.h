@@ -64,6 +64,7 @@ class HRPWM : public PWMBase {
       }
    }
    void set_frequency_hz(uint32_t frequency_hz, uint16_t min_off_ns = 0, uint16_t min_on_ns = 0, bool keep_prescaler = false);
+   bool is_voltage_saturated() const;
    uint16_t period_, half_period_;
    uint32_t base_frequency_hz_, current_frequency_hz_, min_on_ns_, min_off_ns_;
    HRTIM_TypeDef &regs_;

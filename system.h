@@ -199,7 +199,7 @@ class System {
             std::snprintf(c, len, "%ld, %f, %f, %f, %f, %f, %f, %f, %f, %f, %f", 
                     status.timestamp,
                     status.foc_command.measured.motor_encoder,
-                    status.foc_command.desired.i_q,
+                    status.foc_status.desired.i_q,
                     status.foc_status.measured.i_q,
                     status.foc_command.measured.i_a,
                     status.foc_command.measured.i_b,

@@ -377,6 +377,9 @@ class MainLoop {
         }
       }
 
+      status_.error.motor_current_limit = fast_loop_.is_current_saturated(); // todo || is controller saturated
+      status_.error.motor_voltage_limit = fast_loop_.is_voltage_saturated();
+
       fast_loop_.set_iq_des(iq_des);
       fast_loop_.set_vq_des(vq_des);
       

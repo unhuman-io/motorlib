@@ -22,6 +22,13 @@ public:
     void set_iq_limit(float limit) { iq_limiter_.set_limit(limit*dt_); }
     float get_id_limit() const { return id_limiter_.get_limit()/dt_; }
     float get_iq_limit() const { return iq_limiter_.get_limit()/dt_; }
+    bool is_voltage_saturated() const { 
+      return pi_id_.is_voltage_saturated() || pi_iq_.is_voltage_saturated();
+    }
+    bool is_current_saturated() const { 
+      return std::abs(status_.command.i_q) < std::abs(status_.desired.i_q) ||
+             std::abs(status_.command.i_d) < std::abs(status_.desired.i_d);
+    }
 
 private:
     float num_poles_ = 7;
