@@ -3,11 +3,15 @@
 
 #include <stdint.h>
 
-typedef struct __attribute__((packed)) {
+typedef struct {
     uint8_t version;
     char name[20];
     char rev[5];
+    char reserved[2];
+    int32_t num;
 } OTP;
+
+static_assert(sizeof(OTP) == 32);
 
 extern OTP otp;
 

@@ -137,9 +137,9 @@ class APICallbackHex : public APIVariable {
 class ParameterAPI {
  public:
     // type is used by scanf to parse the string
-    void add_api_variable(std::string name, APIVariable *variable);
-    void add_api_variable(std::string name, const APIVariable *variable);
-    bool set_api_variable(std::string name, std::string value);
+    void add_api_variable(const std::string name, APIVariable *variable);
+    void add_api_variable(const std::string name, const APIVariable *variable);
+    bool set_api_variable(const std::string name, std::string value);
     std::string get_api_variable(std::string name);
     std::string parse_string(std::string);
     std::string get_all_api_variables() const;
