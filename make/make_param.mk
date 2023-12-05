@@ -1,4 +1,6 @@
+ifndef GIT_HASH
 GIT_HASH := $(shell git rev-parse HEAD)
+endif
 GIT_DEFINE := -DGIT_HASH=\"$(GIT_HASH)\"
 
 ifdef PARAM_OVERRIDE
