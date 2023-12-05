@@ -52,12 +52,12 @@ class Actuator {
     }
     void maintenance() {
       fast_loop_.maintenance();
-      if (main_loop_.driver_enable_triggered()) {
-         enable_driver();
-      }
       if (main_loop_.driver_disable_triggered()) {
          ms_delay(10);
          main_loop_.driver_.disable();
+      }
+      if (main_loop_.driver_enable_triggered()) {
+         enable_driver();
       }
 
       MainLoopStatus status = main_loop_.get_status();
