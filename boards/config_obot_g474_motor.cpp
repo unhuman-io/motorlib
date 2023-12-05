@@ -50,23 +50,10 @@ uint16_t drv_regs_error = 0;
 #include "../peripheral/stm32g4/temp_sensor.h"
 #include "../temperature_sensor.h"
 #include "../peripheral/stm32g4/i2c_dma.h"
-
-
-#ifdef HAS_BMI270
 #include "../bmi270.h"
-#endif
-
-#ifdef HAS_MAX31875
 #include "../peripheral/stm32g4/max31875.h"
-#endif
-
-#ifdef HAS_MAX31889
 #include "../peripheral/stm32g4/max31889.h"
-#endif
-
-#if defined(HAS_MB85RC64)
 #include "../mb85rc64.h"
-#endif
 
 
 namespace config {
@@ -97,6 +84,7 @@ namespace config {
 #if defined(HAS_MB85RC64)
     MB85RC64 mb85rc64(i2c1, 4);
 #endif
+    const BoardRev board_rev = get_board_rev();
     HRPWM motor_pwm = {pwm_frequency, *HRTIM1, 3, 5, 4, false, 50, 1000, 1000};
     USB1 usb;
     FastLoop fast_loop = {(int32_t) pwm_frequency, motor_pwm, motor_encoder, param->fast_loop_param, &I_A_DR, &I_B_DR, &I_C_DR, &V_BUS_DR};
@@ -183,10 +171,10 @@ void system_init() {
 #if defined (HAS_MAX31875) || defined (HAS_MAX31889)
     System::api.add_api_variable("Tboard", new const APICallbackFloat([](){ return config::board_temperature.get_temperature(); }));
 #endif
-#ifdef HAS_BRIDGE_THERMISTORS
-    System::api.add_api_variable("Tbridge", new const APICallbackFloat([](){ return config::temp_bridge.read(); }));
-    System::api.add_api_variable("Tbridge2", new const APICallbackFloat([](){ return config::temp_bridge2.read(); }));
-#endif
+    if (config::board_rev.has_bridge_thermistors) {
+        System::api.add_api_variable("Tbridge", new const APICallbackFloat([](){ return config::temp_bridge.read(); }));
+        System::api.add_api_variable("Tbridge2", new const APICallbackFloat([](){ return config::temp_bridge2.read(); }));
+    }
     System::api.add_api_variable("index_mod", new APIInt32(&index_mod));
     System::api.add_api_variable("pwm_mult", new APICallbackUint8([](){return config::motor_pwm.get_frequency_multiplier();}, [](uint8_t mult){ config::motor_pwm.set_frequency_multiplier(mult);}));
     System::api.add_api_variable("drv_err", new const APICallbackUint32([](){ return config::drv.get_drv_status(); }));
@@ -213,46 +201,46 @@ void system_init() {
     System::api.add_api_variable("deadtime", new APICallbackUint16([](){ 
         return config::motor_pwm.deadtime_ns_; }, [](uint16_t u) {config::motor_pwm.set_deadtime(u); }));
 
-#ifdef HAS_BMI270
-    System::api.add_api_variable("imu_read", new const APICallback([](){ config::imu.read_with_restore(); return config::imu.get_string(); }));
-    System::api.add_api_variable("ax", new const APICallbackFloat([](){ return config::imu.data_.acc_x*8./pow(2,15); }));
-    System::api.add_api_variable("ay", new const APICallbackFloat([](){ return config::imu.data_.acc_y*8./pow(2,15); }));
-    System::api.add_api_variable("az", new const APICallbackFloat([](){ return config::imu.data_.acc_z*8./pow(2,15); }));
-    System::api.add_api_variable("gx", new const APICallbackFloat([](){ return config::imu.data_.gyr_x*2000.*M_PI/180/pow(2,15); }));
-    System::api.add_api_variable("gy", new const APICallbackFloat([](){ return config::imu.data_.gyr_y*2000.*M_PI/180/pow(2,15); }));
-    System::api.add_api_variable("gz", new const APICallbackFloat([](){ return config::imu.data_.gyr_z*2000.*M_PI/180/pow(2,15); }));
-#endif
-
-#ifdef HAS_5V_SENSE
-    System::api.add_api_variable("5V", new const APIFloat(&v5v));
-#endif
-#ifdef HAS_I5V_SENSE
-    System::api.add_api_variable("i5V", new const APIFloat(&i5v));
-#endif
-#ifdef HAS_I48V_SENSE
-    System::api.add_api_variable("i48V", new const APIFloat(&i48v));
-#endif
-
-#if defined(HAS_MB85RC64)
-    config::mb85rc64.init();
-    config::mb85rc64.read_block(0, &total_uptime_start);
-    logger.log_printf("total_uptime_start: %u", total_uptime_start);
-    {
-        std::string s = "startup at " + std::to_string(total_uptime_start) + "\n";
-        config::mb85rc64.write_log((uint8_t*) s.c_str(), s.size());
+    if (config::board_rev.has_bmi270) {
+        System::api.add_api_variable("imu_read", new const APICallback([](){ config::imu.read_with_restore(); return config::imu.get_string(); }));
+        System::api.add_api_variable("ax", new const APICallbackFloat([](){ return config::imu.data_.acc_x*8./pow(2,15); }));
+        System::api.add_api_variable("ay", new const APICallbackFloat([](){ return config::imu.data_.acc_y*8./pow(2,15); }));
+        System::api.add_api_variable("az", new const APICallbackFloat([](){ return config::imu.data_.acc_z*8./pow(2,15); }));
+        System::api.add_api_variable("gx", new const APICallbackFloat([](){ return config::imu.data_.gyr_x*2000.*M_PI/180/pow(2,15); }));
+        System::api.add_api_variable("gy", new const APICallbackFloat([](){ return config::imu.data_.gyr_y*2000.*M_PI/180/pow(2,15); }));
+        System::api.add_api_variable("gz", new const APICallbackFloat([](){ return config::imu.data_.gyr_z*2000.*M_PI/180/pow(2,15); }));
     }
-    System::api.add_api_variable("total_uptime", new const APIUint32(&total_uptime));
-    System::api.add_api_variable("fram_log", new APICallback([](){
-        config::i2c1.init(1000);
-        std::string s = config::mb85rc64.get_log();
-        config::i2c1.init(400);
-        return s;
-    }, [](std::string s){
-        config::i2c1.init(1000);
-        config::mb85rc64.write_log((uint8_t *) s.c_str(), s.size());
-        config::i2c1.init(400);
-    }));
-#endif
+
+    if (config::board_rev.has_5V_sense) {
+        System::api.add_api_variable("5V", new const APIFloat(&v5v));
+    }
+    if (config::board_rev.has_I5V_sense) {
+        System::api.add_api_variable("i5V", new const APIFloat(&i5v));
+    }
+    if (config::board_rev.has_I48V_sense) {
+        System::api.add_api_variable("i48V", new const APIFloat(&i48v));
+    }
+
+    if (config::board_rev.has_bmi270) {
+        config::mb85rc64.init();
+        config::mb85rc64.read_block(0, &total_uptime_start);
+        logger.log_printf("total_uptime_start: %u", total_uptime_start);
+        {
+            std::string s = "startup at " + std::to_string(total_uptime_start) + "\n";
+            config::mb85rc64.write_log((uint8_t*) s.c_str(), s.size());
+        }
+        System::api.add_api_variable("total_uptime", new const APIUint32(&total_uptime));
+        System::api.add_api_variable("fram_log", new APICallback([](){
+            config::i2c1.init(1000);
+            std::string s = config::mb85rc64.get_log();
+            config::i2c1.init(400);
+            return s;
+        }, [](std::string s){
+            config::i2c1.init(1000);
+            config::mb85rc64.write_log((uint8_t *) s.c_str(), s.size());
+            config::i2c1.init(400);
+        }));
+    }
 
 
     for (auto regs : std::vector<ADC_TypeDef*>{ADC1, ADC2, ADC3, ADC4, ADC5}) {
