@@ -55,6 +55,16 @@ uint16_t drv_regs_error = 0;
 #include "../mb85rc64.h"
 
 
+extern "C" void SystemClock_Config();
+void pin_config_obot_g474_motor(const BoardRev&);
+
+extern "C" void board_init() {
+    const BoardRev board_rev = get_board_rev();
+    SystemClock_Config();
+    pin_config_obot_g474_motor(board_rev);
+}
+
+
 namespace config {
     static_assert(((double) CPU_FREQUENCY_HZ * 8 / 2) / pwm_frequency < 65535);    // check pwm frequency
 #ifdef SPI1_REINIT_CALLBACK

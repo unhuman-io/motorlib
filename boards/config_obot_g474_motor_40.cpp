@@ -25,6 +25,14 @@ volatile uint32_t * const cpu_clock = &DWT->CYCCNT;
 #include "../peripheral/stm32g4/temp_sensor.h"
 #include "../peripheral/stm32g4/max31875.h"
 
+extern "C" void SystemClock_Config();
+void pin_config_obot_g474_motor_40();
+
+extern "C" void board_init() {
+    SystemClock_Config();
+    pin_config_obot_g474_motor_40();
+}
+
 namespace config {
     static_assert(((double) CPU_FREQUENCY_HZ * 8 / 2) / pwm_frequency < 65535);    // check pwm frequency
     TempSensor temp_sensor;
