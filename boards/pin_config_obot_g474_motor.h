@@ -3,6 +3,7 @@
 
 #include "stm32g474xx.h"
 #include "../peripheral/stm32g4/pin_config.h"
+#include "config_obot_g474_motor.h"
 
 #define I_A_DR  ADC3->JDR1
 #define I_B_DR  ADC4->JDR1
@@ -38,12 +39,12 @@ BoardPins get_board_pins(const BoardRev &board_rev) {
         .led_tim_b = &TIM4->CCR3,
         .v5v_dr = &ADC2->JDR4,
     };
-    if (board_rev.rev == BoardRev::Rev::R0 || board_rev.rev == BoardRev::Rev::R4 ||
-        board_rev.rev == BoardRev::Rev::MR0P) {
+    if (board_rev.rev == BoardRev::Rev::kR0 || board_rev.rev == BoardRev::Rev::kR4 ||
+        board_rev.rev == BoardRev::Rev::kMR0P) {
         board_pins.led_tim_g = &TIM4->CCR3;
         board_pins.led_tim_b = &TIM4->CCR2;
     }
-    if (board_rev.rev == BoardRev::Rev::MR0P) {
+    if (board_rev.rev == BoardRev::Rev::kMR0P) {
         board_pins.v5v_dr = &A3_DR;
     } 
     return board_pins;

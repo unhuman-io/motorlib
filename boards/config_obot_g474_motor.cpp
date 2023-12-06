@@ -49,6 +49,7 @@ uint16_t drv_regs_error = 0;
 #include "../peripheral/stm32g4/temp_sensor.h"
 #include "../temperature_sensor.h"
 #include "../peripheral/stm32g4/i2c_dma.h"
+#include "../peripheral/stm32g4/spi_dma.h"
 #include "../bmi270.h"
 #include "../peripheral/stm32g4/max31875.h"
 #include "../peripheral/stm32g4/max31889.h"
