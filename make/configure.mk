@@ -5,8 +5,12 @@
 
 # Build path
 BUILD_DIR = build
+ifndef GIT_VERSION
 GIT_VERSION := $(shell git describe --long --dirty --always --abbrev=7)
+endif
+ifndef GIT_HASH
 GIT_HASH := $(shell git rev-parse HEAD)
+endif
 MOTORLIB_HASH := $(shell git -C $(SELF_DIR) rev-parse HEAD)
 $(shell touch $(SELF_DIR)../param_default.h)
 
@@ -68,7 +72,8 @@ endif # MCU_TARGET == stm32g474
 override C_DEFS +=  \
 -DGIT_VERSION=\"$(GIT_VERSION)\" \
 -DGIT_HASH=\"$(GIT_HASH)\" \
--DMOTORLIB_HASH=\"$(MOTORLIB_HASH)\"
+-DMOTORLIB_HASH=\"$(MOTORLIB_HASH)\" \
+-DCONFIG=\"$(CONFIG)\"
 ifdef NOTES
 override C_DEFS += \
 -DNOTES=\"-$(NOTES)\"
@@ -100,4 +105,3 @@ $(SELF_DIR)../parameter_api.cpp\
 ifdef PARAM_OVERRIDE
 PARAM_INCLUDE=-include $(PARAM_OVERRIDE)
 endif
-

@@ -1,11 +1,15 @@
 
-usage := "USAGE: make NAME=name REV=rev"
+usage := "USAGE: make NAME=name REV=rev NUM=num"
 
 ifndef NAME
 $(error $(usage))
 endif
 
 ifndef REV
+$(error $(usage))
+endif
+
+ifndef NUM
 $(error $(usage))
 endif
 
@@ -16,7 +20,8 @@ C_INCLUDES = \
 
 C_DEFS = \
 -DNAME=\"$(NAME)\" \
--DREV=\"$(REV)\"
+-DREV=\"$(REV)\" \
+-DNUM=$(NUM) \
 
 clean_build::
 	$(MAKE) clean
@@ -41,6 +46,3 @@ program: clean_build
 
 TARGET_MCU := stm32g474
 include ../../../make/configure_gcc.mk
-
-
-#dfu-util -a2 -s 0x1FFF7000:leave -D motor_molex_mr1.bin

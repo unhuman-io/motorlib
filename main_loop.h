@@ -82,10 +82,10 @@ class MainLoop {
           no_command_ = 0;
           first_command_received_ = true;
           host_timestamp_ = receive_data.host_timestamp;
-          if (!safe_mode_) {
+          if (!safe_mode_ && mode_ != DRIVER_DISABLE) {
             command_received = true;
             receive_data_ = receive_data;
-          } else if (receive_data.mode_desired == CLEAR_FAULTS ||
+          } else if ((receive_data.mode_desired == CLEAR_FAULTS && mode_ != DRIVER_DISABLE) ||
                      receive_data.mode_desired == DRIVER_ENABLE) {
               command_received = true;
               first_command_received_ = false;
@@ -361,7 +361,7 @@ class MainLoop {
         if (((status_.motor_position > encoder_limits_.motor_controlled_max && iq_des >= 0) ||
             (status_.motor_position < encoder_limits_.motor_controlled_min && iq_des <= 0)) && started_) {
           if (receive_data_.mode_desired != DRIVER_ENABLE && receive_data_.mode_desired != CLEAR_FAULTS) {
-            if (mode_ != VELOCITY && mode_ != param_.safe_mode && first_command_received()) {
+            if (mode_ != VELOCITY && mode_ != param_.safe_mode && mode_ != DRIVER_DISABLE && first_command_received()) {
               set_mode(VELOCITY);
             }
             MotorCommand tmp_receive_data = command_current_;
