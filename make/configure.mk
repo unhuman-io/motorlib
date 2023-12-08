@@ -26,9 +26,12 @@ ifeq "$(TARGET_MCU)" "stm32g474"
 # source
 ######################################
 # C sources
-C_SOURCES +=  \
+ifndef C_SOURCES
+C_SOURCES =  \
 $(SELF_DIR)../device/stm32g4/Src/stm32g4xx_it.c \
-$(SELF_DIR)../device/stm32g4/Src/system_stm32g4xx.c
+$(SELF_DIR)../device/stm32g4/Src/system_stm32g4xx.c \
+$(SELF_DIR)../device/stm32g4/Src/main.c
+endif
 
 # ASM sources
 ASM_SOURCES += \
@@ -87,8 +90,7 @@ C_INCLUDES +=  \
 -I$(SELF_DIR)../CMSIS/Include \
 -I$(SELF_DIR)../peripheral
 
-C_SOURCES +=  \
-Src/main.c \
+C_SOURCES += \
 ./$(PARAM_FILE)
 
 CPP_SOURCES += \
