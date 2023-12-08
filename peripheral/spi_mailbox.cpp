@@ -25,7 +25,7 @@ SpiMailbox::SpiMailbox(Pool* pools, size_t pool_count) :
 void SpiMailbox::write(uint8_t mailbox_id, const uint8_t* buffer, size_t length)
 {
   FIGURE_ASSERT(buffer != NULL); // Invalid arg
-  FIGURE_ASSERT(length < kBufferSize); // Invalid arg
+  FIGURE_ASSERT(length <= kBufferSize); // Invalid arg
 
   size_t i;
   size_t oldest_sequence = 0xFFFFFFFFU;
