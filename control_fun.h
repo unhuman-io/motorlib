@@ -267,9 +267,9 @@ class RateLimiter {
 class PIDController {
 public:
     PIDController(float dt) : velocity_filter_(dt), output_filter_(dt), dt_(dt) {}
-    virtual ~PIDController() {}
+    ~PIDController() {}
     void init(float measured) { rate_limit_.init(measured), ki_sum_ = 0; measured_last_ = measured; velocity_filter_.init(0); output_filter_.init(0); } // todo init to current output 
-    virtual float step(float desired, float velocity_desired, float measured, float velocity_limit = INFINITY);
+    float step(float desired, float velocity_desired, float measured, float velocity_limit = INFINITY);
     void set_param(const PIDParam &param);
     float get_error() const { return error_last_; }
     void set_rollover(float rollover) { rollover_ = rollover; }
@@ -295,21 +295,21 @@ protected:
 
 class PIDWrapController : public PIDController {
  public:
-    virtual float step(float desired, float velocity_desired, float measured, float velocity_limit = INFINITY);
+    float step(float desired, float velocity_desired, float measured, float velocity_limit = INFINITY);
 };
 
 class PIDDeadbandController : public PIDController {
 public:
     PIDDeadbandController(float dt) : PIDController(dt) {}
-    virtual ~PIDDeadbandController() {}
-    virtual float step(float desired, float velocity_desired, float deadband, float measured, float velocity_limit = INFINITY);
+    ~PIDDeadbandController() {}
+    float step(float desired, float velocity_desired, float deadband, float measured, float velocity_limit = INFINITY);
 };
 
 class PIDInterpolateController : public PIDController {
  public:
     PIDInterpolateController(float dt, float filter_hz) : PIDController(dt), filt1_(dt, filter_hz), filt2_(dt, filter_hz) {}
-    virtual ~PIDInterpolateController() {}
-    virtual float step(float desired, float velocity_desired, float measured, float velocity_limit = INFINITY) {
+    ~PIDInterpolateController() {}
+    float step(float desired, float velocity_desired, float measured, float velocity_limit = INFINITY) {
         desired = filt2_.update(filt1_.update(desired));
         return PIDController::step(desired, velocity_desired, measured, velocity_limit);
     }
@@ -371,12 +371,15 @@ class TrajectoryGenerator {
         return trajectory_value_;
     }
     float * value() { return &trajectory_value_.value; }
+    float get_amplitude() const { return amplitude_; }
+    float get_frequency() const { return frequency_; }
  private:
     TuningMode mode_ = TuningMode::SINE;
     float frequency_, amplitude_;
     TrajectoryValue trajectory_value_;
     KahanSum phi_, chirp_frequency_;
     float chirp_rate_;
+    friend class System;
 };
 
 template<class T>
@@ -416,6 +419,44 @@ inline T wrap1_diff(T value, T value2, T rollover) {
     }
     return diff;
 }
+
+class DFT {
+ public:
+    DFT(int num_points = 128) : num_points_(num_points) {}
+    void step(float value, float frequency_hz, mcu_time);
+    float magnitude_last_ = 0;
+    float phase_last_ = 0;
+    float frequency_last_ = 0; 
+    float real_last_, imag_last_;
+    int count_ = 1;
+ private:
+    mcu_time time_start_;
+    float real_ = 0;
+    float imag_ = 0;
+    float frequency_ = 0;
+    int num_points_;
+};
+
+class DFTResponse {
+ public:
+    DFTResponse(int num_points = 128) : desired_(num_points), measured_(num_points) {}
+    void step(float desired, float measured, float frequency, mcu_time time) {
+        desired_.step(desired, frequency, time);
+        measured_.step(measured, frequency, time);
+        if (desired_.count_ == 1) {
+            magnitude_ = measured_.magnitude_last_ / desired_.magnitude_last_;
+            phase_ = measured_.phase_last_ - desired_.phase_last_;
+            if (phase_ > M_PI) {
+                phase_ -= 2*M_PI;
+            } else if (phase_ < -M_PI) {
+                phase_ += 2*M_PI;
+            }
+        }
+    }
+
+    DFT desired_, measured_;
+    float magnitude_, phase_;
+};
 
 
 

@@ -82,10 +82,10 @@ class MainLoop {
           no_command_ = 0;
           first_command_received_ = true;
           host_timestamp_ = receive_data.host_timestamp;
-          if (!safe_mode_) {
+          if (!safe_mode_ && mode_ != DRIVER_DISABLE) {
             command_received = true;
             receive_data_ = receive_data;
-          } else if (receive_data.mode_desired == CLEAR_FAULTS ||
+          } else if ((receive_data.mode_desired == CLEAR_FAULTS && mode_ != DRIVER_DISABLE) ||
                      receive_data.mode_desired == DRIVER_ENABLE) {
               command_received = true;
               first_command_received_ = false;
@@ -191,6 +191,20 @@ class MainLoop {
 
       if (receive_data_.mode_desired == TUNING) {
           command_current_ = set_tuning_command(receive_data_, count_received);
+          float desired = *tuning_trajectory_generator_.value();
+          float measured = 0;
+          switch (command_current_.mode_desired) {
+            case POSITION:
+              measured = status_.motor_position;
+              break;
+            case VELOCITY:
+              measured = status_.motor_velocity_filtered;
+              break;
+            case TORQUE:
+              measured = status_.torque;
+              break;
+          }
+          dft_.step(desired, measured, tuning_trajectory_generator_.get_frequency(), timestamp_);
       } else {
           command_current_ = receive_data_;
       }
@@ -285,6 +299,8 @@ class MainLoop {
               }
             }
           }
+          dft_.step(status_.fast_loop.foc_command.desired.i_q, status_.fast_loop.foc_status.measured.i_q, 
+            fast_loop_.get_tuning_frequency(), status_.fast_loop.timestamp);
           break;
         case VOLTAGE:
           vq_des = command_current_.voltage.voltage_desired;
@@ -345,7 +361,7 @@ class MainLoop {
         if (((status_.motor_position > encoder_limits_.motor_controlled_max && iq_des >= 0) ||
             (status_.motor_position < encoder_limits_.motor_controlled_min && iq_des <= 0)) && started_) {
           if (receive_data_.mode_desired != DRIVER_ENABLE && receive_data_.mode_desired != CLEAR_FAULTS) {
-            if (mode_ != VELOCITY && mode_ != param_.safe_mode && first_command_received()) {
+            if (mode_ != VELOCITY && mode_ != param_.safe_mode && mode_ != DRIVER_DISABLE && first_command_received()) {
               set_mode(VELOCITY);
             }
             MotorCommand tmp_receive_data = command_current_;
@@ -712,6 +728,9 @@ class MainLoop {
     volatile bool driver_enable_triggered_ = false;
     volatile bool driver_disable_triggered_ = false;
     uint32_t last_energy_uJ_ = 0;
+
+    DFTResponse dft_;
+
     enum FindLimitsState {FIND_FIRST_LIMIT, FIND_SECOND_LIMIT, VELOCITY_TO_POSITION, GOTO_POSITION} find_limits_state_;
     FirstOrderLowPassFilter iq_find_limits_filter_;
     bool position_limits_disable_ = false;

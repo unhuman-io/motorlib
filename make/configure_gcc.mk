@@ -1,3 +1,5 @@
+SELF_DIR := $(dir $(lastword $(MAKEFILE_LIST)))
+
 ######################################
 # building variables
 ######################################
@@ -17,24 +19,22 @@ PREFIX = arm-none-eabi-
 # Install GCC automatically if GCC_PATH is not specified and it's not already installed.
 
 ifndef GCC_PATH
-$(dir $(lastword $(MAKEFILE_LIST)))/../gcc/bin/$(PREFIX)gcc:
-	$(dir $(lastword $(MAKEFILE_LIST)))/install_gcc.sh
+upgrade_gcc:
+	@echo upgrading gcc
+	$(SELF_DIR)../scripts/install_gcc.sh
+
+.PHONY: upgrade_gcc
+
+$(SELF_DIR)../gcc/bin/$(PREFIX)gcc:
+	$(SELF_DIR)../scripts/install_gcc.sh
 endif
 
-GCC_PATH=$(dir $(lastword $(MAKEFILE_LIST)))/../gcc/bin
-ifdef GCC_PATH
+GCC_PATH=$(SELF_DIR)../gcc/bin
 CC = $(GCC_PATH)/$(PREFIX)gcc
 AS = $(GCC_PATH)/$(PREFIX)gcc -x assembler-with-cpp
 CP = $(GCC_PATH)/$(PREFIX)objcopy
 SZ = $(GCC_PATH)/$(PREFIX)size
 CXX = $(GCC_PATH)/$(PREFIX)g++
-else
-CC = $(PREFIX)gcc
-AS = $(PREFIX)gcc -x assembler-with-cpp
-CP = $(PREFIX)objcopy
-SZ = $(PREFIX)size
-CXX = $(PREFIX)g++
-endif
 HEX = $(CP) -O ihex
 BIN = $(CP) -O binary -S
  
@@ -74,10 +74,10 @@ LDFLAGS = $(MCU) -specs=nosys.specs -T$(LDSCRIPT) $(LIBDIR) $(LIBS) -Wl,-Map=$(B
 GCC_VERSION := $(shell $(CC) -dumpversion)
 GCC_MAJOR_VERSION := $(word 1, $(subst ., ,$(GCC_VERSION)))
 
-ifeq ($(GCC_MAJOR_VERSION), $(filter $(GCC_MAJOR_VERSION),10 11 12))
+ifeq ($(GCC_MAJOR_VERSION), $(filter $(GCC_MAJOR_VERSION),10 11 12 13))
 $(info gcc version $(GCC_VERSION))
 else
-$(error gcc version $(GCC_VERSION), 10, 11, or 12 required)
+$(error gcc version $(GCC_VERSION), 10 - 13 required)
 endif
 
 ifeq ($(OS),Windows_NT)

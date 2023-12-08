@@ -3,6 +3,7 @@
 
 #include "stm32g474xx.h"
 #include "../peripheral/stm32g4/pin_config.h"
+#include "config_obot_g474_motor.h"
 
 #define I_A_DR  ADC3->JDR1
 #define I_B_DR  ADC4->JDR1
@@ -16,34 +17,41 @@
 #define A1_DR ADC1->JDR3
 #define A2_DR ADC1->JDR4
 #define A3_DR ADC2->JDR1
-// MR0+
+
 #define TSENSE ADC2->JDR2
 #define TSENSE2 ADC2->JDR3
 
-// MR1
-#define V5V ADC2->JDR4
 #define I5V ADC3->JDR2
 #define I_BUS_DR ADC5->JDR2
 
-#if defined(MR0P)
-#undef V5V
-#define V5V A3_DR
-#endif
 
-#define TIM_R TIM4->CCR1
-#define TIM_G TIM4->CCR2
-#define TIM_B TIM4->CCR3
-#if defined(R0) || defined (R4) | defined (MR0P)
-    #undef TIM_R
-    #undef TIM_G
-    #undef TIM_B
-    #define TIM_R TIM4->CCR1
-    #define TIM_G TIM4->CCR3
-    #define TIM_B TIM4->CCR2
-#endif
+struct BoardPins {
+    volatile uint32_t * led_tim_r;
+    volatile uint32_t * led_tim_g;
+    volatile uint32_t * led_tim_b;
+    volatile uint32_t * v5v_dr;
+};
+
+BoardPins get_board_pins(const BoardRev &board_rev) {
+    BoardPins board_pins = {
+        .led_tim_r = &TIM4->CCR1,
+        .led_tim_g = &TIM4->CCR2,
+        .led_tim_b = &TIM4->CCR3,
+        .v5v_dr = &ADC2->JDR4,
+    };
+    if (board_rev.rev == BoardRev::Rev::kR0 || board_rev.rev == BoardRev::Rev::kR4 ||
+        board_rev.rev == BoardRev::Rev::kMR0P) {
+        board_pins.led_tim_g = &TIM4->CCR3;
+        board_pins.led_tim_b = &TIM4->CCR2;
+    }
+    if (board_rev.rev == BoardRev::Rev::kMR0P) {
+        board_pins.v5v_dr = &A3_DR;
+    } 
+    return board_pins;
+}
 
 
-void pin_config_obot_g474_motor_r0() {
+void pin_config_obot_g474_motor(const BoardRev &board_rev) {
      // Peripheral clock enable
         RCC->APB1ENR1 = RCC_APB1ENR1_SPI3EN | RCC_APB1ENR1_TIM2EN |  RCC_APB1ENR1_TIM4EN | RCC_APB1ENR1_TIM5EN | RCC_APB1ENR1_USBEN | RCC_APB1ENR1_I2C1EN | RCC_APB1ENR1_RTCAPBEN | RCC_APB1ENR1_PWREN;
         RCC->APB2ENR |= RCC_APB2ENR_SPI1EN | RCC_APB2ENR_TIM1EN | RCC_APB2ENR_HRTIM1EN | RCC_APB2ENR_SYSCFGEN;
@@ -206,10 +214,10 @@ void pin_config_obot_g474_motor_r0() {
         NVIC_SetPriority(USB_LP_IRQn, NVIC_EncodePriority(NVIC_GetPriorityGrouping(), 2, 0));
         NVIC_EnableIRQ(USB_LP_IRQn);
 
-#ifdef HAS_BMI270
-        GPIO_SETL(C, 4, GPIO::OUTPUT, GPIO_SPEED::LOW, 0);        // imu cs
-        GPIOC->BSRR |= GPIO_BSRR_BS4; // set imu cs
-#endif
+        if (board_rev.has_bmi270) {
+            GPIO_SETL(C, 4, GPIO::OUTPUT, GPIO_SPEED::LOW, 0);        // imu cs
+            GPIOC->BSRR |= GPIO_BSRR_BS4; // set imu cs
+        }
 
         // SPI1 CS2
         GPIO_SETL(C, 3, GPIO::OUTPUT, GPIO_SPEED::MEDIUM, 0);
