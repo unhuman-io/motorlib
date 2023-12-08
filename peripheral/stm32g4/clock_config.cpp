@@ -1,7 +1,9 @@
 #include "stm32g474xx.h"
+#include "../../util.h"
 extern "C" void SystemClock_Config(void)
 {
     PWR->CR5 &= ~PWR_CR5_R1MODE; // R1MODE -> 0 for > 150 MHz operation
+    us_delay(1);
 #ifdef USE_HSI
     RCC->PLLCFGR = 2 << RCC_PLLCFGR_PLLSRC_Pos | // (2) HSI is pll source (16 MHz)
       3 << RCC_PLLCFGR_PLLM_Pos | // (3) div4 
