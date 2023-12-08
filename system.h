@@ -10,8 +10,14 @@
 
 extern uint32_t t_exec_fastloop;
 extern uint32_t t_exec_mainloop;
+extern uint32_t t_exec_comint;
 extern uint32_t t_period_fastloop;
 extern uint32_t t_period_mainloop;
+
+extern uint32_t comint_count;
+extern uint32_t mainloop_count;
+extern uint32_t fastloop_count;
+
 
 void system_maintenance();
 
@@ -63,6 +69,10 @@ class System {
         api.add_api_variable("t_exec_mainloop", new APIUint32(&t_exec_mainloop));
         api.add_api_variable("t_period_fastloop", new APIUint32(&t_period_fastloop));
         api.add_api_variable("t_period_mainloop", new APIUint32(&t_period_mainloop));
+        api.add_api_variable("t_exec_comint", new APIUint32(&t_exec_comint));
+        api.add_api_variable("cpu_comint", new APIFloat(&cpu_comint));
+        api.add_api_variable("cpu_mainloop", new APIFloat(&cpu_mainloop));
+        api.add_api_variable("cpu_fastloop", new APIFloat(&cpu_fastloop));
         api.add_api_variable("vbus", new APIFloat(&actuator_.main_loop_.status_.fast_loop.vbus));
         api.add_api_variable("phase_mode", new APICallbackUint8([](){ return actuator_.fast_loop_.get_phase_mode(); }, [](uint8_t p){ actuator_.fast_loop_.set_phase_mode(p); }));
         api.add_api_variable("va", new APIFloat(&actuator_.main_loop_.status_.fast_loop.foc_status.command.v_a));
@@ -282,6 +292,15 @@ class System {
             system_maintenance();
             actuator_.maintenance();
             round_robin_logger.log_data(UPTIME_INDEX, get_uptime());
+
+            if (cpu_rate.run()) {
+                cpu_fastloop = (float) (fastloop_count - last_fastloop_count)/CPU_FREQUENCY_HZ*10;
+                last_fastloop_count = fastloop_count;
+                cpu_mainloop = (float) (mainloop_count - last_mainloop_count)/CPU_FREQUENCY_HZ*10 * (1 - cpu_fastloop);
+                last_mainloop_count = mainloop_count;
+                cpu_comint = (float) (comint_count - last_comint_count)/CPU_FREQUENCY_HZ*10 * (1 - cpu_fastloop - cpu_mainloop);
+                last_comint_count = comint_count;
+            }
         }
     }
     static void main_loop_interrupt() {
@@ -307,6 +326,14 @@ class System {
     static Actuator actuator_;
     static ParameterAPI api;
     static uint32_t count_;
+
+    static FrequencyLimiter cpu_rate;
+    static uint32_t last_comint_count;
+    static uint32_t last_mainloop_count;
+    static uint32_t last_fastloop_count;
+    static float cpu_comint;
+    static float cpu_mainloop;
+    static float cpu_fastloop;
 };
 
 extern "C" {
