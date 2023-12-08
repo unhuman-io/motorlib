@@ -264,7 +264,7 @@ class System {
         api.add_api_variable("mlimit_min", new APIFloat(&actuator_.main_loop_.encoder_limits_.motor_hard_min));
         api.add_api_variable("msoftlimit_max", new APIFloat(&actuator_.main_loop_.encoder_limits_.motor_controlled_max));
         api.add_api_variable("msoftlimit_min", new APIFloat(&actuator_.main_loop_.encoder_limits_.motor_controlled_min));
-
+        api.add_api_variable("is_sbank", new const APICallbackUint8([](){ return (*((uint8_t *) 0x1fff7802) & 0x40) == 0; }));
 
 
         uint32_t t_start = get_clock();
