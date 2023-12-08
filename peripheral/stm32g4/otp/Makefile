@@ -1,5 +1,5 @@
 
-usage := "USAGE: make NAME=name REV=rev NUM=num"
+usage := "USAGE: make NAME=name REV=rev NUM=num [SN=sn]"
 
 ifndef NAME
 $(error $(usage))
@@ -11,6 +11,10 @@ endif
 
 ifndef NUM
 $(error $(usage))
+endif
+
+ifdef SN
+SN_LINE := -S $(SN)
 endif
 
 srcs = otp.cpp
@@ -39,7 +43,7 @@ clean:
 	rm -rf *.o *.d *.bin
 
 program: clean_build
-	dfu-util -a2 -s 0x1FFF7000:leave -D otp.bin
+	dfu-util -a2 -s 0x1FFF7000:leave -D otp.bin $(SN_LINE)
 
 .PHONY: program clean_build all
 
