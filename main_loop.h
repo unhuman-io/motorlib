@@ -85,7 +85,7 @@ class MainLoop {
           if (!safe_mode_ && mode_ != DRIVER_DISABLE) {
             command_received = true;
             receive_data_ = receive_data;
-          } else if (receive_data.mode_desired == CLEAR_FAULTS ||
+          } else if ((receive_data.mode_desired == CLEAR_FAULTS && mode_ != DRIVER_DISABLE) ||
                      receive_data.mode_desired == DRIVER_ENABLE) {
               command_received = true;
               first_command_received_ = false;

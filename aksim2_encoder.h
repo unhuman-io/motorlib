@@ -5,8 +5,6 @@
 #include <cmath>
 
 static uint8_t CRC_BiSS_43_24bit(uint32_t w_InputData);
-
-template<uint8_t nbits_>
 class Aksim2Encoder : public EncoderBase {
  public:
     union Diag {
@@ -27,7 +25,9 @@ class Aksim2Encoder : public EncoderBase {
         uint8_t word;
     };
     // BISS, 5 MHz max
-    Aksim2Encoder(SPIDMA &spi_dma) : EncoderBase(), spi_dma_(spi_dma) {}
+    Aksim2Encoder(SPIDMA &spi_dma, int32_t cpr) : EncoderBase(), spi_dma_(spi_dma) {
+        nbits_ = std::log2(std::abs(cpr));
+    }
     void trigger() {
         spi_dma_.start_readwrite(data_out_, data_in_, length_);
     }
@@ -90,6 +90,7 @@ class Aksim2Encoder : public EncoderBase {
     uint8_t data_in_[length_] = {};
     int32_t value_ = 0;
     uint32_t last_shift_value_ = 0;
+    uint8_t nbits_;
 
     friend void config_init();
 };
