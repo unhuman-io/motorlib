@@ -1,7 +1,7 @@
 #ifndef UNHUMAN_MOTORLIB_PERIPHERAL_STM32F4_OTG_USB_H_
 #define UNHUMAN_MOTORLIB_PERIPHERAL_STM32F4_OTG_USB_H_
 
-#include "../st_device.h"
+#include "st_device.h"
 #include <cstdint>
 #include "stm32f4xx_hal.h"
 #include "stm32f4xx_ll_usb.h"

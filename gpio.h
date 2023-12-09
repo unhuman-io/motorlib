@@ -2,7 +2,7 @@
 #define UNHUMAN_MOTORLIB_GPIO_H_
 
 #include <cstdint>
-#include "../st_device.h"    //TODO remove
+#include "st_device.h"    //TODO remove
 
 class GPIO {
  public:

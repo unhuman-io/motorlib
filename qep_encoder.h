@@ -3,7 +3,7 @@
 
 #include <cstdint>
 #include "encoder.h"
-#include "../st_device.h"
+#include "st_device.h"
 #include "control_fun.h"
 
 class QEPEncoder final : public EncoderBase {
