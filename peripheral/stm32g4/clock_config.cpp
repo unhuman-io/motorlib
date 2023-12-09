@@ -56,5 +56,5 @@ extern "C" void SystemClock_Config(void)
   RCC->APB1SMENR1 |= RCC_APB1SMENR1_CRSSMEN;
   CRS->CFGR = 2 << CRS_CFGR_SYNCSRC_Pos | 34 << CRS_CFGR_FELIM_Pos |
     (48000000/1000 - 1) << CRS_CFGR_RELOAD_Pos; // DIV1, source usb sof (2), polarity rising, 34 felim was specificed by cubemx, reload (48000000/1000 - 1)
-  //CRS->CR |= CRS_CR_AUTOTRIMEN | CRS_CR_CEN;
+  CRS->CR |= CRS_CR_AUTOTRIMEN | CRS_CR_CEN;
 }
