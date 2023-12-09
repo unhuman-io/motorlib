@@ -14,6 +14,9 @@ extern "C" void SystemClock_Config(void)
 
     // PWR_CR5_R1MODE change recommends 1 us startup
     us_delay(1);
+
+    FLASH->ACR |= FLASH_ACR_PRFTEN;
+    FLASH->ACR = (FLASH->ACR & ~FLASH_ACR_LATENCY_Msk) | FLASH_ACR_LATENCY_4WS; // 4 flash wait states for 170 MHz
 #ifdef USE_HSI
     RCC->PLLCFGR = 2 << RCC_PLLCFGR_PLLSRC_Pos | // (2) HSI is pll source (16 MHz)
       3 << RCC_PLLCFGR_PLLM_Pos | // (3) div4 
@@ -39,11 +42,9 @@ extern "C" void SystemClock_Config(void)
     RCC->CR = RCC_CR_HSEON | RCC_CR_HSION | RCC_CR_PLLON;
 #endif
 
-  RCC->CRRCR = RCC_CRRCR_HSI48ON;  
+  RCC->CRRCR = RCC_CRRCR_HSI48ON;
+  while(!(RCC->CRRCR & RCC_CRRCR_HSI48RDY));
   while(!(RCC->CR & RCC_CR_PLLRDY));
-
-  FLASH->ACR |= 4 << FLASH_ACR_LATENCY_Pos; // flash latency at least 4
-  
 
   RCC->CFGR = 3 << RCC_CFGR_SW_Pos; // (3) // PLL clock
 
