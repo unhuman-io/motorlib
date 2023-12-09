@@ -89,7 +89,8 @@ endif
 C_INCLUDES +=  \
 -I. \
 -I$(SELF_DIR)../CMSIS/Include \
--I$(SELF_DIR)../peripheral
+-I$(SELF_DIR)../peripheral \
+-I$(SELF_DIR)../device/stm_common
 
 C_SOURCES += \
 ./$(PARAM_FILE)
