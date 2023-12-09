@@ -7,7 +7,6 @@
 using Driver = DriverBase;
 using PWM = HRPWM;
 using Communication = USBCommunication;
-volatile uint32_t * const cpu_clock = &DWT->CYCCNT;
 uint16_t drv_regs_error = 0;  
 
 #include "../led.h"

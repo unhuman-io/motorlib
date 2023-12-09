@@ -1,8 +1,18 @@
 #include "stm32g474xx.h"
 #include "../../util.h"
+
+volatile uint32_t * const cpu_clock = &DWT->CYCCNT;
+
 extern "C" void SystemClock_Config(void)
 {
     PWR->CR5 &= ~PWR_CR5_R1MODE; // R1MODE -> 0 for > 150 MHz operation
+
+    // ensure cpu clock is started for us_delay
+    CoreDebug->DEMCR |= CoreDebug_DEMCR_TRCENA_Msk;
+    DWT->CYCCNT = 0;
+    DWT->CTRL |= DWT_CTRL_CYCCNTENA_Msk;
+
+    // PWR_CR5_R1MODE change recommends 1 us startup
     us_delay(1);
 #ifdef USE_HSI
     RCC->PLLCFGR = 2 << RCC_PLLCFGR_PLLSRC_Pos | // (2) HSI is pll source (16 MHz)

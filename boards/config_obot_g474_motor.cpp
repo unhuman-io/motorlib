@@ -8,7 +8,6 @@
 using PWM = HRPWM;
 using Communication = USBCommunication;
 using Driver = DRV8323S;
-volatile uint32_t * const cpu_clock = &DWT->CYCCNT;
 uint16_t drv_regs_error = 0;
 
 #ifndef GPIO_OUT
