@@ -8,6 +8,7 @@
 #define FIGURE_ASSERT(x, ...) \
 do {                          \
   if (!(x)) {                 \
+    __disable_irq();          \
     while(1);                 \
   }                           \
 } while(0)

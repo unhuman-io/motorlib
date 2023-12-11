@@ -19,23 +19,30 @@ class SPICommunication : public CommunicationBase {
     {};
 
     int receive_data(ReceiveData* const data) {
+      FIGURE_ASSERT(sizeof(ReceiveData) <= SpiMailbox::kBufferSize);
       return protocol_.mailboxes.read(MAILBOX_ID_DATA_FROM_HOST, (uint8_t*)data, sizeof(ReceiveData));
     }
 
     void send_data(const SendData& data) {
+      FIGURE_ASSERT(sizeof(SendData) <= SpiMailbox::kBufferSize);
       protocol_.mailboxes.write(MAILBOX_ID_DATA_TO_HOST, (uint8_t*)&data, sizeof(SendData));
     }
 
     int receive_string(char* const string) {
-      size_t length = protocol_.mailboxes.read(MAILBOX_ID_SERIAL_FROM_HOST, (uint8_t*)string, 64U);
+      size_t length = protocol_.mailboxes.read(MAILBOX_ID_SERIAL_FROM_HOST, (uint8_t*)string, SpiMailbox::kBufferSize);
       string[length] = '\x0'; // Enforce the string termination
       return length;
     }
 
-    bool send_string(const char* const string, uint16_t length) {
-      if(length > 0)
+    bool send_string(const char* string, uint16_t length) {
+      size_t chunk_length;
+      // If the buffer is too long - split it onto smaller chunks.
+      while(length > 0)
       {
-        protocol_.mailboxes.write(MAILBOX_ID_SERIAL_TO_HOST, (const uint8_t*)string, length);
+        chunk_length = (length > SpiMailbox::kBufferSize) ? SpiMailbox::kBufferSize : length;
+        protocol_.mailboxes.write(MAILBOX_ID_SERIAL_TO_HOST, (const uint8_t*)string, chunk_length);
+        string += chunk_length;
+        length -= chunk_length;
       }
       return true;
     }
