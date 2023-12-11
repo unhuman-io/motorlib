@@ -14,6 +14,9 @@ extern "C" void SystemClock_Config(void)
 
     // PWR_CR5_R1MODE change recommends 1 us startup
     us_delay(1);
+
+    FLASH->ACR |= FLASH_ACR_PRFTEN;
+    FLASH->ACR = (FLASH->ACR & ~FLASH_ACR_LATENCY_Msk) | FLASH_ACR_LATENCY_4WS; // 4 flash wait states for 170 MHz
 #ifdef USE_HSI
     RCC->PLLCFGR = 2 << RCC_PLLCFGR_PLLSRC_Pos | // (2) HSI is pll source (16 MHz)
       3 << RCC_PLLCFGR_PLLM_Pos | // (3) div4 
@@ -39,11 +42,9 @@ extern "C" void SystemClock_Config(void)
     RCC->CR = RCC_CR_HSEON | RCC_CR_HSION | RCC_CR_PLLON;
 #endif
 
-  RCC->CRRCR = RCC_CRRCR_HSI48ON;  
+  RCC->CRRCR = RCC_CRRCR_HSI48ON;
+  while(!(RCC->CRRCR & RCC_CRRCR_HSI48RDY));
   while(!(RCC->CR & RCC_CR_PLLRDY));
-
-  FLASH->ACR |= 4 << FLASH_ACR_LATENCY_Pos; // flash latency at least 4
-  
 
   RCC->CFGR = 3 << RCC_CFGR_SW_Pos; // (3) // PLL clock
 
@@ -56,5 +57,5 @@ extern "C" void SystemClock_Config(void)
   RCC->APB1SMENR1 |= RCC_APB1SMENR1_CRSSMEN;
   CRS->CFGR = 2 << CRS_CFGR_SYNCSRC_Pos | 34 << CRS_CFGR_FELIM_Pos |
     (48000000/1000 - 1) << CRS_CFGR_RELOAD_Pos; // DIV1, source usb sof (2), polarity rising, 34 felim was specificed by cubemx, reload (48000000/1000 - 1)
-  //CRS->CR |= CRS_CR_AUTOTRIMEN | CRS_CR_CEN;
+  CRS->CR |= CRS_CR_AUTOTRIMEN | CRS_CR_CEN;
 }
