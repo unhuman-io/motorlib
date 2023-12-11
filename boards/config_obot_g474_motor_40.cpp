@@ -7,7 +7,6 @@
 using PWM = HRPWM;
 using Communication = USBCommunication;
 using Driver = DriverMPS;
-volatile uint32_t * const cpu_clock = &DWT->CYCCNT;
 
 #include "../led.h"
 #include "../controller/position_controller.h"

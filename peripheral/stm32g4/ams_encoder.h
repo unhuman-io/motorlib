@@ -2,7 +2,7 @@
 #define UNHUMAN_MOTORLIB_PERIPHERAL_STM32G4_AMS_ENCODER_H_
 
 #include "../../encoder.h"
-#include "../st_device.h"
+#include "st_device.h"
 
 
 class GPIO;

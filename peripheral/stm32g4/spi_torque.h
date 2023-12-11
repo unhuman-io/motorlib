@@ -2,7 +2,7 @@
 #define UNHUMAN_MOTORLIB_PERIPHERAL_STM32G4_SPI_TORQUE_H_
 
 #include <cstdint>
-#include "../st_device.h"
+#include "st_device.h"
 #include "../../gpio.h"
 #include "../../torque_sensor.h"
 

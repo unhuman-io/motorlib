@@ -2,7 +2,7 @@
 #define UNHUMAN_MOTORLIB_PERIPHERAL_STM32G4_I2C_TORQUE_H_
 
 #include <cstdint>
-#include "../st_device.h"
+#include "st_device.h"
 #include "../../gpio.h"
 #include "../../torque_sensor.h"
 #include "i2c_dma.h"

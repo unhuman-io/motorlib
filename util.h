@@ -1,7 +1,7 @@
 #ifndef UNHUMAN_MOTORLIB_UTIL_H_
 #define UNHUMAN_MOTORLIB_UTIL_H_
 
-#include "../st_device.h"
+#include "st_device.h"
 #include "core_cm4.h"
 
 #define US_TO_CPU(t_us) (t_us*(CPU_FREQUENCY_HZ/1000000))

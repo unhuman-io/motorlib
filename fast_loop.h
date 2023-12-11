@@ -6,13 +6,8 @@
 #include "control_fun.h"
 #include "logger.h"
 
-// #include "fast_loop.h"
 #include "foc.h"
-// #include <cmath>
-// #include "peripheral/pwm.h"
 #include "util.h"
-// #include "encoder.h"
-// #include "../st_device.h"
 #include "sincos.h"
 #include "table_interp.h"
 #include "cstack.h"

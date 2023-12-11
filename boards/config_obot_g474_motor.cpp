@@ -8,7 +8,6 @@
 using PWM = HRPWM;
 using Communication = USBCommunication;
 using Driver = DRV8323S;
-volatile uint32_t * const cpu_clock = &DWT->CYCCNT;
 uint16_t drv_regs_error = 0;
 
 #ifndef GPIO_OUT
@@ -206,6 +205,7 @@ void system_init() {
     System::api.add_api_variable("IC", new const APIUint32(&ADC5->JDR1));
     System::api.add_api_variable("usb_err", new APIUint32(&config::usb.error_count_));
     System::api.add_api_variable("usb_reset_count", new APIUint32(&config::usb.reset_count_));
+    System::api.add_api_variable("hsi48_trim", new const APICallbackInt8([](){ return (int8_t) ((CRS->CR & CRS_CR_TRIM) >> CRS_CR_TRIM_Pos) - 64; }));
     System::api.add_api_variable("shutdown", new const APICallback([](){
         // requires power cycle to return 
         setup_sleep();

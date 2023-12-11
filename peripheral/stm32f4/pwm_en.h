@@ -3,7 +3,7 @@
 
 #include "../pwm.h"
 #include <cstdint>
-#include "../../../st_device.h"
+#include "st_device.h"
 
 class GPIO;
 

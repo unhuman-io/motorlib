@@ -2,7 +2,7 @@
 #define UNHUMAN_MOTORLIB_PERIPHERAL_STM32G4_SPI_DMA_H_
 
 #include <cstdint>
-#include "../st_device.h"
+#include "st_device.h"
 #include "../../gpio.h"
 #include "../../util.h"
 
