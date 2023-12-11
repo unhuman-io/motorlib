@@ -211,6 +211,7 @@ class MainLoop {
 
       float iq_des = 0;
       float vq_des = 0;
+      bool controller_current_saturated = false;
       switch (mode_) {
         case CURRENT:
           iq_des = command_current_.current_desired;
@@ -220,24 +221,31 @@ class MainLoop {
           if (position_controller_.tracking_fault()) {
             status_.error.controller_tracking = true;
           }
+          controller_current_saturated = position_controller_.is_current_saturated();
           break;
         case TORQUE:
           iq_des = torque_controller_.step(command_current_, status_);
+          controller_current_saturated = torque_controller_.is_current_saturated();
           break;
         case IMPEDANCE:
           iq_des = impedance_controller_.step(command_current_, status_);
+          controller_current_saturated = impedance_controller_.is_current_saturated();
           break;
         case VELOCITY:
           iq_des = velocity_controller_.step(command_current_, status_);
+          controller_current_saturated = velocity_controller_.is_current_saturated();
           break;
         case STATE:
           iq_des = state_controller_.step(command_current_, status_);
+          controller_current_saturated = state_controller_.is_current_saturated();
           break;
         case JOINT_POSITION:
           iq_des = joint_position_controller_.step(command_current_, status_);
+          controller_current_saturated = joint_position_controller_.is_current_saturated();
           break;
         case ADMITTANCE:
           iq_des = admittance_controller_.step(command_current_, status_);
+          controller_current_saturated = admittance_controller_.is_current_saturated();
           break;
         case STEPPER_VELOCITY:
           vq_des = command_current_.stepper_velocity.voltage;
@@ -274,7 +282,7 @@ class MainLoop {
             if (position_controller_.tracking_fault()) {
               status_.error.controller_tracking = true;
             }
-
+            controller_current_saturated = position_controller_.is_current_saturated();
             break;
           }
         case CURRENT_TUNING:
@@ -350,6 +358,7 @@ class MainLoop {
               iq_des = position_controller_.step(command, status_);
               break;
           }
+          controller_current_saturated = position_controller_.is_current_saturated();
           
           break;
         }
@@ -377,7 +386,7 @@ class MainLoop {
         }
       }
 
-      status_.error.motor_current_limit = fast_loop_.is_current_saturated(); // todo || is controller saturated
+      status_.error.motor_current_limit = fast_loop_.is_current_saturated() || controller_current_saturated;
       status_.error.motor_voltage_limit = fast_loop_.is_voltage_saturated();
 
       fast_loop_.set_iq_des(iq_des);

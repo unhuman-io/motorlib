@@ -30,9 +30,9 @@ class StateController : public Controller {
         torque_dot_error_ = torque_dot_error_filter_.update(c.torque_dot_desired - torque_dot);
         torque_last_ = status.torque;
 
-        float iq_des = c.kp*position_error_ + c.kd*velocity_error_ + c.kt*torque_error_ + 
+        iq_des_ = c.kp*position_error_ + c.kd*velocity_error_ + c.kt*torque_error_ + 
             c.ks*torque_dot_error_ + param_.ff_tau*command.torque_desired + command.current_desired;
-        float iq_filtered = output_filter_.update(iq_des);
+        float iq_filtered = output_filter_.update(iq_des_);
         float iq_sat = fsat(iq_filtered, param_.command_max);
         return iq_sat;
     }
@@ -54,11 +54,15 @@ class StateController : public Controller {
         API_ADD_FILTER(state_position_desired_filter, SecondOrderLowPassFilter, position_desired_filter_);
     }
     void set_rollover(float rollover) { /* doesn't support rollover */ }
+    bool is_current_saturated() const {
+        return std::abs(iq_des_) >= std::abs(param_.command_max);
+    }
  private:
     float position_error_, velocity_error_;
     float position_last_ = 0;
     float torque_error_, torque_dot_error_;
     float torque_last_ = 0;
+    float iq_des_ = 0, iq_command_ = 0;
     FirstOrderLowPassFilter velocity_error_filter_;
     FirstOrderLowPassFilter torque_error_filter_;
     FirstOrderLowPassFilter torque_dot_error_filter_;

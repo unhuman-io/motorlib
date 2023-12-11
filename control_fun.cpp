@@ -146,8 +146,8 @@ float PIDController::step(float desired, float velocity_desired, float measured,
     measured_last_ = measured;
     ki_sum_ += ki_ * dt_ * error_;
     ki_sum_ = fsat(ki_sum_, ki_limit_);
-    float filtered_out = output_filter_.update(kp_*error_ + ki_sum_ + kd_*error_dot);
-    return fsat(filtered_out, command_max_);
+    filtered_out_ = output_filter_.update(kp_*error_ + ki_sum_ + kd_*error_dot);
+    return fsat(filtered_out_, command_max_);
 }
 
 float PIDWrapController::step(float desired, float velocity_desired, float measured, float velocity_limit) {

@@ -275,6 +275,9 @@ public:
     void set_param(const PIDParam &param);
     float get_error() const { return error_last_; }
     void set_rollover(float rollover) { rollover_ = rollover; }
+    bool is_saturated() const {
+        return std::abs(filtered_out_) >= command_max_;
+    }
     
     float kp_ = 0, kd_ = 0, ki_ = 0, ki_sum_ = 0, ki_limit_ = 0, command_max_ = 0;
     SecondOrderLowPassFilter velocity_filter_;
@@ -282,6 +285,7 @@ public:
 protected:
     float error_ = 0, velocity_measured_ = 0;
     float measured_last_ = 0;
+    float filtered_out_ = 0;
     
     float error_last_ = 0;
     float last_desired_ = 0;

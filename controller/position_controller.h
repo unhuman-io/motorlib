@@ -40,6 +40,9 @@ class PositionController : public Controller {
     bool tracking_fault() const {
         return tracking_fault_;
     }
+    bool is_current_saturated() const {
+        return controller_.is_saturated();
+    }
  private:
     PIDController controller_;
     float velocity_limit_ = INFINITY;

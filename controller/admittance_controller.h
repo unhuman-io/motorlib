@@ -22,6 +22,9 @@ class AdmittanceController : public Controller {
         torque_controller_.set_param(param.torque);
         velocity_controller_.set_param(param.velocity);
     }
+    bool is_current_saturated() const {
+        return velocity_controller_.is_current_saturated();
+    }
  private:
     VelocityController velocity_controller_;
     PIDController torque_controller_;
