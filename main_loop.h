@@ -386,7 +386,9 @@ class MainLoop {
         }
       }
 
-      status_.error.motor_current_limit = fast_loop_.is_current_saturated() || controller_current_saturated;
+      status_.error.motor_current_limit = (controller_current_saturated || fast_loop_.is_current_saturated()) && 
+        (std::abs(status_.fast_loop.foc_status.measured.i_q) > std::abs(status_.fast_loop.foc_status.command.i_q) - 3);
+        // 3 is a noise limiting factor. I'm hardcoding it for now.
       status_.error.motor_voltage_limit = fast_loop_.is_voltage_saturated();
 
       fast_loop_.set_iq_des(iq_des);
