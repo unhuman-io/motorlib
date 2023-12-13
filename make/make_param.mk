@@ -1,7 +1,7 @@
-ifndef GIT_HASH
-GIT_HASH := $(shell git rev-parse HEAD)
+ifndef OBOT_HASH
+OBOT_HASH := $(shell git rev-parse HEAD)
 endif
-GIT_DEFINE := -DGIT_HASH=\"$(GIT_HASH)\"
+GIT_DEFINE := -DOBOT_HASH=\"$(OBOT_HASH)\"
 
 ifdef PARAM_OVERRIDE
 PARAM_SUFFIX=$(addprefix _,$(notdir $(PARAM_OVERRIDE:.h=)))

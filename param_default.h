@@ -1,1 +1,1 @@
-.git_hash = GIT_HASH,
+.obot_hash = OBOT_HASH,
