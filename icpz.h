@@ -411,6 +411,22 @@ class ICPZ : public EncoderBase {
           (uint8_t) ((ecc_raw >> 16) & 0xff), (uint8_t) ((ecc_raw >> 24) & 0xff)});
     }
 
+    uint8_t get_ipo_filt1() {
+        return read_register(0, 3, 1)[0];
+    }
+
+    void set_ipo_filt1(uint8_t u) {
+        set_register(0, 3, {u});
+    }
+
+    uint8_t get_ipo_filt2() {
+        return read_register(0, 4, 1)[0];
+    }
+
+    void set_ipo_filt2(uint8_t u) {
+        set_register(0, 4, {u});
+    }
+
     std::string get_cmd_result() {
         return "command: " + std::to_string(read_register(Addr::COMMANDS, 1)[0]) + ", result: " + std::to_string(read_register(Addr::CMD_STAT, 1)[0]);
     }
@@ -454,6 +470,10 @@ class ICPZ : public EncoderBase {
         api.add_api_variable(prefix + "cals", new const APICallback([this](){ return this->get_cals_string(); }));
         api.add_api_variable(prefix + "cmd_result", new const APICallback([this](){ return this->get_cmd_result(); }));
         api.add_api_variable(prefix + "disk_um", new const APICallbackFloat([this](){ return this->r_disk_um[this->disk_]; }));
+        api.add_api_variable(prefix + "ipo_filt1", new APICallbackHex<uint8_t>([this](){ return get_ipo_filt1(); },
+            [this](uint8_t u){ this->set_ipo_filt1(u); }));
+        api.add_api_variable(prefix + "ipo_filt2", new APICallbackHex<uint8_t>([this](){ return get_ipo_filt2(); },
+            [this](uint8_t u){ this->set_ipo_filt2(u); }));
     }
 
  protected:
