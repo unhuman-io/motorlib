@@ -5,11 +5,11 @@
 
 # Build path
 BUILD_DIR = build
-ifndef GIT_VERSION
-GIT_VERSION := $(shell git describe --long --dirty --always --abbrev=7)
+ifndef OBOT_VERSION
+OBOT_VERSION := $(shell git describe --long --dirty --always --abbrev=7)
 endif
-ifndef GIT_HASH
-GIT_HASH := $(shell git rev-parse HEAD)
+ifndef OBOT_HASH
+OBOT_HASH := $(shell git rev-parse HEAD)
 endif
 MOTORLIB_HASH := $(shell git -C $(SELF_DIR) rev-parse HEAD)
 $(shell touch $(SELF_DIR)../param_default.h)
@@ -74,8 +74,8 @@ $(SELF_DIR)../peripheral/stm32g4/clock_config.cpp\
 endif # MCU_TARGET == stm32g474
 
 override C_DEFS +=  \
--DGIT_VERSION=\"$(GIT_VERSION)\" \
--DGIT_HASH=\"$(GIT_HASH)\" \
+-DOBOT_VERSION=\"$(OBOT_VERSION)\" \
+-DOBOT_HASH=\"$(OBOT_HASH)\" \
 -DMOTORLIB_HASH=\"$(MOTORLIB_HASH)\" \
 -DCONFIG=\"$(CONFIG)\"
 ifdef NOTES

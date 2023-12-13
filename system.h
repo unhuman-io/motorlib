@@ -20,8 +20,8 @@ class System {
  public:
     static void run() {
         // check parameter version
-        if (GIT_HASH != std::string(param->git_hash)) {
-            logger.log_printf("param version error, firmware: %s, param: %s", GIT_HASH, param->git_hash);
+        if (OBOT_HASH != std::string(param->obot_hash)) {
+            logger.log_printf("param version error, firmware: %s, param: %s", OBOT_HASH, param->obot_hash);
             actuator_.main_loop_.led_.set_color(LED::RED);
             actuator_.main_loop_.led_.set_mode(LED::BLINKING);
             while(1) {
@@ -29,7 +29,7 @@ class System {
                 NVIC_SystemReset();
             }
         } else {
-            logger.log_printf("param version match: %s", GIT_HASH);
+            logger.log_printf("param version match: %s", OBOT_HASH);
         }
         actuator_.start();
 
@@ -237,9 +237,9 @@ class System {
         api.add_api_variable("timestamp", new const APICallbackUint32(get_clock));
         api.add_api_variable("mrollover", new const APICallbackFloat([](){ return actuator_.fast_loop_.get_rollover(); }));
         api.add_api_variable("gear_ratio", new const APIFloat(&param->startup_param.gear_ratio));
-        api.add_api_variable("version", new const APICallback([](){ return GIT_VERSION; }));
-        api.add_api_variable("git_sha", new const APICallback([](){ return GIT_HASH; }));
-        api.add_api_variable("motorlib_sha", new const APICallback([](){ return MOTORLIB_HASH; }));
+        api.add_api_variable("version", new const APICallback([](){ return OBOT_VERSION; }));
+        api.add_api_variable("obot_hash", new const APICallback([](){ return OBOT_HASH; }));
+        api.add_api_variable("motorlib_hash", new const APICallback([](){ return MOTORLIB_HASH; }));
         api.add_api_variable("name", new const APICallback([](){ return param->name; }));
         uint32_t api_timeout_us = 10000;
         api.add_api_variable("api_timeout", new APIUint32(&api_timeout_us));
