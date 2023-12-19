@@ -34,10 +34,9 @@ class AutoComplete {
                         str_ = matches[0];
                         str_out = '\r' + str_;
                     } else if (matches.size()) {
-                        std::string_view max_match = matches[0];
+                        std::string max_match = std::string(matches[0]);
                         if (last_key_ == '\t') {
                             str_out = '\n';
-                            std::string_view max_match = matches[0];
                             for (auto &match : matches) {
                                 max_match = max_string_match(max_match, match);
                                 str_out += std::string(match) + '\t';
