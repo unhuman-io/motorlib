@@ -7,6 +7,7 @@
 #include "util.h"
 #include <algorithm>
 #include "autocomplete.h"
+#include <cstring>
 
 #define API_ADD_FILTER(name, type, location) \
     std::function<void(float)> set_filt_##name = std::bind(&type::set_frequency, &location, std::placeholders::_1); \
@@ -137,17 +138,24 @@ class APICallbackHex : public APIVariable {
 class ParameterAPI {
  public:
     // type is used by scanf to parse the string
-    void add_api_variable(const std::string name, APIVariable *variable);
-    void add_api_variable(const std::string name, const APIVariable *variable);
-    bool set_api_variable(const std::string name, std::string value);
+    void add_api_variable(const char * name, APIVariable *variable);
+    void add_api_variable(const char * name, const APIVariable *variable);
+    bool set_api_variable(std::string name, std::string value);
     std::string get_api_variable(std::string name);
     std::string parse_string(std::string);
     std::string get_all_api_variables() const;
     uint16_t get_api_length() const;
     std::string get_api_variable_name(uint16_t index) const;
+    struct cmp_str
+    {
+      bool operator()(char const *a, char const *b) const
+      {
+          return std::strcmp(a, b) < 0;
+      }
+    };
  private:
-    std::map<std::string, APIVariable *> variable_map_;
-    std::map<std::string, const APIVariable *> const_variable_map_;
+    std::map<const char *, APIVariable *, cmp_str> variable_map_;
+    std::map<const char *, const APIVariable *, cmp_str> const_variable_map_;
     AutoComplete auto_complete_;
 };
 

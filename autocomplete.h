@@ -19,7 +19,7 @@ inline std::string max_string_match(std::string &s1, std::string s2) {
 
 class AutoComplete {
  public:
-    void add_match_string(std::string &s) {
+    void add_match_string(const char *s) {
         strs_.emplace_back(s);
     }
     std::string autocomplete(char c) {
@@ -81,7 +81,7 @@ class AutoComplete {
  private:
     char last_key_ = 0;
     std::string str_, last_str_;
-    std::vector<std::string> strs_;
+    std::vector<const char *> strs_;
 };
 
 #endif  // UNHUMAN_MOTORLIB_AUTOCOMPLETE_H_

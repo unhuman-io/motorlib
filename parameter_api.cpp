@@ -9,19 +9,19 @@ static std::string trim(std::string s)
     return s.substr(first, (last-first+1));
 }
 
-void ParameterAPI::add_api_variable(std::string name, APIVariable *var) {
+void ParameterAPI::add_api_variable(const char * name, APIVariable *var) {
     variable_map_[name] = var;
     auto_complete_.add_match_string(name);
 }
 
-void ParameterAPI::add_api_variable(std::string name, const APIVariable *var) {
+void ParameterAPI::add_api_variable(const char * name, const APIVariable *var) {
     const_variable_map_[name] = var;
     auto_complete_.add_match_string(name);
 }
 
 bool ParameterAPI::set_api_variable(std::string name, std::string value) {
-    if (variable_map_.count(name))  {
-        variable_map_[name]->set(value);
+    if (variable_map_.count(name.c_str()))  {
+        variable_map_[name.c_str()]->set(value);
         return true;
     }
     return false;
@@ -29,10 +29,10 @@ bool ParameterAPI::set_api_variable(std::string name, std::string value) {
 
 std::string ParameterAPI::get_api_variable(std::string name) {
     std::string out;
-    if (variable_map_.count(name)) {
-        out = variable_map_[name]->get();
-    } else if (const_variable_map_.count(name)) {
-        out = const_variable_map_[name]->get();
+    if (variable_map_.count(name.c_str())) {
+        out = variable_map_[name.c_str()]->get();
+    } else if (const_variable_map_.count(name.c_str())) {
+        out = const_variable_map_[name.c_str()]->get();
     }
     return out;
 }
@@ -84,10 +84,10 @@ std::string ParameterAPI::get_all_api_variables() const {
     std::string s;
     s = std::to_string(variable_map_.size() + const_variable_map_.size()) + " variables:\n";
     for(auto const& m : variable_map_) {
-        s += m.first + "\n";
+        s += std::string(m.first) + "\n";
     }
     for(auto const& m : const_variable_map_) {
-        s += m.first + "\n";
+        s += std::string(m.first) + "\n";
     }
     return s;
 }
