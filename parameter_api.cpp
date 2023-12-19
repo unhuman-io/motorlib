@@ -2,24 +2,24 @@
 //#include <regex>
 //#include <sstream>
 
-static std::string trim(std::string s)
+static std::string trim(std::string_view s)
 {
     auto first = s.find_first_not_of(' ');
     auto last = s.find_last_not_of(' ');
-    return s.substr(first, (last-first+1));
+    return std::string(s.substr(first, (last-first+1)));
 }
 
-void ParameterAPI::add_api_variable(std::string name, APIVariable *var) {
+void ParameterAPI::add_api_variable(std::string_view name, APIVariable *var) {
     variable_map_[name] = var;
     auto_complete_.add_match_string(name);
 }
 
-void ParameterAPI::add_api_variable(std::string name, const APIVariable *var) {
+void ParameterAPI::add_api_variable(std::string_view name, const APIVariable *var) {
     const_variable_map_[name] = var;
     auto_complete_.add_match_string(name);
 }
 
-bool ParameterAPI::set_api_variable(std::string name, std::string value) {
+bool ParameterAPI::set_api_variable(std::string_view name, std::string value) {
     if (variable_map_.count(name))  {
         variable_map_[name]->set(value);
         return true;
@@ -27,7 +27,7 @@ bool ParameterAPI::set_api_variable(std::string name, std::string value) {
     return false;
 }
 
-std::string ParameterAPI::get_api_variable(std::string name) {
+std::string ParameterAPI::get_api_variable(std::string_view name) {
     std::string out;
     if (variable_map_.count(name)) {
         out = variable_map_[name]->get();
@@ -37,7 +37,7 @@ std::string ParameterAPI::get_api_variable(std::string name) {
     return out;
 }
 
-std::string ParameterAPI::parse_string(std::string s) {
+std::string ParameterAPI::parse_string(std::string_view s) {
     std::string out;
 
     try {
@@ -84,10 +84,10 @@ std::string ParameterAPI::get_all_api_variables() const {
     std::string s;
     s = std::to_string(variable_map_.size() + const_variable_map_.size()) + " variables:\n";
     for(auto const& m : variable_map_) {
-        s += m.first + "\n";
+        s += std::string(m.first) + "\n";
     }
     for(auto const& m : const_variable_map_) {
-        s += m.first + "\n";
+        s += std::string(m.first) + "\n";
     }
     return s;
 }
