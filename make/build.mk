@@ -34,7 +34,7 @@ $(BUILD_DIR)/%.o: %.c | $(BUILD_DIR)
 	$(CC) $(PARAM_INCLUDE) -c $(CFLAGS) -Wa,-a,-ad,-alms=$(BUILD_DIR)/lto.lst $< -o $@
 
 $(BUILD_DIR)/%.o: %.cpp | $(BUILD_DIR) 
-	$(CXX) -c $(CPPFLAGS) -std=c++11 -Wa,-a,-ad,-alms=$(BUILD_DIR)/lto.lst $< -o $@
+	$(CXX) -c $(CPPFLAGS) -std=c++17 -Wa,-a,-ad,-alms=$(BUILD_DIR)/lto.lst $< -o $@
 
 $(BUILD_DIR)/%.o: %.s | $(BUILD_DIR)
 	$(AS) -c $(CFLAGS) $< -o $@

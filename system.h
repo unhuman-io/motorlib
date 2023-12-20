@@ -113,7 +113,8 @@ class System {
         api.add_api_variable("stack_used", new const APICallbackUint32(get_stack_used));
         api.add_api_variable("heap_free", new const APICallbackUint32(get_heap_free));
         api.add_api_variable("heap_used", new const APICallbackUint32(get_heap_used));
-
+        api.add_api_variable("heap_current_free", new const APICallbackUint32(get_current_heap_free));
+        api.add_api_variable("heap_current_used", new const APICallbackUint32(get_current_heap_used));
         api.add_api_variable("vbus_min", new APIFloat(&actuator_.main_loop_.vbus_min_));
         api.add_api_variable("vbus_max", new APIFloat(&actuator_.main_loop_.vbus_max_));
         api.add_api_variable("ia_bias", new APIFloat(&actuator_.fast_loop_.ia_bias_));

@@ -41,6 +41,11 @@
 #define VREFINT_CAL_ADDR                   ((uint16_t*) (0x1FFF75AAUL)) /* Internal voltage reference, address of parameter VREFINT_CAL: VrefInt ADC raw data acquired at temperature 30 DegC (tolerance: +-5 DegC), Vref+ = 3.0 V (tolerance: +-10 mV). */
 #define VREFINT_CAL_VREF                   (3000UL)                     /* Analog voltage reference (Vref+) value with which temperature sensor has been calibrated in production (tolerance: +-10 mV) (unit: mV). */
 
-
+#ifdef __cplusplus
+inline bool is_rom(void * p) {
+    // FLASH defines for both stm32g474.
+    return (uint32_t) p >= FLASH_BASE && (uint32_t) p <= FLASH_BASE + *((uint16_t*) FLASHSIZE_BASE)*1024;
+}
+#endif
 
 #endif
