@@ -76,7 +76,7 @@ class AutoComplete {
         last_key_ = c;
         return str_out;
     }
-    std::string last_string() const { return last_str_; }
+    std::string_view last_string() const { return last_str_; }
  private:
     char last_key_ = 0;
     std::string str_, last_str_;

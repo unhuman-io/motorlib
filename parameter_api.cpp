@@ -46,9 +46,9 @@ std::string ParameterAPI::get_api_variable(std::string_view name) {
     return out;
 }
 
-std::string ParameterAPI::parse_string(std::string_view sin) {
+std::string ParameterAPI::parse_string(std::string_view s) {
     std::string out;
-    std::string s = std::string(sin);
+
     try {
         bool autocomplete = false;
         if (s.size() == 1) {
