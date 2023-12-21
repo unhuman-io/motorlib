@@ -244,6 +244,7 @@ class FastLoop {
       ia_bias_ = param_.ia_bias;
       ib_bias_ = param_.ib_bias;
       ic_bias_ = param_.ic_bias;
+      max_i_bias_ = param_.max_i_bias == 0 ? 10 : param_.max_i_bias;
       iq_filter_.set_frequency(param_.output_filter_hz.iq);
       motor_velocity_filter_.set_frequency(param_.output_filter_hz.motor_velocity);
       motor_position_filter_.set_frequency(param_.output_filter_hz.motor_position);
@@ -282,9 +283,9 @@ class FastLoop {
       ia_bias_ = (1-alpha_zero_)*(ia_bias_) + alpha_zero_* param_.adc1_gain*(adc1_0-2048);
       ib_bias_ = (1-alpha_zero_)*(ib_bias_) + alpha_zero_* param_.adc2_gain*(adc2_0-2048);
       ic_bias_ = (1-alpha_zero_)*(ic_bias_) + alpha_zero_* param_.adc3_gain*(adc3_0-2048);
-      ia_bias_ = fsat(ia_bias_, 10);
-      ib_bias_ = fsat(ib_bias_, 10);
-      ic_bias_ = fsat(ic_bias_, 10);
+      ia_bias_ = fsat(ia_bias_, max_i_bias_);
+      ib_bias_ = fsat(ib_bias_, max_i_bias_);
+      ic_bias_ = fsat(ic_bias_, max_i_bias_);
     }
 
     void set_phase_mode(float phase_mode) {
@@ -344,6 +345,7 @@ class FastLoop {
     int32_t motor_mechanical_position_ = 0;
 
     float ia_bias_, ib_bias_, ic_bias_;
+    float max_i_bias_ = 0;
 
     float iq_des = 0;
     float id_des = 0;
