@@ -46,6 +46,8 @@ static uint8_t CRC_BiSS_43_30bit (uint32_t w_InputData);
         [](uint8_t u){ icpz.set_ac_count(u); }));\
     api.add_api_variable(prefix "led_cur", new APICallbackUint8([](){ return icpz.get_led_cur(); }, \
         [](uint8_t u){ icpz.set_led_cur(u); }));\
+    api.add_api_variable(prefix "ana_sel", new APICallbackUint8([](){ return icpz.get_ac_sel(); }, \
+        [](uint8_t u){ icpz.set_ac_sel(u); }));\
     api.add_api_variable(prefix "cal", new const APICallback([](){ return icpz.get_cal_string(); }));\
     api.add_api_variable(prefix "cals", new const APICallback([](){ return icpz.get_cals_string(); }));\
     api.add_api_variable(prefix "cmd_result", new const APICallback([](){ return icpz.get_cmd_result(); }));\
@@ -430,6 +432,17 @@ class ICPZ : public EncoderBase {
         return read_register(0x5d, 1)[0];// & 0xf;
     }
 
+    void set_ac_sel(uint8_t sel) {
+        auto data = read_register(3, 1, 1);
+        set_register(3, 1, {(uint8_t) ((data[0] & 0x04) | (sel & 0x3))});
+    }
+
+    uint8_t get_ac_sel() {
+        // sel 0 buffered signals
+        // sel 2 pre conditioning signals
+        // sel 3 post conditioning signals
+        return read_register(3, 1, 1)[0] & 0x3;
+    }
 
     float get_ecc_um() {
         auto data = read_register(2, 4, 4);
