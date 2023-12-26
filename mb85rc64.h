@@ -83,8 +83,8 @@ class MB85RC64 {
     }
 
     std::string get_log() {
-      char c[255];
-      read(log_address_.word+4, (uint8_t*) c, 255, 10000);
+      char c[MAX_API_DATA_SIZE];
+      read(log_address_.word+4, (uint8_t*) c, MAX_API_DATA_SIZE, 10000);
       std::string s(c);
       return s;
     }
@@ -100,7 +100,7 @@ class MB85RC64 {
       *value = word.word;
     }
 
-   void read(uint16_t address, uint8_t *bytes, uint8_t length, uint16_t timeout_us = 1000) {
+   void read(uint16_t address, uint8_t *bytes, uint16_t length, uint16_t timeout_us = 1000) {
       Address addr = {.word = address};
       uint8_t data[2] = {addr.high, addr.low};
       i2c_dma_.write(address_, 2, data, false);
@@ -114,7 +114,7 @@ class MB85RC64 {
       i2c_dma_.write(address_, 6, data, true);
     }
 
-    void write(uint16_t address, const uint8_t *bytes, uint8_t length, uint16_t timeout_us = 1000) {
+    void write(uint16_t address, const uint8_t *bytes, uint16_t length, uint16_t timeout_us = 1000) {
       Address addr = {.word = address};
       uint8_t data[2+length] = {addr.high, addr.low};
       std::memcpy(data+2, bytes, length);
@@ -130,7 +130,7 @@ class MB85RC64 {
     const Address *current_block_ = &block1_;
     const Address log_address_ = {.word = (uint16_t) (block2_.word + block_length_)};
     //const uint16_t log_max_ = 0x2000 - 4 - log_address_.word; // todo: figure out longer log
-    const uint16_t log_max_ = 256;
+    const uint16_t log_max_ = MAX_API_DATA_SIZE;
  
 };
 
