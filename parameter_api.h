@@ -1,7 +1,7 @@
 #ifndef UNHUMAN_MOTORLIB_PARAMETER_API_H_
 #define UNHUMAN_MOTORLIB_PARAMETER_API_H_
 
-#include <string>
+#include <string_view>
 #include <map>
 #include <vector>
 #include "util.h"
@@ -137,17 +137,17 @@ class APICallbackHex : public APIVariable {
 class ParameterAPI {
  public:
     // type is used by scanf to parse the string
-    void add_api_variable(const std::string name, APIVariable *variable);
-    void add_api_variable(const std::string name, const APIVariable *variable);
-    bool set_api_variable(const std::string name, std::string value);
-    std::string get_api_variable(std::string name);
-    std::string parse_string(std::string);
+    void add_api_variable(const std::string_view name, APIVariable *variable);
+    void add_api_variable(const std::string_view name, const APIVariable *variable);
+    bool set_api_variable(const std::string_view name, std::string value);
+    std::string get_api_variable(std::string_view name);
+    std::string parse_string(std::string_view);
     std::string get_all_api_variables() const;
     uint16_t get_api_length() const;
     std::string get_api_variable_name(uint16_t index) const;
  private:
-    std::map<std::string, APIVariable *> variable_map_;
-    std::map<std::string, const APIVariable *> const_variable_map_;
+    std::map<std::string_view, APIVariable *> variable_map_;
+    std::map<std::string_view, const APIVariable *> const_variable_map_;
     AutoComplete auto_complete_;
 };
 

@@ -3,6 +3,7 @@
 
 #include "st_device.h"
 #include "core_cm4.h"
+#include <malloc.h>
 
 #define US_TO_CPU(t_us) (t_us*(CPU_FREQUENCY_HZ/1000000))
 extern volatile uint32_t * const cpu_clock;
@@ -39,6 +40,14 @@ inline uint32_t get_heap_free() {
 }
 inline uint32_t get_heap_used() {
     return (uint32_t) &_Min_Heap_Size - get_heap_free();
+}
+inline uint32_t get_current_heap_used() {
+    struct mallinfo info = mallinfo();
+    return info.uordblks;
+}
+inline uint32_t get_current_heap_free() {
+    struct mallinfo info = mallinfo();
+    return info.fordblks;
 }
 
 #define wait_while_false(condition) while(!(condition))

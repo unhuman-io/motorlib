@@ -11,6 +11,52 @@
 
 static uint8_t CRC_BiSS_43_30bit (uint32_t w_InputData);
 
+#define ICPZ_SET_DEBUG_VARIABLES(prefix, api, icpz) \
+    api.add_api_variable(prefix "ai_phase", new const APICallbackFloat([](){ return icpz.get_ai_phase(); }));\
+    api.add_api_variable(prefix "ai_scale", new const APICallbackFloat([](){ return icpz.get_ai_scale(); }));\
+    api.add_api_variable(prefix "cos_off", new const APICallbackFloat([](){ return icpz.get_cos_off(); }));\
+    api.add_api_variable(prefix "sc_gain", new const APICallbackFloat([](){ return icpz.get_sc_gain(); }));\
+    api.add_api_variable(prefix "sc_phase", new const APICallbackFloat([](){ return icpz.get_sc_phase(); }));\
+    api.add_api_variable(prefix "ai_phases", new const APICallbackFloat([](){ return icpz.get_ai_phases(); }));\
+    api.add_api_variable(prefix "ai_scales", new const APICallbackFloat([](){ return icpz.get_ai_scales(); }));\
+    api.add_api_variable(prefix "cos_offs", new const APICallbackFloat([](){ return icpz.get_cos_offs(); }));\
+    api.add_api_variable(prefix "sin_offs", new const APICallbackFloat([](){ return icpz.get_sin_offs(); }));\
+    api.add_api_variable(prefix "sc_gains", new const APICallbackFloat([](){ return icpz.get_sc_gains(); }));\
+    api.add_api_variable(prefix "sc_phases", new const APICallbackFloat([](){ return icpz.get_sc_phases(); }));\
+    api.add_api_variable(prefix "err", new APIUint32(&icpz.error_count_));\
+    api.add_api_variable(prefix "warn", new APIUint32(&icpz.warn_count_));\
+    api.add_api_variable(prefix "crc_cnt", new APIUint32(&icpz.crc_error_count_));\
+    api.add_api_variable(prefix "raw", new APIUint32(&icpz.raw_value_));\
+    api.add_api_variable(prefix "rawh", new const APICallback([](){ return u32_to_hex(icpz.raw_value_); }));\
+    api.add_api_variable(prefix "diag", new const APICallback([](){ return icpz.read_diagnosis(); }));\
+    api.add_api_variable(prefix "conf_write", new const APICallback([](){ return icpz.write_conf(); }));\
+    api.add_api_variable(prefix "auto_ana", new const APICallback([](){ icpz.start_auto_adj_ana(); return "ok"; }));\
+    api.add_api_variable(prefix "auto_dig", new const APICallback([](){ icpz.start_auto_adj_dig(); return "ok"; }));\
+    api.add_api_variable(prefix "readj_dig", new const APICallback([](){ icpz.start_auto_readj_dig(); return "ok"; }));\
+    api.add_api_variable(prefix "auto_ecc", new const APICallback([](){ icpz.start_auto_adj_ecc(); return "ok"; }));\
+    api.add_api_variable(prefix "ecc_correction", new APICallbackUint8([](){ return icpz.get_ecc_correction(); }, \
+        [](uint8_t u){ icpz.set_ecc_correction(u); }));\
+    api.add_api_variable(prefix "ran_tol", new APICallbackUint8([](){ return icpz.get_ran_tol(); }, \
+        [](uint8_t u){ icpz.set_ran_tol(u); }));\
+    api.add_api_variable(prefix "ecc_um", new APICallbackFloat([](){ return icpz.get_ecc_um(); }, \
+        [](float f){ icpz.set_ecc_um(f); }));\
+    api.add_api_variable(prefix "low", new APICallbackUint8([](){ return icpz.get_ac_eto(); }, \
+        [](uint8_t u){ icpz.set_ac_eto(u); }));\
+    api.add_api_variable(prefix "ac_count", new APICallbackUint8([](){ return icpz.get_ac_count(); }, \
+        [](uint8_t u){ icpz.set_ac_count(u); }));\
+    api.add_api_variable(prefix "led_cur", new APICallbackUint8([](){ return icpz.get_led_cur(); }, \
+        [](uint8_t u){ icpz.set_led_cur(u); }));\
+    api.add_api_variable(prefix "ana_sel", new APICallbackUint8([](){ return icpz.get_ac_sel(); }, \
+        [](uint8_t u){ icpz.set_ac_sel(u); }));\
+    api.add_api_variable(prefix "cal", new const APICallback([](){ return icpz.get_cal_string(); }));\
+    api.add_api_variable(prefix "cals", new const APICallback([](){ return icpz.get_cals_string(); }));\
+    api.add_api_variable(prefix "cmd_result", new const APICallback([](){ return icpz.get_cmd_result(); }));\
+    api.add_api_variable(prefix "disk_um", new const APICallbackFloat([](){ return icpz.r_disk_um[icpz.disk_]; }));\
+    api.add_api_variable(prefix "ipo_filt1", new APICallbackHex<uint8_t>([](){ return icpz.get_ipo_filt1(); }, \
+        [](uint8_t u){ icpz.set_ipo_filt1(u); }));\
+    api.add_api_variable(prefix "ipo_filt2", new APICallbackHex<uint8_t>([](){ return icpz.get_ipo_filt2(); }, \
+        [](uint8_t u){ icpz.set_ipo_filt2(u); }));
+
 class ICPZ : public EncoderBase {
  public:
     const char *disk_names[4] = {"default", "pz03s", "pz08s", "pz16s"};
@@ -390,6 +436,17 @@ class ICPZ : public EncoderBase {
         return read_register(0x5d, 1)[0];// & 0xf;
     }
 
+    void set_ac_sel(uint8_t sel) {
+        auto data = read_register(3, 1, 1);
+        set_register(3, 1, {(uint8_t) ((data[0] & 0x04) | (sel & 0x3))});
+    }
+
+    uint8_t get_ac_sel() {
+        // sel 0 buffered signals
+        // sel 2 pre conditioning signals
+        // sel 3 post conditioning signals
+        return read_register(3, 1, 1)[0] & 0x3;
+    }
 
     float get_ecc_um() {
         auto data = read_register(2, 4, 4);
@@ -431,52 +488,6 @@ class ICPZ : public EncoderBase {
         return "command: " + std::to_string(read_register(Addr::COMMANDS, 1)[0]) + ", result: " + std::to_string(read_register(Addr::CMD_STAT, 1)[0]);
     }
 
-    void set_debug_variables(std::string prefix, ParameterAPI &api) {
-        api.add_api_variable(prefix + "ai_phase", new const APICallbackFloat([this](){ return this->get_ai_phase(); }));
-        api.add_api_variable(prefix + "ai_scale", new const APICallbackFloat([this](){ return this->get_ai_scale(); }));
-        api.add_api_variable(prefix + "cos_off", new const APICallbackFloat([this](){ return this->get_cos_off(); }));
-        api.add_api_variable(prefix + "sc_gain", new const APICallbackFloat([this](){ return this->get_sc_gain(); }));
-        api.add_api_variable(prefix + "sc_phase", new const APICallbackFloat([this](){ return this->get_sc_phase(); }));
-        api.add_api_variable(prefix + "ai_phases", new const APICallbackFloat([this](){ return this->get_ai_phases(); }));
-        api.add_api_variable(prefix + "ai_scales", new const APICallbackFloat([this](){ return this->get_ai_scales(); }));
-        api.add_api_variable(prefix + "cos_offs", new const APICallbackFloat([this](){ return this->get_cos_offs(); }));
-        api.add_api_variable(prefix + "sin_offs", new const APICallbackFloat([this](){ return this->get_sin_offs(); }));
-        api.add_api_variable(prefix + "sc_gains", new const APICallbackFloat([this](){ return this->get_sc_gains(); }));
-        api.add_api_variable(prefix + "sc_phases", new const APICallbackFloat([this](){ return this->get_sc_phases(); }));
-        api.add_api_variable(prefix + "err", new APIUint32(&error_count_));
-        api.add_api_variable(prefix + "warn", new APIUint32(&warn_count_));
-        api.add_api_variable(prefix + "crc_cnt", new APIUint32(&crc_error_count_));
-        api.add_api_variable(prefix + "raw", new APIUint32(&raw_value_));
-        api.add_api_variable(prefix + "rawh", new const APICallback([this](){ return u32_to_hex(this->raw_value_); }));
-        api.add_api_variable(prefix + "diag", new const APICallback([this](){ return this->read_diagnosis(); }));
-        api.add_api_variable(prefix + "conf_write", new const APICallback([this](){ return this->write_conf(); }));
-        api.add_api_variable(prefix + "auto_ana", new const APICallback([this](){ this->start_auto_adj_ana(); return "ok"; }));
-        api.add_api_variable(prefix + "auto_dig", new const APICallback([this](){ this->start_auto_adj_dig(); return "ok"; }));
-        api.add_api_variable(prefix + "readj_dig", new const APICallback([this](){ this->start_auto_readj_dig(); return "ok"; }));
-        api.add_api_variable(prefix + "auto_ecc", new const APICallback([this](){ this->start_auto_adj_ecc(); return "ok"; }));
-        api.add_api_variable(prefix + "ecc_correction", new APICallbackUint8([this](){ return this->get_ecc_correction(); }, 
-            [this](uint8_t u){ this->set_ecc_correction(u); }));
-        api.add_api_variable(prefix + "ran_tol", new APICallbackUint8([this](){ return this->get_ran_tol(); }, 
-            [this](uint8_t u){ this->set_ran_tol(u); }));
-        api.add_api_variable(prefix + "ecc_um", new APICallbackFloat([this](){ return this->get_ecc_um(); },
-            [this](float f){ this->set_ecc_um(f); }));
-        api.add_api_variable(prefix + "low", new APICallbackUint8([this](){ return this->get_ac_eto(); }, 
-            [this](uint8_t u){ this->set_ac_eto(u); }));
-        api.add_api_variable(prefix + "ac_count", new APICallbackUint8([this](){ return this->get_ac_count(); }, 
-            [this](uint8_t u){ this->set_ac_count(u); }));
-        api.add_api_variable(prefix + "led_cur", new APICallbackUint8([this](){ return this->get_led_cur(); }, 
-            [this](uint8_t u){ this->set_led_cur(u); }));
-        api.add_api_variable(prefix + "cal", new const APICallback([this](){ return this->get_cal_string(); }));
-        api.add_api_variable(prefix + "cals", new const APICallback([this](){ return this->get_cals_string(); }));
-        api.add_api_variable(prefix + "cmd_result", new const APICallback([this](){ return this->get_cmd_result(); }));
-        api.add_api_variable(prefix + "disk_um", new const APICallbackFloat([this](){ return this->r_disk_um[this->disk_]; }));
-        api.add_api_variable(prefix + "ipo_filt1", new APICallbackHex<uint8_t>([this](){ return get_ipo_filt1(); },
-            [this](uint8_t u){ this->set_ipo_filt1(u); }));
-        api.add_api_variable(prefix + "ipo_filt2", new APICallbackHex<uint8_t>([this](){ return get_ipo_filt2(); },
-            [this](uint8_t u){ this->set_ipo_filt2(u); }));
-    }
-
- protected:
     SPIDMA &spidma_;
     Disk disk_;
     uint8_t command_[5] = {};

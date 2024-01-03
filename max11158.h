@@ -55,12 +55,12 @@ class MAX11158 : public TorqueSensorBase {
         read_error_ = 0;
     }
 
-    void set_debug_variables(std::string prefix, ParameterAPI &api) {
-        api.add_api_variable(prefix + "raw", new const APIUint32(&raw_value_));
-        api.add_api_variable(prefix + "int", new const APIInt32(&signed_value_));
-        api.add_api_variable(prefix + "timeout_error", new const APIUint32(&timeout_error_));
-        api.add_api_variable(prefix + "read_error", new const APIUint32(&read_error_));
-        api.add_api_variable(prefix + "read_error", new const APIUint32(&read_error_));
+    void set_debug_variables(ParameterAPI &api) {
+        api.add_api_variable("max_raw", new const APIUint32(&raw_value_));
+        api.add_api_variable("max_int", new const APIInt32(&signed_value_));
+        api.add_api_variable("max_timeout_error", new const APIUint32(&timeout_error_));
+        api.add_api_variable("max_read_error", new const APIUint32(&read_error_));
+        api.add_api_variable("max_read_error", new const APIUint32(&read_error_));
     }
 
     uint8_t count_ = 0;
