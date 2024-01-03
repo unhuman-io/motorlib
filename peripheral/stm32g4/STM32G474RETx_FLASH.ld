@@ -77,19 +77,19 @@ SECTIONS
     *(flash_param)         /* .rodata sections (constants, strings, etc.) */
     . = ALIGN(4);
   } >SECTOR_7
-  /* The startup code goes first into FLASH */
-/*  .isr_vector :
-  {
-    . = ALIGN(4);
-    KEEP(*(.isr_vector)) */ /* Startup code */
-/*    . = ALIGN(4);
-  } >FLASH */
+
   _siccmram = LOADADDR(.ccmram);
   .ccmram :
   {
     . = ALIGN(4);
     _sccmram = .;
     KEEP(*(.isr_vector)) /* Startup code */
+    . = ALIGN(512);
+    KEEP(*(flash_start)) /* Address 0x8000200 */
+    . = ALIGN(4);
+    /* use example : 
+      const char obot_hash[41] __attribute__((section("flash_start"),used)) 
+        = OBOT_HASH; */
     *(.ccmram)
     *(.ccmram*)
     *(.text._ZN8FastLoop6updateEv)
