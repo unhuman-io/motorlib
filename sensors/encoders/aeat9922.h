@@ -6,6 +6,8 @@
 #include "../../logger.h"
 
 // An "18 bit" on or off axis single pole magnetic encoder from Broadcom
+// "isol_" is the number of bytes of read delay. This comes about from using
+// for example the LTC4332, which adds one byte of read delay.
 template<uint8_t isol_ = 1>
 class AEAT9922 : public EncoderBase {
  public:
@@ -21,12 +23,13 @@ class AEAT9922 : public EncoderBase {
             us_delay(2);
         }
         spidma_.readwrite(read_out_, read_in_, 3+isol_);
-        if (read_in_[1+isol_] != 0x80) {
+        if ((read_in_[1+isol_] & 0xF0) != 0x80) {
             success = false;
             logger.log_printf("aeat9922 status error reg 0x21, expected 0x80, read 0x%02X",
                 read_in_[1+isol_]);
         }
 
+        // May in the future use 24 bit mode, Keeping this code for that case
         // Set into 24 bit mode
         // uint8_t data_out[2] = {0x80, 0x0B};
         // uint8_t data_in[2];
@@ -46,6 +49,7 @@ class AEAT9922 : public EncoderBase {
     int32_t read() {
         spidma_.finish_readwrite();
         
+        // May in the future use 24 bit mode, Keeping this code for that case
         // 24 bit
         // raw_value_ = read_in_[0+isol_] << 12 | read_in_[1+isol_] << 4 | read_in_[2+isol_] >> 4; // 20 bits
         // uint8_t crc_read = read_in_[2+isol_] << 4 | read_in_[3+isol_] >> 4;
@@ -68,8 +72,11 @@ class AEAT9922 : public EncoderBase {
         
         // 16 bit
         raw_value_ = read_in_[0+isol_] << 12 | read_in_[1+isol_] << 4 | read_in_[2+isol_] >> 4;
-        if (raw_value_ & 0x40000) {
+        if (!(raw_value_ & 0x40000)) {
+            // assuming error bit is active low
             error_count_++;
+        } else if (((raw_value_ & 0x80000) >> 19) != get_parity(raw_value_)) {
+            crc_error_count_++;
         } else {
             raw_encoder_ = (raw_value_ & 0x3FFFF) << 14;
             int32_t diff = raw_encoder_ - last_raw_encoder_;
@@ -89,6 +96,7 @@ class AEAT9922 : public EncoderBase {
     bool index_received() const { return true; }
 
     bool set_register(uint8_t address, uint8_t value) {
+        (*spidma_.register_operation_)++;
         uint8_t data_out[3+isol_] = {0, address};
         data_out[2] = crc(data_out);
 
@@ -104,9 +112,39 @@ class AEAT9922 : public EncoderBase {
         data_out[0] = 0x40;
         spidma_.readwrite(data_out, data_in, 3+isol_, true);
         if (data_in[1+isol_] != data_out[1]) {
+            (*spidma_.register_operation_)--;
             return false;
         }
+        (*spidma_.register_operation_)--;
         return true;
+    }
+
+    uint8_t bit_sum(uint32_t val_19) {
+        uint8_t bit_count = 0;
+        for (int i=0; i<19; i++) {
+            bit_count += val_19 & 1;
+            val_19 >>= 1;
+        }
+        return bit_count;
+    }
+    
+    uint8_t get_parity(uint32_t val_19) {
+        return bit_sum(val_19) & 1;
+    }
+
+    uint8_t get_error_register() {
+        (*spidma_.register_operation_)++;
+        //uint8_t data_out[2] = {0x40, 0x21};
+        reg_out_[1] = 0x21;
+        uint8_t data_in[2];
+        spidma_.readwrite(reg_out_, data_in, 2, true);
+        if (isol_) {
+            us_delay(2);
+        }
+        spidma_.readwrite(read_out_, read_in_, 3+isol_, true);
+
+        (*spidma_.register_operation_)--;
+        return read_in_[1+isol_];
     }
     uint8_t crc(uint8_t data[3]) {
         return 0;
@@ -125,6 +163,7 @@ class AEAT9922 : public EncoderBase {
     SPIDMA &spidma_;
     uint8_t read_out_[3+isol_] = {0x40, 0x3F};
     uint8_t read_in_[3+isol_];
+    uint8_t reg_out_[2] = {0x40};
     uint32_t last_raw_encoder_ = 0;
     int32_t accumulated_value_ = 0;
 };
