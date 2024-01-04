@@ -51,7 +51,11 @@ static uint8_t CRC_BiSS_43_30bit (uint32_t w_InputData);
     api.add_api_variable(prefix "cal", new const APICallback([](){ return icpz.get_cal_string(); }));\
     api.add_api_variable(prefix "cals", new const APICallback([](){ return icpz.get_cals_string(); }));\
     api.add_api_variable(prefix "cmd_result", new const APICallback([](){ return icpz.get_cmd_result(); }));\
-    api.add_api_variable(prefix "disk_um", new const APICallbackFloat([](){ return icpz.r_disk_um[icpz.disk_]; }));
+    api.add_api_variable(prefix "disk_um", new const APICallbackFloat([](){ return icpz.r_disk_um[icpz.disk_]; }));\
+    api.add_api_variable(prefix "ipo_filt1", new APICallbackHex<uint8_t>([](){ return icpz.get_ipo_filt1(); }, \
+        [](uint8_t u){ icpz.set_ipo_filt1(u); }));\
+    api.add_api_variable(prefix "ipo_filt2", new APICallbackHex<uint8_t>([](){ return icpz.get_ipo_filt2(); }, \
+        [](uint8_t u){ icpz.set_ipo_filt2(u); }));
 
 class ICPZ : public EncoderBase {
  public:
@@ -462,6 +466,22 @@ class ICPZ : public EncoderBase {
         uint32_t ecc_raw = ecc/r_disk_um[disk_] / 1.407e-9;
         set_register(2, 4, {(uint8_t) (ecc_raw & 0xff), (uint8_t) ((ecc_raw >> 8) & 0xff), 
           (uint8_t) ((ecc_raw >> 16) & 0xff), (uint8_t) ((ecc_raw >> 24) & 0xff)});
+    }
+
+    uint8_t get_ipo_filt1() {
+        return read_register(0, 3, 1)[0];
+    }
+
+    void set_ipo_filt1(uint8_t u) {
+        set_register(0, 3, {u});
+    }
+
+    uint8_t get_ipo_filt2() {
+        return read_register(0, 4, 1)[0];
+    }
+
+    void set_ipo_filt2(uint8_t u) {
+        set_register(0, 4, {u});
     }
 
     std::string get_cmd_result() {
