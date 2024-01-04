@@ -134,10 +134,9 @@ class AEAT9922 : public EncoderBase {
 
     uint8_t get_error_register() {
         (*spidma_.register_operation_)++;
-        //uint8_t data_out[2] = {0x40, 0x21};
-        reg_out_[1] = 0x21;
+        uint8_t data_out[2] = {0x40, 0x21};
         uint8_t data_in[2];
-        spidma_.readwrite(reg_out_, data_in, 2, true);
+        spidma_.readwrite(data_out, data_in, 2, true);
         if (isol_) {
             us_delay(2);
         }
@@ -163,7 +162,6 @@ class AEAT9922 : public EncoderBase {
     SPIDMA &spidma_;
     uint8_t read_out_[3+isol_] = {0x40, 0x3F};
     uint8_t read_in_[3+isol_];
-    uint8_t reg_out_[2] = {0x40};
     uint32_t last_raw_encoder_ = 0;
     int32_t accumulated_value_ = 0;
 };
