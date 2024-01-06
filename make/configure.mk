@@ -70,6 +70,7 @@ $(SELF_DIR)../peripheral/spi_protocol_commands.cpp\
 $(SELF_DIR)../peripheral/stm32g4/ams_encoder.cpp\
 $(SELF_DIR)../peripheral/stm32g4/hrpwm.cpp\
 $(SELF_DIR)../peripheral/stm32g4/clock_config.cpp\
+$(SELF_DIR)../peripheral/stm32g4/stm32g4_serial.cpp\
 
 endif # MCU_TARGET == stm32g474
 
