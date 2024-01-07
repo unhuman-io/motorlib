@@ -198,6 +198,10 @@ void SpiSlave::startTransaction(BufferDescriptor descriptor)
   // Configure txBuffer
   if(descriptor.txBuffer != NULL)
   {
+    // ensure that CMAR writes are not optimized out
+    // txBuffer[*] is an input constraint so it will be
+    // initialized
+    asm("" : : "m" (*(const uint8_t (*)[]) descriptor.txBuffer)); 
     init_struct_.txDmaChannel->CMAR = (uint32_t)descriptor.txBuffer;
     init_struct_.txDmaChannel->CCR |= DMA_CCR_MINC;
   }

@@ -45,6 +45,9 @@ class I2C_DMA {
         }
         clear_isr();
         tx_dma_.CCR = 0;
+        asm("" : : "m" (*(const uint8_t (*)[]) data)); // ensure that CMAR writes are not optimized out
+                                    // data[*] is an input constraint so it will be
+                                    // initialized
         tx_dma_.CMAR = (uint32_t) data;
         tx_dma_.CNDTR = nbytes;
         tx_dma_.CCR = DMA_CCR_EN | DMA_CCR_MINC | DMA_CCR_DIR; // DIR = 1 > read from memory
@@ -63,7 +66,10 @@ class I2C_DMA {
         }
         clear_isr();
         rx_dma_.CCR = 0;
-        asm("nop"); // memory barrier in case optimization things nothing is using data[*]
+        // todo, previously a memory barrier on rx. But only TX should matter
+        asm("" : : "m" (*(const uint8_t (*)[]) data)); // ensure that CMAR writes are not optimized out
+                                    // data[*] is an input constraint so it will be
+                                    // initialized
         rx_dma_.CMAR = (uint32_t) data;
         rx_dma_.CNDTR = nbytes;
         rx_dma_.CCR = DMA_CCR_EN | DMA_CCR_MINC;
