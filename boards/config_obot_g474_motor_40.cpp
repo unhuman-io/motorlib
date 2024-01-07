@@ -5,7 +5,7 @@
 #include "../driver_mps.h"
 
 const Param * const param = (const Param * const) 0x8060000;
-const char * name = param->name;
+extern const char * const name = param->name;
 
 using PWM = HRPWM;
 using Communication = USBCommunication;
