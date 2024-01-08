@@ -6,6 +6,7 @@
 #include "logger.h"
 #include "round_robin_logger.h"
 #include "otp.h"
+#include "peripheral/stm32_serial.h"
 
 
 extern uint32_t t_exec_fastloop;
@@ -259,6 +260,7 @@ class System {
         api.add_api_variable("board_rev", new const APICallback([]() { return otp->version == 1 ? otp->rev : ""; }));
         api.add_api_variable("board_num", new const APIInt32(&otp->num));
         api.add_api_variable("config", new const APICallback([](){ return CONFIG; }));
+        api.add_api_variable("serial", new const APICallback([](){ return get_serial_number(); }));
         api.add_api_variable("olimit_max", new APIFloat(&actuator_.main_loop_.encoder_limits_.output_hard_max));
         api.add_api_variable("olimit_min", new APIFloat(&actuator_.main_loop_.encoder_limits_.output_hard_min));
         api.add_api_variable("mlimit_max", new APIFloat(&actuator_.main_loop_.encoder_limits_.motor_hard_max));
