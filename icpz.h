@@ -114,6 +114,10 @@ class ICPZ : public EncoderBase {
        return success;
     }
     void trigger() {
+      if (clear_diag_command_active_) {
+        spidma_.finish_readwrite();
+        clear_diag_command_active_ = false;
+      }
       if (!*register_operation_) {
         ongoing_read_ = true;
         spidma_.start_readwrite(command_, data_, sizeof(command_));
@@ -137,7 +141,7 @@ class ICPZ : public EncoderBase {
           last_data_ = data;
         }
         if (!diag.nErr && auto_clear_diag) {
-          clear_diag();
+          clear_diag_no_wait();
         }
         ongoing_read_ = false;
       }
@@ -162,6 +166,11 @@ class ICPZ : public EncoderBase {
       spidma_.readwrite(data_out, data_in, 10, true);
       (*register_operation_)--;
       return bytes_to_hex(data_in+2, 8);
+    }
+
+    void clear_diag_no_wait() {
+      spidma_.start_write(clear_diag_command, sizeof(clear_diag_command));
+      clear_diag_command_active_ = true;
     }
 
     void clear_diag() {
@@ -508,6 +517,8 @@ class ICPZ : public EncoderBase {
     uint32_t crc_error_count_ = 0;
     uint32_t raw_value_ = 0;
     bool auto_clear_diag = true;
+    bool clear_diag_command_active_ = false;
+    uint8_t clear_diag_command[3] = {write_register_opcode_, Addr::COMMANDS, CMD::SCLEAR};
     friend void config_init();
     friend void config_maintenance();
 
