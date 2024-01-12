@@ -143,14 +143,11 @@ class ICPZ : public EncoderBase {
           //pos_ = data/256;
           last_data_ = data;
         }
-        if (!diag.nErr && auto_clear_diag) {
-          switch (clear_diag_command_active_) {
-            case 0:
-              read_diag_no_wait();
-              break;
-            case 1:
-              clear_diag_no_wait();
-              break;
+        if (auto_clear_diag) {
+          if (clear_diag_command_active_ == 1) {
+            clear_diag_no_wait();
+          } else if (!diag.nErr) {
+            read_diag_no_wait();
           }
         }
         ongoing_read_ = false;
