@@ -29,6 +29,9 @@ static uint8_t CRC_BiSS_43_30bit (uint32_t w_InputData);
     api.add_api_variable(prefix "raw", new APIUint32(&icpz.raw_value_));\
     api.add_api_variable(prefix "rawh", new const APICallback([](){ return u32_to_hex(icpz.raw_value_); }));\
     api.add_api_variable(prefix "diag", new const APICallback([](){ return icpz.read_diagnosis(); }));\
+    api.add_api_variable(prefix "get_diag", new const APICallback([](){ return icpz.get_diagnosis(); }));\
+    api.add_api_variable(prefix "clear_diag", new const APICallback([](){ icpz.clear_diag(); return "ok"; }));\
+    api.add_api_variable(prefix "auto_clear_diag", new APIBool(&icpz.auto_clear_diag));\
     api.add_api_variable(prefix "conf_write", new const APICallback([](){ return icpz.write_conf(); }));\
     api.add_api_variable(prefix "auto_ana", new const APICallback([](){ icpz.start_auto_adj_ana(); return "ok"; }));\
     api.add_api_variable(prefix "auto_dig", new const APICallback([](){ icpz.start_auto_adj_dig(); return "ok"; }));\
@@ -112,6 +115,12 @@ class ICPZ : public EncoderBase {
        return success;
     }
     void trigger() {
+      if (clear_diag_command_active_) {
+        spidma_.finish_readwrite();
+        if (clear_diag_command_active_ == 2) {
+          clear_diag_command_active_ = 0;
+        }
+      }
       if (!*register_operation_) {
         ongoing_read_ = true;
         spidma_.start_readwrite(command_, data_, sizeof(command_));
@@ -134,8 +143,12 @@ class ICPZ : public EncoderBase {
           //pos_ = data/256;
           last_data_ = data;
         }
-        if (!diag.nErr) {
-          //clear_diag();
+        if (auto_clear_diag) {
+          if (clear_diag_command_active_ == 1) {
+            clear_diag_no_wait();
+          } else if (!diag.nErr) {
+            read_diag_no_wait();
+          }
         }
         ongoing_read_ = false;
       }
@@ -153,14 +166,27 @@ class ICPZ : public EncoderBase {
        (*register_operation_)--;
     }
 
-    std::string read_diagnosis() {
+    std::string get_diagnosis() {
       (*register_operation_)++;
       uint8_t data_out[10] = {0x9C};
       uint8_t data_in[10];
       spidma_.readwrite(data_out, data_in, 10, true);
       (*register_operation_)--;
-      clear_diag();
       return bytes_to_hex(data_in+2, 8);
+    }
+
+    std::string read_diagnosis() {
+      return bytes_to_hex(read_diag_result_+2, 8);
+    }
+
+    void read_diag_no_wait() {
+      spidma_.start_readwrite(read_diag_command_, read_diag_result_, sizeof(read_diag_command_));
+      clear_diag_command_active_ = 1;
+    }
+
+    void clear_diag_no_wait() {
+      spidma_.start_write(clear_diag_command_, sizeof(clear_diag_command_));
+      clear_diag_command_active_ = 2;
     }
 
     void clear_diag() {
@@ -506,6 +532,11 @@ class ICPZ : public EncoderBase {
     uint32_t warn_count_ = 0;
     uint32_t crc_error_count_ = 0;
     uint32_t raw_value_ = 0;
+    bool auto_clear_diag = true;
+    uint8_t clear_diag_command_active_ = 0;
+    uint8_t clear_diag_command_[3] = {write_register_opcode_, Addr::COMMANDS, CMD::SCLEAR};
+    uint8_t read_diag_command_[10] = {0x9c};
+    uint8_t read_diag_result_[10] = {};
     friend void config_init();
     friend void config_maintenance();
 
