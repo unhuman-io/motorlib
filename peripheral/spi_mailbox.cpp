@@ -114,6 +114,7 @@ size_t SpiMailbox::read(uint8_t mailbox_id, uint8_t* buffer, size_t buffer_size)
     // If mailbox is supported
     if(pool != NULL)
     {
+      asm("" : "=m" (*(uint8_t (*)[]) pool)); // ensure that pool reads are not optimized out
       // Find a buffer with a matching Id and the oldest sequence number.
       // TODO: Testing/setting of the "busy" flag needs to be inside of a critical section
       for(i = 0; i < pool->buffersCount; i++)

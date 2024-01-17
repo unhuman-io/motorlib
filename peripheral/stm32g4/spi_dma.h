@@ -97,6 +97,7 @@ class SPIDMA {
     void finish_readwrite(bool register_operation = false) {
         if (!*register_operation_ || register_operation) {
             while(rx_dma_.CNDTR);
+            asm("" : "=m" (*(uint8_t (*)[]) rx_dma_.CMAR)); // ensure that CMAR reads are not optimized out
             ns_delay(end_cs_delay_ns_);
             gpio_cs_.set();
         }
