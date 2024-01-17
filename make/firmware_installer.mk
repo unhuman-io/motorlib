@@ -7,7 +7,7 @@ $(BUILD_DIR)/%.bin: $(BUILD_DIR)/%.elf | $(BUILD_DIR)
 	-dfu-suffix -p 0x100 -v 0x3293 -a $(@:.bin=_param_only.bin)
 
 define dfu_leave =
-rm -f tmp1.dat && dfu-util -a0 -s 0x8000000:8:leave -U tmp1.dat; rm tmp1.dat
+rm -f tmp1.dat && dfu-util -a0 -s 0x8000000:8:leave -U tmp1.dat || true; rm tmp1.dat
 endef
 
 $(BUILD_DIR)/%.tgz: $(BUILD_DIR)/%.bin | $(BUILD_DIR)
