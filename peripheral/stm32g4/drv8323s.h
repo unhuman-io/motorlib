@@ -93,9 +93,15 @@ class DRV8323S : public DriverBase {
     }
 
     uint16_t write_reg(uint16_t reg_out) {
+        uint32_t timeout = get_clock() + US_TO_CPU(100000U); // Timeout 100ms
+        uint16_t reg_in = 0;
         regs_.DR = reg_out;
-        while(!(regs_.SR & SPI_SR_RXNE));
-        uint16_t reg_in = regs_.DR;
+        while((!(regs_.SR & SPI_SR_RXNE)) && (get_clock() < timeout)); // Busy wait with timeout
+
+        if(get_clock() < timeout) // If timeout did not expire
+        {
+          reg_in = regs_.DR;
+        }
         return reg_in;
     }
     
@@ -105,10 +111,16 @@ class DRV8323S : public DriverBase {
     }
 
     uint16_t read_reg(uint8_t address) {
+        uint32_t timeout = get_clock() + US_TO_CPU(100000U); // Timeout 100ms
         uint16_t out_value = 1<<15 | address<<11;
+        uint16_t value = 0;
         regs_.DR = out_value;
-        while(!(regs_.SR & SPI_SR_RXNE));
-        uint16_t value = regs_.DR;
+        while((!(regs_.SR & SPI_SR_RXNE)) && (get_clock() < timeout)); // Busy wait with timeout
+
+        if(get_clock() < timeout) // If timeout did not expire
+        {
+          value = regs_.DR;
+        }
         return value;
     }
 

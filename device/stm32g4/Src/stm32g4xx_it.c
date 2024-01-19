@@ -1,14 +1,6 @@
 
 #include "../../motorlib/system.h"
 
-
-#define SPI_DEBUG_PIN2_SET()   do{GPIOC->ODR |= GPIO_ODR_OD12;}while(0)
-#define SPI_DEBUG_PIN2_CLEAR() do{GPIOC->ODR &= ~GPIO_ODR_OD12;}while(0)
-
-#define SPI_DEBUG_PIN3_SET()   do{GPIOC->ODR |= GPIO_ODR_OD11;}while(0)
-#define SPI_DEBUG_PIN3_CLEAR() do{GPIOC->ODR &= ~GPIO_ODR_OD11;}while(0)
-
-
 void ADC5_IRQHandler(void) __attribute__((section (".ccmram")));
 
 #define INTERRUPT_PROFILE_GLOBALS(loop) uint32_t t_exec_##loop __attribute__((used));\
@@ -95,14 +87,12 @@ void USB_LP_IRQHandler(void)
 
 void TIM1_UP_TIM16_IRQHandler(void)
 {
-  SPI_DEBUG_PIN3_SET();
   SET_SCOPE_PIN(C,0);
   INTERRUPT_PROFILE_START;
   main_loop_interrupt();
   TIM1->SR = 0;
   INTERRUPT_PROFILE_END(mainloop);
   CLEAR_SCOPE_PIN(C,0); 
-  SPI_DEBUG_PIN3_CLEAR();
 }
 
 void ADC5_IRQHandler(void)

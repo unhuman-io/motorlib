@@ -85,12 +85,14 @@ class SPIDMA {
     }
 
     void finish_readwrite(bool register_operation = false) {
+        uint32_t time_start = get_clock();
         if (!*register_operation_ || register_operation) {
-            while(rx_dma_.CNDTR);
+            while((rx_dma_.CNDTR) && (get_clock() - time_start < US_TO_CPU(100000U))); // Busy wait with timeout
             ns_delay(end_cs_delay_ns_);
             gpio_cs_.set();
         }
     }
+
     volatile int *register_operation_ = &register_operation_local_;
  private:
     volatile int register_operation_local_ = 0;
