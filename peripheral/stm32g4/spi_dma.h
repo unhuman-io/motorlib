@@ -51,6 +51,11 @@ class SPIDMA {
         finish_readwrite(register_operation);
     }
 
+    void write(const uint8_t * const data_out, uint8_t length, bool register_operation = false) {
+        start_write(data_out, length, register_operation);
+        finish_readwrite(register_operation);
+    }
+
     void start_readwrite(const uint8_t * const data_out, uint8_t * const data_in, uint8_t length, bool register_operation = false) {
         if (!*register_operation_ || register_operation) {
             reinit();
@@ -60,11 +65,14 @@ class SPIDMA {
             rx_dma_.CCR = 0;
             tx_dma_.CNDTR = length;
             rx_dma_.CNDTR = length;
+            asm("" : : "m" (*(const uint8_t (*)[]) data_out)); // ensure that CMAR writes are not optimized out
+                                    // data_out[*] is an input constraint so it will be
+                                    // initialized
             tx_dma_.CMAR = (uint32_t) data_out;
             rx_dma_.CMAR = (uint32_t) data_in;      
             rx_dma_.CCR = DMA_CCR_EN | DMA_CCR_MINC;
             tx_dma_.CCR = DMA_CCR_EN | DMA_CCR_MINC | DMA_CCR_DIR; // DIR = 1 > read from memory
-            asm("dmb"); // ensure that CMAR writes are not optimized out
+            
         }
     }
 
@@ -76,17 +84,20 @@ class SPIDMA {
             rx_dma_.CCR = 0;
             tx_dma_.CNDTR = length;
             rx_dma_.CNDTR = length;
+            asm("" : : "m" (*(const uint8_t (*)[]) data_out)); // ensure that CMAR writes are not optimized out
+                                    // data_out[*] is an input constraint so it will be
+                                    // initialized
             tx_dma_.CMAR = (uint32_t) data_out;
             rx_dma_.CMAR = (uint32_t) tmp_rx_;        
             rx_dma_.CCR = DMA_CCR_EN;
             tx_dma_.CCR = DMA_CCR_EN | DMA_CCR_MINC | DMA_CCR_DIR; // DIR = 1 > read from memory
-            asm("dmb"); // ensure that CMAR writes are not optimized out
         }
     }
 
     void finish_readwrite(bool register_operation = false) {
         if (!*register_operation_ || register_operation) {
             while(rx_dma_.CNDTR);
+            asm("" : "=m" (*(uint8_t (*)[]) rx_dma_.CMAR)); // ensure that CMAR reads are not optimized out
             ns_delay(end_cs_delay_ns_);
             gpio_cs_.set();
         }
