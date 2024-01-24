@@ -179,7 +179,7 @@ void system_init() {
     System::api.add_api_variable("3v3", new APIFloat(&v3v3));
     std::function<float()> get_t = std::bind(&TempSensor::get_value, &config::temp_sensor);
     std::function<void(float)> set_t = std::bind(&TempSensor::set_value, &config::temp_sensor, std::placeholders::_1);
-    System::api.add_api_variable("T", new APICallbackFloat(get_t, set_t));
+    System::api.add_api_variable("Tmicro", new APICallbackFloat(get_t, set_t));
     if (config::board_rev.has_max31875) {
         System::api.add_api_variable("Tboard", new const APICallbackFloat([](){ return config::board_temperature_max31875.get_temperature(); }));
     } else if (config::board_rev.has_max31889) {
@@ -331,20 +331,20 @@ void system_maintenance() {
             Tboard = board_temperature_filter.update(config::board_temperature_max31889.read());
         }
         round_robin_logger.log_data(BOARD_TEMPERATURE_INDEX, Tboard);
-        if (Tboard > 120) {
+        if (Tboard > 120 || Tboard < -40) {
             config::main_loop.status_.error.board_temperature = 1;
         }
 
         if (config::board_rev.has_bridge_thermistors) {
             float Tmosfet = mosfet_temperature_filter.update(config::temp_bridge.read());
             round_robin_logger.log_data(MOSFET_TEMPERATURE_INDEX, Tmosfet);
-            if (Tmosfet > 150) {
+            if (Tmosfet > 150 || Tmosfet < -40) {
                 config::main_loop.status_.error.board_temperature = 1;
             }
             float Tmosfet2 = mosfet_temperature_filter.update(config::temp_bridge2.read());
             round_robin_logger.log_data(MOSFET2_TEMPERATURE_INDEX, Tmosfet2);
             config::temp_bridge2.read();
-            if (Tmosfet2 > 150) {
+            if (Tmosfet2 > 150 || Tmosfet2 < -40) {
                 config::main_loop.status_.error.board_temperature = 1;
             }
         }
