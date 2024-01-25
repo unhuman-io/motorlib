@@ -44,8 +44,10 @@ FOCStatus * const FOC::step(const FOCCommand &command) {
     float i_d_desired_limited = id_limiter_.step(status_.desired.i_d);
     float i_q_desired_limited = iq_limiter_.step(status_.desired.i_q);
 
-    float v_d_desired = i_gain_*pi_id_.step(i_d_desired_limited, i_d_measured_filtered) - command.measured.motor_velocity*num_poles_*param_.L*i_q_measured_filtered;
-    float v_q_desired = i_gain_*pi_iq_.step(i_q_desired_limited, i_q_measured_filtered) + command.desired.v_q + command.measured.motor_velocity*num_poles_*param_.L*i_d_measured_filtered;
+    float v_d_desired = i_gain_*pi_id_.step(i_d_desired_limited, i_d_measured_filtered) + 
+        param_.rd*i_d_measured_filtered - command.measured.motor_velocity*num_poles_*param_.Ld*i_q_measured_filtered;
+    float v_q_desired = i_gain_*pi_iq_.step(i_q_desired_limited, i_q_measured_filtered) + command.desired.v_q + 
+        param_.rq*i_q_measured_filtered + command.measured.motor_velocity*num_poles_*(param_.Lq*i_d_measured_filtered + param_.lambda);
 
     float v_alpha_desired = cos_t * v_d_desired + sin_t * v_q_desired;
     float v_beta_desired = -sin_t * v_d_desired + cos_t * v_q_desired;
