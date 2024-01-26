@@ -45,29 +45,29 @@ FOCStatus * const FOC::step(const FOCCommand &command) {
     float i_q_desired_limited = iq_limiter_.step(status_.desired.i_q);
 
     float omega_e = command.measured.motor_velocity*num_poles_;
-    // Sincos sincos_h = sincos1(electrical_angle * param_.afc_harmonic);
-    // float &sin_h = sincos_h.sin;
-    // float &cos_h = sincos_h.cos;
+    Sincos sincos_h = sincos1(electrical_angle * param_.afc_harmonic);
+    float &sin_h = sincos_h.sin;
+    float &cos_h = sincos_h.cos;
     float i_q_error = i_q_desired_limited - i_q_measured_filtered;
     float i_d_error = i_d_desired_limited - i_d_measured_filtered;
-    // // if(abs(omega_e) > 1) //avoid dividing by zero
-    // // {
-    //     afc_cos_intq_ += dt_*i_q_error*param_.kq_afc*cos_h; 
-    //     afc_sin_intq_ += dt_*i_q_error*param_.kq_afc*sin_h;
-    //     afc_cos_intd_ += dt_*i_d_error*param_.kd_afc*cos_h; 
-    //     afc_sin_intd_ += dt_*i_d_error*param_.kd_afc*sin_h;
-    // //}
-    // afc_outq_ = (sin_h*afc_sin_intq_ + cos_h*afc_cos_intq_);
-    // afc_outd_ = (sin_h*afc_sin_intd_ + cos_h*afc_cos_intd_);
-    // i_q_error += afc_outq_;
-    // i_d_error += afc_outd_;
+    // if(abs(omega_e) > 1) //avoid dividing by zero
+    // {
+        afc_cos_intq_ += dt_*i_q_error*param_.kq_afc*cos_h; 
+        afc_sin_intq_ += dt_*i_q_error*param_.kq_afc*sin_h;
+        afc_cos_intd_ += dt_*i_d_error*param_.kd_afc*cos_h; 
+        afc_sin_intd_ += dt_*i_d_error*param_.kd_afc*sin_h;
+    //}
+    afc_outq_ = (sin_h*afc_sin_intq_ + cos_h*afc_cos_intq_);
+    afc_outd_ = (sin_h*afc_sin_intd_ + cos_h*afc_cos_intd_);
+    i_q_error += afc_outq_;
+    i_d_error += afc_outd_;
 
     // i_q_desired_limited = i_q_error + i_q_measured_filtered;
 
-    float v_q_desired = i_gain_*pi_iq_.step(i_q_error) + command.desired.v_q;// + 
-       // param_.rs*i_q_desired_limited + omega_e*(param_.Ld*i_d_desired_limited + param_.lambda_m);
-    float v_d_desired = i_gain_*pi_id_.step(i_d_error);// + 
-       // param_.rs*i_d_desired_limited - omega_e*param_.Lq*i_q_desired_limited;
+    float v_q_desired = i_gain_*pi_iq_.step(i_q_error) + command.desired.v_q + 
+        param_.rs*i_q_desired_limited + omega_e*(param_.Ld*i_d_desired_limited + param_.lambda_m);
+    float v_d_desired = i_gain_*pi_id_.step(i_d_error) + 
+        param_.rs*i_d_desired_limited - omega_e*param_.Lq*i_q_desired_limited;
    
     float v_alpha_desired = cos_t * v_d_desired + sin_t * v_q_desired;
     float v_beta_desired = -sin_t * v_d_desired + cos_t * v_q_desired;
