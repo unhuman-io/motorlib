@@ -33,10 +33,12 @@ private:
     FirstOrderLowPassFilter id_filter_, iq_filter_;
     RateLimiter id_limiter_, iq_limiter_;
     FOCParam param_;
-    float afc_cos_int_ = 0;
-    float afc_sin_int_ = 0;
-    float afc_out_ = 0;
-
+    float afc_cos_intq_ = 0;
+    float afc_sin_intq_ = 0;
+    float afc_outq_ = 0;
+    float afc_cos_intd_ = 0;
+    float afc_sin_intd_ = 0;
+    float afc_outd_ = 0;
     friend class System;
 };
 

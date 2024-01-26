@@ -51,7 +51,7 @@ typedef struct {
     float id_rate_limit;    // A/s rate limit on the current d
     float iq_rate_limit;    // A/s rate limit on the current q
     float Ld, Lq, rs, lambda_m;
-    float k_afc, afc_harmonic;
+    float kd_afc, kq_afc, afc_harmonic;
 } FOCParam;
 
 #define COGGING_TABLE_SIZE 128  // must be multiple of 2

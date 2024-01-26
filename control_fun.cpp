@@ -104,12 +104,12 @@ PI2Param PI2Controller::get_param() const {
     return p;
 }
 
-float PI2Controller::step(float desired, float measured) {
-    float error = desired - measured;
-    float ratio = (value2_ - fabsf2(desired))*inv_value2_; // 1: all k, 0: all k2
-    ratio = ratio < 0 ? 0 : ratio;
-    float ki = ratio*ki_ + (1-ratio)*ki2_;
-    float kp = ratio*kp_ + (1-ratio)*kp2_;
+float PI2Controller::step(float error) {
+    //float error = desired - measured;
+    //float ratio = (value2_ - fabsf2(desired))*inv_value2_; // 1: all k, 0: all k2
+    //ratio = ratio < 0 ? 0 : ratio;
+    float ki = ki_;// ratio*ki_ + (1-ratio)*ki2_;
+    float kp = kp_;//ratio*kp_ + (1-ratio)*kp2_;
     ki_sum_ += ki * error;
     ki_sum_ = fsat(ki_sum_, ki_limit_);
     return fsat(kp*error + ki_sum_, command_max_);

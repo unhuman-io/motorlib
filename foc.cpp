@@ -49,17 +49,24 @@ FOCStatus * const FOC::step(const FOCCommand &command) {
     float &sin_h = sincos_h.sin;
     float &cos_h = sincos_h.cos;
     float i_q_error = i_q_desired_limited - i_q_measured_filtered;
-    if(abs(omega_e) > 1) //avoid dividing by zero
-    {
-        afc_cos_int_ += dt_*i_q_error*param_.k_afc*cos_h/omega_e; 
-        afc_sin_int_ += dt_*i_q_error*param_.k_afc*sin_h/omega_e;
-    }
-    afc_out_ = omega_e*(sin_h*afc_sin_int_ + cos_h*afc_cos_int_);
-    i_q_desired_limited += afc_out_;
+    float i_d_error = i_d_desired_limited - i_d_measured_filtered;
+    // if(abs(omega_e) > 1) //avoid dividing by zero
+    // {
+        afc_cos_intq_ += dt_*i_q_error*param_.kq_afc*cos_h; 
+        afc_sin_intq_ += dt_*i_q_error*param_.kq_afc*sin_h;
+        afc_cos_intd_ += dt_*i_d_error*param_.kd_afc*cos_h; 
+        afc_sin_intd_ += dt_*i_d_error*param_.kd_afc*sin_h;
+    //}
+    afc_outq_ = (sin_h*afc_sin_intq_ + cos_h*afc_cos_intq_);
+    afc_outd_ = (sin_h*afc_sin_intd_ + cos_h*afc_cos_intd_);
+    i_q_error += afc_outq_;
+    i_d_error += afc_outd_;
 
-    float v_q_desired = i_gain_*pi_iq_.step(i_q_desired_limited, i_q_measured_filtered) + command.desired.v_q + 
+    i_q_desired_limited = i_q_error + i_q_measured_filtered;
+
+    float v_q_desired = i_gain_*pi_iq_.step(i_q_error) + command.desired.v_q + 
         param_.rs*i_q_desired_limited + omega_e*(param_.Ld*i_d_desired_limited + param_.lambda_m);
-    float v_d_desired = i_gain_*pi_id_.step(i_d_desired_limited, i_d_measured_filtered) + 
+    float v_d_desired = i_gain_*pi_id_.step(i_d_error) + 
         param_.rs*i_d_desired_limited - omega_e*param_.Lq*i_q_desired_limited;
    
     float v_alpha_desired = cos_t * v_d_desired + sin_t * v_q_desired;

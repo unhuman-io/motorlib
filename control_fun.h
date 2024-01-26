@@ -225,7 +225,7 @@ private:
 class PI2Controller {
 public:
     ~PI2Controller() {}
-    float step(float desired, float measured);
+    float step(float);
     void set_param(const PI2Param &pi_param);
     void initialize() { ki_sum_ = 0; }
     PI2Param get_param() const;
