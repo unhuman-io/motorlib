@@ -272,6 +272,11 @@ class System {
         api.add_api_variable("Lq", new APIFloat(&actuator_.fast_loop_.foc_->param_.Lq));
         api.add_api_variable("rs", new APIFloat(&actuator_.fast_loop_.foc_->param_.rs));
         api.add_api_variable("lambda_m", new APIFloat(&actuator_.fast_loop_.foc_->param_.lambda_m));
+        api.add_api_variable("afc_out", new APIFloat(&actuator_.fast_loop_.foc_->afc_out_));
+        api.add_api_variable("afc_cos_int", new APIFloat(&actuator_.fast_loop_.foc_->afc_cos_int_));
+        api.add_api_variable("afc_sin_int", new APIFloat(&actuator_.fast_loop_.foc_->afc_sin_int_));
+        api.add_api_variable("afc_harmonic", new APIFloat(&actuator_.fast_loop_.foc_->param_.afc_harmonic));
+        api.add_api_variable("afc_k", new APIFloat(&actuator_.fast_loop_.foc_->param_.k_afc));
 
 
         uint32_t t_start = get_clock();
