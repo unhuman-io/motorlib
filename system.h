@@ -270,9 +270,8 @@ class System {
         api.add_api_variable("is_sbank", new const APICallbackUint8([](){ return (*((uint8_t *) 0x1fff7802) & 0x40) == 0; }));
         api.add_api_variable("Ld", new APIFloat(&actuator_.fast_loop_.foc_->param_.Ld));
         api.add_api_variable("Lq", new APIFloat(&actuator_.fast_loop_.foc_->param_.Lq));
-        api.add_api_variable("rd", new APIFloat(&actuator_.fast_loop_.foc_->param_.rd));
-        api.add_api_variable("rq", new APIFloat(&actuator_.fast_loop_.foc_->param_.rq));
-        api.add_api_variable("lambda", new APIFloat(&actuator_.fast_loop_.foc_->param_.lambda));
+        api.add_api_variable("rs", new APIFloat(&actuator_.fast_loop_.foc_->param_.rs));
+        api.add_api_variable("lambda_m", new APIFloat(&actuator_.fast_loop_.foc_->param_.lambda_m));
 
 
         uint32_t t_start = get_clock();
