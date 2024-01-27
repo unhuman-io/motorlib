@@ -121,6 +121,43 @@ namespace config {
     const BoardRev board_rev = get_board_rev();
 
 #if COMMS == COMMS_UART
+#if COMMS_UART_NUMBER == 2
+    Uart uart({
+      .usart        = USART2,
+      .gpioPort     = GPIOA,
+      .gpioPinTx    = 2U,
+      .gpioPinRx    = 3U,
+
+      .gpioAlternateFunction = 7U,
+
+      .gpioRccEnableRegister = &RCC->AHB2ENR,
+      .gpioRccEnableBit      = RCC_AHB2ENR_GPIOAEN_Pos,
+      .uartRccEnableRegister  = &RCC->APB1ENR1,
+      .uartRccEnableBit       = RCC_APB1ENR1_USART2EN_Pos,
+      .uartRccResetRegister   = &RCC->APB1RSTR1,
+      .uartRccResetBit        = RCC_APB1RSTR1_USART2RST_Pos,
+
+      .uartIrqN               = USART2_IRQn,
+
+      .rxDma            = DMA2,
+      .rxDmaIfcrCgif    = DMA_IFCR_CGIF3,
+      .rxDmaChannel     = DMA2_Channel3,
+      .rxDmaMuxChannel  = DMAMUX1_Channel10,
+      .rxDmaMuxId       = 26U,
+      .rxDmaIrqN        = DMA2_Channel3_IRQn,
+
+      .txDma            = DMA2,
+      .txDmaIfcrCgif    = DMA_IFCR_CGIF4,
+      .txDmaChannel     = DMA2_Channel4,
+      .txDmaMuxChannel  = DMAMUX1_Channel11,
+      .txDmaMuxId       = 27U,
+      .txDmaIrqN        = DMA2_Channel4_IRQn,
+
+      .irqPriority = 1U,
+
+      .brrValue         = (uint32_t)(CPU_FREQUENCY_HZ / COMMS_UART_BAUDRATE)
+    });
+#else // default usart1
     Uart uart({
       .usart        = USART1,
       .gpioPort     = GPIOA,
@@ -156,7 +193,8 @@ namespace config {
 
       .brrValue         = (uint32_t)(CPU_FREQUENCY_HZ / COMMS_UART_BAUDRATE)
     });
-#endif
+#endif // COMMS_UART_NUMBER
+#endif // COMMS_UART
 
 #if (COMMS == COMMS_UART) || (COMMS == COMMS_SPI)
     // SPI communication protocol buffers and pools allocation

@@ -31,6 +31,14 @@ void USART1_IRQHandler(void)
   }
 }
 
+void USART2_IRQHandler(void)
+{
+  if(Uart::instance != NULL)
+  {
+    Uart::instance->errorInterruptHandler();
+  }
+}
+
 }
 
 Uart::Uart(const InitStruct& init_struct) :
