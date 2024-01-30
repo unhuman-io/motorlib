@@ -8,6 +8,7 @@
 #include <cstdio>
 #include "../../messages.h"
 #include "../../logger.h"
+#include "../stm32_serial.h"
 
 extern const char * const name;
 
@@ -320,26 +321,14 @@ void epr_set_toggle(uint8_t endpoint, uint16_t set_bits, uint16_t set_mask) {
     USBEPR->EP[endpoint].EPR = epr_total;
 }
 
-// This is the serial number used by the bootloader, 13 bytes with null terminator
-void Get_SerialNum(char * buffer)
-{
-  uint32_t deviceserial0, deviceserial1, deviceserial2;
-
-  deviceserial0 = *(uint32_t *)DEVICE_ID1;
-  deviceserial1 = *(uint32_t *)DEVICE_ID2;
-  deviceserial2 = *(uint32_t *)DEVICE_ID3;
-
-  deviceserial0 += deviceserial2;
-  std::sprintf(buffer,"%lX%X",deviceserial0, (uint16_t) (deviceserial1>>16));
-}
-
 void USB1::interrupt() {
     /* Handle Reset Interrupt */
     if (USB->ISTR & USB_ISTR_RESET)
     {
         reset_count_++;
         error_count_ = 0;
-        logger.log("usb reset");
+        // todo bring back logger in isr safe way
+        // logger.log("usb reset");
         // Set up endpoint 0
         USB->EP0R = USB_EP_CONTROL;
         USBPMA->btable[0].ADDR_TX = offsetof(USBPMA_TypeDef, buffer[0].EP_TX);
@@ -455,9 +444,7 @@ void USB1::interrupt() {
                                     break;
                                 case 0x03:
                                 { 
-                                    char sn_buffer[13];
-                                    Get_SerialNum(sn_buffer);
-                                    send_string(0, sn_buffer, std::strlen(sn_buffer));
+                                    send_string(0, get_serial_number(), std::strlen(get_serial_number()));
                                     break;
                                 }
                                 case 0x04:
