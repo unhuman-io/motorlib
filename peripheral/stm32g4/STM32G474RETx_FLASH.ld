@@ -100,7 +100,6 @@ SECTIONS
         = OBOT_HASH; */
     *(.ccmram)
     *(.ccmram*)
-    *(.text._ZN8FastLoop6updateEv)
     . = ALIGN(4);
     _eccmram = .;
   } >CCMRAM AT> FLASH

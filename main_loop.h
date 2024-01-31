@@ -53,7 +53,7 @@ class MainLoop {
           torque_sensor_.trigger();
 #endif
     } // todo: init filters with first status
-    void update() {
+    void update() __attribute__((section (".ccmram"), externally_visible)) {
       count_++;
 #if !defined(END_TRIGGER_MAIN_SENSORS) && !defined(EXT_TRIGGER_MAIN_SENSORS)
       output_encoder_.trigger();
