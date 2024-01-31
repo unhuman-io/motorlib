@@ -48,7 +48,7 @@ class MainLoop {
           set_param();
         }
     void init() {} // todo: init filters with first status
-    void update() {
+    void update() __attribute__((section (".ccmram"), externally_visible)) {
       count_++;
 
       output_encoder_.trigger();
