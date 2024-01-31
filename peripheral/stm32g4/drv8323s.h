@@ -74,15 +74,15 @@ class DRV8323S : public DriverBase {
             if ((reg_in & 0x7FF) != (reg_out & 0x7FF)) {
                 drv_regs_error |= 1 << i;
             }
-            logger.log_printf("address: %d, reg_out: %03x, reg_in: %03x", address, reg_out & 0x7FF, reg_in);
+            // logger.log_printf("address: %d, reg_out: %03x, reg_in: %03x", address, reg_out & 0x7FF, reg_in);
         }
 
         drv_spi_end();
         DriverBase::enable();
         if(!drv_regs_error) {
-            logger.log("drv8323s configure success");
+            // logger.log("drv8323s configure success");
         } else {
-            logger.log_printf("drv8323s configure error: %02x", drv_regs_error);
+            // logger.log_printf("drv8323s configure error: %02x", drv_regs_error);
         }
     }
 
