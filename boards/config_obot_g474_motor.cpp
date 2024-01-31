@@ -4,9 +4,33 @@
 #include "../util.h"
 #include "../peripheral/stm32g4/pin_config.h"
 #include "../peripheral/stm32g4/drv8323s.h"
+#include "../peripheral/stm32g4/uart.h"
+#include "../peripheral/protocol.h"
+#include "../communication.h"
+#include "../spi_communication.h"
+
+#define COMMS_USB   1
+#define COMMS_SPI   2
+#define COMMS_UART  3
+
+#ifndef COMMS
+  #error "COMMS should be defined"
+#endif
+
+#if (COMMS != COMMS_USB) && (COMMS != COMMS_SPI) && (COMMS != COMMS_UART)
+  #error "Invalid COMMS value"
+#endif
 
 using PWM = HRPWM;
-using Communication = USBCommunication;
+
+#if COMMS == COMMS_USB
+    using Communication = USBCommunication;
+#endif
+
+#if (COMMS == COMMS_UART) || (COMMS == COMMS_SPI)
+    using Communication = SPICommunication;
+#endif
+
 using Driver = DRV8323S;
 uint16_t drv_regs_error = 0;
 
@@ -95,6 +119,88 @@ namespace config {
     MB85RC64 mb85rc64(i2c1, 4);
 
     const BoardRev board_rev = get_board_rev();
+
+#if COMMS == COMMS_UART
+    Uart uart({
+      .usart        = USART1,
+      .gpioPort     = GPIOA,
+      .gpioPinTx    = 9U,
+      .gpioPinRx    = 10U,
+
+      .gpioAlternateFunction = 7U,
+
+      .gpioRccEnableRegister = &RCC->AHB2ENR,
+      .gpioRccEnableBit      = RCC_AHB2ENR_GPIOAEN_Pos,
+      .uartRccEnableRegister  = &RCC->APB2ENR,
+      .uartRccEnableBit       = RCC_APB2ENR_USART1EN_Pos,
+      .uartRccResetRegister   = &RCC->APB2RSTR,
+      .uartRccResetBit        = RCC_APB2RSTR_USART1RST_Pos,
+
+      .uartIrqN               = USART1_IRQn,
+
+      .rxDma            = DMA2,
+      .rxDmaIfcrCgif    = DMA_IFCR_CGIF3,
+      .rxDmaChannel     = DMA2_Channel3,
+      .rxDmaMuxChannel  = DMAMUX1_Channel10,
+      .rxDmaMuxId       = 24U,
+      .rxDmaIrqN        = DMA2_Channel3_IRQn,
+
+      .txDma            = DMA2,
+      .txDmaIfcrCgif    = DMA_IFCR_CGIF4,
+      .txDmaChannel     = DMA2_Channel4,
+      .txDmaMuxChannel  = DMAMUX1_Channel11,
+      .txDmaMuxId       = 25U,
+      .txDmaIrqN        = DMA2_Channel4_IRQn,
+
+      .irqPriority = 1U,
+
+      .brrValue         = (uint32_t)(CPU_FREQUENCY_HZ / COMMS_UART_BAUDRATE)
+    });
+#endif
+
+#if (COMMS == COMMS_UART) || (COMMS == COMMS_SPI)
+    // SPI communication protocol buffers and pools allocation
+    Mailbox::Buffer mailbox_data_to_host_buffers[2];
+    Mailbox::Buffer mailbox_data_from_host_buffers[2];
+    Mailbox::Buffer mailbox_string_buffers[8];
+
+    Mailbox::Pool pools[] = {
+       {
+         .mailboxIds = {SPICommunication::MAILBOX_ID_DATA_TO_HOST},
+         .buffers = mailbox_data_to_host_buffers,
+         .buffersCount = FIGURE_COUNTOF(mailbox_data_to_host_buffers)
+       },
+       {
+         .mailboxIds = {SPICommunication::MAILBOX_ID_DATA_FROM_HOST},
+         .buffers = mailbox_data_from_host_buffers,
+         .buffersCount = FIGURE_COUNTOF(mailbox_data_from_host_buffers)
+       },
+       {
+         .mailboxIds = {SPICommunication::MAILBOX_ID_SERIAL_TO_HOST, SPICommunication::MAILBOX_ID_SERIAL_FROM_HOST},
+         .buffers = mailbox_string_buffers,
+         .buffersCount = FIGURE_COUNTOF(mailbox_string_buffers)
+       }
+    };
+#endif
+
+#if COMMS == COMMS_SPI
+    Protocol protocol = {
+      spi_slave,              // comms
+      Protocol::Mode::kSpi,   // mode
+      pools,                  // mailbox_pools
+      FIGURE_COUNTOF(pools)   // mailbox_pools_count
+    };
+#endif
+
+#if COMMS == COMMS_UART
+    Protocol protocol = {
+      uart,                   // comms
+      Protocol::Mode::kUart,  // mode
+      pools,                  // mailbox_pools
+      FIGURE_COUNTOF(pools)   // mailbox_pools_count
+    };
+#endif
+
     HRPWM motor_pwm = {pwm_frequency, *HRTIM1, 3, 5, 4, false, 50, 1000, 1000};
     USB1 usb;
     FastLoop fast_loop = {(int32_t) pwm_frequency, motor_pwm, motor_encoder, param->fast_loop_param, &I_A_DR, &I_B_DR, &I_C_DR, &V_BUS_DR};
@@ -126,10 +232,18 @@ namespace config {
     MainLoop main_loop = {main_loop_frequency, fast_loop, position_controller, torque_controller, impedance_controller, velocity_controller, state_controller, joint_position_controller, admittance_controller, System::communication_, led, output_encoder, torque_sensor, drv, param->main_loop_param};
 };
 
+#if COMMS == COMMS_USB
 Communication System::communication_ = {config::usb};
+#endif
+
+#if (COMMS == COMMS_SPI) || (COMMS == COMMS_UART)
+Communication System::communication_(config::protocol);
+#endif
+
 void usb_interrupt() {
     config::usb.interrupt();
 }
+
 Actuator System::actuator_ = {config::fast_loop, config::main_loop, param->startup_param};
 
 float v3v3 = 3.3;
@@ -146,6 +260,12 @@ int32_t index_mod = 0;
 void config_init();
 
 void system_init() {
+
+#if COMMS == COMMS_UART
+    config::uart.init();
+    config::protocol.init();
+#endif
+
     DMAMUX1_Channel6->CCR =  DMA_REQUEST_I2C1_TX;
     DMAMUX1_Channel7->CCR =  DMA_REQUEST_I2C1_RX;
     DMAMUX1_Channel2->CCR =  DMA_REQUEST_SPI1_TX;
