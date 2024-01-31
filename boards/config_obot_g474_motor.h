@@ -4,6 +4,7 @@
 #include <string>
 #include "../otp.h"
 #include "st_device.h"
+#include "../peripheral/stm32_serial.h"
 
 struct BoardRev {
     enum Rev {kR0, kR1, kR2, kR3, kR4, kMR0, kMR0P, kMR1, kMR2} rev;
@@ -18,6 +19,7 @@ struct BoardRev {
 };
 
 BoardRev get_board_rev() {
+    init_serial_number();
     BoardRev b = {};
     enum BoardRev::Rev& rev = b.rev;
 

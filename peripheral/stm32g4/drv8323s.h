@@ -43,17 +43,18 @@ class DRV8323S : public DriverBase {
 
     void disable() {
         uint32_t status = get_drv_status();
-        logger.log_printf("drv8323 disabled, status1: %03x status2: %03x", status & 0xFFFF, status >> 16);
-        std::string s = "drv8323 status bits";
-        for(int i=0; i<11; i++) {
-            if ((status >> i) & 0x1)
-                s += " " + drv8323_status1_bits[i];
-        }
-        for(int i=0; i<11; i++) {
-            if ((status >> (16+i)) & 0x1)
-                s += " " + drv8323_status2_bits[i];
-        }
-        logger.log(s);
+        // todo bring back logger in isr safe way
+        // logger.log_printf("drv8323 disabled, status1: %03x status2: %03x", status & 0xFFFF, status >> 16);
+        // std::string s = "drv8323 status bits";
+        // for(int i=0; i<11; i++) {
+        //     if ((status >> i) & 0x1)
+        //         s += " " + drv8323_status1_bits[i];
+        // }
+        // for(int i=0; i<11; i++) {
+        //     if ((status >> (16+i)) & 0x1)
+        //         s += " " + drv8323_status2_bits[i];
+        // }
+        // logger.log(s);
         GPIOC->BSRR = GPIO_BSRR_BR13; // drv disable
         DriverBase::disable();
     }
