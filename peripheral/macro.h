@@ -1,7 +1,5 @@
 #pragma once
 
-#define DEBUG_PINS_ENABLE
-
 #ifndef FIGURE_ASSERT
 #define FIGURE_ASSERT(x, ...) \
 do {                          \
