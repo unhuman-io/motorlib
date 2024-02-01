@@ -179,7 +179,6 @@ void Uart::reset()
 
   // Reset UART
   *init_struct_.uartRccResetRegister |= (1 << init_struct_.uartRccResetBit);
-  *init_struct_.uartRccResetRegister &= ~(1 << init_struct_.uartRccResetBit);
 
   initUart();
 }
