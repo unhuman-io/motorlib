@@ -11,7 +11,7 @@ void DMA2_Channel3_IRQHandler(void)
 {
   if(Uart::instance != NULL)
   {
-    Uart::instance->rxInterruptHandler();
+    //Uart::instance->rxInterruptHandler();
   }
 }
 
@@ -19,7 +19,7 @@ void DMA2_Channel4_IRQHandler(void)
 {
   if(Uart::instance != NULL)
   {
-    Uart::instance->txInterruptHandler();
+    //Uart::instance->txInterruptHandler();
   }
 }
 
@@ -115,7 +115,6 @@ void Uart::initGpio()
 
 void Uart::initDma()
 {
-  asm("bkpt 1");
   // UART Rx Dma channel
   init_struct_.rxDmaChannel->CPAR = (uint32_t)&init_struct_.usart->RDR;
   init_struct_.rxDmaChannel->CNDTR = RX_BUFFER_SIZE;
@@ -148,13 +147,12 @@ void Uart::initDma()
 void Uart::initUart()
 {
   init_struct_.usart->BRR = init_struct_.brrValue;
-  init_struct_.usart->CR3 = USART_CR3_DMAT | USART_CR3_DMAR | USART_CR3_OVRDIS | USART_CR3_DDRE;
-  init_struct_.usart->CR1 = USART_CR1_PCE | USART_CR1_M0 | USART_CR1_TE | USART_CR1_RE | USART_CR1_UE;
+  init_struct_.usart->CR3 = USART_CR3_DMAT | USART_CR3_DMAR; // DMA TX and RX
 
-  NVIC_SetPriority(
-    init_struct_.uartIrqN,
-    NVIC_EncodePriority(NVIC_GetPriorityGrouping(), init_struct_.irqPriority, 0)
-  );
+  // NVIC_SetPriority(
+  //   init_struct_.uartIrqN,
+  //   NVIC_EncodePriority(NVIC_GetPriorityGrouping(), init_struct_.irqPriority, 0)
+  // );
 
   //NVIC_EnableIRQ(init_struct_.uartIrqN);
 }
@@ -215,11 +213,10 @@ void Uart::startTransaction(BufferDescriptor descriptor)
 void Uart::abortTransaction()
 {
   // Disable DMA
-  init_struct_.rxDmaChannel->CCR &= ~DMA_CCR_EN;
   init_struct_.txDmaChannel->CCR &= ~DMA_CCR_EN;
 
   // Flush both Rx and Tx FIFO
-  init_struct_.usart->RQR = USART_RQR_TXFRQ | USART_RQR_RXFRQ;
+  init_struct_.usart->RQR = USART_RQR_TXFRQ;
 }
 
 void Uart::resetTransactionCounter()
@@ -281,10 +278,10 @@ void Uart::errorInterruptHandler()
   }
 }
 
-uint16_t Uart::get_current_tx_index() const {
-  return TX_BUFFER_SIZE - init_struct_.txDmaChannel->CNDTR;
-}
-
 uint16_t Uart::get_current_rx_index() const {
   return RX_BUFFER_SIZE - init_struct_.rxDmaChannel->CNDTR;
+}
+
+bool Uart::is_tx_active() const {
+  return init_struct_.txDmaChannel->CNDTR == 0;
 }

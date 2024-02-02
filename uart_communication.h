@@ -4,14 +4,7 @@
 #include "communication.h"
 #include "util.h"
 #include <cstring>
-
-volatile uint16_t uart_delay = 5;
-
-extern "C" void PendSV_Handler(void) {
-  SET_SCOPE_PIN(C,2);
-  us_delay(uart_delay);
-  CLEAR_SCOPE_PIN(C,2);
-}
+#include <atomic>
 
 class UARTCommunication : public CommunicationBase {
  public:
@@ -23,7 +16,11 @@ class UARTCommunication : public CommunicationBase {
       OBOT_ASCII = 0x04,
     };
 
-    UARTCommunication(Uart &uart) : uart_(uart) {
+    UARTCommunication(Uart &uart, UARTCommunicationProtocol protocol) : uart_(uart), protocol_(protocol) {
+      protocol_.register_callback(OBOT_CMD, [this](uint8_t* a, uint16_t b){ this->callback_obot_cmd(a,b); });
+      protocol_.register_callback(OBOT_STATUS, [this](uint8_t* a, uint16_t b){ this->callback_obot_status(a,b); });
+      protocol_.register_callback(OBOT_ASCII, [this](uint8_t* a, uint16_t b){ this->callback_obot_ascii(a,b); });
+
       NVIC_SetPriority(PendSV_IRQn,
         NVIC_EncodePriority(NVIC_GetPriorityGrouping(), 2, 0));
       NVIC_EnableIRQ(PendSV_IRQn);
@@ -37,50 +34,90 @@ class UARTCommunication : public CommunicationBase {
       volatile uint32_t *icsr = (uint32_t *)0xE000ED04;
       // Pend a PendSV exception using by writing 1 to PENDSVSET at bit 28
       *icsr = 0x1 << 28;
+
+      if (new_obot_cmd_) {
+        *data = obot_cmd_;
+        new_obot_cmd_ = false;
+        return sizeof(obot_cmd_);
+      }
       return 0;
     }
-    int i = 0;
+
     void send_data(const SendData& data) {
-      i++;
-      if (i % 1000 == 0) {
-        std::memcpy(uart_.tx_buffer_, &data, sizeof(SendData));
-        Uart::BufferDescriptor desc = {};
-        desc.length = sizeof(SendData);
-        desc.txBuffer = uart_.tx_buffer_;
-        uart_.startTransaction(desc);
-      }
+      obot_status_ = data;
     }
 
     int receive_string(char* const string) {
+      if (new_ascii_str_) {
+        std::memcpy(string, ascii_str_in_, std::strlen(ascii_str_in_));
+        new_ascii_str_ = false;
+        return std::strlen(ascii_str_in_);
+      }
       return 0;
     }
 
     bool send_string(const char* string, uint16_t length) {
+      while(send_active());
+      std::memcpy(uart_.tx_buffer_, string, length);
       return true;
     }
 
     bool send_string_active() const {
-      return false;
+      return send_active();
     }
 
-    void cancel_send_string() {
-    }
-
-    bool new_rx_data() {
-      return false;
-    }
-
-    bool any_new_rx_data() {
-      return false;
+    bool send_active() const {
+      return uart_.is_tx_active();
     }
 
     bool tx_data_ack() {
-      return false;
+      bool status_sent = status_sent_;
+      status_sent_ = false;
+      return status_sent;
+    }
+
+    void parse() {
+      // lib.parse(uart_.get_current_rx_index());
+      protocol_.parse(uart_.get_current_rx_index());
+    }
+
+    void callback_obot_cmd(uint8_t *buf, uint16_t length) {
+      asm("dmb");
+      std::memcpy(&obot_cmd_, buf, sizeof(obot_cmd_));
+      new_obot_cmd_ = true;
+    }
+
+    void callback_obot_status(uint8_t *buf, uint16_t length) {
+      asm("dmb");
+      std::memcpy(uart_.tx_buffer_, &obot_status_, sizeof(SendData));
+      Uart::BufferDescriptor desc = {};
+      desc.length = sizeof(SendData);
+      desc.txBuffer = uart_.tx_buffer_;
+      uart_.startTransaction(desc);
+      status_sent_ = true;
+    }
+
+    void callback_obot_cmd_status(uint8_t *buf, uint16_t length) {
+      callback_obot_cmd(buf, length);
+      callback_obot_status(buf, length);
+    }
+
+    void callback_obot_ascii(uint8_t *buf, uint16_t length) {
+      std::memcpy(&ascii_str_in_, buf, length);
+      new_ascii_str_ = true;
     }
 
  private:
     Uart &uart_;
+    UARTCommunicationProtocol &protocol_;
     friend class System;
+    std::atomic_bool new_obot_cmd_;
+    ReceiveData obot_cmd_;
+    SendData obot_status_;
+    std::atomic_bool status_sent_;
+    std::atomic_bool new_ascii_str_;
+    char ascii_str_in_[MAX_API_DATA_SIZE];
 };
+
 
 #endif  // UNHUMAN_MOTORLIB_UART_COMMUNICATION_H_

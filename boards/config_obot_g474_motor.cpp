@@ -14,11 +14,11 @@
 #else
 #define SET_SCOPE_PIN(X,x)
 #define CLEAR_SCOPE_PIN(X,x)
+#define TOGGLE_SCOPE_PIN(X,x)
 #endif
 
 #include "../communication.h"
 #include "../spi_communication.h"
-#include "../uart_communication.h"
 
 #define COMMS_USB   1
 #define COMMS_SPI   2
@@ -43,7 +43,11 @@ using PWM = HRPWM;
 #endif
 
 #if (COMMS == COMMS_UART)
+    #include "../uart_communication_protocol.h"
+    using UARTCommunicationProtocol = UARTRawProtocol; 
+    #include "../uart_communication.h"
     using Communication = UARTCommunication;
+
 #endif
 
 using Driver = DRV8323S;
@@ -142,6 +146,7 @@ namespace config {
     const BoardRev board_rev = get_board_rev();
 
 #if COMMS == COMMS_UART
+    UARTCommunicationProtocol uart_protocol;
 #if COMMS_UART_NUMBER == 2
     Uart uart({
       .usart        = USART2,
@@ -291,7 +296,12 @@ Communication System::communication_(config::protocol);
 #endif
 
 #if (COMMS == COMMS_UART)
-Communication System::communication_(config::uart);
+Communication System::communication_(config::uart, config::uart_protocol);
+extern "C" void PendSV_Handler(void) {
+  SET_SCOPE_PIN(C,2);
+  System::communication_.parse();
+  CLEAR_SCOPE_PIN(C,2);
+}
 #endif
 
 void usb_interrupt() {

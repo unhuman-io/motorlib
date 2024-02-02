@@ -68,7 +68,7 @@ class Uart : public Comms
     void txInterruptHandler();
     void errorInterruptHandler();
 
-    uint16_t get_current_tx_index() const;
+    bool is_tx_active() const;
     uint16_t get_current_rx_index() const;
     uint8_t tx_buffer_[TX_BUFFER_SIZE];
     uint8_t rx_buffer_[RX_BUFFER_SIZE];
