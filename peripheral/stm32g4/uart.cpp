@@ -286,3 +286,12 @@ uint16_t Uart::get_current_rx_index() const {
 bool Uart::is_tx_active() const {
   return init_struct_.txDmaChannel->CNDTR == 0;
 }
+
+void Uart::rx_copy(uint8_t * const out_buf, uint8_t * rx_buf_ptr, uint16_t length) {
+  // todo optimize with 1 to 2 memcpy for circular buffer
+  int index = rx_buf_ptr - rx_buffer_;
+  for(int i=0; i<length; i++) {
+    out_buf[i] = rx_buffer_[index++];
+    index %= RX_BUFFER_SIZE;
+  }
+}

@@ -5,6 +5,7 @@
 #include "util.h"
 #include <cstring>
 #include <atomic>
+#include <algorithm>
 
 volatile uint32_t status_callbacks = 0;
 class UARTCommunication : public CommunicationBase {
@@ -24,12 +25,11 @@ class UARTCommunication : public CommunicationBase {
 
       protocol_.set_buffer(uart.rx_buffer_);
       protocol_.register_comms_inst(this);
-      //protocol_.register_callback(OBOT_CMD, *(new std::function<void(uint8_t *, uint16_t)>([this](uint8_t* a, uint16_t b){ this->callback_obot_cmd(a,b); })));
       protocol_.register_callback(OBOT_CMD, callback_obot_cmd);
       protocol_.register_callback(OBOT_STATUS, callback_obot_status);
       protocol_.register_callback(OBOT_CMD_STATUS, callback_obot_cmd_status);
       protocol_.register_callback(OBOT_ASCII, callback_obot_ascii);
-      //protocol_.register_callback(OBOT_ASCII, *(new std::function<void(uint8_t *, uint16_t)>([this](uint8_t* a, uint16_t b){ this->callback_obot_ascii(a,b); })));
+    
 
       NVIC_SetPriority(PendSV_IRQn,
         NVIC_EncodePriority(NVIC_GetPriorityGrouping(), 2, 0));
@@ -68,8 +68,13 @@ class UARTCommunication : public CommunicationBase {
     }
 
     bool send_string(const char* string, uint16_t length) {
-      while(send_active());
+      //while(send_active());
+      // todo packetize
       std::memcpy(uart_.tx_buffer_, string, length);
+      Uart::BufferDescriptor desc = {};
+      desc.length = length;
+      desc.txBuffer = uart_.tx_buffer_;
+      uart_.startTransaction(desc);
       return true;
     }
 
@@ -88,7 +93,6 @@ class UARTCommunication : public CommunicationBase {
     }
 
     void parse() {
-      // lib.parse(uart_.get_current_rx_index());
       protocol_.parse(uart_.get_current_rx_index());
     }
 
@@ -111,13 +115,16 @@ class UARTCommunication : public CommunicationBase {
 
     void callback_obot_cmd(uint8_t *buf, uint16_t length) {
       asm("dmb");
+      uart_.rx_copy((uint8_t *) &obot_cmd_, buf, std::min((size_t) length, sizeof(obot_cmd_)));
       std::memcpy(&obot_cmd_, buf, sizeof(obot_cmd_));
       new_obot_cmd_ = true;
     }
 
+    // todo potential collisions between obot status and ascii responses
     void callback_obot_status(uint8_t *buf, uint16_t length) {
       asm("dmb");
-      std::memcpy(uart_.tx_buffer_, &obot_status_, sizeof(SendData));
+      // todo packetize
+      std::memcpy(&uart_.tx_buffer_[0], &obot_status_, sizeof(SendData));
       Uart::BufferDescriptor desc = {};
       desc.length = sizeof(SendData);
       desc.txBuffer = uart_.tx_buffer_;
@@ -131,7 +138,7 @@ class UARTCommunication : public CommunicationBase {
     }
 
     void callback_obot_ascii(uint8_t *buf, uint16_t length) {
-      std::memcpy(&ascii_str_in_, buf, length);
+      uart_.rx_copy((uint8_t *) ascii_str_in_, buf, std::min((int) length, MAX_API_DATA_SIZE));
       ascii_str_in_[length] = 0;
       new_ascii_str_ = true;
     }
@@ -145,7 +152,7 @@ class UARTCommunication : public CommunicationBase {
     SendData obot_status_;
     std::atomic_bool status_sent_;
     std::atomic_bool new_ascii_str_;
-    char ascii_str_in_[MAX_API_DATA_SIZE];
+    char ascii_str_in_[MAX_API_DATA_SIZE+1];
 };
 
 
