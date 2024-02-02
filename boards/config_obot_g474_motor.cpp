@@ -43,8 +43,10 @@ using PWM = HRPWM;
 #endif
 
 #if (COMMS == COMMS_UART)
-    #include "../uart_communication_protocol.h"
-    using UARTCommunicationProtocol = UARTRawProtocol<>; 
+    #include "../obot-parser/obot-parser.h"
+    using ObotParser = ObotParser<>
+    // #include "../uart_communication_protocol.h"
+    // using UARTCommunicationProtocol = UARTRawProtocol<>; 
     #include "../uart_communication.h"
     using Communication = UARTCommunication;
 
@@ -146,7 +148,6 @@ namespace config {
     const BoardRev board_rev = get_board_rev();
 
 #if COMMS == COMMS_UART
-    UARTCommunicationProtocol uart_protocol;
 #if COMMS_UART_NUMBER == 2
     Uart uart({
       .usart        = USART2,
@@ -220,6 +221,7 @@ namespace config {
       .brrValue         = (uint32_t)(CPU_FREQUENCY_HZ / COMMS_UART_BAUDRATE)
     });
 #endif // COMMS_UART_NUMBER
+    ObotParser uart_protocol(config::uart.rx_buffer_, 100);
 #endif // COMMS_UART
 
 #if (COMMS == COMMS_SPI)
