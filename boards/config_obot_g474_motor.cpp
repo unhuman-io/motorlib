@@ -44,7 +44,7 @@ using PWM = HRPWM;
 
 #if (COMMS == COMMS_UART)
     #include "../obot-parser/obot-parser.h"
-    using figure::ObotParser = ObotParser<>
+    using ObotParser = figure::ObotParser<>
     // #include "../uart_communication_protocol.h"
     // using UARTCommunicationProtocol = UARTRawProtocol<>; 
     #include "../uart_communication.h"
