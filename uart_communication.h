@@ -6,6 +6,7 @@
 #include <cstring>
 #include <atomic>
 
+volatile uint32_t status_callbacks = 0;
 class UARTCommunication : public CommunicationBase {
  public:
     enum mailboxId
@@ -21,11 +22,13 @@ class UARTCommunication : public CommunicationBase {
       new_obot_cmd_ = false;
       status_sent_ = false;
 
+      protocol_.set_buffer(uart.rx_buffer_);
       protocol_.register_comms_inst(this);
       //protocol_.register_callback(OBOT_CMD, *(new std::function<void(uint8_t *, uint16_t)>([this](uint8_t* a, uint16_t b){ this->callback_obot_cmd(a,b); })));
-      protocol_.register_callback(OBOT_CMD, callback_obot_status);
+      protocol_.register_callback(OBOT_CMD, callback_obot_cmd);
       protocol_.register_callback(OBOT_STATUS, callback_obot_status);
-      protocol_.register_callback(OBOT_CMD_STATUS, callback_obot_status);
+      protocol_.register_callback(OBOT_CMD_STATUS, callback_obot_cmd_status);
+      protocol_.register_callback(OBOT_ASCII, callback_obot_ascii);
       //protocol_.register_callback(OBOT_ASCII, *(new std::function<void(uint8_t *, uint16_t)>([this](uint8_t* a, uint16_t b){ this->callback_obot_ascii(a,b); })));
 
       NVIC_SetPriority(PendSV_IRQn,
@@ -89,14 +92,27 @@ class UARTCommunication : public CommunicationBase {
       protocol_.parse(uart_.get_current_rx_index());
     }
 
+    static void callback_obot_cmd(void * inst, uint8_t *buf, uint16_t length) {
+      ((UARTCommunication *) inst)->callback_obot_cmd(buf, length);
+    }
+
+    static void callback_obot_status(void * inst, uint8_t *buf, uint16_t length) {
+      status_callbacks++;
+      ((UARTCommunication *) inst)->callback_obot_status(buf, length);
+    }
+
+    static void callback_obot_cmd_status(void * inst, uint8_t *buf, uint16_t length) {
+      ((UARTCommunication *) inst)->callback_obot_cmd_status(buf, length);
+    }
+
+    static void callback_obot_ascii(void * inst, uint8_t *buf, uint16_t length) {
+      ((UARTCommunication *) inst)->callback_obot_ascii(buf, length);
+    }
+
     void callback_obot_cmd(uint8_t *buf, uint16_t length) {
       asm("dmb");
       std::memcpy(&obot_cmd_, buf, sizeof(obot_cmd_));
       new_obot_cmd_ = true;
-    }
-
-    static void callback_obot_status(void * inst, uint8_t *buf, uint16_t length) {
-      ((UARTCommunication *) inst)->callback_obot_status(buf, length);
     }
 
     void callback_obot_status(uint8_t *buf, uint16_t length) {
@@ -116,6 +132,7 @@ class UARTCommunication : public CommunicationBase {
 
     void callback_obot_ascii(uint8_t *buf, uint16_t length) {
       std::memcpy(&ascii_str_in_, buf, length);
+      ascii_str_in_[length] = 0;
       new_ascii_str_ = true;
     }
 

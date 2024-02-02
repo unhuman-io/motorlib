@@ -44,7 +44,7 @@ using PWM = HRPWM;
 
 #if (COMMS == COMMS_UART)
     #include "../uart_communication_protocol.h"
-    using UARTCommunicationProtocol = UARTRawProtocol; 
+    using UARTCommunicationProtocol = UARTRawProtocol<>; 
     #include "../uart_communication.h"
     using Communication = UARTCommunication;
 
