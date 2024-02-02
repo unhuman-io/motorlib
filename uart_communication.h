@@ -16,10 +16,17 @@ class UARTCommunication : public CommunicationBase {
       OBOT_ASCII = 0x04,
     };
 
-    UARTCommunication(Uart &uart, UARTCommunicationProtocol protocol) : uart_(uart), protocol_(protocol) {
-      protocol_.register_callback(OBOT_CMD, [this](uint8_t* a, uint16_t b){ this->callback_obot_cmd(a,b); });
-      protocol_.register_callback(OBOT_STATUS, [this](uint8_t* a, uint16_t b){ this->callback_obot_status(a,b); });
-      protocol_.register_callback(OBOT_ASCII, [this](uint8_t* a, uint16_t b){ this->callback_obot_ascii(a,b); });
+    UARTCommunication(Uart &uart, UARTCommunicationProtocol &protocol) : uart_(uart), protocol_(protocol) {
+      new_ascii_str_ = false;
+      new_obot_cmd_ = false;
+      status_sent_ = false;
+
+      protocol_.register_comms_inst(this);
+      //protocol_.register_callback(OBOT_CMD, *(new std::function<void(uint8_t *, uint16_t)>([this](uint8_t* a, uint16_t b){ this->callback_obot_cmd(a,b); })));
+      protocol_.register_callback(OBOT_CMD, callback_obot_status);
+      protocol_.register_callback(OBOT_STATUS, callback_obot_status);
+      protocol_.register_callback(OBOT_CMD_STATUS, callback_obot_status);
+      //protocol_.register_callback(OBOT_ASCII, *(new std::function<void(uint8_t *, uint16_t)>([this](uint8_t* a, uint16_t b){ this->callback_obot_ascii(a,b); })));
 
       NVIC_SetPriority(PendSV_IRQn,
         NVIC_EncodePriority(NVIC_GetPriorityGrouping(), 2, 0));
@@ -53,6 +60,7 @@ class UARTCommunication : public CommunicationBase {
         new_ascii_str_ = false;
         return std::strlen(ascii_str_in_);
       }
+      *string = 0;
       return 0;
     }
 
@@ -85,6 +93,10 @@ class UARTCommunication : public CommunicationBase {
       asm("dmb");
       std::memcpy(&obot_cmd_, buf, sizeof(obot_cmd_));
       new_obot_cmd_ = true;
+    }
+
+    static void callback_obot_status(void * inst, uint8_t *buf, uint16_t length) {
+      ((UARTCommunication *) inst)->callback_obot_status(buf, length);
     }
 
     void callback_obot_status(uint8_t *buf, uint16_t length) {

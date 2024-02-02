@@ -148,6 +148,7 @@ void Uart::initUart()
 {
   init_struct_.usart->BRR = init_struct_.brrValue;
   init_struct_.usart->CR3 = USART_CR3_DMAT | USART_CR3_DMAR; // DMA TX and RX
+  init_struct_.usart->CR1 = USART_CR1_TE | USART_CR1_RE | USART_CR1_UE; // enable all
 
   // NVIC_SetPriority(
   //   init_struct_.uartIrqN,
