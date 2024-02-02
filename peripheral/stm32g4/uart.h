@@ -6,6 +6,8 @@
 #include "../macro.h"
 #include "../comms.h"
 
+#define TX_BUFFER_SIZE 2048
+#define RX_BUFFER_SIZE 2048
 class Uart : public Comms
 {
   public:
@@ -65,6 +67,11 @@ class Uart : public Comms
     void rxInterruptHandler();
     void txInterruptHandler();
     void errorInterruptHandler();
+
+    uint16_t get_current_tx_index() const;
+    uint16_t get_current_rx_index() const;
+    uint8_t tx_buffer_[TX_BUFFER_SIZE];
+    uint8_t rx_buffer_[RX_BUFFER_SIZE];
 
   private:
     const InitStruct init_struct_;
