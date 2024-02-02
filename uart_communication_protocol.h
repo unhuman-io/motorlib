@@ -12,6 +12,7 @@ class CommunicationProtocolBase {
     void * comms_inst_ = 0;
 };
 
+//int n_parses = 0;
 template<uint8_t n_fids=4>
 // A simple protocol that uses 2x parse period timeout to separate frames
 class UARTRawProtocol : public CommunicationProtocolBase {
@@ -29,9 +30,17 @@ class UARTRawProtocol : public CommunicationProtocolBase {
         // no new data, time to parse
         uint8_t fid = rx_buffer_[tail_];
         if (fid && fid <= n_fids) {
-          uint16_t length = current_index - tail_ - 1;
-          // todo need to unwrap
-          callbacks_[fid-1](comms_inst_, (uint8_t *) &rx_buffer_[tail_+1], length);
+          uint16_t length = current_index - tail_;
+          if (current_index < tail_) {
+            length = 0; // todo figure out unwrap;
+          } else {
+            // todo need to unwrap
+            // n_parses++;
+            // if (n_parses > 156) {
+            //   asm("bkpt 1");
+            // }
+            callbacks_[fid-1](comms_inst_, (uint8_t *) &rx_buffer_[tail_+1], length);
+          }
         }
         tail_ = current_index;
       }

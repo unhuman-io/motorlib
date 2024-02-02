@@ -138,9 +138,12 @@ class UARTCommunication : public CommunicationBase {
     }
 
     void callback_obot_ascii(uint8_t *buf, uint16_t length) {
-      uart_.rx_copy((uint8_t *) ascii_str_in_, buf, std::min((int) length, MAX_API_DATA_SIZE));
+      length = std::min(length, (uint16_t) MAX_API_DATA_SIZE);
+      uart_.rx_copy((uint8_t *) ascii_str_in_, buf, length);
       ascii_str_in_[length] = 0;
-      new_ascii_str_ = true;
+      if (length) {
+        new_ascii_str_ = true;
+      }
     }
 
  private:
