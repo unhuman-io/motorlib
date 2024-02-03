@@ -43,7 +43,7 @@ using PWM = HRPWM;
 #endif
 
 #if (COMMS == COMMS_UART)
-    #include "../obot-parser/obot-parser.h"
+    #include "../../lib/obot-parser/obot-parser.h"
     #include "../uart_communication_obot.h"
     using Communication = UARTCommunication;
 #endif
