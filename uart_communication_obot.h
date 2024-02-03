@@ -104,7 +104,7 @@ class UARTCommunication : public CommunicationBase {
     asm("dmb");
     // Packetize obot_status and send
     uint8_t packet_size;
-    uint8_t* packet = protocol_.generatePacket(static_cast<uint8_t*>(&obot_status_), sizeof(SendData), OBOT_STATUS, &packet_size);
+    uint8_t* packet = protocol_.generatePacket(reinterpret_cast<uint8_t*>(&obot_status_), sizeof(SendData), OBOT_STATUS, &packet_size);
     std::memcpy(&uart_.tx_buffer_[0], &packet[0], packet_size);
     Uart::BufferDescriptor desc = {};
     desc.length = sizeof(SendData);
