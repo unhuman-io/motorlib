@@ -107,7 +107,7 @@ class UARTCommunication : public CommunicationBase {
     uint8_t* packet = protocol_.generatePacket(reinterpret_cast<uint8_t*>(&obot_status_), sizeof(SendData), OBOT_STATUS, &packet_size);
     std::memcpy(&uart_.tx_buffer_[0], &packet[0], packet_size);
     Uart::BufferDescriptor desc = {};
-    desc.length = sizeof(SendData);
+    desc.length = sizeof(packet_size);
     desc.txBuffer = uart_.tx_buffer_;
     uart_.startTransaction(desc);
     status_sent_ = true;
