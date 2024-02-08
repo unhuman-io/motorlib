@@ -43,7 +43,7 @@ using PWM = HRPWM;
 #endif
 
 #if (COMMS == COMMS_UART)
-    #include "../../lib/obot-parser/obot-parser.h"
+    #include "../../lib/protocol/protocol_parser.h"
     #include "../uart_communication_obot.h"
     using Communication = UARTCommunication;
 #endif
@@ -220,7 +220,7 @@ namespace config {
 #endif
 
 #if COMMS == COMMS_UART
-    figure::ObotParser uart_protocol(config::uart.rx_buffer_, 100);
+    figure::ProtocolParser uart_protocol(config::uart.rx_buffer_, 100);
 #endif // COMMS_UART
 
 #if (COMMS == COMMS_SPI)

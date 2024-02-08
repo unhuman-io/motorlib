@@ -18,7 +18,7 @@ class UARTCommunication : public CommunicationBase {
     OBOT_ASCII = 0x04,
   };
 
-  UARTCommunication(Uart& uart, figure::ObotParser& protocol) : uart_(uart), protocol_(protocol) {
+  UARTCommunication(Uart& uart, figure::ProtocolParser& protocol) : uart_(uart), protocol_(protocol) {
     new_ascii_str_ = false;
     new_obot_cmd_ = false;
     status_sent_ = false;
@@ -126,7 +126,7 @@ class UARTCommunication : public CommunicationBase {
 
  private:
   Uart& uart_;
-  figure::ObotParser& protocol_;
+  figure::ProtocolParser& protocol_;
   friend class System;
   std::atomic_bool new_obot_cmd_;
   ReceiveData obot_cmd_;
