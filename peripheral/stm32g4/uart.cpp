@@ -289,7 +289,7 @@ bool Uart::is_tx_active() const {
 
 void Uart::rx_copy(uint8_t * const out_buf, uint8_t * rx_buf_ptr, uint16_t length) {
   // todo optimize with 1 to 2 memcpy for circular buffer
-  int index = rx_buf_ptr - rx_buffer_;
+  int index = (rx_buf_ptr - rx_buffer_) % RX_BUFFER_SIZE;
   for(int i=0; i<length; i++) {
     out_buf[i] = rx_buffer_[index++];
     index %= RX_BUFFER_SIZE;

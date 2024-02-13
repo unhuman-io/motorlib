@@ -117,7 +117,6 @@ class UARTCommunication : public CommunicationBase {
     void callback_obot_cmd(uint8_t *buf, uint16_t length) {
       asm("dmb");
       uart_.rx_copy((uint8_t *) &obot_cmd_, buf, std::min((size_t) length, sizeof(obot_cmd_)));
-      std::memcpy(&obot_cmd_, buf, sizeof(obot_cmd_));
       new_obot_cmd_ = true;
     }
 
