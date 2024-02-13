@@ -23,7 +23,7 @@ class UARTCommunication : public CommunicationBase {
       new_obot_cmd_ = false;
       status_sent_ = false;
 
-      protocol_.set_buffer(uart.rx_buffer_);
+      protocol_.set_buffer(uart.rx_buffer_, RX_BUFFER_SIZE);
       protocol_.register_comms_inst(this);
       protocol_.register_callback(OBOT_CMD, callback_obot_cmd);
       protocol_.register_callback(OBOT_STATUS, callback_obot_status);
@@ -59,7 +59,7 @@ class UARTCommunication : public CommunicationBase {
 
     int receive_string(char* const string) {
       if (new_ascii_str_) {
-        std::memcpy(string, ascii_str_in_, std::strlen(ascii_str_in_));
+        std::memcpy(string, ascii_str_in_, std::strlen(ascii_str_in_)+1);
         new_ascii_str_ = false;
         return std::strlen(ascii_str_in_);
       }
@@ -72,7 +72,8 @@ class UARTCommunication : public CommunicationBase {
       // todo packetize
       std::memcpy(uart_.tx_buffer_, string, length);
       Uart::BufferDescriptor desc = {};
-      desc.length = length;
+      desc.length = length+1;
+      uart_.tx_buffer_[length] = 0;
       desc.txBuffer = uart_.tx_buffer_;
       uart_.startTransaction(desc);
       return true;
