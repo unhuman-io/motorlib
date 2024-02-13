@@ -109,11 +109,11 @@ class MAX11254 : public TorqueSensorBase {
         //cr2_register cr2 = {.ldoen=1};
         ret_val &= write_reg(2, cr2.word);
         ret_val &= write_reg(9, 0x1); //  GPO0 on
-        delay_register delay = {.mux=25}; // 25 -> 100 us delay before sampling
+        delay_register delay = {.mux=150, .gpo=0}; // 150 -> 600 us delay before sampling
         ret_val &= write_reg(5, delay.word);
         // sample channel 1
-        //seq_register seq = {.mux=1};
-        //ret_val &= write_reg(8, seq.word);
+        seq_register seq = {.mdren=1};
+        ret_val &= write_reg(8, seq.word);
 
         spi_dma_.readwrite(data_out, data_in, 5);
         logger.log_printf("max11254 stat: %02x %02x %02x", data_in[2], data_in[3], data_in[4]);
