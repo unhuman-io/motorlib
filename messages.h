@@ -94,6 +94,14 @@ typedef struct {
     uint8_t current_direction;                      // 0 or 1 to switch direction
 } FastLoopParam;
 
+
+typedef struct {
+    struct {
+        float index_electrical_offset_pos;          // index offset electrial zero in encoder counts
+                                                    // can obtain this value from  motor_index_pos_ - motor_electrical_zero_pos_ 
+    } motor_encoder;
+} FastLoopCal;
+
 typedef struct {
     float gain;
     float bias;
@@ -102,6 +110,11 @@ typedef struct {
     float table_gain;
     float dir;
 } TorqueSensorParam;
+
+typedef struct {
+    float gain;
+} TorqueSensorCal;
+
 
 #ifndef POSITION_CONTROLLER_OVERRIDE
 typedef struct {
@@ -216,6 +229,13 @@ typedef struct {
 } MainLoopParam;
 
 typedef struct {
+    struct {
+        float bias;
+    } output_encoder;
+    TorqueSensorCal torque_sensor;
+} MainLoopCal;
+
+typedef struct {
     uint8_t do_phase_lock;          // 1: yes, 0: no
     float phase_lock_current;       // current in A
     float phase_lock_duration;      // duration in seconds
@@ -246,7 +266,22 @@ typedef struct {
     uint8_t no_zero_current_sensors;   // default of 0 will zero current sensors for 2 seconds on startup
                                        // 1 to disable and use fast_loop_param.i*_bias
     uint8_t no_driver_enable;       // 1 to require sending driver_enable mode and clear faults to enable the driver
+
 } StartupParam;
+
+
+typedef struct {
+    float motor_encoder_bias;   // for ENCODER_BIAS and ENCODER_BIAS_FROM_OUTPUT: extra bias to add to motor encoder
+                                // for ENCODER_BIAS_*_WITH_MOTOR_CORRECTION: motor bias to give a desired motor zero position
+                                    // for example when output position = 0 if motor position is -1, then motor_encoder_bias = 1
+} StartupCal;
+
+
+typedef struct{
+    StartupCal startup_cal;
+    FastLoopCal fast_loop_cal;
+    MainLoopCal main_loop_cal;
+} Calibration;
 
 typedef struct {
     struct { float i_d, i_q, v_q; } desired;         // desired current in A, i_d typically 0, i_q creates torque, v_q in V is a feedforward

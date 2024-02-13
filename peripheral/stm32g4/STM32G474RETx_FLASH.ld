@@ -65,6 +65,7 @@ RAM (xrw)      : ORIGIN = 0x20000000, LENGTH = 96K
 CCMRAM (xrw)   : ORIGIN = 0x10000000, LENGTH = 32K
 FLASH (rx)      : ORIGIN = 0x8000000, LENGTH = 384K
 SECTOR_7 (rx)  : ORIGIN = 0x8060000, LENGTH = 128K
+CALIBRATION_DATA (rx) : ORIGIN = 0x8070000, LENGTH = 64K
 }
 
 /* Define output sections */
@@ -77,6 +78,13 @@ SECTIONS
     *(flash_param)         /* .rodata sections (constants, strings, etc.) */
     . = ALIGN(4);
   } >SECTOR_7
+
+  .calibration_data :
+  {
+      . = ALIGN(4);
+      *(.calibration_data)  /* Specify sections or symbols to go here */
+      . = ALIGN(4);
+  } >CALIBRATION_DATA
 
   _siccmram = LOADADDR(.ccmram);
   .ccmram :

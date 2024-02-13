@@ -35,9 +35,9 @@ class MainLoop {
     MainLoop(int32_t frequency_hz, FastLoop &fast_loop, PositionController &position_controller,  TorqueController &torque_controller, 
         ImpedanceController &impedance_controller, VelocityController &velocity_controller, StateController &state_controller, 
         JointPositionController &joint_position_controller, AdmittanceController &admittance_controller, Communication &communication,
-        LED &led, OutputEncoder &output_encoder, TorqueSensor &torque, Driver &driver, const MainLoopParam &param,
+        LED &led, OutputEncoder &output_encoder, TorqueSensor &torque, Driver &driver, const MainLoopParam &param, const Calibration &calibration,
         HardwareBrake &brake=no_brake_) : 
-          param_(param), fast_loop_(fast_loop), position_controller_(position_controller), torque_controller_(torque_controller), 
+          param_(param), calibration_(calibration), fast_loop_(fast_loop), position_controller_(position_controller), torque_controller_(torque_controller), 
           impedance_controller_(impedance_controller), velocity_controller_(velocity_controller), state_controller_(state_controller),  
           joint_position_controller_(joint_position_controller), admittance_controller_(admittance_controller), 
           communication_(communication), led_(led), frequency_hz_(frequency_hz), output_encoder_(output_encoder), torque_sensor_(torque),
@@ -134,7 +134,8 @@ class MainLoop {
 
       status_.motor_position = status_.fast_loop.motor_position.position_filtered + motor_encoder_bias_;
 
-      float torque_corrected = torque_sensor_dir_ * (torque_sensor_.read() - param_.torque_sensor.bias) + param_.torque_sensor.bias;
+      // float torque_corrected = torque_sensor_dir_ * (torque_sensor_.read() - param_.torque_sensor.bias) + param_.torque_sensor.bias;
+      float torque_corrected = torque_sensor_dir_ * (torque_sensor_.read() - param_.torque_sensor.bias) + calibration_.torque_sensor.bias;
       //if (torque_corrected != status_.torque) {
         torque_corrected += param_.torque_correction*status_.fast_loop.foc_status.measured.i_q;
       //}
@@ -437,7 +438,8 @@ class MainLoop {
           param_.motor_temperature_model.Rth, 1.0/frequency_hz_);
       }
       motor_temperature_limit_ = param_.motor_temperature_limit == 0 ? 140 : param_.motor_temperature_limit;
-      output_encoder_bias_ = param_.output_encoder.bias;
+      // output_encoder_bias_ = param_.output_encoder.bias;
+      output_encoder_bias_ = calibration_.output_encoder.bias;
       error_mask_.all = param_.error_mask.all == 0 ? ERROR_MASK_ALL : (param_.error_mask.all & ERROR_MASK_ALL);
       output_encoder_dir_ = param_.output_encoder.dir == 0 ? 1 : param_.output_encoder.dir;
       torque_sensor_dir_ = param_.torque_sensor.dir == 0 ? 1 : param_.torque_sensor.dir;
@@ -679,6 +681,7 @@ class MainLoop {
  private:
     LED* led() { return &led_; }
     const MainLoopParam &param_;
+    const Calibration &calibration_;
     FastLoop &fast_loop_;
     PositionController &position_controller_;
     TorqueController &torque_controller_;
