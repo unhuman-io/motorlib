@@ -95,7 +95,7 @@ typedef struct {
 } FastLoopParam;
 
 typedef struct {
-    // float gain;
+    float gain;
     float bias;
     float k_temp;
     float table[TORQUE_TABLE_LENGTH][4];
