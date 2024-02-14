@@ -273,7 +273,7 @@ class System {
 
         uint32_t t_start = get_clock();
         while(1) {
-            TOGGLE_SCOPE_PIN(C,4);
+            //TOGGLE_SCOPE_PIN(C,4);
             count_++;
             if (communication_.send_string_active() && get_clock() - t_start > US_TO_CPU(api_timeout_us)) {
                 communication_.cancel_send_string();
