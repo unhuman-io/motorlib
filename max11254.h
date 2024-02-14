@@ -78,8 +78,9 @@ class MAX11254 : public TorqueSensorBase {
         uint8_t word;
     };
 
-    MAX11254(SPIDMA &spi_dma, uint8_t decimation=1) :
-        TorqueSensorBase(), spi_dma_(spi_dma), decimation_(decimation) {
+    MAX11254(SPIDMA &spi_dma, uint8_t decimation=1, bool mux_delay_en = true) :
+        TorqueSensorBase(), spi_dma_(spi_dma), decimation_(decimation),
+        mux_delay_en_(mux_delay_en) {
         
         //init();
         register_address dr = {.rw = 1, .addr = 14, .bits2 = 3};
@@ -112,7 +113,7 @@ class MAX11254 : public TorqueSensorBase {
         delay_register delay = {.mux=150, .gpo=0}; // 150 -> 600 us delay before sampling
         ret_val &= write_reg(5, delay.word);
         // sample channel 1
-        seq_register seq = {.mdren=1};
+        seq_register seq = {.mdren=mux_delay_en_};
         ret_val &= write_reg(8, seq.word);
 
         spi_dma_.readwrite(data_out, data_in, 5);
@@ -234,5 +235,6 @@ class MAX11254 : public TorqueSensorBase {
     static const uint8_t length_ = 5;
     uint8_t data_out_[length_] = {};
     uint8_t data_in_[length_] = {};
-    uint8_t decimation_ = 1;
+    uint8_t decimation_;
+    bool mux_delay_en_;
 };
