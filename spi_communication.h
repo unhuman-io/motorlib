@@ -1,8 +1,10 @@
 #ifndef UNHUMAN_MOTORLIB_SPI_COMMUNICATION_H_
+
 #define UNHUMAN_MOTORLIB_SPI_COMMUNICATION_H_
 
 #include "communication.h"
-#include "peripheral/spi_protocol.h"
+#include "peripheral/protocol.h"
+#include "peripheral/mailbox.h"
 
 class SPICommunication : public CommunicationBase {
  public:
@@ -14,23 +16,25 @@ class SPICommunication : public CommunicationBase {
       MAILBOX_ID_DATA_TO_HOST = 3,
       MAILBOX_ID_DATA_FROM_HOST = 4
     };
-    SPICommunication(SpiProtocol& protocol) :
+
+    SPICommunication(Protocol& protocol) :
       protocol_(protocol)
     {};
 
     int receive_data(ReceiveData* const data) {
-      FIGURE_ASSERT(sizeof(ReceiveData) <= SpiMailbox::kBufferSize);
+      FIGURE_ASSERT(sizeof(ReceiveData) <= Mailbox::kBufferSize);
       return protocol_.mailboxes.read(MAILBOX_ID_DATA_FROM_HOST, (uint8_t*)data, sizeof(ReceiveData));
     }
 
     void send_data(const SendData& data) {
-      FIGURE_ASSERT(sizeof(SendData) <= SpiMailbox::kBufferSize);
+      FIGURE_ASSERT(sizeof(SendData) <= Mailbox::kBufferSize);
       protocol_.mailboxes.write(MAILBOX_ID_DATA_TO_HOST, (uint8_t*)&data, sizeof(SendData));
     }
 
     int receive_string(char* const string) {
-      size_t length = protocol_.mailboxes.read(MAILBOX_ID_SERIAL_FROM_HOST, (uint8_t*)string, SpiMailbox::kBufferSize);
+      size_t length = protocol_.mailboxes.read(MAILBOX_ID_SERIAL_FROM_HOST, (uint8_t*)string, Mailbox::kBufferSize);
       string[length] = '\x0'; // Enforce the string termination
+
       return length;
     }
 
@@ -39,11 +43,12 @@ class SPICommunication : public CommunicationBase {
       // If the buffer is too long - split it onto smaller chunks.
       while(length > 0)
       {
-        chunk_length = (length > SpiMailbox::kBufferSize) ? SpiMailbox::kBufferSize : length;
+        chunk_length = (length > Mailbox::kBufferSize) ? Mailbox::kBufferSize : length;
         protocol_.mailboxes.write(MAILBOX_ID_SERIAL_TO_HOST, (const uint8_t*)string, chunk_length);
         string += chunk_length;
         length -= chunk_length;
       }
+
       return true;
     }
 
@@ -67,7 +72,7 @@ class SPICommunication : public CommunicationBase {
     }
 
  private:
-    SpiProtocol& protocol_;
+    Protocol& protocol_;
     friend class System;
 };
 

@@ -176,14 +176,15 @@ class MainLoop {
       if (status_.error.all & error_mask_.all && !(receive_data_.mode_desired == DRIVER_ENABLE || receive_data_.mode_desired == CLEAR_FAULTS)) {
           status_.error.fault = 1;
           if (safe_mode_ != true) {
-            logger.log_printf("fault detected, error: %08x", status_.error.all);
-            std::string s = "fault bits:";
-            for (int i=0; i<32; i++) {
-              if ((status_.error.all >> i) & 0x1) {
-                s += " " + error_bit_strings[i];
-              }
-            }
-            logger.log(s);
+            // todo bring back logger in isr safe way
+            // logger.log_printf("fault detected, error: %08x", status_.error.all);
+            // std::string s = "fault bits:";
+            // for (int i=0; i<32; i++) {
+            //   if ((status_.error.all >> i) & 0x1) {
+            //     s += " " + error_bit_strings[i];
+            //   }
+            // }
+            // logger.log(s);
           }
           safe_mode_ = true;
           set_mode(param_.safe_mode);
@@ -602,7 +603,8 @@ class MainLoop {
           led_.set_color(LED::RED);
           led_.set_rate(2);
           if (param_.safe_mode_driver_disable && !(mode == DRIVER_ENABLE)) {
-            logger.log_printf("safe mode driver disable, mode: %d", mode);
+            // todo bring back logger in isr safe way
+            // logger.log_printf("safe mode driver disable, mode: %d", mode);
             driver_.disable();
           }
         } else {

@@ -268,10 +268,12 @@ class System {
         api.add_api_variable("msoftlimit_max", new APIFloat(&actuator_.main_loop_.encoder_limits_.motor_controlled_max));
         api.add_api_variable("msoftlimit_min", new APIFloat(&actuator_.main_loop_.encoder_limits_.motor_controlled_min));
         api.add_api_variable("is_sbank", new const APICallbackUint8([](){ return (*((uint8_t *) 0x1fff7802) & 0x40) == 0; }));
+        api.add_api_variable("reset", new const APICallbackUint8([](){ NVIC_SystemReset(); return 0; }));
 
 
         uint32_t t_start = get_clock();
         while(1) {
+            //TOGGLE_SCOPE_PIN(C,4);
             count_++;
             if (communication_.send_string_active() && get_clock() - t_start > US_TO_CPU(api_timeout_us)) {
                 communication_.cancel_send_string();
