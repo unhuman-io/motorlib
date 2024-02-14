@@ -90,6 +90,8 @@ class ICPZ : public EncoderBase {
       success = set_register(0, 0, {3}) ? success : false; // fast speed on port a, set first
       success = set_register(7, 9, {0}) ? success : false; // multiturn data length = 0
       success = set_register(7, 0xA, {0}) ? success : false; // spi_ext = 0
+      success &= set_register(7, 0, {0x13, 0x07, 0, 0x11}); // disable prc error, default: {0x13, 0x0F, 0, 0x11}, 
+      success &= set_register(7, 4, {0x0C, 0xC8, 0, 0x02}); // prc is a warning, default: {0x0C, 0xC0, 0, 0x02}, 
       success = set_register(0, 0xF, {4}) ? success : false; // 0x00 ran_fld = 0 -> never update position based on absolute track after initial, tol 4
       success = set_register(2, 3, {0x77}) ? success : false; // moderate dynamic digital calibration
       success = set_register(2, 0, {0x77, 0x7}) ? success: false; // moderate dynamic analog calibration
@@ -249,7 +251,8 @@ class ICPZ : public EncoderBase {
     }
 
     void clear_faults() {
-        clear_diag();
+        // todo this is called by mainloop needs to be isr safe to use clear diag here
+        // clear_diag();
         error_count_ = 0;
         warn_count_ = 0;
         crc_error_count_ = 0;

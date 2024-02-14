@@ -59,16 +59,19 @@ C_INCLUDES +=  \
 LDSCRIPT = $(SELF_DIR)../peripheral/stm32g4/STM32G474RETx_FLASH.ld
 
 CPP_SOURCES += \
-$(SELF_DIR)../peripheral/stm32g4/usb.cpp\
-$(SELF_DIR)../peripheral/stm32g4/spi_slave.cpp\
 $(SELF_DIR)../peripheral/spi_encoder.cpp\
-$(SELF_DIR)../peripheral/spi_protocol.cpp\
-$(SELF_DIR)../peripheral/spi_mailbox.cpp\
-$(SELF_DIR)../peripheral/spi_protocol_states.cpp\
-$(SELF_DIR)../peripheral/spi_protocol_commands.cpp\
+$(SELF_DIR)../peripheral/protocol.cpp\
+$(SELF_DIR)../peripheral/mailbox.cpp\
+$(SELF_DIR)../peripheral/protocol_states_spi.cpp\
+$(SELF_DIR)../peripheral/protocol_states_uart.cpp\
+$(SELF_DIR)../peripheral/protocol_commands.cpp\
 $(SELF_DIR)../peripheral/stm32g4/ams_encoder.cpp\
 $(SELF_DIR)../peripheral/stm32g4/hrpwm.cpp\
 $(SELF_DIR)../peripheral/stm32g4/clock_config.cpp\
+$(SELF_DIR)../peripheral/stm32g4/stm32g4_serial.cpp\
+$(SELF_DIR)../peripheral/stm32g4/usb.cpp\
+$(SELF_DIR)../peripheral/stm32g4/spi_slave.cpp\
+$(SELF_DIR)../peripheral/stm32g4/uart.cpp
 
 endif # MCU_TARGET == stm32g474
 
@@ -85,12 +88,17 @@ override C_DEFS += \
 -DNOTES=\"$(shell git branch --show-current)\"
 endif
 
+# Uncomment to disable the watchdog timer
+#override C_DEFS += \
+-DNO_WATCHDOG
+
 C_INCLUDES +=  \
 -I. \
 -I$(SELF_DIR)../CMSIS/Include \
 -I$(SELF_DIR)../peripheral
 
 CPP_SOURCES += \
+$(SELF_DIR)../malloc.cpp\
 $(SELF_DIR)../control_fun.cpp\
 $(SELF_DIR)../foc.cpp\
 $(SELF_DIR)../gpio.cpp\

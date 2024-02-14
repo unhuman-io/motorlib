@@ -110,9 +110,20 @@ Original_Reset_Handler:
   ldr	r1, =0xE0042008
   str   r0, [r1]		// IWDG stop on debug
   ldr	r0, =0xCCCC
-#endif
   ldr	r1, =IWDG_KR
+  str	r0, [r1]		// start watchdog
+  ldr	r0, =0x5555		// access IWDG_PR key
   str	r0, [r1]
+  // wait for IWDR_SR PVU to be 0
+pvu_zero_wait:
+  ldr	r0, [r1, #12]
+  cmp	r0, #1
+  beq	pvu_zero_wait
+  
+  ldr	r0, =0
+  str	r0, [r1, #4]	// Set PR to 0 (default but bootloader sets to 6)
+#endif
+
   ldr   r0, =_estack
   mov   sp, r0          /* set stack pointer */
 
@@ -358,8 +369,8 @@ g_pfnVectors:
 //	.weak	DebugMon_Handler
 //	.thumb_set DebugMon_Handler,Default_Handler
 
-//	.weak	PendSV_Handler
-//	.thumb_set PendSV_Handler,Default_Handler
+	.weak	PendSV_Handler
+	.thumb_set PendSV_Handler,Default_Handler
 
 //	.weak	SysTick_Handler
 //	.thumb_set SysTick_Handler,Default_Handler*/

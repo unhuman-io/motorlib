@@ -1,49 +1,42 @@
-#include "spi_protocol.h"
+#include <protocol.h>
 
-const SpiProtocol::StateTableEntry SpiProtocol::state_table_[kStateCount] =
+const Protocol::StateTableEntry Protocol::state_table_spi_[kStateCount] =
 {
   [kStateInit           ] = {NULL                                     },
-  [kStateWaitForSync    ] = {&SpiProtocol::stateWaitForSyncHandler    },
-  [kStateWaitForAck     ] = {&SpiProtocol::stateWaitForAckHandler     },
-  [kStateSendAckNack    ] = {&SpiProtocol::stateSendAckNackHandler    },
-  [kStateWaitForCommand ] = {&SpiProtocol::stateWaitForCommandHandler },
-  [kStateRunCommand     ] = {&SpiProtocol::stateRunCommandHandler     },
+  [kStateWaitForSync    ] = {&Protocol::stateWaitForSyncHandlerSpi    },
+  [kStateWaitForAck     ] = {&Protocol::stateWaitForAckHandlerSpi     },
+  [kStateSendAckNack    ] = {&Protocol::stateSendAckNackHandlerSpi    },
+  [kStateWaitForCommand ] = {&Protocol::stateWaitForCommandHandlerSpi },
+  [kStateRunCommand     ] = {&Protocol::stateRunCommandHandlerSpi     },
 };
 
-SpiProtocol::State SpiProtocol::sendAckNack(bool send_nack, State state_after_ack)
-{
-  send_nack_ = send_nack;
-  state_after_ack_ = state_after_ack;
-  return kStateSendAckNack;
-}
-
-SpiProtocol::State SpiProtocol::stateWaitForSyncHandler(bool first_run)
+Protocol::State Protocol::stateWaitForSyncHandlerSpi(bool first_run)
 {
   State new_state = kStateWaitForSync;
 
-  // Reset SPI
-  spi_slave_.reset();
+    // Reset communication interface
+    comms_.reset();
 
-  if(  (!first_run)
-     &&(rx_protocol_buffer_[0] == (uint8_t)Command::kSync)
-     &&(rx_protocol_buffer_[1] == 0x00) )
-  {
-    new_state = sendAckNack(false, kStateWaitForCommand);
-  }
-  else
-  {
-    // Read 2 bytes from SPI looking for Sync sequence
-    spi_slave_.startTransaction({
-      .txBuffer = NULL,
-      .rxBuffer = rx_protocol_buffer_,
-      .length = 2
-    });
-  }
+    if(  (!first_run)
+       &&(rx_protocol_buffer_[0] == (uint8_t)Command::kSync)
+       &&(rx_protocol_buffer_[1] == 0x00) )
+    {
+      new_state = sendAckNack(false, kStateWaitForCommand);
+    }
+    else
+    {
+      // Read 2 bytes from Comms looking for Sync sequence
+      comms_.startTransaction({
+        .txBuffer = NULL,
+        .rxBuffer = rx_protocol_buffer_,
+        .length = 2
+      });
+    }
 
-  return new_state;
+    return new_state;
 }
 
-SpiProtocol::State SpiProtocol::stateSendAckNackHandler(bool first_run)
+Protocol::State Protocol::stateSendAckNackHandlerSpi(bool first_run)
 {
   static uint8_t response_ack[2] = {0x00, (uint8_t)Command::kAck};
   static uint8_t response_nack[2] = {0x00, (uint8_t)Command::kNack};
@@ -53,7 +46,7 @@ SpiProtocol::State SpiProtocol::stateSendAckNackHandler(bool first_run)
   if(first_run)
   {
     // Send the dummy byte (0x00) and Ack/Nack
-    spi_slave_.startTransaction({
+    comms_.startTransaction({
       .txBuffer = (send_nack_) ? response_nack : response_ack,
       .rxBuffer = NULL,
       .length = 2
@@ -67,7 +60,7 @@ SpiProtocol::State SpiProtocol::stateSendAckNackHandler(bool first_run)
   return new_state;
 }
 
-SpiProtocol::State SpiProtocol::stateWaitForAckHandler(bool first_run)
+Protocol::State Protocol::stateWaitForAckHandlerSpi(bool first_run)
 {
   State new_state = kStateWaitForAck;
 
@@ -85,7 +78,7 @@ SpiProtocol::State SpiProtocol::stateWaitForAckHandler(bool first_run)
   {
     if(wait_for_ack_cycles_++ < 100U)
     {
-      spi_slave_.startTransaction({
+      comms_.startTransaction({
         .txBuffer = NULL,
         .rxBuffer = rx_protocol_buffer_,
         .length = 1
@@ -100,14 +93,14 @@ SpiProtocol::State SpiProtocol::stateWaitForAckHandler(bool first_run)
   return new_state;
 }
 
-SpiProtocol::State SpiProtocol::stateWaitForCommandHandler(bool first_run)
+Protocol::State Protocol::stateWaitForCommandHandlerSpi(bool first_run)
 {
   State new_state = kStateWaitForCommand;
   size_t i;
 
   if(first_run)
   {
-    spi_slave_.startTransaction({
+    comms_.startTransaction({
       .txBuffer = NULL,
       .rxBuffer = rx_protocol_buffer_,
       .length = 3
@@ -152,7 +145,7 @@ SpiProtocol::State SpiProtocol::stateWaitForCommandHandler(bool first_run)
   return new_state;
 }
 
-SpiProtocol::State SpiProtocol::stateRunCommandHandler(bool first_run)
+Protocol::State Protocol::stateRunCommandHandlerSpi(bool first_run)
 {
   State new_state = kStateRunCommand;
   size_t i;

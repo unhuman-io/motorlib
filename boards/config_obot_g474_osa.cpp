@@ -27,11 +27,13 @@ uint16_t drv_regs_error = 0;
 #include "pin_config_obot_g474_osa.h"
 #include "../peripheral/stm32g4/temp_sensor.h"
 #include "../peripheral/stm32g4/max31875.h"
+#include "../peripheral/stm32_serial.h"
 
 extern "C" void SystemClock_Config();
 void pin_config_obot_g474_osa();
 
 extern "C" void board_init() {
+    init_serial_number();
     SystemClock_Config();
     pin_config_obot_g474_osa();
 }
