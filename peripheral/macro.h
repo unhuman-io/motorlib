@@ -16,9 +16,9 @@ do {                          \
 #ifdef DEBUG_PINS_ENABLE
 
 #define DEBUG_PORT GPIOA
-#define DEBUG_PIN1 11
-#define DEBUG_PIN2 11
-#define DEBUG_PIN3 11
+#define DEBUG_PIN1 9
+#define DEBUG_PIN2 10
+#define DEBUG_PIN3 10
 
 #define CONCATENATE_(A, B, C) A##B##C
 #define CONCATENATE(A, B, C) CONCATENATE_(A, B, C)

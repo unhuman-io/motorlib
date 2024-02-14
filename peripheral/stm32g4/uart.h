@@ -63,10 +63,13 @@ class Uart : public Comms
 
     // These two have to be public so they can be called them from the ISR handler
     void rxInterruptHandler();
+    void rxTimerInterruptHandler();
     void txInterruptHandler();
     void errorInterruptHandler();
 
   private:
+    static constexpr size_t kRxBufferSize = 64U;
+
     const InitStruct init_struct_;
     bool is_initialized_;
 
@@ -78,9 +81,19 @@ class Uart : public Comms
     commsCallback error_callback_;
     void*         error_callback_param_;
 
+    volatile uint8_t rx_buffer_[kRxBufferSize];
+    volatile uint8_t temp_buffer_[kRxBufferSize];
+    volatile size_t rx_buffer_head_;
+    volatile size_t rx_buffer_tail_;
+
     void setGpioAlternateFunction(GPIO_TypeDef* port, uint8_t pin, uint8_t alternate_function);
     void initClock();
     void initGpio();
     void initDma();
     void initUart();
+    void initRxTimer();
+
+    size_t  getRxBufferLength();
+    uint8_t rxDmaReadByte();
+    void    rxDmaReadBuffer(volatile uint8_t* buffer, size_t length);
 };

@@ -90,7 +90,7 @@ override C_DEFS += \
 endif
 
 # Uncomment to disable the watchdog timer
-#override C_DEFS += \
+override C_DEFS += \
 -DNO_WATCHDOG
 
 C_INCLUDES +=  \
