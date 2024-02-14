@@ -5,7 +5,10 @@
 #include "stm32g4xx.h"
 #include "../macro.h"
 #include "../comms.h"
+#include "../messages.h"
 
+#define TX_BUFFER_SIZE (MAX_API_DATA_SIZE+10) // 10 for some packet overhead
+#define RX_BUFFER_SIZE 2048
 class Uart : public Comms
 {
   public:
@@ -65,6 +68,12 @@ class Uart : public Comms
     void rxInterruptHandler();
     void txInterruptHandler();
     void errorInterruptHandler();
+
+    bool is_tx_active() const;
+    uint16_t get_current_rx_index() const;
+    uint8_t tx_buffer_[TX_BUFFER_SIZE];
+    uint8_t rx_buffer_[RX_BUFFER_SIZE];
+    void rx_copy(uint8_t * const out_buf, uint8_t * rx_buf_ptr, uint16_t length);
 
   private:
     const InitStruct init_struct_;

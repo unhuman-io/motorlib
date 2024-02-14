@@ -11,7 +11,7 @@ void DMA2_Channel3_IRQHandler(void)
 {
   if(Uart::instance != NULL)
   {
-    Uart::instance->rxInterruptHandler();
+    //Uart::instance->rxInterruptHandler();
   }
 }
 
@@ -19,7 +19,7 @@ void DMA2_Channel4_IRQHandler(void)
 {
   if(Uart::instance != NULL)
   {
-    Uart::instance->txInterruptHandler();
+    //Uart::instance->txInterruptHandler();
   }
 }
 
@@ -27,11 +27,19 @@ void USART1_IRQHandler(void)
 {
   if(Uart::instance != NULL)
   {
-    Uart::instance->errorInterruptHandler();
+    //Uart::instance->errorInterruptHandler();
   }
 }
 
+void USART2_IRQHandler(void)
+{
+  if(Uart::instance != NULL)
+  {
+    //Uart::instance->errorInterruptHandler();
+  }
 }
+
+} // extern C
 
 Uart::Uart(const InitStruct& init_struct) :
     init_struct_(init_struct),
@@ -109,15 +117,16 @@ void Uart::initDma()
 {
   // UART Rx Dma channel
   init_struct_.rxDmaChannel->CPAR = (uint32_t)&init_struct_.usart->RDR;
-  init_struct_.rxDmaChannel->CNDTR = 0;
-  init_struct_.rxDmaChannel->CCR = DMA_CCR_MINC | DMA_CCR_TCIE;
-
+  init_struct_.rxDmaChannel->CNDTR = RX_BUFFER_SIZE;
+  init_struct_.rxDmaChannel->CCR = DMA_CCR_MINC | DMA_CCR_CIRC; // | DMA_CCR_TCIE;
+  init_struct_.rxDmaChannel->CMAR = (uint32_t)&rx_buffer_;
   init_struct_.rxDmaMuxChannel->CCR = init_struct_.rxDmaMuxId;
+  init_struct_.rxDmaChannel->CCR |= DMA_CCR_EN;
 
   // UART Tx Dma channel
   init_struct_.txDmaChannel->CPAR = (uint32_t)&init_struct_.usart->TDR;
-  init_struct_.txDmaChannel->CNDTR = 0;
-  init_struct_.txDmaChannel->CCR = DMA_CCR_DIR | DMA_CCR_MINC | DMA_CCR_TCIE;
+  init_struct_.txDmaChannel->CCR = DMA_CCR_DIR | DMA_CCR_MINC; // | DMA_CCR_TCIE;
+  init_struct_.txDmaChannel->CMAR = (uint32_t)&tx_buffer_;
 
   init_struct_.txDmaMuxChannel->CCR = init_struct_.txDmaMuxId;
 
@@ -138,15 +147,15 @@ void Uart::initDma()
 void Uart::initUart()
 {
   init_struct_.usart->BRR = init_struct_.brrValue;
-  init_struct_.usart->CR3 = USART_CR3_DMAT | USART_CR3_DMAR | USART_CR3_OVRDIS | USART_CR3_DDRE;
-  init_struct_.usart->CR1 = USART_CR1_PCE | USART_CR1_M0 | USART_CR1_TE | USART_CR1_RE | USART_CR1_UE;
+  init_struct_.usart->CR3 = USART_CR3_DMAT | USART_CR3_DMAR; // DMA TX and RX
+  init_struct_.usart->CR1 = USART_CR1_TE | USART_CR1_RE | USART_CR1_UE; // enable all
 
-  NVIC_SetPriority(
-    init_struct_.uartIrqN,
-    NVIC_EncodePriority(NVIC_GetPriorityGrouping(), init_struct_.irqPriority, 0)
-  );
+  // NVIC_SetPriority(
+  //   init_struct_.uartIrqN,
+  //   NVIC_EncodePriority(NVIC_GetPriorityGrouping(), init_struct_.irqPriority, 0)
+  // );
 
-  NVIC_EnableIRQ(init_struct_.uartIrqN);
+  //NVIC_EnableIRQ(init_struct_.uartIrqN);
 }
 
 void Uart::init()
@@ -171,28 +180,26 @@ void Uart::reset()
 
   // Reset UART
   *init_struct_.uartRccResetRegister |= (1 << init_struct_.uartRccResetBit);
-  *init_struct_.uartRccResetRegister &= ~(1 << init_struct_.uartRccResetBit);
 
   initUart();
 }
 
 void Uart::startTransaction(BufferDescriptor descriptor)
 {
-  FIGURE_ASSERT(!(descriptor.rxBuffer != NULL && descriptor.txBuffer != NULL)); // Tx and Rx at the same time is not supported by UART driver
 
   transaction_counter_++;
 
-  // Configure rxBuffer
-  if(descriptor.rxBuffer != NULL)
-  {
-    init_struct_.usart->CR1 |= USART_CR1_PEIE; // Parity error interrupt
-    init_struct_.usart->CR3 |= USART_CR3_EIE;  // Error interrupt
+  // // Configure rxBuffer
+  // if(descriptor.rxBuffer != NULL)
+  // {
+  //   init_struct_.usart->CR1 |= USART_CR1_PEIE; // Parity error interrupt
+  //   init_struct_.usart->CR3 |= USART_CR3_EIE;  // Error interrupt
 
-    init_struct_.rxDmaChannel->CCR &= ~DMA_CCR_EN;
-    init_struct_.rxDmaChannel->CNDTR = descriptor.length;
-    init_struct_.rxDmaChannel->CMAR = (uint32_t)descriptor.rxBuffer;
-    init_struct_.rxDmaChannel->CCR |= DMA_CCR_EN;
-  }
+  //   init_struct_.rxDmaChannel->CCR &= ~DMA_CCR_EN;
+  //   init_struct_.rxDmaChannel->CNDTR = descriptor.length;
+  //   init_struct_.rxDmaChannel->CMAR = (uint32_t)descriptor.rxBuffer;
+  //   init_struct_.rxDmaChannel->CCR |= DMA_CCR_EN;
+  // }
 
   // Configure txBuffer
   if(descriptor.txBuffer != NULL)
@@ -207,11 +214,10 @@ void Uart::startTransaction(BufferDescriptor descriptor)
 void Uart::abortTransaction()
 {
   // Disable DMA
-  init_struct_.rxDmaChannel->CCR &= ~DMA_CCR_EN;
   init_struct_.txDmaChannel->CCR &= ~DMA_CCR_EN;
 
   // Flush both Rx and Tx FIFO
-  init_struct_.usart->RQR = USART_RQR_TXFRQ | USART_RQR_RXFRQ;
+  init_struct_.usart->RQR = USART_RQR_TXFRQ;
 }
 
 void Uart::resetTransactionCounter()
@@ -270,5 +276,22 @@ void Uart::errorInterruptHandler()
   if(error_callback_ != NULL)
   {
     error_callback_(error_callback_param_);
+  }
+}
+
+uint16_t Uart::get_current_rx_index() const {
+  return RX_BUFFER_SIZE - init_struct_.rxDmaChannel->CNDTR;
+}
+
+bool Uart::is_tx_active() const {
+  return init_struct_.txDmaChannel->CNDTR == 0;
+}
+
+void Uart::rx_copy(uint8_t * const out_buf, uint8_t * rx_buf_ptr, uint16_t length) {
+  // todo optimize with 1 to 2 memcpy for circular buffer
+  int index = (rx_buf_ptr - rx_buffer_) % RX_BUFFER_SIZE;
+  for(int i=0; i<length; i++) {
+    out_buf[i] = rx_buffer_[index++];
+    index %= RX_BUFFER_SIZE;
   }
 }
