@@ -1,7 +1,8 @@
-#include "spi_mailbox.h"
+#include "mailbox.h"
+
 #include <cstring>
 
-SpiMailbox::SpiMailbox(Pool* pools, size_t pool_count) :
+Mailbox::Mailbox(Pool* pools, size_t pool_count) :
       sequence_(0),
       mailbox_pool_table_{NULL}
 {
@@ -22,7 +23,7 @@ SpiMailbox::SpiMailbox(Pool* pools, size_t pool_count) :
   }
 }
 
-void SpiMailbox::write(uint8_t mailbox_id, const uint8_t* buffer, size_t length)
+void Mailbox::write(uint8_t mailbox_id, const uint8_t* buffer, size_t length)
 {
   FIGURE_ASSERT(buffer != NULL); // Invalid arg
   FIGURE_ASSERT(length <= kBufferSize); // Invalid arg
@@ -83,7 +84,7 @@ void SpiMailbox::write(uint8_t mailbox_id, const uint8_t* buffer, size_t length)
         pool_buffer->busy = true;
 
         // Copy data
-        memcpy(pool_buffer->buffer, buffer, length);
+        memcpy((void*)pool_buffer->buffer, buffer, length);
         pool_buffer->length = length;
         pool_buffer->mailboxId = mailbox_id;
         pool_buffer->sequence = sequence_++;
@@ -96,7 +97,7 @@ void SpiMailbox::write(uint8_t mailbox_id, const uint8_t* buffer, size_t length)
   }
 }
 
-size_t SpiMailbox::read(uint8_t mailbox_id, uint8_t* buffer, size_t buffer_size)
+size_t Mailbox::read(uint8_t mailbox_id, uint8_t* buffer, size_t buffer_size)
 {
   FIGURE_ASSERT(buffer != NULL); // Invalid arg
 
@@ -141,7 +142,7 @@ size_t SpiMailbox::read(uint8_t mailbox_id, uint8_t* buffer, size_t buffer_size)
         length = (oldest_buffer->length <= buffer_size) ? oldest_buffer->length : buffer_size;
 
         // Copy data
-        memcpy(buffer, oldest_buffer->buffer, length);
+        memcpy(buffer, (void*)oldest_buffer->buffer, length);
 
         oldest_buffer->hasData = false;
 

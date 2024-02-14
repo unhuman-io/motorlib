@@ -61,9 +61,10 @@ class SPIDMA {
             tx_dma_.CNDTR = length;
             rx_dma_.CNDTR = length;
             tx_dma_.CMAR = (uint32_t) data_out;
-            rx_dma_.CMAR = (uint32_t) data_in;        
+            rx_dma_.CMAR = (uint32_t) data_in;      
             rx_dma_.CCR = DMA_CCR_EN | DMA_CCR_MINC;
             tx_dma_.CCR = DMA_CCR_EN | DMA_CCR_MINC | DMA_CCR_DIR; // DIR = 1 > read from memory
+            asm("dmb"); // ensure that CMAR writes are not optimized out
         }
     }
 
@@ -79,16 +80,19 @@ class SPIDMA {
             rx_dma_.CMAR = (uint32_t) tmp_rx_;        
             rx_dma_.CCR = DMA_CCR_EN;
             tx_dma_.CCR = DMA_CCR_EN | DMA_CCR_MINC | DMA_CCR_DIR; // DIR = 1 > read from memory
+            asm("dmb"); // ensure that CMAR writes are not optimized out
         }
     }
 
     void finish_readwrite(bool register_operation = false) {
+        uint32_t time_start = get_clock();
         if (!*register_operation_ || register_operation) {
-            while(rx_dma_.CNDTR);
+            while((rx_dma_.CNDTR) && (get_clock() - time_start < US_TO_CPU(100000U))); // Busy wait with timeout
             ns_delay(end_cs_delay_ns_);
             gpio_cs_.set();
         }
     }
+
     volatile int *register_operation_ = &register_operation_local_;
  private:
     volatile int register_operation_local_ = 0;
