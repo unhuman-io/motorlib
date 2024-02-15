@@ -33,6 +33,7 @@
 #endif
 
 const Param * const param = (const Param * const) 0x8060000;
+const Calibration * const calibration = (const Calibration * const) 0x8070000;
 extern const char * const name = param->name;
 
 using PWM = HRPWM;
