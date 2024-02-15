@@ -146,7 +146,7 @@ class FastLoop {
             // motor_index_electrical_offset_pos is the value of an electrical zero minus the index position
             // motor_electrical_zero_pos is the offset to the initial encoder value
             // motor_electrical_zero_pos_ = param_.motor_encoder.index_electrical_offset_pos + motor_index_pos_;
-            motor_electrical_zero_pos_ = calibration_.motor_encoder.index_electrical_offset_pos + motor_index_pos_;
+            motor_electrical_zero_pos_ = calibration_.motor_encoder_index_electrical_offset_pos + motor_index_pos_;
          }
          motor_index_pos_set_ = true;
       }           
