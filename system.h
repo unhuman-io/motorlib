@@ -16,6 +16,10 @@ extern uint32_t t_period_mainloop;
 
 void system_maintenance();
 
+#ifndef TOGGLE_SCOPE_PIN
+#define TOGGLE_SCOPE_PIN(X,x)
+#endif
+
 
 class System {
  public:
