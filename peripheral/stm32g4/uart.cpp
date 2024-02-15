@@ -111,6 +111,10 @@ void Uart::initGpio()
 
   // Configure output speed to "Very high speed" for MISO
   init_struct_.gpioPort->OSPEEDR |= (0x03 << (init_struct_.gpioPinTx * 2));
+
+  // RX pulled high
+  init_struct_.gpioPort->PUPDR |= (1 << (init_struct_.gpioPinRx * 2));
+  init_struct_.gpioPort->PUPDR &= ~(1 << (init_struct_.gpioPinRx * 2 + 1));
 }
 
 void Uart::initDma()
