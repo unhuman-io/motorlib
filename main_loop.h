@@ -440,7 +440,7 @@ class MainLoop {
       motor_temperature_limit_ = param_.motor_temperature_limit == 0 ? 140 : param_.motor_temperature_limit;
       // output_encoder_bias_ = param_.output_encoder.bias;
       output_encoder_bias_ = calibration_.output_encoder_bias;
-      error_mask_.all = param_.error_mask.all == 0 ? ERROR_MASK_ALL : (param_.error_mask.all & ERROR_MASK_ALL);
+      error_mask_.all = calibration_.error_mask.all == 0 ? ERROR_MASK_ALL : (calibration_.error_mask.all & ERROR_MASK_ALL);
       output_encoder_dir_ = param_.output_encoder.dir == 0 ? 1 : param_.output_encoder.dir;
       torque_sensor_dir_ = param_.torque_sensor.dir == 0 ? 1 : param_.torque_sensor.dir;
       vbus_min_ = param_.vbus_min == 0 ? 8 : param_.vbus_min;

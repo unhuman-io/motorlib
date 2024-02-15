@@ -11,7 +11,7 @@ void system_init();
 
 class Actuator {
  public:
-    Actuator(FastLoop &fast_loop, MainLoop &main_loop, const volatile StartupParam &startup_param, const volatile Calibration &calibration_) : fast_loop_(fast_loop), main_loop_(main_loop), startup_param_(startup_param) {
+    Actuator(FastLoop &fast_loop, MainLoop &main_loop, const volatile StartupParam &startup_param, const volatile Calibration &calibration_) : fast_loop_(fast_loop), main_loop_(main_loop), startup_param_(startup_param), calibration_(calibration) {
       // startup_motor_bias_ = startup_param_.motor_encoder_bias;
       startup_motor_bias_ = calibration_.motor_encoder_bias;
     }
