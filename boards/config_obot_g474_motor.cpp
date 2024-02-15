@@ -51,9 +51,9 @@ using PWM = HRPWM;
     #include "../uart_communication_obot.h"
 #else
     #include "../uart_communication_protocol.h"
+    #include "../uart_communication.h"
     using UARTCommunicationProtocol = UARTRawProtocol<>; 
 #endif
-    #include "../uart_communication.h"
     using Communication = UARTCommunication;
 #endif
 using Driver = DRV8323S;
@@ -228,7 +228,7 @@ namespace config {
 #endif // COMMS_UART
 
 #ifdef COMMS_UART_OBOT
-    figure::ProtocolParser uart_protocol(config::uart.rx_buffer_, 100);
+    figure::ProtocolParser uart_protocol(config::uart.rx_buffer_, RX_BUFFER_SIZE);
 #else
     UARTCommunicationProtocol uart_protocol; 
 #endif

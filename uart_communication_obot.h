@@ -94,7 +94,6 @@ class UARTCommunication : public CommunicationBase {
 
   void callback_obot_cmd(uint8_t* buf, uint16_t length) {
     asm("dmb");
-    uart_.rx_copy((uint8_t*)&obot_cmd_, buf, std::min((size_t)length, sizeof(obot_cmd_)));
     std::memcpy(&obot_cmd_, buf, sizeof(obot_cmd_));
     new_obot_cmd_ = true;
   }
@@ -107,7 +106,7 @@ class UARTCommunication : public CommunicationBase {
     uint8_t* packet = protocol_.generatePacket(reinterpret_cast<uint8_t*>(&obot_status_), sizeof(SendData), OBOT_STATUS, &packet_size);
     std::memcpy(&uart_.tx_buffer_[0], &packet[0], packet_size);
     Uart::BufferDescriptor desc = {};
-    desc.length = sizeof(packet_size);
+    desc.length = packet_size;
     desc.txBuffer = uart_.tx_buffer_;
     uart_.startTransaction(desc);
     status_sent_ = true;
@@ -119,7 +118,7 @@ class UARTCommunication : public CommunicationBase {
   }
 
   void callback_obot_ascii(uint8_t* buf, uint16_t length) {
-    uart_.rx_copy((uint8_t*)ascii_str_in_, buf, std::min((int)length, MAX_API_DATA_SIZE));
+    std::memcpy((uint8_t*)ascii_str_in_, buf, std::min((int)length, MAX_API_DATA_SIZE));
     ascii_str_in_[length] = 0;
     new_ascii_str_ = true;
   }
