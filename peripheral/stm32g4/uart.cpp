@@ -283,6 +283,10 @@ uint16_t Uart::get_current_rx_index() const {
   return RX_BUFFER_SIZE - init_struct_.rxDmaChannel->CNDTR;
 }
 
+uint16_t Uart::get_last_rx_index() const {
+  return (2*RX_BUFFER_SIZE - init_struct_.rxDmaChannel->CNDTR - 1) % RX_BUFFER_SIZE;
+}
+
 bool Uart::is_tx_active() const {
   return init_struct_.txDmaChannel->CNDTR == 0;
 }

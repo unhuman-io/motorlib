@@ -71,6 +71,7 @@ class Uart : public Comms
 
     bool is_tx_active() const;
     uint16_t get_current_rx_index() const;
+    uint16_t get_last_rx_index() const;
     uint8_t tx_buffer_[TX_BUFFER_SIZE];
     uint8_t rx_buffer_[RX_BUFFER_SIZE];
     void rx_copy(uint8_t * const out_buf, uint8_t * rx_buf_ptr, uint16_t length);

@@ -90,7 +90,13 @@ class UARTCommunication : public CommunicationBase {
     return status_sent;
   }
 
-  void parse() { protocol_.process(uart_.get_current_rx_index()); }
+  void parse() {
+    uint16_t current_rx_index_ = uart_.get_last_rx_index();
+    if (current_rx_index_ != last_rx_index_) {
+      protocol_.process(uart_.get_last_rx_index());
+    }
+    last_rx_index_ = current_rx_index_;
+  }
 
   void callback_obot_cmd(uint8_t* buf, uint16_t length) {
     asm("dmb");
@@ -132,6 +138,7 @@ class UARTCommunication : public CommunicationBase {
   SendData obot_status_;
   std::atomic_bool status_sent_;
   std::atomic_bool new_ascii_str_;
+  uint16_t last_rx_index_ = 0;
   char ascii_str_in_[MAX_API_DATA_SIZE + 1];
 };
 

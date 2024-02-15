@@ -51,8 +51,8 @@ using PWM = HRPWM;
     #include "../uart_communication_obot.h"
 #else
     #include "../uart_communication_protocol.h"
-    #include "../uart_communication.h"
     using UARTCommunicationProtocol = UARTRawProtocol<>; 
+    #include "../uart_communication.h"
 #endif
     using Communication = UARTCommunication;
 #endif
