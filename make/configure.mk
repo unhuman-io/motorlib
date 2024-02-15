@@ -1,7 +1,7 @@
 #######################################
 # paths
 #######################################
-# Requires PARAM_FILE, CONFIG_FILE, and TARGET_MCU defined
+# Requires CONFIG_FILE, and TARGET_MCU defined
 
 # Build path
 BUILD_DIR = build
@@ -12,7 +12,6 @@ ifndef OBOT_HASH
 OBOT_HASH := $(shell git rev-parse HEAD)
 endif
 MOTORLIB_HASH := $(shell git -C $(SELF_DIR) rev-parse HEAD)
-$(shell touch $(SELF_DIR)../param_default.h)
 
 ifndef TARGET_MCU
 $(error need to define TARGET_MCU)
@@ -98,9 +97,6 @@ C_INCLUDES +=  \
 -I$(SELF_DIR)../CMSIS/Include \
 -I$(SELF_DIR)../peripheral
 
-C_SOURCES += \
-./$(PARAM_FILE)
-
 CPP_SOURCES += \
 $(SELF_DIR)../malloc.cpp\
 $(SELF_DIR)../control_fun.cpp\
@@ -111,8 +107,3 @@ $(SELF_DIR)../util.cpp\
 $(SELF_DIR)../hall.cpp\
 $(SELF_DIR)../parameter_api.cpp\
 ./$(CONFIG_FILE)
-
-
-ifdef PARAM_OVERRIDE
-PARAM_INCLUDE=-include $(PARAM_OVERRIDE)
-endif

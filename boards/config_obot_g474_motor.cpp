@@ -32,6 +32,9 @@
   #error "Invalid COMMS value"
 #endif
 
+const Param * const param = (const Param * const) 0x8060000;
+extern const char * const name = param->name;
+
 using PWM = HRPWM;
 
 #if COMMS == COMMS_USB
@@ -45,9 +48,11 @@ using PWM = HRPWM;
 #if (COMMS == COMMS_UART)
     #include "../../lib/protocol/protocol_parser.h"
     #include "../uart_communication_obot.h"
+    #include "../uart_communication_protocol.h"
+    using UARTCommunicationProtocol = UARTRawProtocol<>; 
+    #include "../uart_communication.h"
     using Communication = UARTCommunication;
 #endif
-
 using Driver = DRV8323S;
 uint16_t drv_regs_error = 0;
 
@@ -144,6 +149,7 @@ namespace config {
     const BoardRev board_rev = get_board_rev();
 
 #if COMMS == COMMS_UART
+    UARTCommunicationProtocol uart_protocol;
 #if COMMS_UART_NUMBER == 2
     Uart uart({
       .usart        = USART2,
@@ -217,11 +223,11 @@ namespace config {
       .brrValue         = (uint32_t)(CPU_FREQUENCY_HZ / COMMS_UART_BAUDRATE)
     });
 #endif // COMMS_UART_NUMBER
+#endif // COMMS_UART
 #endif
 
 #if COMMS == COMMS_UART
     figure::ProtocolParser uart_protocol(config::uart.rx_buffer_, 100);
-#endif // COMMS_UART
 
 #if (COMMS == COMMS_SPI)
     // SPI communication protocol buffers and pools allocation

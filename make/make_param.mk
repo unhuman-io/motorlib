@@ -17,7 +17,7 @@ endif
 $(info PARAM_BUILD_DIR: $(PARAM_BUILD_DIR))
 $(info $(PARAM_OUT))
 
-.PHONY: param
+.PHONY: param .FORCE
 
 param:
 	-$(RM) $(PARAM_BUILD_DIR)
@@ -25,18 +25,22 @@ param:
 
 build_param: $(PARAM_OUT)
 
+.FORCE:
+
 ifndef PARAM_OVERRIDE
-$(PARAM_OUT): $(PARAM_FILE) | $(PARAM_BUILD_DIR)
+$(PARAM_OUT): $(PARAM_FILE) .FORCE | $(PARAM_BUILD_DIR)
 	$(CC) -I param -c $(GIT_DEFINE) $< -o $(PARAM_BUILD_DIR)/$(notdir $(<:c=o)) 
-	$(CP) -O binary -S -j flash_param $(PARAM_BUILD_DIR)/$(notdir $(<:c=o)) $@ 
+	$(CP) -O binary -S -j flash_param $(PARAM_BUILD_DIR)/$(notdir $(<:c=o)) $@
+	-dfu-suffix -p 0x100 -v 0x3293 -a $@
 endif
 
 # if overrides 
 define generateRules
 a = $(PARAM_BUILD_DIR)/$(notdir $(PARAM_FILE:.c=))_$(1:.h=)
-$(a).bin: $(PARAM_FILE) $(1) | $(PARAM_BUILD_DIR)
+$(a).bin: $(PARAM_FILE) $(1) .FORCE | $(PARAM_BUILD_DIR)
 	$(CC) -I param -include $(1) -c $(GIT_DEFINE) $(PARAM_FILE) -o $(a).o 
 	$(CP) -O binary -S -j flash_param $(a).o $(a).bin
+	-dfu-suffix -p 0x100 -v 0x3293 -a $@
 endef
 
 $(foreach ovr, $(PARAM_OVERRIDE), $(eval $(call generateRules, $(ovr))))

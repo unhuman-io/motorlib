@@ -29,17 +29,21 @@ class UARTRawProtocol : public CommunicationProtocolBase {
         // no new data, time to parse
         uint8_t fid = rx_buffer_[tail_];
         if (fid && fid <= n_fids) {
-          uint16_t length = current_index - tail_ - 1;
-          // todo need to unwrap
+          uint16_t length = current_index - tail_ - 1; // -1 is for the fid
+          if (current_index < tail_) {
+            length = current_index - tail_ - 1 + rx_buffer_length_;
+          }
           callbacks_[fid-1](comms_inst_, (uint8_t *) &rx_buffer_[tail_+1], length);
+      
         }
         tail_ = current_index;
       }
       last_index_ = current_index;
     }
-    void set_buffer(uint8_t *buf) { rx_buffer_ = buf; }
+    void set_buffer(uint8_t *buf, uint16_t length) { rx_buffer_ = buf; rx_buffer_length_ = length; }
   private:
     volatile uint8_t *rx_buffer_;
+    uint16_t rx_buffer_length_;
     uint16_t last_index_ = 0, tail_ = 0;
     uint32_t parses_ = 0;
     communication_callback callbacks_[n_fids];
