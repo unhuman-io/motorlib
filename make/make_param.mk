@@ -27,11 +27,12 @@ build_param: $(PARAM_OUT)
 
 .FORCE:
 
+SECTION ?= flash_param
+
 ifndef PARAM_OVERRIDE
 $(PARAM_OUT): $(PARAM_FILE) .FORCE | $(PARAM_BUILD_DIR)
 	$(CC) -I param -I cal -c $(GIT_DEFINE) $< -o $(PARAM_BUILD_DIR)/$(notdir $(<:c=o)) 
-	$(CP) -O binary -S -j flash_param $(PARAM_BUILD_DIR)/$(notdir $(<:c=o)) $@
-	$(CP) -O binary -S -j calibration_data $(PARAM_BUILD_DIR)/$(notdir $(<:c=o)) $@ 
+	$(CP) -O binary -S -j $(SECTION) $(PARAM_BUILD_DIR)/$(notdir $(<:c=o)) $@
 	-dfu-suffix -p 0x100 -v 0x3293 -a $@
 endif
 
@@ -40,8 +41,7 @@ define generateRules
 a = $(PARAM_BUILD_DIR)/$(notdir $(PARAM_FILE:.c=))_$(1:.h=)
 $(a).bin: $(PARAM_FILE) $(1) .FORCE | $(PARAM_BUILD_DIR)
 	$(CC) -I param -I cal -include $(1) -c $(GIT_DEFINE) $(PARAM_FILE) -o $(a).o 
-	$(CP) -O binary -S -j flash_param $(a).o $(a).bin
-	$(CP) -O binary -S -j calibration_data $(a).o $(a).bin
+	$(CP) -O binary -S -j $(SECTION) $(a).o $(a).bin
 	-dfu-suffix -p 0x100 -v 0x3293 -a $@
 endef
 
