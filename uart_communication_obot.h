@@ -15,7 +15,8 @@ class UARTCommunication : public CommunicationBase {
     OBOT_CMD = 0x01,
     OBOT_STATUS = 0x02,
     OBOT_CMD_STATUS = 0x03,
-    OBOT_ASCII = 0x04,
+    OBOT_ASCII_CMD = 0x04,
+    OBOT_ASCII_RESPONSE = 0x05,
   };
 
   UARTCommunication(Uart& uart, figure::ProtocolParser& protocol) : uart_(uart), protocol_(protocol) {
@@ -32,7 +33,7 @@ class UARTCommunication : public CommunicationBase {
     protocol_.registerCallback(OBOT_CMD_STATUS, [this](const unsigned char* buf, uint16_t length) {
       this->callback_obot_cmd_status(const_cast<uint8_t*>(buf), length);  // Using const_cast if necessary
     });
-    protocol_.registerCallback(OBOT_ASCII, [this](const unsigned char* buf, uint16_t length) {
+    protocol_.registerCallback(OBOT_ASCII_CMD, [this](const unsigned char* buf, uint16_t length) {
       this->callback_obot_ascii(const_cast<uint8_t*>(buf), length);  // Using const_cast if necessary
     });
 
@@ -72,7 +73,7 @@ class UARTCommunication : public CommunicationBase {
   bool send_string(const char* string, uint16_t length) {
     // while(send_active());
     uint8_t packet_size;
-    uint8_t* packet = protocol_.generatePacket((const uint8_t *) string, length, OBOT_ASCII, &packet_size);
+    uint8_t* packet = protocol_.generatePacket((const uint8_t *) string, length, OBOT_ASCII_RESPONSE, &packet_size);
     std::memcpy(&uart_.tx_buffer_[0], &packet[0], packet_size);
     Uart::BufferDescriptor desc = {};
     desc.length = packet_size;
