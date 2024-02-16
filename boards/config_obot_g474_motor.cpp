@@ -46,13 +46,16 @@ using PWM = HRPWM;
 #endif
 
 #if (COMMS == COMMS_UART)
+#ifdef COMMS_UART_OBOT
+    #include "../../lib/protocol/protocol_parser.h"
+    #include "../uart_communication_obot.h"
+#else
     #include "../uart_communication_protocol.h"
     using UARTCommunicationProtocol = UARTRawProtocol<>; 
     #include "../uart_communication.h"
-    using Communication = UARTCommunication;
-
 #endif
-
+    using Communication = UARTCommunication;
+#endif
 using Driver = DRV8323S;
 uint16_t drv_regs_error = 0;
 
@@ -149,7 +152,6 @@ namespace config {
     const BoardRev board_rev = get_board_rev();
 
 #if COMMS == COMMS_UART
-    UARTCommunicationProtocol uart_protocol;
 #if COMMS_UART_NUMBER == 2
     Uart uart({
       .usart        = USART2,
@@ -184,7 +186,7 @@ namespace config {
 
       .irqPriority = 2U,
 
-      .brrValue         = (uint32_t)(CPU_FREQUENCY_HZ / COMMS_UART_BAUDRATE)
+      .brrValue         = (uint32_t)((CPU_FREQUENCY_HZ + COMMS_UART_BAUDRATE/2)/ COMMS_UART_BAUDRATE)   // rounding
     });
 #else // default usart1
     Uart uart({
@@ -220,10 +222,17 @@ namespace config {
 
       .irqPriority = 2U,
 
-      .brrValue         = (uint32_t)(CPU_FREQUENCY_HZ / COMMS_UART_BAUDRATE)
+      .brrValue         = (uint32_t)((CPU_FREQUENCY_HZ + COMMS_UART_BAUDRATE/2)/ COMMS_UART_BAUDRATE)   // rounding
     });
 #endif // COMMS_UART_NUMBER
+#ifdef COMMS_UART_OBOT
+    figure::ProtocolParser uart_protocol(config::uart.rx_buffer_, RX_BUFFER_SIZE);
+#else
+    UARTCommunicationProtocol uart_protocol; 
+#endif
 #endif // COMMS_UART
+
+
 
 #if (COMMS == COMMS_SPI)
     // SPI communication protocol buffers and pools allocation

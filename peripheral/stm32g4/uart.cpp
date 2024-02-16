@@ -111,6 +111,10 @@ void Uart::initGpio()
 
   // Configure output speed to "Very high speed" for MISO
   init_struct_.gpioPort->OSPEEDR |= (0x03 << (init_struct_.gpioPinTx * 2));
+
+  // RX pulled high
+  init_struct_.gpioPort->PUPDR |= (1 << (init_struct_.gpioPinRx * 2));
+  init_struct_.gpioPort->PUPDR &= ~(1 << (init_struct_.gpioPinRx * 2 + 1));
 }
 
 void Uart::initDma()
@@ -146,9 +150,17 @@ void Uart::initDma()
 
 void Uart::initUart()
 {
-  init_struct_.usart->BRR = init_struct_.brrValue;
+  uint32_t over8 = 0;
+  uint32_t brr = init_struct_.brrValue;
+  if (brr < 16) {
+    // need to use 8x oversampling instead of 16
+    // and strange brr definition
+    brr = (brr & 0x7) | (brr & 0x8) << 1;
+    over8 = USART_CR1_OVER8;
+  }
+  init_struct_.usart->BRR = brr;
   init_struct_.usart->CR3 = USART_CR3_DMAT | USART_CR3_DMAR; // DMA TX and RX
-  init_struct_.usart->CR1 = USART_CR1_TE | USART_CR1_RE | USART_CR1_UE; // enable all
+  init_struct_.usart->CR1 = USART_CR1_TE | USART_CR1_RE | USART_CR1_UE | over8; // enable all
 
   // NVIC_SetPriority(
   //   init_struct_.uartIrqN,
@@ -281,6 +293,10 @@ void Uart::errorInterruptHandler()
 
 uint16_t Uart::get_current_rx_index() const {
   return RX_BUFFER_SIZE - init_struct_.rxDmaChannel->CNDTR;
+}
+
+uint16_t Uart::get_last_rx_index() const {
+  return (2*RX_BUFFER_SIZE - init_struct_.rxDmaChannel->CNDTR - 1) % RX_BUFFER_SIZE;
 }
 
 bool Uart::is_tx_active() const {

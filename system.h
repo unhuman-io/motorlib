@@ -16,6 +16,10 @@ extern uint32_t t_period_mainloop;
 
 void system_maintenance();
 
+#ifndef TOGGLE_SCOPE_PIN
+#define TOGGLE_SCOPE_PIN(X,x)
+#endif
+
 
 class System {
  public:
@@ -273,7 +277,7 @@ class System {
 
         uint32_t t_start = get_clock();
         while(1) {
-            //TOGGLE_SCOPE_PIN(C,4);
+            TOGGLE_SCOPE_PIN(C,4);
             count_++;
             if (communication_.send_string_active() && get_clock() - t_start > US_TO_CPU(api_timeout_us)) {
                 communication_.cancel_send_string();
