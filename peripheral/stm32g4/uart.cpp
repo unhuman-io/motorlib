@@ -150,9 +150,17 @@ void Uart::initDma()
 
 void Uart::initUart()
 {
-  init_struct_.usart->BRR = init_struct_.brrValue;
+  uint32_t over8 = 0;
+  uint32_t brr = init_struct_.brrValue;
+  if (brr < 16) {
+    // need to use 8x oversampling instead of 16
+    // and strange brr definition
+    brr = (brr & 0x7) | (brr & 0x8) << 1;
+    over8 = USART_CR1_OVER8;
+  }
+  init_struct_.usart->BRR = brr;
   init_struct_.usart->CR3 = USART_CR3_DMAT | USART_CR3_DMAR; // DMA TX and RX
-  init_struct_.usart->CR1 = USART_CR1_TE | USART_CR1_RE | USART_CR1_UE; // enable all
+  init_struct_.usart->CR1 = USART_CR1_TE | USART_CR1_RE | USART_CR1_UE | over8; // enable all
 
   // NVIC_SetPriority(
   //   init_struct_.uartIrqN,

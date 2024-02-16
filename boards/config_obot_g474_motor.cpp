@@ -186,7 +186,7 @@ namespace config {
 
       .irqPriority = 2U,
 
-      .brrValue         = (uint32_t)(CPU_FREQUENCY_HZ / COMMS_UART_BAUDRATE)
+      .brrValue         = (uint32_t)((CPU_FREQUENCY_HZ + COMMS_UART_BAUDRATE/2)/ COMMS_UART_BAUDRATE)   // rounding
     });
 #else // default usart1
     Uart uart({
@@ -222,16 +222,17 @@ namespace config {
 
       .irqPriority = 2U,
 
-      .brrValue         = (uint32_t)(CPU_FREQUENCY_HZ / COMMS_UART_BAUDRATE)
+      .brrValue         = (uint32_t)((CPU_FREQUENCY_HZ + COMMS_UART_BAUDRATE/2)/ COMMS_UART_BAUDRATE)   // rounding
     });
 #endif // COMMS_UART_NUMBER
-#endif // COMMS_UART
-
 #ifdef COMMS_UART_OBOT
     figure::ProtocolParser uart_protocol(config::uart.rx_buffer_, RX_BUFFER_SIZE);
 #else
     UARTCommunicationProtocol uart_protocol; 
 #endif
+#endif // COMMS_UART
+
+
 
 #if (COMMS == COMMS_SPI)
     // SPI communication protocol buffers and pools allocation
