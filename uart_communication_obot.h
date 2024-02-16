@@ -62,7 +62,7 @@ class UARTCommunication : public CommunicationBase {
 
   int receive_string(char* const string) {
     if (new_ascii_str_) {
-      std::memcpy(string, ascii_str_in_, std::strlen(ascii_str_in_));
+      std::memcpy(string, ascii_str_in_, std::strlen(ascii_str_in_)+1);
       new_ascii_str_ = false;
       return std::strlen(ascii_str_in_);
     }
@@ -126,9 +126,12 @@ class UARTCommunication : public CommunicationBase {
   }
 
   void callback_obot_ascii(uint8_t* buf, uint16_t length) {
-    std::memcpy((uint8_t*)ascii_str_in_, buf, std::min((int)length, MAX_API_DATA_SIZE));
+    length = std::min(length, (uint16_t) MAX_API_DATA_SIZE);
+    std::memcpy((uint8_t *) ascii_str_in_, buf, length);
     ascii_str_in_[length] = 0;
-    new_ascii_str_ = true;
+    if (length) {
+      new_ascii_str_ = true;
+    }
   }
 
  private:
