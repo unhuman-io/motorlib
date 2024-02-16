@@ -3,6 +3,8 @@
 
 volatile uint32_t * const cpu_clock = &DWT->CYCCNT;
 
+static_assert((uint32_t) CPU_FREQUENCY_HZ % 2000000 == 0, "CPU_FREQUENCY_HZ must be a multiple of 2000000");
+
 extern "C" void SystemClock_Config(void)
 {
     PWR->CR5 &= ~PWR_CR5_R1MODE; // R1MODE -> 0 for > 150 MHz operation
@@ -20,7 +22,7 @@ extern "C" void SystemClock_Config(void)
 #ifdef USE_HSI
     RCC->PLLCFGR = 2 << RCC_PLLCFGR_PLLSRC_Pos | // (2) HSI is pll source (16 MHz)
       3 << RCC_PLLCFGR_PLLM_Pos | // (3) div4 
-      85 << RCC_PLLCFGR_PLLN_Pos | // (85) x85
+      (uint32_t) CPU_FREQUENCY_HZ/2000000 << RCC_PLLCFGR_PLLN_Pos | // (85) x85
       2 << RCC_PLLCFGR_PLLPDIV_Pos | // (2) div2
       //RCC_PLLCFGR_PLLPEN |
       0 << RCC_PLLCFGR_PLLQ_Pos | // (0) div2
@@ -32,7 +34,7 @@ extern "C" void SystemClock_Config(void)
   // P, Q, R all 170 MHz
   RCC->PLLCFGR = 3 << RCC_PLLCFGR_PLLSRC_Pos | // (3) HSE is pll source (24 MHz)
     5 << RCC_PLLCFGR_PLLM_Pos | // (5) div6 
-    85 << RCC_PLLCFGR_PLLN_Pos | // (85) x85
+    (uint32_t) CPU_FREQUENCY_HZ/2000000 << RCC_PLLCFGR_PLLN_Pos | // (85) x85
     2 << RCC_PLLCFGR_PLLPDIV_Pos | // (2) div2
     //RCC_PLLCFGR_PLLPEN |
     0 << RCC_PLLCFGR_PLLQ_Pos | // (0) div2
