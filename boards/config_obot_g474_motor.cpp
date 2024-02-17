@@ -272,6 +272,8 @@ namespace config {
     HRPWM motor_pwm = {pwm_frequency, *HRTIM1, 3, 5, 4, false, 50, 1000, 1000};
     USB1 usb;
     FastLoop fast_loop = {(int32_t) pwm_frequency, motor_pwm, motor_encoder, param->fast_loop_param, *calibration, &I_A_DR, &I_B_DR, &I_C_DR, &V_BUS_DR};
+
+
     LED led = {const_cast<uint16_t*>(reinterpret_cast<volatile uint16_t *>(get_board_pins(board_rev).led_tim_r)), 
                const_cast<uint16_t*>(reinterpret_cast<volatile uint16_t *>(get_board_pins(board_rev).led_tim_g)),
                const_cast<uint16_t*>(reinterpret_cast<volatile uint16_t *>(get_board_pins(board_rev).led_tim_b))};
@@ -476,6 +478,10 @@ void system_init() {
 
     v3v3 =  *((uint16_t *) (0x1FFF75AA)) * 3.0 / V_REF_DR;
     System::log("3v3: " + std::to_string(v3v3));
+    System::log("obias: ",  std::to_string(calibration->output_encoder_bias));
+    System::log("tbias: ", std::to_string(calibration->torque_sensor_bias));
+    System::log("offset: ", std::to_string(calibration->motor_encoder_index_electrical_offset_pos));
+    System::log("mbias: ", std::to_string(calibration->motor_encoder_bias));
 
     ADC1->GCOMP = v3v3*4096;
     ADC1->CFGR2 |= ADC_CFGR2_GCOMP;
