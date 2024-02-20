@@ -100,45 +100,72 @@ Protocol::State Protocol::stateWaitForCommandHandlerSpi(bool first_run)
 
   if(first_run)
   {
+    // Clear the buffer
+    bytes_read_ = 0;
+    rx_protocol_buffer_[0] = 0xAA;
+    rx_protocol_buffer_[1] = 0xAA;
+    rx_protocol_buffer_[2] = 0xAA;
+
+    // Receive bytes one by one in case if there is a loss of synchronization
     comms_.startTransaction({
       .txBuffer = NULL,
-      .rxBuffer = rx_protocol_buffer_,
-      .length = 3
+      .rxBuffer = &rx_protocol_buffer_[2],
+      .length = 1
     });
   }
   else
   {
-    if(  (rx_protocol_buffer_[0] == (uint8_t)Command::kSync)
-       &&((rx_protocol_buffer_[1] ^ rx_protocol_buffer_[2]) == 0xFF) )
+    bool command_found = false;
+    bytes_read_++;
+
+    if(bytes_read_ >= 3U) // If there are at least 2 bytes - attempt to parse the command
     {
-      current_command_ = (Command)rx_protocol_buffer_[1];
-
-      // Check if the command is in the command_table
-      for(i = 0; i < FIGURE_COUNTOF(command_table_); i++)
+      if(  (rx_protocol_buffer_[0] ==  (uint8_t)Command::kSync)
+         &&(rx_protocol_buffer_[1] ^ rx_protocol_buffer_[2] == 0xFF) )
       {
-        if(command_table_[i].command == current_command_)
-        {
-          // Call the init method of the command
-          if(command_table_[i].init != NULL)
-          {
-            (this->*command_table_[i].init)();
-          }
+        current_command_ = (Command)rx_protocol_buffer_[1];
 
-          // Send ACK, transition into kRunCommand state
-          new_state = sendAckNack(false, kStateRunCommand);
-          break;
+        // Check if the command is in the command_table
+        for(i = 0; i < FIGURE_COUNTOF(command_table_); i++)
+        {
+          if(command_table_[i].command == current_command_)
+          {
+            command_found = true;
+
+            // Call the init method of the command
+            if(command_table_[i].init != NULL)
+            {
+              (this->*command_table_[i].init)();
+            }
+
+            // Send ACK, transition into kRunCommand state
+            new_state = sendAckNack(false, kStateRunCommand);
+            break;
+          }
         }
       }
+    }
 
-      // If command has not been found - send Nack, go back to kWaitForCommand
-      if(i >= FIGURE_COUNTOF(command_table_))
+    if(!command_found)
+    {
+      // If there is still no reasonable command after 3 bytes - error out
+      if(bytes_read_ >= 5)
       {
         new_state = sendAckNack(true, kStateWaitForCommand);
       }
-    }
-    else
-    {
-      new_state = sendAckNack(true, kStateWaitForCommand);
+      else
+      {
+        // Shift the data inside the buffer
+        rx_protocol_buffer_[0] = rx_protocol_buffer_[1];
+        rx_protocol_buffer_[1] = rx_protocol_buffer_[2];
+
+        // Receive another byte
+        comms_.startTransaction({
+          .txBuffer = NULL,
+          .rxBuffer = &rx_protocol_buffer_[2],
+          .length = 1
+        });
+      }
     }
   }
 
