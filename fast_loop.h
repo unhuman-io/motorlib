@@ -301,6 +301,15 @@ class FastLoop {
       return phase_mode_desired_ == 1 ? 0 : 1;
     }
 
+    bool is_voltage_saturated() const { 
+      return foc_->is_voltage_saturated() || 
+             pwm_.is_voltage_saturated();
+    }
+
+    bool is_current_saturated() const { 
+      return foc_->is_current_saturated();
+    }
+
     float get_rollover() const { return 2*M_PI*inv_motor_encoder_cpr_*param_.motor_encoder.rollover; }
     void beep_on(float t_seconds = 1) {
       beep_ = true;

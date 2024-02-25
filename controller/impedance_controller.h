@@ -23,6 +23,9 @@ class ImpedanceController : public Controller {
         torque_controller_.set_param(param.torque);
     }
     void set_rollover(float rollover) { impedance_controller_.set_rollover(rollover); }
+    bool is_current_saturated() const {
+        return torque_controller_.is_saturated();
+    }
  private:
     PIDController impedance_controller_;
     PIDController torque_controller_;

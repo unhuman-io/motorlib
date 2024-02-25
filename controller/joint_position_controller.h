@@ -23,6 +23,9 @@ class JointPositionController : public Controller {
         param_ = param;
     }
     void set_rollover(float rollover) { velocity_controller_.set_rollover(rollover); }
+    bool is_current_saturated() const {
+        return velocity_controller_.is_current_saturated();
+    }
  private:
     VelocityController velocity_controller_;
     JointPositionControllerParam param_ = {};

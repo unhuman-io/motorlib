@@ -28,6 +28,9 @@ class TorqueController : public Controller {
         API_ADD_FILTER(t_output_filter, FirstOrderLowPassFilter, controller_.output_filter_);
         api.add_api_variable("tmax", new APIFloat(&controller_.command_max_));
     }
+    bool is_current_saturated() const {
+        return controller_.is_saturated();
+    }
  private:
     PIDController controller_;
 

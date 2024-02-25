@@ -228,10 +228,12 @@ public:
     float step(float desired, float measured);
     void set_param(const PI2Param &pi_param);
     void initialize() { ki_sum_ = 0; }
+    bool is_voltage_saturated() const { return std::abs(ki_sum_ == ki_limit_) >= ki_limit_ || 
+        std::abs(kp_total_*error_ + ki_sum_) >= command_max_; }
     PI2Param get_param() const;
 private:
     float kp_ = 0, ki_ = 0, ki_sum_ = 0, ki_limit_ = 0, command_max_ = 0, kp2_ = 0, ki2_ = 0, value2_ = 0, inv_value2_ = 1;
-
+    float error_ = 0, kp_total_ = 0, ki_total_ = 0;
     friend class System;
 };
 
@@ -273,6 +275,9 @@ public:
     void set_param(const PIDParam &param);
     float get_error() const { return error_last_; }
     void set_rollover(float rollover) { rollover_ = rollover; }
+    bool is_saturated() const {
+        return std::abs(filtered_out_) >= command_max_;
+    }
     
     float kp_ = 0, kd_ = 0, ki_ = 0, ki_sum_ = 0, ki_limit_ = 0, command_max_ = 0;
     SecondOrderLowPassFilter velocity_filter_;
@@ -280,6 +285,7 @@ public:
 protected:
     float error_ = 0, velocity_measured_ = 0;
     float measured_last_ = 0;
+    float filtered_out_ = 0;
     
     float error_last_ = 0;
     float last_desired_ = 0;

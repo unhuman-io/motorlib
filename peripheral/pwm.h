@@ -11,6 +11,7 @@ class PWMBase {
    void brake_mode() {}
    void voltage_mode() {}
    void set_frequency_hz(uint32_t frequency_hz) {}
+   bool is_voltage_saturated() const { return false; }
 };
 
 #endif  // UNHUMAN_MOTORLIB_PERIPHERAL_PWM_H_
