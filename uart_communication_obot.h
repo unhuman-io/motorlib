@@ -121,8 +121,8 @@ class UARTCommunication : public CommunicationBase {
   }
 
   void callback_obot_cmd_status(uint8_t* buf, uint16_t length) {
-    callback_obot_cmd(buf, length);
     callback_obot_status(buf, length);
+    callback_obot_cmd(buf, length);
   }
 
   void callback_obot_ascii(uint8_t* buf, uint16_t length) {
