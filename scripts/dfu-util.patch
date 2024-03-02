@@ -1,0 +1,15 @@
+diff --git a/src/dfu.c b/src/dfu.c
+index 091e74b..62a6224 100644
+--- a/src/dfu.c
++++ b/src/dfu.c
+@@ -156,9 +156,7 @@ int dfu_get_status( struct dfu_if *dif, struct dfu_status *status )
+         if (dif->quirks & QUIRK_POLLTIMEOUT)
+             status->bwPollTimeout = DEFAULT_POLLTIMEOUT;
+         else
+-            status->bwPollTimeout = ((0xff & buffer[3]) << 16) |
+-                                    ((0xff & buffer[2]) << 8)  |
+-                                    (0xff & buffer[1]);
++            status->bwPollTimeout = 0;
+         status->bState  = buffer[4];
+         status->iString = buffer[5];
+     }
