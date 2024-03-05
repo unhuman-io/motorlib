@@ -54,7 +54,7 @@ class MainLoop {
     void init() {} // todo: init filters with first status
     void update() {
       count_++;
-#ifndef END_TRIGGER_MAIN_SENSORS
+#if !defined(END_TRIGGER_MAIN_SENSORS) && !defined(EXT_TRIGGER_MAIN_SENSORS)
       output_encoder_.trigger();
       torque_sensor_.trigger();
 #endif
