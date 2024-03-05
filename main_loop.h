@@ -46,12 +46,13 @@ class MainLoop {
           iq_find_limits_filter_(1.0/frequency_hz, 1), motor_velocity_filter_(1.0/frequency_hz, param.output_filter_hz.motor_velocity), motor_position_filter_(1.0/frequency_hz),
           output_position_filter_(1.0/frequency_hz), output_velocity_filter_(1.0/frequency_hz, param.output_filter_hz.output_velocity), torque_filter_(1.0/frequency_hz) {
           set_param();
+        }
+    void init() {
 #ifdef END_TRIGGER_MAIN_SENSORS
           output_encoder_.trigger();
           torque_sensor_.trigger();
 #endif
-        }
-    void init() {} // todo: init filters with first status
+    } // todo: init filters with first status
     void update() {
       count_++;
 #if !defined(END_TRIGGER_MAIN_SENSORS) && !defined(EXT_TRIGGER_MAIN_SENSORS)

@@ -487,6 +487,7 @@ void system_init() {
 
     config_init();
 
+    config::main_loop.init();
     TIM1->CR1 = TIM_CR1_CEN; // start main loop interrupt
     config::usb.connect();
     HRTIM1->sMasterRegs.MCR = HRTIM_MCR_TDCEN + HRTIM_MCR_TECEN + HRTIM_MCR_TFCEN; // start high res timer
