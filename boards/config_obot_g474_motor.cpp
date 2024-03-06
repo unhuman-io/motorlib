@@ -47,7 +47,7 @@ using PWM = HRPWM;
 
 #if (COMMS == COMMS_UART)
 #ifdef COMMS_UART_OBOT
-    #include "../../lib/protocol/protocol_parser.h"
+    #include <protocol_parser.h>
     #include "../uart_communication_obot.h"
 #else
     #include "../uart_communication_protocol.h"

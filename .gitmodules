@@ -2,3 +2,6 @@
   path = motor_messages
   url = ../motor_messages
   branch = main
+[submodule "obot-protocol"]
+	path = obot-protocol
+	url = ../obot-protocol

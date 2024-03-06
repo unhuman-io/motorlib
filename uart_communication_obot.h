@@ -73,7 +73,7 @@ class UARTCommunication : public CommunicationBase {
   bool send_string(const char* string, uint16_t length) {
     // while(send_active());
     uint8_t packet_size;
-    length = std::min(length, 255); // todo support larger packets
+    length = std::min(length, (uint16_t) 255); // todo support larger packets
     uint8_t* packet = protocol_.generatePacket((const uint8_t *) string, length, OBOT_ASCII_RESPONSE, &packet_size);
     std::memcpy(&uart_.tx_buffer_[0], &packet[0], packet_size);
     Uart::BufferDescriptor desc = {};
