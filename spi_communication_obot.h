@@ -76,7 +76,7 @@ class SPICommunication : public CommunicationBase {
     length = std::min(length, (uint16_t) 64); // todo support larger packets
     uint8_t* packet = protocol_.generatePacket((const uint8_t *) string, length, OBOT_ASCII_RESPONSE, &packet_size);
     std::memcpy(&spi_.tx_buffer_[0], &packet[0], packet_size);
-    Spi::BufferDescriptor desc = {};
+    SpiSlaveFigure::BufferDescriptor desc = {};
     desc.length = packet_size;
     desc.txBuffer = spi_.tx_buffer_;
     spi_.startTransaction(desc);
@@ -114,7 +114,7 @@ class SPICommunication : public CommunicationBase {
     uint8_t packet_size;
     uint8_t* packet = protocol_.generatePacket(reinterpret_cast<uint8_t*>(&obot_status_), sizeof(SendData), OBOT_STATUS, &packet_size);
     std::memcpy(&spi_.tx_buffer_[0], &packet[0], packet_size);
-    Spi::BufferDescriptor desc = {};
+    SpiSlaveFigure::BufferDescriptor desc = {};
     desc.length = packet_size;
     desc.txBuffer = spi_.tx_buffer_;
     spi_.startTransaction(desc);
