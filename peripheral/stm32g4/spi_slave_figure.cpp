@@ -113,10 +113,11 @@ void SpiSlaveFigure::initDma()
 {
   // SPI Rx Dma channel
   init_struct_.rxDmaChannel->CPAR = (uint32_t)&init_struct_.spi->DR;
-  init_struct_.rxDmaChannel->CNDTR = 0;
-  init_struct_.rxDmaChannel->CCR = DMA_CCR_MINC | DMA_CCR_TCIE;
-
+  init_struct_.rxDmaChannel->CNDTR = RX_BUFFER_SIZE;
+  init_struct_.rxDmaChannel->CCR = DMA_CCR_MINC | DMA_CCR_CIRC;
+  init_struct_.rxDmaChannel->CMAR = (uint32_t)&rx_buffer_;
   init_struct_.rxDmaMuxChannel->CCR = init_struct_.rxDmaMuxId;
+  init_struct_.rxDmaChannel->CCR |= DMA_CCR_EN;
 
   // SPI Tx Dma channel
   init_struct_.txDmaChannel->CPAR = (uint32_t)&init_struct_.spi->DR;
@@ -125,12 +126,12 @@ void SpiSlaveFigure::initDma()
 
   init_struct_.txDmaMuxChannel->CCR = init_struct_.txDmaMuxId;
 
-  NVIC_SetPriority(
-    init_struct_.rxDmaIrqN,
-    NVIC_EncodePriority(NVIC_GetPriorityGrouping(), init_struct_.rxDmaIrqPriority, 0)
-  );
+  // NVIC_SetPriority(
+  //   init_struct_.rxDmaIrqN,
+  //   NVIC_EncodePriority(NVIC_GetPriorityGrouping(), init_struct_.rxDmaIrqPriority, 0)
+  // );
 
-  NVIC_EnableIRQ(init_struct_.rxDmaIrqN);
+  // NVIC_EnableIRQ(init_struct_.rxDmaIrqN);
 
   //  NVIC_SetPriority(init_struct_.txDmaIrqN, init_struct_.txDmaIrqPriority);
   //  NVIC_EnableIRQ(init_struct_.txDmaIrqN);
