@@ -96,7 +96,7 @@ C_INCLUDES +=  \
 -I. \
 -I$(SELF_DIR)../CMSIS/Include \
 -I$(SELF_DIR)../peripheral \
--I$(SELF_DIR)../../lib/protocol \
+-I$(SELF_DIR)../../../lib/protocol \
 -I$(SELF_DIR)../obot-protocol \
 
 CPP_SOURCES += \
@@ -108,5 +108,11 @@ $(SELF_DIR)../sincos.cpp\
 $(SELF_DIR)../util.cpp\
 $(SELF_DIR)../hall.cpp\
 $(SELF_DIR)../parameter_api.cpp\
-$(SELF_DIR)../obot-protocol/protocol_parser.cpp\
 ./$(CONFIG_FILE)
+
+ifneq ($(findstring protocol_parser.cpp, $(CPP_SOURCES)),)
+$(info protocol_parser.cpp already defined)
+else
+$(info using motorlib protocol_parser.cpp)
+CPP_SOURCES += $(SELF_DIR)../obot-protocol/protocol_parser.cpp
+endif

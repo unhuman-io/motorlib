@@ -194,7 +194,13 @@ void SpiSlaveFigure::startTransaction(BufferDescriptor descriptor)
   if(descriptor.txBuffer != NULL)
   {
     init_struct_.txDmaChannel->CCR &= ~DMA_CCR_EN;
-    init_struct_.txDmaChannel->CNDTR = descriptor.length;
+    // send extra 4 zeros to prevent it resending previous data on additional reads
+    // hopefully doesn't overflow
+    init_struct_.txDmaChannel->CNDTR = descriptor.length+4;
+    descriptor.txBuffer[descriptor.length] = 0;
+    descriptor.txBuffer[descriptor.length+1] = 0;
+    descriptor.txBuffer[descriptor.length+2] = 0;
+    descriptor.txBuffer[descriptor.length+3] = 0;
     init_struct_.txDmaChannel->CMAR = (uint32_t)descriptor.txBuffer;
     init_struct_.txDmaChannel->CCR |= DMA_CCR_EN;
   }

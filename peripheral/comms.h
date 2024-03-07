@@ -8,7 +8,7 @@ class Comms
   public:
     struct BufferDescriptor
     {
-      const volatile uint8_t* txBuffer;
+      volatile uint8_t* txBuffer;
       volatile uint8_t*       rxBuffer;
       size_t                  length;
     };
