@@ -29,7 +29,7 @@ build_param: $(PARAM_OUT)
 
 ifndef PARAM_OVERRIDE
 $(PARAM_OUT): $(PARAM_FILE) .FORCE | $(PARAM_BUILD_DIR)
-	$(CC) -I param -c $(GIT_DEFINE) $< -o $(PARAM_BUILD_DIR)/$(notdir $(<:c=o)) 
+	$(CC) -I param $(filter-out $(LTO), $(CFLAGS)) -c $(GIT_DEFINE) $< -o $(PARAM_BUILD_DIR)/$(notdir $(<:c=o)) 
 	$(CP) -O binary -S -j flash_param $(PARAM_BUILD_DIR)/$(notdir $(<:c=o)) $@
 	-dfu-suffix -p 0x100 -v 0x3293 -a $@
 endif
