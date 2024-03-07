@@ -8,7 +8,6 @@
 #include "communication.h"
 #include "util.h"
 
-volatile uint32_t status_callbacks = 0;
 class UARTCommunication : public CommunicationBase {
  public:
   enum mailboxId {

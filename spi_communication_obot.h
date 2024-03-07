@@ -8,7 +8,6 @@
 #include "communication.h"
 #include "util.h"
 
-volatile uint32_t status_callbacks = 0;
 class SPICommunication : public CommunicationBase {
  public:
   enum mailboxId {
@@ -146,6 +145,7 @@ class SPICommunication : public CommunicationBase {
   std::atomic_bool new_ascii_str_;
   uint16_t last_rx_index_ = 0;
   char ascii_str_in_[MAX_API_DATA_SIZE + 1];
+  volatile uint32_t status_callbacks = 0;
 };
 
 #endif  // UNHUMAN_MOTORLIB_SPI_COMMUNICATION_OBOT_H_

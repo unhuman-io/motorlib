@@ -7,7 +7,6 @@
 #include <atomic>
 #include <algorithm>
 
-volatile uint32_t status_callbacks = 0;
 class UARTCommunication : public CommunicationBase {
  public:
     enum mailboxId
@@ -102,7 +101,6 @@ class UARTCommunication : public CommunicationBase {
     }
 
     static void callback_obot_status(void * inst, uint8_t *buf, uint16_t length) {
-      status_callbacks++;
       ((UARTCommunication *) inst)->callback_obot_status(buf, length);
     }
 
