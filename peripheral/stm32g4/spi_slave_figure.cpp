@@ -2,28 +2,6 @@
 
 SpiSlaveFigure* SpiSlaveFigure::instance = NULL;
 
-// Interrupt handlers have to be inside extern "C" section
-// so their names are not mangled
-extern "C"
-{
-
-void DMA2_Channel1_IRQHandler(void)
-{
-  if(SpiSlaveFigure::instance != NULL)
-  {
-    SpiSlaveFigure::instance->rxInterruptHandler();
-  }
-}
-
-void DMA2_Channel2_IRQHandler(void)
-{
-  if(SpiSlaveFigure::instance != NULL)
-  {
-    SpiSlaveFigure::instance->txInterruptHandler();
-  }
-}
-
-} // extern C
 
 SpiSlaveFigure::SpiSlaveFigure(const InitStruct& init_struct) :
     init_struct_(init_struct),
