@@ -71,6 +71,7 @@ $(SELF_DIR)../peripheral/stm32g4/clock_config.cpp\
 $(SELF_DIR)../peripheral/stm32g4/stm32g4_serial.cpp\
 $(SELF_DIR)../peripheral/stm32g4/usb.cpp\
 $(SELF_DIR)../peripheral/stm32g4/spi_slave.cpp\
+$(SELF_DIR)../peripheral/stm32g4/spi_slave_figure.cpp\
 $(SELF_DIR)../peripheral/stm32g4/uart.cpp
 
 endif # MCU_TARGET == stm32g474
@@ -95,7 +96,9 @@ endif
 C_INCLUDES +=  \
 -I. \
 -I$(SELF_DIR)../CMSIS/Include \
--I$(SELF_DIR)../peripheral
+-I$(SELF_DIR)../peripheral \
+-I$(SELF_DIR)../../../lib/protocol \
+-I$(SELF_DIR)../obot-protocol \
 
 CPP_SOURCES += \
 $(SELF_DIR)../malloc.cpp\
@@ -107,3 +110,10 @@ $(SELF_DIR)../util.cpp\
 $(SELF_DIR)../hall.cpp\
 $(SELF_DIR)../parameter_api.cpp\
 ./$(CONFIG_FILE)
+
+ifneq ($(findstring protocol_parser.cpp, $(CPP_SOURCES)),)
+$(info protocol_parser.cpp already defined)
+else
+$(info using motorlib protocol_parser.cpp)
+CPP_SOURCES += $(SELF_DIR)../obot-protocol/protocol_parser.cpp
+endif

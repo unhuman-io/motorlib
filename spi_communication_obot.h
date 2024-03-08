@@ -1,5 +1,5 @@
-#ifndef UNHUMAN_MOTORLIB_UART_COMMUNICATION_H_
-#define UNHUMAN_MOTORLIB_UART_COMMUNICATION_H_
+#ifndef UNHUMAN_MOTORLIB_SPI_COMMUNICATION_OBOT_H_
+#define UNHUMAN_MOTORLIB_SPI_COMMUNICATION_OBOT_H_
 
 #include <algorithm>
 #include <atomic>
@@ -8,7 +8,7 @@
 #include "communication.h"
 #include "util.h"
 
-class UARTCommunication : public CommunicationBase {
+class SPICommunication : public CommunicationBase {
  public:
   enum mailboxId {
     OBOT_CMD = 0x01,
@@ -18,7 +18,7 @@ class UARTCommunication : public CommunicationBase {
     OBOT_ASCII_RESPONSE = 0x05,
   };
 
-  UARTCommunication(Uart& uart, figure::ProtocolParser& protocol) : uart_(uart), protocol_(protocol) {
+  SPICommunication(SpiSlaveFigure& spi, figure::ProtocolParser& protocol) : spi_(spi), protocol_(protocol) {
     new_ascii_str_ = false;
     new_obot_cmd_ = false;
     status_sent_ = false;
@@ -72,19 +72,19 @@ class UARTCommunication : public CommunicationBase {
   bool send_string(const char* string, uint16_t length) {
     // while(send_active());
     uint8_t packet_size;
-    length = std::min(length, (uint16_t) 255); // todo support larger packets
+    length = std::min(length, (uint16_t) 64); // todo support larger packets
     uint8_t* packet = protocol_.generatePacket((const uint8_t *) string, length, OBOT_ASCII_RESPONSE, &packet_size);
-    std::memcpy(&uart_.tx_buffer_[0], &packet[0], packet_size);
-    Uart::BufferDescriptor desc = {};
+    std::memcpy(&spi_.tx_buffer_[0], &packet[0], packet_size);
+    SpiSlaveFigure::BufferDescriptor desc = {};
     desc.length = packet_size;
-    desc.txBuffer = uart_.tx_buffer_;
-    uart_.startTransaction(desc);
+    desc.txBuffer = spi_.tx_buffer_;
+    spi_.startTransaction(desc);
     return true;
   }
 
   bool send_string_active() const { return send_active(); }
 
-  bool send_active() const { return uart_.is_tx_active(); }
+  bool send_active() const { return spi_.is_tx_active(); }
 
   bool tx_data_ack() {
     bool status_sent = status_sent_;
@@ -93,9 +93,9 @@ class UARTCommunication : public CommunicationBase {
   }
 
   void parse() {
-    uint16_t current_rx_index_ = uart_.get_last_rx_index();
+    uint16_t current_rx_index_ = spi_.get_last_rx_index();
     if (current_rx_index_ != last_rx_index_) {
-      protocol_.process(uart_.get_last_rx_index());
+      protocol_.process(spi_.get_last_rx_index());
     }
     last_rx_index_ = current_rx_index_;
   }
@@ -112,11 +112,11 @@ class UARTCommunication : public CommunicationBase {
     // Packetize obot_status and send
     uint8_t packet_size;
     uint8_t* packet = protocol_.generatePacket(reinterpret_cast<uint8_t*>(&obot_status_), sizeof(SendData), OBOT_STATUS, &packet_size);
-    std::memcpy(&uart_.tx_buffer_[0], &packet[0], packet_size);
-    Uart::BufferDescriptor desc = {};
+    std::memcpy(&spi_.tx_buffer_[0], &packet[0], packet_size);
+    SpiSlaveFigure::BufferDescriptor desc = {};
     desc.length = packet_size;
-    desc.txBuffer = uart_.tx_buffer_;
-    uart_.startTransaction(desc);
+    desc.txBuffer = spi_.tx_buffer_;
+    spi_.startTransaction(desc);
     status_sent_ = true;
   }
 
@@ -135,7 +135,7 @@ class UARTCommunication : public CommunicationBase {
   }
 
  private:
-  Uart& uart_;
+  SpiSlaveFigure& spi_;
   figure::ProtocolParser& protocol_;
   friend class System;
   std::atomic_bool new_obot_cmd_;
@@ -145,6 +145,8 @@ class UARTCommunication : public CommunicationBase {
   std::atomic_bool new_ascii_str_;
   uint16_t last_rx_index_ = 0;
   char ascii_str_in_[MAX_API_DATA_SIZE + 1];
+  volatile uint32_t status_callbacks = 0;
 };
 
-#endif  // UNHUMAN_MOTORLIB_UART_COMMUNICATION_H_
+#endif  // UNHUMAN_MOTORLIB_SPI_COMMUNICATION_OBOT_H_
+
