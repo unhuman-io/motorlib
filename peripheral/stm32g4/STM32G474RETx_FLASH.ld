@@ -74,7 +74,7 @@ SECTIONS
   flash_param :
   {
     . = ALIGN(4);
-    *(flash_param)         /* .rodata sections (constants, strings, etc.) */
+    KEEP(*(flash_param))         /* .rodata sections (constants, strings, etc.) */
     . = ALIGN(4);
   } >SECTOR_7
 
