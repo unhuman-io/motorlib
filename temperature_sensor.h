@@ -17,8 +17,11 @@ class PT1000 : public TemperatureSensor {
         float voltage = 1.0/4096*adc_;
         // top side 1k/1k
         float resistance = 1000*(v3v3_/voltage-1);
-        temperature_ = (resistance-1000)/(1000*3.91e-3);
+        temperature_ = resistance_to_temperature(resistance);
         return get_temperature(); 
+    }
+    static float resistance_to_temperature(float resistance) {
+        return (resistance-1000)/(1000*3.91e-3);
     }
     float get_temperature() const { return temperature_; }   
  private:
