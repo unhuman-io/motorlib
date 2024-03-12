@@ -97,7 +97,7 @@ class Actuator {
             float round_by = 2*M_PI*(startup_param_.num_encoder_poles == 0 ? 1 : startup_param_.num_encoder_poles);
             float motor_bias_from_output = output_position_to_motor_position(status.output_position) 
               - (status.fast_loop.motor_position.position);
-            float motor_bias_rounded = roundf(motor_bias_from_output/round_by)*(round_by) + startup_motor_bias_;
+            float motor_bias_rounded = roundf((motor_bias_from_output + startup_motor_bias_)/round_by)*(round_by);
             logger.log("Encoder bias from output with correction");
             logger.log_printf("output_position_to_motor_position: %f", output_position_to_motor_position(status.output_position));
             logger.log_printf("Output position: %f, motor_position: %f, motor mechanical position: %f", 
