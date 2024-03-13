@@ -124,9 +124,10 @@ class ICPZ : public EncoderBase {
       if (ongoing_read_) {
         spidma_.finish_readwrite();
         uint32_t data = ((data_[1] << 16) | (data_[2] << 8) | data_[3]) << 8;
-        raw_value_ = data | data_[4];
+        raw_value_ = data >> 8;
+        uint32_t word = data | data_[4];
         Diag diag = {.word = data_[4]};
-        uint8_t crc6_calc = ~CRC_BiSS_43_30bit(raw_value_ >> 6) & 0x3f;
+        uint8_t crc6_calc = ~CRC_BiSS_43_30bit(word >> 6) & 0x3f;
         error_count_ += !diag.nErr;
         warn_count_ += !diag.nWarn;
         uint8_t crc_error = diag.crc6 == crc6_calc ? 0 : 1;
