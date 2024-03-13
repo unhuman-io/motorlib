@@ -370,9 +370,9 @@ void system_init() {
     }
     if (drv_regs_error) {
         System::log("drv configure failure");
+        init_failure |= 1;
     } else {
         System::log("drv configure success");
-        init_failure |= 1;
     }
     if (config::torque_sensor.init()) {
         System::log("torque sensor init success");
