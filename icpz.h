@@ -28,6 +28,7 @@ static uint8_t CRC_BiSS_43_30bit (uint32_t w_InputData);
     api.add_api_variable(prefix "crc_cnt", new APIUint32(&icpz.crc_error_count_));\
     api.add_api_variable(prefix "raw", new APIUint32(&icpz.raw_value_));\
     api.add_api_variable(prefix "rawh", new const APICallback([](){ return u32_to_hex(icpz.raw_value_); }));\
+    api.add_api_variable(prefix "value", new const APIInt32(&icpz.pos_));\
     api.add_api_variable(prefix "diag", new const APICallback([](){ return icpz.read_diagnosis(); }));\
     api.add_api_variable(prefix "conf_write", new const APICallback([](){ return icpz.write_conf(); }));\
     api.add_api_variable(prefix "auto_ana", new const APICallback([](){ icpz.start_auto_adj_ana(); return "ok"; }));\
