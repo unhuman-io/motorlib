@@ -39,7 +39,7 @@ $(BUILD_DIR)/%.o: %.cpp | $(BUILD_DIR)
 $(BUILD_DIR)/%.o: %.s | $(BUILD_DIR)
 	$(AS) -c $(CFLAGS) $< -o $@
 
-$(BUILD_DIR)/$(TARGET).elf: $(OBJECTS) $(PARAM_OUT)
+$(BUILD_DIR)/$(TARGET).elf: $(OBJECTS) build_param
 	$(CXX) $(OBJECTS) $(PARAM_OUT:bin=o) $(LDFLAGS) -o $@
 	$(SZ) $@
 
