@@ -246,8 +246,14 @@ class ICPZ : public EncoderBase {
         std::vector<uint8_t> data_out = {write_register_opcode_, address};
         data_out.insert(data_out.end(), value.begin(), value.end());
         spidma_.readwrite(data_out.data(), data_in, data_out.size(), true);
-        bool retval = read_register(address, value.size()) == value;
+        std::vector<uint8_t> data_read = read_register(address, value.size());
+        bool retval = data_read == value;
         (*register_operation_)--;
+        if (!retval) {
+          for (int i=0; i<value.size(); i++) {
+            logger.log_printf("icpz register %x, set%d: %x, read%d: %x", address, i, value[i], i, data_read[i]);
+          }
+        }
         return retval;
     }
 
