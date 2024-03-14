@@ -342,6 +342,8 @@ uint32_t total_uptime;
 
 int32_t index_mod = 0;
 
+uint32_t init_failure = 0;
+
 void config_init();
 
 void system_init() {
@@ -358,14 +360,17 @@ void system_init() {
         System::log("Motor encoder init success");
     } else {
         System::log("Motor encoder init failure");
+        init_failure |= 1;
     }
     if (config::output_encoder.init()) {
         System::log("Output encoder init success");
     } else {
         System::log("Output encoder init failure");
+        init_failure |= 1;
     }
     if (drv_regs_error) {
         System::log("drv configure failure");
+        init_failure |= 1;
     } else {
         System::log("drv configure success");
     }
@@ -373,6 +378,7 @@ void system_init() {
         System::log("torque sensor init success");
     } else {
         System::log("torque sensor init failure");
+        init_failure |= 1;
     }
     if (config::board_rev.has_bmi270) {
         config::imu.init();
@@ -599,6 +605,8 @@ void system_maintenance() {
     config::main_loop.status_.error.driver_fault |= driver_fault;    // maybe latch driver fault until reset
     index_mod = config::motor_encoder.index_error(param->fast_loop_param.motor_encoder.cpr);
     config_maintenance();
+    // unclearable init failure fault
+    config::main_loop.status_.error.init_failure |= init_failure;
 }
 
 void setup_sleep() {
