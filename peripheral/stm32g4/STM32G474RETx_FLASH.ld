@@ -79,10 +79,9 @@ SECTIONS
     . = ALIGN(4);
   } >PARAM_DATA
 
-  .calibration_data :
+  calibration_data :
   {
       . = ALIGN(4);
-      KEEP(*(.calibration_data))
       KEEP(*(calibration_data)) 
       . = ALIGN(4);
   } >CALIBRATION_DATA
