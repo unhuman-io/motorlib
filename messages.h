@@ -250,6 +250,7 @@ typedef struct {
 } StartupParam;
 
 typedef struct{
+    uint8_t schema_version;     // 1
     float motor_encoder_bias;   // for ENCODER_BIAS and ENCODER_BIAS_FROM_OUTPUT: extra bias to add to motor encoder
                                 // for ENCODER_BIAS_*_WITH_MOTOR_CORRECTION: motor bias to give a desired motor zero position
                                     // for example when output position = 0 if motor position is -1, then motor_encoder_bias = 1
@@ -259,8 +260,6 @@ typedef struct{
     float torque_sensor_bias;
     float joint_encoder_bias;
     MotorError error_mask;      // can set to ERROR_MASK_ALL or ERROR_MASK_NONE or others
-
-    uint8_t schema_version;
 } Calibration;
 
 typedef struct {

@@ -165,7 +165,7 @@ class MainLoop {
       status_.error.driver_not_enabled |= !driver_.is_enabled();
       status_.error.driver_fault |= driver_.is_faulted();
 
-      float output_velocity = (status_.output_position - output_position_last_)/dt_;
+      float __attribute((unused)) output_velocity = (status_.output_position - output_position_last_)/dt_;
       output_position_last_ = status_.output_position;
       iq_find_limits_filter_.update(status_.fast_loop.foc_status.measured.i_q);
       status_.motor_velocity_filtered = motor_velocity_filter_.update(status_.motor_position);//(status_.fast_loop.motor_velocity.velocity_filtered);

@@ -189,7 +189,7 @@ namespace config {
       .txDmaIrqN        = DMA2_Channel2_IRQn,
       .txDmaIrqPriority = 5U,
     });
-#endif COMMS_SPI
+#endif // COMMS_SPI
 
 #if COMMS == COMMS_UART
 #if COMMS_UART_NUMBER == 2

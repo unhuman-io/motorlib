@@ -82,7 +82,8 @@ SECTIONS
   .calibration_data :
   {
       . = ALIGN(4);
-      *(.calibration_data)  /* Specify sections or symbols to go here */
+      KEEP(*(.calibration_data))
+      KEEP(*(calibration_data)) 
       . = ALIGN(4);
   } >CALIBRATION_DATA
 
