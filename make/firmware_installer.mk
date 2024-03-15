@@ -1,7 +1,7 @@
 $(BUILD_DIR)/%.bin: $(BUILD_DIR)/%.elf | $(BUILD_DIR)
 	$(BIN) $< $@
 	-dfu-suffix -p 0x100 -v 0x3293 -a $@
-	$(BIN) $< --remove-section flash_param $(@:.bin=_noparam.bin)
+	$(BIN) $< --remove-section flash_param --remove-section calibration_data $(@:.bin=_noparam.bin)
 	-dfu-suffix -p 0x100 -v 0x3293 -a $(@:.bin=_noparam.bin)
 	# $(BIN) $< --only-section flash_param $(@:.bin=_param_only.bin)
 	# -dfu-suffix -p 0x100 -v 0x3293 -a $(@:.bin=_param_only.bin)
