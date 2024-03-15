@@ -18,7 +18,9 @@
 #endif
 
 #include "../communication.h"
-#include "../spi_communication.h"
+#include <protocol_parser.h>
+#include "../peripheral/stm32g4/spi_slave_figure.h"
+#include "../spi_communication_obot.h"
 
 #define COMMS_USB   1
 #define COMMS_SPI   2
@@ -43,12 +45,13 @@ using PWM = HRPWM;
 #endif
 
 #if (COMMS == COMMS_SPI)
+    #include <protocol_parser.h>
     using Communication = SPICommunication;
 #endif
 
 #if (COMMS == COMMS_UART)
 #ifdef COMMS_UART_OBOT
-    #include "../../lib/protocol/protocol_parser.h"
+    #include <protocol_parser.h>
     #include "../uart_communication_obot.h"
 #else
     #include "../uart_communication_protocol.h"
@@ -152,6 +155,42 @@ namespace config {
 
     const BoardRev board_rev = get_board_rev();
 
+#if COMMS == COMMS_SPI
+ SpiSlaveFigure spi({
+      .spi          = SPI1,
+      .gpioPort     = GPIOA,
+      .gpioPinSs    = 4U,
+      .gpioPinSck   = 5U,
+      .gpioPinMosi  = 7U,
+      .gpioPinMiso  = 6U,
+
+      .gpioAlternateFunction = 5U,
+
+      .gpioRccEnableRegister = &RCC->AHB2ENR,
+      .gpioRccEnableBit      = RCC_AHB2ENR_GPIOAEN_Pos,
+      .spiRccEnableRegister = &RCC->APB2ENR,
+      .spiRccEnableBit      = RCC_APB2ENR_SPI1EN_Pos,
+      .spiRccResetRegister  = &RCC->APB2RSTR,
+      .spiRccResetBit       = RCC_APB2RSTR_SPI1RST_Pos,
+
+      .rxDma            = DMA2,
+      .rxDmaIfcrCgif    = DMA_IFCR_CGIF1,
+      .rxDmaChannel     = DMA2_Channel1,
+      .rxDmaMuxChannel  = DMAMUX1_Channel8,
+      .rxDmaMuxId       = 10U,
+      .rxDmaIrqN        = DMA2_Channel1_IRQn,
+      .rxDmaIrqPriority = 1U,
+
+      .txDma            = DMA2,
+      .txDmaIfcrCgif    = DMA_IFCR_CGIF2,
+      .txDmaChannel     = DMA2_Channel2,
+      .txDmaMuxChannel  = DMAMUX1_Channel9,
+      .txDmaMuxId       = 11U,
+      .txDmaIrqN        = DMA2_Channel2_IRQn,
+      .txDmaIrqPriority = 5U,
+    });
+#endif COMMS_SPI
+
 #if COMMS == COMMS_UART
 #if COMMS_UART_NUMBER == 2
     Uart uart({
@@ -235,38 +274,8 @@ namespace config {
 
 
 
-#if (COMMS == COMMS_SPI)
-    // SPI communication protocol buffers and pools allocation
-    Mailbox::Buffer mailbox_data_to_host_buffers[2];
-    Mailbox::Buffer mailbox_data_from_host_buffers[2];
-    Mailbox::Buffer mailbox_string_buffers[8];
-
-    Mailbox::Pool pools[] = {
-       {
-         .mailboxIds = {SPICommunication::MAILBOX_ID_DATA_TO_HOST},
-         .buffers = mailbox_data_to_host_buffers,
-         .buffersCount = FIGURE_COUNTOF(mailbox_data_to_host_buffers)
-       },
-       {
-         .mailboxIds = {SPICommunication::MAILBOX_ID_DATA_FROM_HOST},
-         .buffers = mailbox_data_from_host_buffers,
-         .buffersCount = FIGURE_COUNTOF(mailbox_data_from_host_buffers)
-       },
-       {
-         .mailboxIds = {SPICommunication::MAILBOX_ID_SERIAL_TO_HOST, SPICommunication::MAILBOX_ID_SERIAL_FROM_HOST},
-         .buffers = mailbox_string_buffers,
-         .buffersCount = FIGURE_COUNTOF(mailbox_string_buffers)
-       }
-    };
-#endif
-
 #if COMMS == COMMS_SPI
-    Protocol protocol = {
-      spi_slave,              // comms
-      Protocol::Mode::kSpi,   // mode
-      pools,                  // mailbox_pools
-      FIGURE_COUNTOF(pools)   // mailbox_pools_count
-    };
+    figure::ProtocolParser spi_protocol(config::spi.rx_buffer_, RX_BUFFER_SIZE);
 #endif
 
     HRPWM motor_pwm = {pwm_frequency, *HRTIM1, 3, 5, 4, false, 50, 1000, 1000};
@@ -307,7 +316,7 @@ Communication System::communication_ = {config::usb};
 #endif
 
 #if (COMMS == COMMS_SPI)
-Communication System::communication_(config::protocol);
+Communication System::communication_(config::spi, config::spi_protocol);
 #endif
 
 #if (COMMS == COMMS_UART)
@@ -336,6 +345,8 @@ uint32_t total_uptime;
 
 int32_t index_mod = 0;
 
+uint32_t init_failure = 0;
+
 void config_init();
 
 void system_init() {
@@ -352,14 +363,17 @@ void system_init() {
         System::log("Motor encoder init success");
     } else {
         System::log("Motor encoder init failure");
+        init_failure |= 1;
     }
     if (config::output_encoder.init()) {
         System::log("Output encoder init success");
     } else {
         System::log("Output encoder init failure");
+        init_failure |= 1;
     }
     if (drv_regs_error) {
         System::log("drv configure failure");
+        init_failure |= 1;
     } else {
         System::log("drv configure success");
     }
@@ -367,6 +381,7 @@ void system_init() {
         System::log("torque sensor init success");
     } else {
         System::log("torque sensor init failure");
+        init_failure |= 1;
     }
     if (config::board_rev.has_bmi270) {
         config::imu.init();
@@ -494,6 +509,7 @@ void system_init() {
 
     config_init();
 
+    config::main_loop.init();
     TIM1->CR1 = TIM_CR1_CEN; // start main loop interrupt
     config::usb.connect();
     HRTIM1->sMasterRegs.MCR = HRTIM_MCR_TDCEN + HRTIM_MCR_TECEN + HRTIM_MCR_TFCEN; // start high res timer
@@ -596,6 +612,8 @@ void system_maintenance() {
     config::main_loop.status_.error.driver_fault |= driver_fault;    // maybe latch driver fault until reset
     index_mod = config::motor_encoder.index_error(param->fast_loop_param.motor_encoder.cpr);
     config_maintenance();
+    // unclearable init failure fault
+    config::main_loop.status_.error.init_failure |= init_failure;
 }
 
 void setup_sleep() {

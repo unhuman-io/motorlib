@@ -47,12 +47,19 @@ class MainLoop {
           output_position_filter_(1.0/frequency_hz), output_velocity_filter_(1.0/frequency_hz, param.output_filter_hz.output_velocity), torque_filter_(1.0/frequency_hz) {
           set_param();
         }
-    void init() {} // todo: init filters with first status
+    void init() {
+#ifdef END_TRIGGER_MAIN_SENSORS
+          output_encoder_.trigger();
+          torque_sensor_.trigger();
+#endif
+    } // todo: init filters with first status
     void update() {
       count_++;
-
+#if !defined(END_TRIGGER_MAIN_SENSORS) && !defined(EXT_TRIGGER_MAIN_SENSORS)
       output_encoder_.trigger();
       torque_sensor_.trigger();
+#endif
+
 
       if (count_ >= frequency_hz_) {
         count_ = 0;
@@ -399,6 +406,10 @@ class MainLoop {
       led_.update();
       //last_receive_data_ = receive_data_;
       IWDG->KR = 0xAAAA;
+#ifdef END_TRIGGER_MAIN_SENSORS
+      output_encoder_.trigger();
+      torque_sensor_.trigger();
+#endif
     }
 
 

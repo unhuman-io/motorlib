@@ -3,6 +3,7 @@
 
 #include "peripheral/spi_encoder.h"
 #include "util.h"
+#include "logger.h"
 
 // Note MA732 encoder expects cpol 1, cpha 1, max 25 mbit
 // 80 ns cs start to sclk, 25 ns sclk end to cs end
@@ -78,7 +79,11 @@ class MA732Encoder : public SPIEncoder {
             reg.bits.value = value;
             send_and_read(reg.word);
             ms_delay(20); 
-            retval = read_register(address) == value;
+            uint8_t read_value = read_register(address);
+            retval = read_value == value;
+            if (!retval) {
+                logger.log_printf("ma732 set reg %x: %x, read %x", address, value, read_value);
+            }
         }
         (*register_operation_)--;
         return retval;

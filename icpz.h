@@ -28,6 +28,7 @@ static uint8_t CRC_BiSS_43_30bit (uint32_t w_InputData);
     api.add_api_variable(prefix "crc_cnt", new APIUint32(&icpz.crc_error_count_));\
     api.add_api_variable(prefix "raw", new APIUint32(&icpz.raw_value_));\
     api.add_api_variable(prefix "rawh", new const APICallback([](){ return u32_to_hex(icpz.raw_value_); }));\
+    api.add_api_variable(prefix "value", new const APIInt32(&icpz.pos_));\
     api.add_api_variable(prefix "diag", new const APICallback([](){ return icpz.read_diagnosis(); }));\
     api.add_api_variable(prefix "conf_write", new const APICallback([](){ return icpz.write_conf(); }));\
     api.add_api_variable(prefix "auto_ana", new const APICallback([](){ icpz.start_auto_adj_ana(); return "ok"; }));\
@@ -123,9 +124,10 @@ class ICPZ : public EncoderBase {
       if (ongoing_read_) {
         spidma_.finish_readwrite();
         uint32_t data = ((data_[1] << 16) | (data_[2] << 8) | data_[3]) << 8;
-        raw_value_ = data | data_[4];
+        raw_value_ = data >> 8;
+        uint32_t word = data | data_[4];
         Diag diag = {.word = data_[4]};
-        uint8_t crc6_calc = ~CRC_BiSS_43_30bit(raw_value_ >> 6) & 0x3f;
+        uint8_t crc6_calc = ~CRC_BiSS_43_30bit(word >> 6) & 0x3f;
         error_count_ += !diag.nErr;
         warn_count_ += !diag.nWarn;
         uint8_t crc_error = diag.crc6 == crc6_calc ? 0 : 1;
@@ -245,8 +247,14 @@ class ICPZ : public EncoderBase {
         std::vector<uint8_t> data_out = {write_register_opcode_, address};
         data_out.insert(data_out.end(), value.begin(), value.end());
         spidma_.readwrite(data_out.data(), data_in, data_out.size(), true);
-        bool retval = read_register(address, value.size()) == value;
+        std::vector<uint8_t> data_read = read_register(address, value.size());
+        bool retval = data_read == value;
         (*register_operation_)--;
+        if (!retval) {
+          for (int i=0; i<value.size(); i++) {
+            logger.log_printf("icpz register %x, set%d: %x, read%d: %x", address, i, value[i], i, data_read[i]);
+          }
+        }
         return retval;
     }
 
