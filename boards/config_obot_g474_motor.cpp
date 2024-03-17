@@ -468,6 +468,7 @@ void system_init() {
         }));
     }
 
+    System::api.add_api_variable("mcmp", new APIUint32(&HRTIM1->sMasterRegs.MCMP1R));
 
     for (auto regs : std::vector<ADC_TypeDef*>{ADC1, ADC2, ADC3, ADC4, ADC5}) {
         regs->CR = ADC_CR_ADVREGEN;
@@ -503,9 +504,21 @@ void system_init() {
     config_init();
 
     config::main_loop.init();
-    TIM1->CR1 = TIM_CR1_CEN; // start main loop interrupt
+
+//          regs_.sTimerxRegs[ch].TIMxCR |= HRTIM_TIMCR_PREEN | HRTIM_TIMCR_TRSTU | HRTIM_TIMCR_CONT;
+
+    NVIC_SetPriority(HRTIM1_Master_IRQn, NVIC_EncodePriority(NVIC_GetPriorityGrouping(), 1, 0));
+    NVIC_EnableIRQ(HRTIM1_Master_IRQn);
+    HRTIM1->sMasterRegs.MDIER = HRTIM_MDIER_MCMP1IE; // interrupt on MCMP1
+   
+    HRTIM1->sMasterRegs.MCMP1R = 100;
+    static_assert(config::main_loop_frequency > CPU_FREQUENCY_HZ/4/65536, "Main loop frequency too low");
+    HRTIM1->sMasterRegs.MPER = CPU_FREQUENCY_HZ/4/config::main_loop_frequency;
+    HRTIM1->sMasterRegs.MCR = HRTIM_MCR_CONT | HRTIM_MCR_PREEN | HRTIM_MCR_MREPU | 7 << HRTIM_MCR_CK_PSC_Pos; // CPU_FREQUENCY * 32 / 2^7 = 42.5 MHz
+
+    //TIM1->CR1 = TIM_CR1_CEN; // start main loop interrupt
     config::usb.connect();
-    HRTIM1->sMasterRegs.MCR = HRTIM_MCR_TDCEN + HRTIM_MCR_TECEN + HRTIM_MCR_TFCEN; // start high res timer
+    HRTIM1->sMasterRegs.MCR |= HRTIM_MCR_MCEN + HRTIM_MCR_TDCEN + HRTIM_MCR_TECEN + HRTIM_MCR_TFCEN; // start high res timer
 }
 
 FrequencyLimiter temp_rate = {10};
