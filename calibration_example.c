@@ -3,7 +3,7 @@
 
 // Can be written by external methods, e.g. bootloader
 Calibration __attribute__((section("calibration_data"))) initial_calibration = {
-    .schema_version = 1,
+    .schema_version = 2,
     .motor_encoder_bias = 0,
     .motor_encoder_index_electrical_offset_pos = 0,
     .output_encoder_bias = 0,
