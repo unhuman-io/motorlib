@@ -260,6 +260,7 @@ typedef struct{
     float torque_sensor_bias;
     float joint_encoder_bias;
     MotorError error_mask;      // can set to ERROR_MASK_ALL or ERROR_MASK_NONE or others
+    uint32_t reserved[9];       // pad to 64 bytes, some dfu-util issue
 } Calibration;
 
 typedef struct {
