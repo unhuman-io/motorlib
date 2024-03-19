@@ -141,6 +141,10 @@ class DRV8323S : public DriverBase {
             [this](uint8_t val){ this->set_idrivep_hs(val); }));
         api.add_api_variable("drv_idrivep_ls", new APICallbackUint8([this](){ return this->get_idrivep_ls(); },
             [this](uint8_t val){ this->set_idrivep_ls(val); }));
+        api.add_api_variable("drv_idriven_hs", new APICallbackUint8([this](){ return this->get_idriven_hs(); },
+            [this](uint8_t val){ this->set_idriven_hs(val); }));
+        api.add_api_variable("drv_idriven_ls", new APICallbackUint8([this](){ return this->get_idriven_ls(); },
+            [this](uint8_t val){ this->set_idriven_ls(val); }));
         api.add_api_variable("drv_tdrive", new APICallbackUint8([this](){ return this->get_tdrive(); },
             [this](uint8_t val){ this->set_tdrive(val); }));
         api.add_api_variable("drv_csa_reg", new APICallbackHex<uint16_t>([this](){ return this->get_csa_reg(); },
@@ -174,6 +178,22 @@ class DRV8323S : public DriverBase {
 
     void set_idrivep_ls(uint8_t val) {
         set_reg_bits(4, 0xF0, val);
+    }
+
+    uint8_t get_idriven_hs() {
+        return get_reg_bits(3, 0xF);
+    }
+
+    void set_idriven_hs(uint8_t val) {
+        set_reg_bits(3, 0xF, val);
+    }
+
+    uint8_t get_idriven_ls() {
+        return get_reg_bits(4, 0xF);
+    }
+
+    void set_idriven_ls(uint8_t val) {
+        set_reg_bits(4, 0xF, val);
     }
 
     uint8_t get_tdrive() {
