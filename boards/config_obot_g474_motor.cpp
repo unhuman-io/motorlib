@@ -35,6 +35,7 @@
 #endif
 
 const Param * const param = (const Param * const) 0x8060000;
+const Calibration * const calibration = (const Calibration * const) 0x8070000;
 extern const char * const name = param->name;
 
 using PWM = HRPWM;
@@ -105,7 +106,7 @@ uint16_t drv_regs_error = 0;
 #include "../peripheral/stm32g4/max31875.h"
 #include "../peripheral/stm32g4/max31889.h"
 #include "../mb85rc64.h"
-
+#include "../messages.h"
 
 extern "C" void SystemClock_Config();
 void pin_config_obot_g474_motor(const BoardRev&);
@@ -188,7 +189,7 @@ namespace config {
       .txDmaIrqN        = DMA2_Channel2_IRQn,
       .txDmaIrqPriority = 5U,
     });
-#endif COMMS_SPI
+#endif // COMMS_SPI
 
 #if COMMS == COMMS_UART
 #if COMMS_UART_NUMBER == 2
@@ -279,7 +280,9 @@ namespace config {
 
     HRPWM motor_pwm = {pwm_frequency, *HRTIM1, 3, 5, 4, false, 50, 1000, 1000};
     USB1 usb;
-    FastLoop fast_loop = {(int32_t) pwm_frequency, motor_pwm, motor_encoder, param->fast_loop_param, &I_A_DR, &I_B_DR, &I_C_DR, &V_BUS_DR};
+    FastLoop fast_loop = {(int32_t) pwm_frequency, motor_pwm, motor_encoder, param->fast_loop_param, *calibration, &I_A_DR, &I_B_DR, &I_C_DR, &V_BUS_DR};
+
+
     LED led = {const_cast<uint16_t*>(reinterpret_cast<volatile uint16_t *>(get_board_pins(board_rev).led_tim_r)), 
                const_cast<uint16_t*>(reinterpret_cast<volatile uint16_t *>(get_board_pins(board_rev).led_tim_g)),
                const_cast<uint16_t*>(reinterpret_cast<volatile uint16_t *>(get_board_pins(board_rev).led_tim_b))};
@@ -305,7 +308,7 @@ namespace config {
 #ifndef ADMITTANCE_CONTROLLER_OVERRIDE
     AdmittanceController admittance_controller = {1.0/main_loop_frequency};
 #endif
-    MainLoop main_loop = {main_loop_frequency, fast_loop, position_controller, torque_controller, impedance_controller, velocity_controller, state_controller, joint_position_controller, admittance_controller, System::communication_, led, output_encoder, torque_sensor, drv, param->main_loop_param};
+    MainLoop main_loop = {main_loop_frequency, fast_loop, position_controller, torque_controller, impedance_controller, velocity_controller, state_controller, joint_position_controller, admittance_controller, System::communication_, led, output_encoder, torque_sensor, drv, param->main_loop_param, *calibration};
 };
 
 #if COMMS == COMMS_USB
@@ -329,7 +332,7 @@ void usb_interrupt() {
     config::usb.interrupt();
 }
 
-Actuator System::actuator_ = {config::fast_loop, config::main_loop, param->startup_param};
+Actuator System::actuator_ = {config::fast_loop, config::main_loop, param->startup_param, *calibration};
 
 float v3v3 = 3.3;
 
@@ -490,6 +493,10 @@ void system_init() {
 
     v3v3 =  *((uint16_t *) (0x1FFF75AA)) * 3.0 / V_REF_DR;
     System::log("3v3: " + std::to_string(v3v3));
+    System::log("obias: " +  std::to_string(calibration->output_encoder_bias));
+    System::log("tbias: " + std::to_string(calibration->torque_sensor_bias));
+    System::log("offset: " + std::to_string(calibration->motor_encoder_index_electrical_offset_pos));
+    System::log("mbias: " + std::to_string(calibration->motor_encoder_bias));
 
     ADC1->GCOMP = v3v3*4096;
     ADC1->CFGR2 |= ADC_CFGR2_GCOMP;

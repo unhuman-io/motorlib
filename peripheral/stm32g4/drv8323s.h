@@ -42,7 +42,7 @@ class DRV8323S : public DriverBase {
     }
 
     void disable() {
-        uint32_t status = get_drv_status();
+        uint32_t __attribute((unused)) status = get_drv_status();
         // todo bring back logger in isr safe way
         // logger.log_printf("drv8323 disabled, status1: %03x status2: %03x", status & 0xFFFF, status >> 16);
         // std::string s = "drv8323 status bits";
