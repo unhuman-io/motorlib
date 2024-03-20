@@ -100,17 +100,7 @@ void ADC5_IRQHandler(void)
   SET_SCOPE_PIN(C,1);
   INTERRUPT_PROFILE_START;
   fast_loop_interrupt();
-  ADC5->ISR = ADC_ISR_JEOS | ADC_ISR_JEOC;
+  ADC5->ISR = ADC_ISR_JEOS;
   INTERRUPT_PROFILE_END(fastloop)
   CLEAR_SCOPE_PIN(C,1);
-}
-
-void HRTIM1_Master_IRQHandler(void)
-{
-  SET_SCOPE_PIN(C,0);
-  INTERRUPT_PROFILE_START;
-  main_loop_interrupt();
-  HRTIM1->sMasterRegs.MICR = HRTIM_MICR_MCMP1;
-  INTERRUPT_PROFILE_END(mainloop);
-  CLEAR_SCOPE_PIN(C,0); 
 }
