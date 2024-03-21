@@ -325,6 +325,7 @@ void system_init();
 void system_run();
 void main_loop_interrupt();
 void fast_loop_interrupt();
+void system_loop_interrupt();
 void usb_interrupt();
 
 #ifdef __cplusplus

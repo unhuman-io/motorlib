@@ -37,6 +37,9 @@
 const Param * const param = (const Param * const) 0x8060000;
 const Calibration * const calibration = (const Calibration * const) 0x8070000;
 extern const char * const name = param->name;
+namespace config {
+    const uint32_t system_loop_frequency =  1000;
+};
 
 using PWM = HRPWM;
 
@@ -120,6 +123,7 @@ extern "C" void board_init() {
     GPIO_SETL(C, 1, GPIO_MODE::OUTPUT, GPIO_SPEED::HIGH, 0); // fast loop scope
     GPIO_SETL(C, 2, GPIO_MODE::OUTPUT, GPIO_SPEED::HIGH, 0); // usb int scope
     GPIO_SETL(C, 4, GPIO_MODE::OUTPUT, GPIO_SPEED::HIGH, 0); // main() scope
+    GPIO_SETL(A, 0, GPIO_MODE::OUTPUT, GPIO_SPEED::HIGH, 0); // system loop scope
 #endif
 }
 
@@ -472,6 +476,7 @@ void system_init() {
     }
 
     System::api.add_api_variable("mcmp", new APIUint32(&HRTIM1->sMasterRegs.MCMP1R));
+    System::api.add_api_variable("t1cmp", new APIUint32(&TIM1->CCR1));
 
     for (auto regs : std::vector<ADC_TypeDef*>{ADC1, ADC2, ADC3, ADC4, ADC5}) {
         regs->CR = ADC_CR_ADVREGEN;
@@ -523,7 +528,7 @@ void system_init() {
     HRTIM1->sMasterRegs.MPER = CPU_FREQUENCY_HZ/4/config::main_loop_frequency;
     HRTIM1->sMasterRegs.MCR = HRTIM_MCR_CONT | HRTIM_MCR_PREEN | HRTIM_MCR_MREPU | 7 << HRTIM_MCR_CK_PSC_Pos; // CPU_FREQUENCY * 32 / 2^7 = 42.5 MHz
 
-    //TIM1->CR1 = TIM_CR1_CEN; // start main loop interrupt
+    TIM1->CR1 = TIM_CR1_CEN; // start system loop interrupt
     config::usb.connect();
     HRTIM1->sMasterRegs.MCR |= HRTIM_MCR_MCEN + HRTIM_MCR_TDCEN + HRTIM_MCR_TECEN + HRTIM_MCR_TFCEN; // start high res timer
 }
