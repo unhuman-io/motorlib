@@ -123,7 +123,7 @@ void pin_config_obot_g474_motor(const BoardRev &board_rev) {
         TIM1->CCR1 = 1;
         TIM1->PSC = 15;
         TIM1->CR2 = TIM_CR2_CCPC; // CC preload enable
-        TIM1->SMCR = 14 << TIM_SMCR_TS_Pos | 6 << TIM_SMCR_SMS_Pos; // trigger mode on tim_itr10 - hrtim_out_sync2
+        TIM1->SMCR = TIM_SMCR_TS_3 | 6 << TIM_SMCR_TS_Pos | 6 << TIM_SMCR_SMS_Pos; // trigger mode on tim_itr10 - hrtim_out_sync2
         NVIC_SetPriority(TIM1_CC_IRQn, NVIC_EncodePriority(NVIC_GetPriorityGrouping(), 3, 0));
         NVIC_EnableIRQ(TIM1_CC_IRQn);
 
