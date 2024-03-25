@@ -523,18 +523,13 @@ void system_init() {
     NVIC_EnableIRQ(HRTIM1_Master_IRQn);
     HRTIM1->sMasterRegs.MDIER = HRTIM_MDIER_MCMP1IE; // interrupt on MCMP1
    
-    HRTIM1->sMasterRegs.MCMP1R = 100;
+    HRTIM1->sMasterRegs.MCMP1R = 400;
     static_assert(config::main_loop_frequency > CPU_FREQUENCY_HZ/4/65536, "Main loop frequency too low");
     HRTIM1->sMasterRegs.MPER = CPU_FREQUENCY_HZ/4/config::main_loop_frequency;
-    HRTIM1->sMasterRegs.MCR = 2 << HRTIM_MCR_SYNC_OUT_Pos | HRTIM_MCR_CONT | HRTIM_MCR_PREEN | HRTIM_MCR_MREPU | 7 << HRTIM_MCR_CK_PSC_Pos; // CPU_FREQUENCY * 32 / 2^7 = 42.5 MHz
-
-    //TIM1->CR1 = TIM_CR1_CEN; // start system loop interrupt
+    HRTIM1->sMasterRegs.MCR = 0 << HRTIM_MCR_SYNC_SRC_Pos | 2 << HRTIM_MCR_SYNC_OUT_Pos | HRTIM_MCR_CONT | HRTIM_MCR_PREEN | HRTIM_MCR_MREPU | 7 << HRTIM_MCR_CK_PSC_Pos; // CPU_FREQUENCY * 32 / 2^7 = 42.5 MHz
     config::usb.connect();
-    //logger.log_printf("mcr_cnt %d, t1_cnt %d", HRTIM1->sMasterRegs.MCNTR, TIM1->CNT);
-    HRTIM1->sMasterRegs.MCR |= HRTIM_MCR_MCEN + HRTIM_MCR_TDCEN + HRTIM_MCR_TECEN + HRTIM_MCR_TFCEN; // start high res timer
-    // for(int i=0;i<10;i++) {
-    //     logger.log_printf("mcr_cnt %d, t1_cnt %d", HRTIM1->sMasterRegs.MCNTR, TIM1->CNT);
-    // }
+
+    HRTIM1->sMasterRegs.MCR |= HRTIM_MCR_MCEN + HRTIM_MCR_TDCEN + HRTIM_MCR_TECEN + HRTIM_MCR_TFCEN; // start high res timer, also triggers TIM1
 }
 
 FrequencyLimiter temp_rate = {10};
