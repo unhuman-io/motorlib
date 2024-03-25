@@ -533,7 +533,6 @@ void system_init() {
 }
 
 FrequencyLimiter temp_rate = {10};
-FrequencyLimiter zero_rate = {100};
 float T = 0;
 MedianFilter<> board_temperature_filter;
 MedianFilter<> microcontroller_temperature_filter;
@@ -543,11 +542,43 @@ MedianFilter<> mosfet2_temperature_filter;
 void config_maintenance();
 void system_maintenance() {
     static bool driver_fault = false;
-    if (zero_rate.run()) {
-        if (config::drv.is_enabled() && !(config::main_loop.mode_ == DAMPED)) {
-            config::fast_loop.zero_current_sensors(I_A0_DR, I_B0_DR, I_C0_DR);
-        }
+    if (config::drv.is_enabled() && !(config::main_loop.mode_ == DAMPED)) {
+        config::fast_loop.zero_current_sensors(I_A0_DR, I_B0_DR, I_C0_DR);
+    }   
+    
+    float bus_current = config::main_loop.status_.power/config::main_loop.status_.fast_loop.vbus;
+    if (!config::board_rev.has_I48V_sense) {
+        round_robin_logger.log_data(BUS_CURRENT_INDEX, bus_current);
     }
+    round_robin_logger.log_data(MOTOR_POWER_INDEX, config::main_loop.status_.fast_loop.power);
+    if (!(GPIOC->IDR & 1<<14)) {
+        driver_fault = true;
+    } else if (param->main_loop_param.no_latch_driver_fault) {
+        driver_fault = false;
+    }
+
+    if (config::board_rev.has_5V_sense) {
+        v5v = (float) config::V5V_DR/4096*v3v3*2;
+        round_robin_logger.log_data(VOLTAGE_5V_INDEX, v5v);
+    }
+    if (config::board_rev.has_I5V_sense) {
+        i5v = (float) I5V/4096*v3v3;
+        round_robin_logger.log_data(CURRENT_5V_INDEX, i5v);
+    }
+    if (config::board_rev.has_I48V_sense) {
+        i48v = -((float) I_BUS_DR-2048)/4096*v3v3/20/.0005;
+        round_robin_logger.log_data(BUS_CURRENT_INDEX, i48v);
+    }
+    round_robin_logger.log_data(BUS_VOLTAGE_INDEX, config::main_loop.status_.fast_loop.vbus);
+    round_robin_logger.log_data(USB_ERROR_COUNT_INDEX, config::usb.error_count_);
+    config::main_loop.status_.error.driver_fault |= driver_fault;    // maybe latch driver fault until reset
+    index_mod = config::motor_encoder.index_error(param->fast_loop_param.motor_encoder.cpr);
+    config_maintenance();
+    // unclearable init failure fault
+    config::main_loop.status_.error.init_failure |= init_failure;
+}
+
+void main_maintenance() {
     if (temp_rate.run()) {
         ADC1->CR |= ADC_CR_JADSTART;
         while(ADC1->CR & ADC_CR_JADSTART);
@@ -599,38 +630,7 @@ void system_maintenance() {
 
             config::i2c1.init(400);
         }
-    }   
-    
-    float bus_current = config::main_loop.status_.power/config::main_loop.status_.fast_loop.vbus;
-    if (!config::board_rev.has_I48V_sense) {
-        round_robin_logger.log_data(BUS_CURRENT_INDEX, bus_current);
     }
-    round_robin_logger.log_data(MOTOR_POWER_INDEX, config::main_loop.status_.fast_loop.power);
-    if (!(GPIOC->IDR & 1<<14)) {
-        driver_fault = true;
-    } else if (param->main_loop_param.no_latch_driver_fault) {
-        driver_fault = false;
-    }
-
-    if (config::board_rev.has_5V_sense) {
-        v5v = (float) config::V5V_DR/4096*v3v3*2;
-        round_robin_logger.log_data(VOLTAGE_5V_INDEX, v5v);
-    }
-    if (config::board_rev.has_I5V_sense) {
-        i5v = (float) I5V/4096*v3v3;
-        round_robin_logger.log_data(CURRENT_5V_INDEX, i5v);
-    }
-    if (config::board_rev.has_I48V_sense) {
-        i48v = -((float) I_BUS_DR-2048)/4096*v3v3/20/.0005;
-        round_robin_logger.log_data(BUS_CURRENT_INDEX, i48v);
-    }
-    round_robin_logger.log_data(BUS_VOLTAGE_INDEX, config::main_loop.status_.fast_loop.vbus);
-    round_robin_logger.log_data(USB_ERROR_COUNT_INDEX, config::usb.error_count_);
-    config::main_loop.status_.error.driver_fault |= driver_fault;    // maybe latch driver fault until reset
-    index_mod = config::motor_encoder.index_error(param->fast_loop_param.motor_encoder.cpr);
-    config_maintenance();
-    // unclearable init failure fault
-    config::main_loop.status_.error.init_failure |= init_failure;
 }
 
 void setup_sleep() {
