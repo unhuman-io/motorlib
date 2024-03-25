@@ -17,7 +17,7 @@ void system_log(std::string s) {
 }
 
 void system_loop_interrupt() {
-    us_delay(200);
+    System::system_loop();
 }
 
 Logger logger;

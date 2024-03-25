@@ -765,6 +765,7 @@ class MainLoop {
     friend class Actuator;
     friend void system_init();
     friend void system_maintenance();
+    friend void main_maintenance();
     friend void config_init();
     friend void config_maintenance();
     friend void load_send_data(const MainLoop &main_loop, SendData *const data);
