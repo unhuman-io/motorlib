@@ -159,6 +159,6 @@ void system_maintenance() {
     
     config_maintenance();
 }
-
+void main_maintenance() {}
 
 #include "../../motorlib/system.cpp"

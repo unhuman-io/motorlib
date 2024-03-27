@@ -176,6 +176,7 @@ void system_maintenance() {
     index_mod = config::motor_encoder.index_error(param->fast_loop_param.motor_encoder.cpr);
     config_maintenance();
 }
+void main_maintenance() {}
 
 void setup_sleep() {
     NVIC_DisableIRQ(TIM1_UP_TIM16_IRQn);
