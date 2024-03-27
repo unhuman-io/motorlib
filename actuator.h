@@ -11,13 +11,14 @@ void system_init();
 
 class Actuator {
  public:
-    Actuator(FastLoop &fast_loop, MainLoop &main_loop, const volatile StartupParam &startup_param) : fast_loop_(fast_loop), main_loop_(main_loop), startup_param_(startup_param) {
-      startup_motor_bias_ = startup_param_.motor_encoder_bias;
+    Actuator(FastLoop &fast_loop, MainLoop &main_loop, const volatile StartupParam &startup_param, const volatile Calibration &calibration) : fast_loop_(fast_loop), main_loop_(main_loop), startup_param_(startup_param), calibration_(calibration) {
+      // startup_motor_bias_ = startup_param_.motor_encoder_bias;
+      startup_motor_bias_ = calibration_.motor_encoder_bias;
     }
     void start() {
       if (!startup_param_.no_driver_enable) {
          main_loop_.driver_.enable();
-         main_loop_.set_mode(CLEAR_FAULTS); 
+         main_loop_.set_mode(CLEAR_FAULTS);
       }
 
       main_loop_.set_rollover(fast_loop_.get_rollover());
@@ -68,12 +69,22 @@ class Actuator {
     }
     void set_bias() {
       MainLoopStatus status = main_loop_.get_status();
-      if (startup_param_.output_encoder_rollover > 0 && status.output_position > startup_param_.output_encoder_rollover) {
-         main_loop_.adjust_output_encoder(-2*M_PI);
-         status.output_position -= 2*M_PI;
-      } else if (startup_param_.output_encoder_rollover < 0 && status.output_position < startup_param_.output_encoder_rollover) {
-         main_loop_.adjust_output_encoder(2*M_PI);
-         status.output_position += 2*M_PI;
+      if (startup_param_.output_encoder_rollover > 0) {
+         if (status.output_position > startup_param_.output_encoder_rollover) {
+            main_loop_.adjust_output_encoder(-2 * M_PI);
+            status.output_position -= 2 * M_PI;
+         } else if (status.output_position < -startup_param_.output_encoder_rollover) {
+            main_loop_.adjust_output_encoder(2 * M_PI);
+            status.output_position += 2 * M_PI;
+         }
+      } else if (startup_param_.output_encoder_rollover < 0) {
+         if (status.output_position < startup_param_.output_encoder_rollover) {
+            main_loop_.adjust_output_encoder(2 * M_PI);
+            status.output_position += 2 * M_PI;
+         } else if (status.output_position > -startup_param_.output_encoder_rollover) {
+            main_loop_.adjust_output_encoder(-2 * M_PI);
+            status.output_position -= 2 * M_PI;
+         }
       }
       switch(startup_param_.motor_encoder_startup) {
          default:
@@ -140,6 +151,7 @@ private:
     FastLoop &fast_loop_;
     MainLoop &main_loop_;
     const volatile StartupParam &startup_param_;
+    const volatile Calibration &calibration_;
     float startup_motor_bias_;
 
     friend class System;
