@@ -72,11 +72,12 @@ class SPICommunication : public CommunicationBase {
   bool send_string(const char* string, uint16_t length) {
     // while(send_active());
     uint8_t packet_size;
-    length = std::min(length, (uint16_t) 64); // todo support larger packets
+    length = std::min(length, (uint16_t) 65); // todo support larger packets
     uint8_t* packet = protocol_.generatePacket((const uint8_t *) string, length, OBOT_ASCII_RESPONSE, &packet_size);
-    std::memcpy(&spi_.tx_buffer_[0], &packet[0], packet_size);
+    spi_.tx_buffer_[0] = 0; // Has trouble with the first byte when packet starts mid transaction
+    std::memcpy(&spi_.tx_buffer_[1], &packet[0], packet_size);
     SpiSlaveFigure::BufferDescriptor desc = {};
-    desc.length = packet_size;
+    desc.length = packet_size+1;
     desc.txBuffer = spi_.tx_buffer_;
     spi_.startTransaction(desc);
     return true;
@@ -112,9 +113,10 @@ class SPICommunication : public CommunicationBase {
     // Packetize obot_status and send
     uint8_t packet_size;
     uint8_t* packet = protocol_.generatePacket(reinterpret_cast<uint8_t*>(&obot_status_), sizeof(SendData), OBOT_STATUS, &packet_size);
-    std::memcpy(&spi_.tx_buffer_[0], &packet[0], packet_size);
+    spi_.tx_buffer_[0] = 0; // Has trouble with the first byte when packet starts mid transaction
+    std::memcpy(&spi_.tx_buffer_[1], &packet[0], packet_size);
     SpiSlaveFigure::BufferDescriptor desc = {};
-    desc.length = packet_size;
+    desc.length = packet_size+1;
     desc.txBuffer = spi_.tx_buffer_;
     spi_.startTransaction(desc);
     status_sent_ = true;
