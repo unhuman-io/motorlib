@@ -16,6 +16,10 @@ void system_log(std::string s) {
     System::log(s);
 }
 
+void system_loop_interrupt() {
+    System::system_loop();
+}
+
 Logger logger;
 RoundRobinLogger round_robin_logger;
 uint32_t System::count_ = 0;

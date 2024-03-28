@@ -15,6 +15,7 @@ extern uint32_t t_period_fastloop;
 extern uint32_t t_period_mainloop;
 
 void system_maintenance();
+void main_maintenance();
 
 #ifndef TOGGLE_SCOPE_PIN
 #define TOGGLE_SCOPE_PIN(X,x)
@@ -288,9 +289,7 @@ class System {
                 communication_.send_string(response.c_str(), response.length());
                 t_start = get_clock();
             }
-            system_maintenance();
-            actuator_.maintenance();
-            round_robin_logger.log_data(UPTIME_INDEX, get_uptime());
+            main_maintenance();
         }
     }
     static void main_loop_interrupt() {
@@ -298,6 +297,11 @@ class System {
     }
     static void fast_loop_interrupt() {
         actuator_.fast_loop_.update();
+    }
+    static void system_loop() {
+        system_maintenance();
+        actuator_.maintenance();
+        round_robin_logger.log_data(UPTIME_INDEX, get_uptime());
     }
     static void log(std::string str) {
         logger.log(str);
@@ -325,6 +329,7 @@ void system_init();
 void system_run();
 void main_loop_interrupt();
 void fast_loop_interrupt();
+void system_loop_interrupt();
 void usb_interrupt();
 
 #ifdef __cplusplus
