@@ -37,6 +37,9 @@
 const Param * const param = (const Param * const) 0x8060000;
 const Calibration * const calibration = (const Calibration * const) 0x8070000;
 extern const char * const name = param->name;
+namespace config {
+    const uint32_t system_loop_frequency =  1000;
+};
 
 using PWM = HRPWM;
 
@@ -120,6 +123,7 @@ extern "C" void board_init() {
     GPIO_SETL(C, 1, GPIO_MODE::OUTPUT, GPIO_SPEED::HIGH, 0); // fast loop scope
     GPIO_SETL(C, 2, GPIO_MODE::OUTPUT, GPIO_SPEED::HIGH, 0); // usb int scope
     GPIO_SETL(C, 4, GPIO_MODE::OUTPUT, GPIO_SPEED::HIGH, 0); // main() scope
+    GPIO_SETL(A, 0, GPIO_MODE::OUTPUT, GPIO_SPEED::HIGH, 0); // system loop scope
 #endif
 }
 
@@ -472,6 +476,7 @@ void system_init() {
     }
 
     System::api.add_api_variable("mcmp", new APIUint32(&HRTIM1->sMasterRegs.MCMP1R));
+    System::api.add_api_variable("t1cmp", new APIUint32(&TIM1->CCR1));
 
     for (auto regs : std::vector<ADC_TypeDef*>{ADC1, ADC2, ADC3, ADC4, ADC5}) {
         regs->CR = ADC_CR_ADVREGEN;
@@ -518,18 +523,16 @@ void system_init() {
     NVIC_EnableIRQ(HRTIM1_Master_IRQn);
     HRTIM1->sMasterRegs.MDIER = HRTIM_MDIER_MCMP1IE; // interrupt on MCMP1
    
-    HRTIM1->sMasterRegs.MCMP1R = 100;
+    HRTIM1->sMasterRegs.MCMP1R = 400;
     static_assert(config::main_loop_frequency > CPU_FREQUENCY_HZ/4/65536, "Main loop frequency too low");
     HRTIM1->sMasterRegs.MPER = CPU_FREQUENCY_HZ/4/config::main_loop_frequency;
-    HRTIM1->sMasterRegs.MCR = HRTIM_MCR_CONT | HRTIM_MCR_PREEN | HRTIM_MCR_MREPU | 7 << HRTIM_MCR_CK_PSC_Pos; // CPU_FREQUENCY * 32 / 2^7 = 42.5 MHz
-
-    //TIM1->CR1 = TIM_CR1_CEN; // start main loop interrupt
+    HRTIM1->sMasterRegs.MCR = 0 << HRTIM_MCR_SYNC_SRC_Pos | 2 << HRTIM_MCR_SYNC_OUT_Pos | HRTIM_MCR_CONT | HRTIM_MCR_PREEN | HRTIM_MCR_MREPU | 7 << HRTIM_MCR_CK_PSC_Pos; // CPU_FREQUENCY * 32 / 2^7 = 42.5 MHz
     config::usb.connect();
-    HRTIM1->sMasterRegs.MCR |= HRTIM_MCR_MCEN + HRTIM_MCR_TDCEN + HRTIM_MCR_TECEN + HRTIM_MCR_TFCEN; // start high res timer
+
+    HRTIM1->sMasterRegs.MCR |= HRTIM_MCR_MCEN + HRTIM_MCR_TDCEN + HRTIM_MCR_TECEN + HRTIM_MCR_TFCEN; // start high res timer, also triggers TIM1
 }
 
 FrequencyLimiter temp_rate = {10};
-FrequencyLimiter zero_rate = {100};
 float T = 0;
 MedianFilter<> board_temperature_filter;
 MedianFilter<> microcontroller_temperature_filter;
@@ -539,11 +542,43 @@ MedianFilter<> mosfet2_temperature_filter;
 void config_maintenance();
 void system_maintenance() {
     static bool driver_fault = false;
-    if (zero_rate.run()) {
-        if (config::drv.is_enabled() && !(config::main_loop.mode_ == DAMPED)) {
-            config::fast_loop.zero_current_sensors(I_A0_DR, I_B0_DR, I_C0_DR);
-        }
+    if (config::drv.is_enabled() && !(config::main_loop.mode_ == DAMPED)) {
+        config::fast_loop.zero_current_sensors(I_A0_DR, I_B0_DR, I_C0_DR);
+    }   
+    
+    float bus_current = config::main_loop.status_.power/config::main_loop.status_.fast_loop.vbus;
+    if (!config::board_rev.has_I48V_sense) {
+        round_robin_logger.log_data(BUS_CURRENT_INDEX, bus_current);
     }
+    round_robin_logger.log_data(MOTOR_POWER_INDEX, config::main_loop.status_.fast_loop.power);
+    if (!(GPIOC->IDR & 1<<14)) {
+        driver_fault = true;
+    } else if (param->main_loop_param.no_latch_driver_fault) {
+        driver_fault = false;
+    }
+
+    if (config::board_rev.has_5V_sense) {
+        v5v = (float) config::V5V_DR/4096*v3v3*2;
+        round_robin_logger.log_data(VOLTAGE_5V_INDEX, v5v);
+    }
+    if (config::board_rev.has_I5V_sense) {
+        i5v = (float) I5V/4096*v3v3;
+        round_robin_logger.log_data(CURRENT_5V_INDEX, i5v);
+    }
+    if (config::board_rev.has_I48V_sense) {
+        i48v = -((float) I_BUS_DR-2048)/4096*v3v3/20/.0005;
+        round_robin_logger.log_data(BUS_CURRENT_INDEX, i48v);
+    }
+    round_robin_logger.log_data(BUS_VOLTAGE_INDEX, config::main_loop.status_.fast_loop.vbus);
+    round_robin_logger.log_data(USB_ERROR_COUNT_INDEX, config::usb.error_count_);
+    config::main_loop.status_.error.driver_fault |= driver_fault;    // maybe latch driver fault until reset
+    index_mod = config::motor_encoder.index_error(param->fast_loop_param.motor_encoder.cpr);
+    config_maintenance();
+    // unclearable init failure fault
+    config::main_loop.status_.error.init_failure |= init_failure;
+}
+
+void main_maintenance() {
     if (temp_rate.run()) {
         ADC1->CR |= ADC_CR_JADSTART;
         while(ADC1->CR & ADC_CR_JADSTART);
@@ -595,38 +630,7 @@ void system_maintenance() {
 
             config::i2c1.init(400);
         }
-    }   
-    
-    float bus_current = config::main_loop.status_.power/config::main_loop.status_.fast_loop.vbus;
-    if (!config::board_rev.has_I48V_sense) {
-        round_robin_logger.log_data(BUS_CURRENT_INDEX, bus_current);
     }
-    round_robin_logger.log_data(MOTOR_POWER_INDEX, config::main_loop.status_.fast_loop.power);
-    if (!(GPIOC->IDR & 1<<14)) {
-        driver_fault = true;
-    } else if (param->main_loop_param.no_latch_driver_fault) {
-        driver_fault = false;
-    }
-
-    if (config::board_rev.has_5V_sense) {
-        v5v = (float) config::V5V_DR/4096*v3v3*2;
-        round_robin_logger.log_data(VOLTAGE_5V_INDEX, v5v);
-    }
-    if (config::board_rev.has_I5V_sense) {
-        i5v = (float) I5V/4096*v3v3;
-        round_robin_logger.log_data(CURRENT_5V_INDEX, i5v);
-    }
-    if (config::board_rev.has_I48V_sense) {
-        i48v = -((float) I_BUS_DR-2048)/4096*v3v3/20/.0005;
-        round_robin_logger.log_data(BUS_CURRENT_INDEX, i48v);
-    }
-    round_robin_logger.log_data(BUS_VOLTAGE_INDEX, config::main_loop.status_.fast_loop.vbus);
-    round_robin_logger.log_data(USB_ERROR_COUNT_INDEX, config::usb.error_count_);
-    config::main_loop.status_.error.driver_fault |= driver_fault;    // maybe latch driver fault until reset
-    index_mod = config::motor_encoder.index_error(param->fast_loop_param.motor_encoder.cpr);
-    config_maintenance();
-    // unclearable init failure fault
-    config::main_loop.status_.error.init_failure |= init_failure;
 }
 
 void setup_sleep() {

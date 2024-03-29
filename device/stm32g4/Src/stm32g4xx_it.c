@@ -25,6 +25,7 @@ void ADC5_IRQHandler(void) __attribute__((section (".ccmram")));
 #include "../../motorlib/util.h"
 INTERRUPT_PROFILE_GLOBALS(fastloop);
 INTERRUPT_PROFILE_GLOBALS(mainloop);
+INTERRUPT_PROFILE_GLOBALS(systemloop);
 INTERRUPT_PROFILE_GLOBALS(comint);
 
 void NMI_Handler(void)
@@ -85,14 +86,14 @@ void USB_LP_IRQHandler(void)
   CLEAR_SCOPE_PIN(C,2); 
 }
 
-void TIM1_UP_TIM16_IRQHandler(void)
+void TIM1_CC_IRQHandler(void)
 {
-  SET_SCOPE_PIN(C,0);
+  SET_SCOPE_PIN(A,0);
   INTERRUPT_PROFILE_START;
-  main_loop_interrupt();
+  system_loop_interrupt();
   TIM1->SR = 0;
-  INTERRUPT_PROFILE_END(mainloop);
-  CLEAR_SCOPE_PIN(C,0); 
+  INTERRUPT_PROFILE_END(systemloop);
+  CLEAR_SCOPE_PIN(A,0); 
 }
 
 void ADC5_IRQHandler(void)
