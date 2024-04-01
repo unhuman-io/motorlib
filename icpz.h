@@ -169,7 +169,7 @@ class ICPZ : public EncoderBase {
 
     void clear_diag() {
       (*register_operation_)++;
-      set_register(bank_, Addr::COMMANDS, {SCLEAR});
+      set_register(bank_, Addr::COMMANDS, {SCLEAR}, true);
       (*register_operation_)--;
     }
 
@@ -237,9 +237,10 @@ class ICPZ : public EncoderBase {
     }
 
     // non interrupt context
-    bool set_register(uint8_t bank, uint8_t address, const std::vector<uint8_t> &value) {
+    bool set_register(uint8_t bank, uint8_t address, const std::vector<uint8_t> &value, bool set_only = false) {
         (*register_operation_)++;
-        uint8_t data_in[std::max(value.size(),(std::size_t) 3)];
+        bool retval = true;
+        uint8_t data_in[std::max(value.size()+2,(std::size_t) 3)];
         if (!set_bank(bank)) {
           (*register_operation_)--;
           return false;
@@ -247,13 +248,17 @@ class ICPZ : public EncoderBase {
         std::vector<uint8_t> data_out = {write_register_opcode_, address};
         data_out.insert(data_out.end(), value.begin(), value.end());
         spidma_.readwrite(data_out.data(), data_in, data_out.size(), true);
-        std::vector<uint8_t> data_read = read_register(address, value.size());
-        bool retval = data_read == value;
-        (*register_operation_)--;
-        if (!retval) {
-          for (int i=0; i<value.size(); i++) {
-            logger.log_printf("icpz register %x, set%d: %x, read%d: %x", address, i, value[i], i, data_read[i]);
+        if (!set_only) {
+          std::vector<uint8_t> data_read = read_register(address, value.size());
+          retval = data_read == value;
+          (*register_operation_)--;
+          if (!retval) {
+            for (int i=0; i<value.size(); i++) {
+              logger.log_printf("icpz register %x, set%d: %x, read%d: %x", address, i, value[i], i, data_read[i]);
+            }
           }
+        } else {
+          (*register_operation_)--;
         }
         return retval;
     }
@@ -520,6 +525,78 @@ class ICPZ : public EncoderBase {
     friend void config_init();
     friend void config_maintenance();
 
+};
+
+class ICPZDMA : public ICPZ {
+ public:
+    ICPZDMA(SPIDMA &spidma, Disk disk = Default) : ICPZ(spidma, disk) {}
+    void trigger() {
+      // if (!*register_operation_) {
+      //   ongoing_read_ = true;
+      //   //spidma_.start_readwrite(command_, data_, sizeof(command_));
+      // }
+    }
+    int32_t read() {
+      if (!*register_operation_) {
+        // Can only read when transactions are not active. Must be guaranteed 
+        // by timing setup.
+        uint32_t data = ((data_[1] << 16) | (data_[2] << 8) | data_[3]) << 8;
+        raw_value_ = data >> 8;
+        uint32_t word = data | data_[4];
+        Diag diag = {.word = data_[4]};
+        uint8_t crc6_calc = ~CRC_BiSS_43_30bit(word >> 6) & 0x3f;
+        error_count_ += !diag.nErr;
+        warn_count_ += !diag.nWarn;
+        uint8_t crc_error = diag.crc6 == crc6_calc ? 0 : 1;
+        crc_error_count_ += crc_error;
+        if (!crc_error) {
+          int32_t diff = (data - last_data_); // rollover summing
+          pos_ += diff/256;
+          //pos_ = data/256;
+          last_data_ = data;
+        }
+        if (!diag.nErr) {
+          //clear_diag();
+        }
+        ongoing_read_ = false;
+      }
+      return get_value();
+    }
+    void start_continuous_read() {
+      DMAMUX1_Channel0->CCR = 2 << DMAMUX_CxCR_SYNC_ID_Pos | 4 << DMAMUX_CxCR_NBREQ_Pos | 2 << DMAMUX_CxCR_SPOL_Pos | DMAMUX_CxCR_SE | DMA_REQUEST_SPI3_TX;
+      DMAMUX1_Channel1->CCR = 4 << DMAMUX_CxCR_NBREQ_Pos | DMAMUX_CxCR_EGE | DMA_REQUEST_SPI3_RX;
+      spidma_.start_continuous_readwrite(command_, data_, sizeof(command_));
+      // start automatic CS
+      HRTIM1->sTimerxRegs[0].TIMxDIER = HRTIM_TIMDIER_CMP1DE;
+     // HRTIM1->sTimerxRegs[0].CMP1xR = 47000;
+      DMA1_Channel5->CCR = DMA_CCR_CIRC | DMA_CCR_DIR | DMA_CCR_EN | DMA_CCR_MINC | DMA_CCR_MSIZE_1 | DMA_CCR_PSIZE_1;
+    }
+    void stop_continuous_read() {
+      // stop automatic CS
+      DMA1_Channel5->CCR = 0;
+     // HRTIM1->sTimerxRegs[0].CMP1xR = 0;
+      HRTIM1->sTimerxRegs[0].TIMxDIER = 0;
+      // wait for CS high
+      while(!(GPIOD->IDR & 0x4));
+      spidma_.stop_continuous_readwrite();
+      DMAMUX1_Channel0->CCR = DMA_REQUEST_SPI3_TX;
+      DMAMUX1_Channel1->CCR = DMA_REQUEST_SPI3_RX;
+    }
+
+    std::string read_diagnosis() {
+      (*register_operation_)++;
+      stop_continuous_read();
+      uint8_t data_out[10] = {0x9C};
+      uint8_t data_in[10];
+      spidma_.readwrite(data_out, data_in, 10, true);
+      clear_diag();
+      GPIOD->BSRR = 4<<16;
+      asm("nop; nop");
+      GPIOD->BSRR = 4;
+      start_continuous_read();
+      (*register_operation_)--;
+      return bytes_to_hex(data_in+2, 8);
+    }
 };
 
 uint8_t tableCRC6[64] = {

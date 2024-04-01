@@ -51,6 +51,24 @@ class SPIDMA {
         finish_readwrite(register_operation);
     }
 
+    void start_continuous_readwrite(const uint8_t * const data_out, uint8_t * const data_in, uint8_t length) {
+        length_ = length;
+        asm("nop"); // memory barrier data_out[]
+        tx_dma_.CCR = 0;
+        rx_dma_.CCR = 0;
+        tx_dma_.CNDTR = length;
+        rx_dma_.CNDTR = length;
+        tx_dma_.CMAR = (uint32_t) data_out;
+        rx_dma_.CMAR = (uint32_t) data_in;
+        rx_dma_.CCR = DMA_CCR_EN | DMA_CCR_CIRC | DMA_CCR_MINC;
+        tx_dma_.CCR = DMA_CCR_EN | DMA_CCR_CIRC | DMA_CCR_MINC | DMA_CCR_DIR; // DIR = 1 > read from memory
+    }
+
+    void stop_continuous_readwrite() {
+        tx_dma_.CCR = 0;
+        rx_dma_.CCR = 0;
+    }
+
     void start_readwrite(const uint8_t * const data_out, uint8_t * const data_in, uint8_t length, bool register_operation = false) {
         if (!*register_operation_ || register_operation) {
             reinit();
