@@ -216,17 +216,17 @@ namespace config {
 
       .rxDma            = DMA2,
       .rxDmaIfcrCgif    = DMA_IFCR_CGIF3,
-      .rxDmaChannel     = DMA2_Channel3,
-      .rxDmaMuxChannel  = DMAMUX1_Channel10,
+      .rxDmaChannel     = DMA2_Channel1,
+      .rxDmaMuxChannel  = DMAMUX1_Channel8,
       .rxDmaMuxId       = 26U,
-      .rxDmaIrqN        = DMA2_Channel3_IRQn,
+      .rxDmaIrqN        = DMA2_Channel1_IRQn,
 
       .txDma            = DMA2,
       .txDmaIfcrCgif    = DMA_IFCR_CGIF4,
-      .txDmaChannel     = DMA2_Channel4,
-      .txDmaMuxChannel  = DMAMUX1_Channel11,
+      .txDmaChannel     = DMA2_Channel2,
+      .txDmaMuxChannel  = DMAMUX1_Channel9,
       .txDmaMuxId       = 27U,
-      .txDmaIrqN        = DMA2_Channel4_IRQn,
+      .txDmaIrqN        = DMA2_Channel2_IRQn,
 
       .irqPriority = 2U,
 
@@ -252,17 +252,17 @@ namespace config {
 
       .rxDma            = DMA2,
       .rxDmaIfcrCgif    = DMA_IFCR_CGIF3,
-      .rxDmaChannel     = DMA2_Channel3,
-      .rxDmaMuxChannel  = DMAMUX1_Channel10,
+      .rxDmaChannel     = DMA2_Channel1,
+      .rxDmaMuxChannel  = DMAMUX1_Channel8,
       .rxDmaMuxId       = 24U,
-      .rxDmaIrqN        = DMA2_Channel3_IRQn,
+      .rxDmaIrqN        = DMA2_Channel1_IRQn,
 
       .txDma            = DMA2,
       .txDmaIfcrCgif    = DMA_IFCR_CGIF4,
-      .txDmaChannel     = DMA2_Channel4,
-      .txDmaMuxChannel  = DMAMUX1_Channel11,
+      .txDmaChannel     = DMA2_Channel2,
+      .txDmaMuxChannel  = DMAMUX1_Channel9,
       .txDmaMuxId       = 25U,
-      .txDmaIrqN        = DMA2_Channel4_IRQn,
+      .txDmaIrqN        = DMA2_Channel2_IRQn,
 
       .irqPriority = 2U,
 
@@ -521,7 +521,7 @@ void system_init() {
 
     NVIC_SetPriority(HRTIM1_Master_IRQn, NVIC_EncodePriority(NVIC_GetPriorityGrouping(), 1, 0));
     NVIC_EnableIRQ(HRTIM1_Master_IRQn);
-    HRTIM1->sMasterRegs.MDIER = HRTIM_MDIER_MCMP1IE; // interrupt on MCMP1
+    HRTIM1->sMasterRegs.MDIER |= HRTIM_MDIER_MCMP1IE; // interrupt on MCMP1
    
     HRTIM1->sMasterRegs.MCMP1R = 400;
     static_assert(config::main_loop_frequency > CPU_FREQUENCY_HZ/4/65536, "Main loop frequency too low");

@@ -549,12 +549,7 @@ class ICPZDMA : public ICPZBase<ICPZDMA> {
       start_continuous_read();
       return result;
     }
-    void trigger() {
-      // if (!*register_operation_) {
-      //   ongoing_read_ = true;
-      //   //spidma_.start_readwrite(command_, data_, sizeof(command_));
-      // }
-    }
+    void trigger() {}
     int32_t read() {
       if (!*register_operation_) {
         // Can only read when transactions are not active. Must be guaranteed 
