@@ -541,7 +541,10 @@ class ICPZ : public ICPZBase<ICPZ> {
 
 class ICPZDMA : public ICPZBase<ICPZDMA> {
  public:
-    ICPZDMA(SPIDMA &spidma, Disk disk = Default) : ICPZBase(spidma, disk) {}
+    ICPZDMA(SPIDMA &spidma, DMAMUX_Channel_TypeDef &tx_dmamux, DMAMUX_Channel_TypeDef &rx_dmamux, Disk disk = Default) : 
+      ICPZBase(spidma, disk), dmamux_tx_regs_(tx_dmamux), dmamux_rx_regs_(rx_dmamux) {
+
+    }
 
     bool init() {
       bool result = ICPZBase::init();
@@ -577,8 +580,8 @@ class ICPZDMA : public ICPZBase<ICPZDMA> {
       return get_value();
     }
     void start_continuous_read() {
-      DMAMUX1_Channel0->CCR = 2 << DMAMUX_CxCR_SYNC_ID_Pos | 4 << DMAMUX_CxCR_NBREQ_Pos | 2 << DMAMUX_CxCR_SPOL_Pos | DMAMUX_CxCR_SE | DMA_REQUEST_SPI3_TX;
-      DMAMUX1_Channel1->CCR = 4 << DMAMUX_CxCR_NBREQ_Pos | DMAMUX_CxCR_EGE | DMA_REQUEST_SPI3_RX;
+      dmamux_tx_regs_.CCR |= 2 << DMAMUX_CxCR_SYNC_ID_Pos | 4 << DMAMUX_CxCR_NBREQ_Pos | 2 << DMAMUX_CxCR_SPOL_Pos | DMAMUX_CxCR_SE;
+      dmamux_rx_regs_.CCR |= 4 << DMAMUX_CxCR_NBREQ_Pos | DMAMUX_CxCR_EGE;
       spidma_.start_continuous_readwrite(command_, data_, sizeof(command_));
       // start automatic CS
       HRTIM1->sTimerxRegs[0].TIMxDIER = HRTIM_TIMDIER_CMP1DE;
@@ -593,8 +596,8 @@ class ICPZDMA : public ICPZBase<ICPZDMA> {
       // wait for CS high
       while(!(GPIOD->IDR & 0x4));
       spidma_.stop_continuous_readwrite();
-      DMAMUX1_Channel0->CCR = DMA_REQUEST_SPI3_TX;
-      DMAMUX1_Channel1->CCR = DMA_REQUEST_SPI3_RX;
+      dmamux_tx_regs_.CCR &= DMAMUX_CxCR_DMAREQ_ID_Msk;
+      dmamux_rx_regs_.CCR &= DMAMUX_CxCR_DMAREQ_ID_Msk;
     }
 
     void set_register_operation_impl() {
@@ -611,6 +614,8 @@ class ICPZDMA : public ICPZBase<ICPZDMA> {
     }
 
     bool inited_ = false;
+    DMAMUX_Channel_TypeDef &dmamux_tx_regs_;
+    DMAMUX_Channel_TypeDef &dmamux_rx_regs_;
 };
 
 uint8_t tableCRC6[64] = {
