@@ -26,7 +26,7 @@ class MAX11158 : public TorqueSensorBase {
             spi_dma_.finish_readwrite();
             raw_value_ = ~(data_in_[0] << 16 | data_in_[1] << 8 | data_in_[2]) & 0xFFFFFF; // invert for mistake on board
             signed_value_ = (int32_t) (raw_value_ >> 6) - 0x20000;
-            torque_ = signed_value_ * gain_ + bias_;
+            torque_ = signed_value_ * gain_;
 
             // stale values are currently the only fault mechanism
             if (last_new_signed_value_ != signed_value_) {
