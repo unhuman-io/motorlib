@@ -134,8 +134,8 @@ class MainLoop {
       status_.error.bus_voltage_high |= status_.fast_loop.vbus > vbus_max_;
 
       int32_t output_encoder_raw = output_encoder_.read();
-      float output_encoder_x = (output_encoder_raw % (int32_t) param_.output_encoder.cpr) / (float) param_.output_encoder.cpr;
-      float output_encoder_rad = output_encoder_raw*2.0*(float) M_PI/param_.output_encoder.cpr;
+      float output_encoder_x = (output_encoder_raw % (int32_t) output_encoder_cpr_) / (float) output_encoder_cpr_;
+      float output_encoder_rad = output_encoder_raw*2.0*(float) M_PI/output_encoder_cpr_;
       status_.output_position = output_encoder_dir_ * output_encoder_rad + output_encoder_bias_ 
         + output_encoder_correction_table_.table_interp(output_encoder_x);
 
@@ -456,6 +456,7 @@ class MainLoop {
       torque_sensor_dir_ = param_.torque_sensor.dir == 0 ? 1 : param_.torque_sensor.dir;
       vbus_min_ = param_.vbus_min == 0 ? 8 : param_.vbus_min;
       vbus_max_ = param_.vbus_max == 0 ? 58 : param_.vbus_max;
+      output_encoder_cpr_ = param_.output_encoder.cpr == 0 ? 1 : param_.output_encoder.cpr;
 
       //motor_velocity_filter_.set_frequency(param_.output_filter_hz.motor_velocity);
       motor_position_filter_.set_frequency(param_.output_filter_hz.motor_position);
@@ -706,6 +707,7 @@ class MainLoop {
     MainLoopParam::EncoderLimits encoder_limits_;
     MotorError error_mask_;
     float vbus_min_, vbus_max_;
+    float output_encoder_cpr_;
     float torque_sensor_dir_;
     float output_encoder_dir_;
     LED &led_;
