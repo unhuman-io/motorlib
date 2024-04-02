@@ -210,7 +210,7 @@ class QIA128_UART : public TorqueSensorBase {
                 }
                 regs_.RQR = USART_RQR_RXFRQ;
                 regs_.ISR &= ~USART_ISR_RXFT;
-                torque_ = (float) ((int32_t) raw_- (int32_t) offset_)/(full_scale_ - offset_)*gain_ + bias_;
+                torque_ = (float) ((int32_t) raw_- (int32_t) offset_)/(full_scale_ - offset_)*gain_;
                 // TODO: remove this in favor of reading if the sensor is connected
                 if (!std::isfinite(torque_)) {
                     torque_ = 0;

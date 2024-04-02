@@ -194,7 +194,7 @@ class MAX11254 : public TorqueSensorBase {
                 raw_value_ = data_in_[2] << 16 | data_in_[3] << 8 | data_in_[4];
             }
             signed_value_ = raw_value_ - 0x7FFFFF;
-            torque_ = signed_value_ * gain_ + bias_;
+            torque_ = signed_value_ * gain_;
 
             // stale values are currently the only fault mechanism
             if (last_new_signed_value_ != signed_value_) {

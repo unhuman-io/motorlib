@@ -103,7 +103,7 @@ class System {
         actuator_.main_loop_.torque_controller_.set_debug_variables(api);
         actuator_.main_loop_.state_controller_.set_debug_variables(api);
         api.add_api_variable("tgain", new APIFloat(&actuator_.main_loop_.torque_sensor_.gain_));
-        api.add_api_variable("tbias", new APIFloat(&actuator_.main_loop_.torque_sensor_.bias_));
+        api.add_api_variable("tbias", new APIFloat(&actuator_.main_loop_.torque_sensor_bias_));
         api.add_api_variable("torque", new const APIFloat(&actuator_.main_loop_.torque_sensor_.torque_));
         api.add_api_variable("t_i_correction", new const APIFloat(&actuator_.main_loop_.param_.torque_correction));
         api.add_api_variable("log", new APICallback(get_log, log));

@@ -142,7 +142,7 @@ class MainLoop {
       status_.motor_position = status_.fast_loop.motor_position.position_filtered + motor_encoder_bias_;
 
       // float torque_corrected = torque_sensor_dir_ * (torque_sensor_.read() - param_.torque_sensor.bias) + param_.torque_sensor.bias;
-      float torque_corrected = torque_sensor_dir_ * (torque_sensor_.read() - calibration_.torque_sensor_bias) + calibration_.torque_sensor_bias;
+      float torque_corrected = torque_sensor_dir_ * torque_sensor_.read() + torque_sensor_bias_;
       //if (torque_corrected != status_.torque) {
         torque_corrected += param_.torque_correction*status_.fast_loop.foc_status.measured.i_q;
       //}
@@ -462,6 +462,7 @@ class MainLoop {
       output_position_filter_.set_frequency(param_.output_filter_hz.output_position);
       //output_velocity_filter_.set_frequency(param_.output_filter_hz.output_velocity);
       torque_filter_.set_frequency(param_.output_filter_hz.torque);
+      torque_sensor_bias_ = calibration->torque_sensor_bias;
     }
     void set_rollover(float rollover) {
       position_controller_.set_rollover(rollover);
@@ -725,6 +726,7 @@ class MainLoop {
     OutputEncoder &output_encoder_;
     float motor_encoder_bias_ = 0;
     float output_encoder_bias_ = 0;
+    float torque_sensor_bias_ = 0;
     TorqueSensor &torque_sensor_;
     FrequencyLimiter current_tuning_rate_limiter_ = {10};
     bool fast_log_ready_ = true;
