@@ -260,7 +260,7 @@ class ICPZBase : public EncoderBase {
           retval = data_read == value;
           clear_register_operation();
           if (!retval) {
-            for (int i=0; i<value.size(); i++) {
+            for (unsigned int i=0; i<value.size(); i++) {
               logger.log_printf("icpz register %x, set%d: %x, read%d: %x", address, i, value[i], i, data_read[i]);
             }
           }
