@@ -117,7 +117,7 @@ class SPIDMA {
     }
 
     volatile int *register_operation_ = &register_operation_local_;
- private:
+
     volatile int register_operation_local_ = 0;
     SPI_TypeDef &regs_;
     GPIO &gpio_cs_;
