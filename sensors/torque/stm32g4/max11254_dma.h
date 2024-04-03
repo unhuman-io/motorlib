@@ -4,9 +4,13 @@
 
 class MAX11254DMA : public MAX11254<> {
  public:
-    MAX11254DMA(SPIDMA &spi_dma, DMAMUX_Channel_TypeDef &dmamux_regs, uint8_t exti_num) : MAX11254(spi_dma, 0, false), tx_dma_(spi_dma.tx_dma_), rx_dma_(spi_dma_.rx_dma_),
-        dmamux_regs_(dmamux_regs), exti_num_(exti_num) {}
-    bool init() { 
+    MAX11254DMA(SPIDMA &spi_dma, DMAMUX_Channel_TypeDef &dmamux_tx_regs, DMAMUX_Channel_TypeDef &dmamux_rx_regs, uint8_t exti_num) : MAX11254(spi_dma, 0, false), tx_dma_(spi_dma.tx_dma_), rx_dma_(spi_dma_.rx_dma_),
+        dmamux_tx_regs_(dmamux_tx_regs), dmamux_rx_regs_(dmamux_rx_regs), exti_num_(exti_num) {
+            register_address dr = {.rw = 1, .addr = 14, .bits2 = 3};
+            dma_buf_out_[0][0] = dr.word;
+            dma_buf_out_[1][0] = dr.word;
+        }
+    bool init() {
         register_address stat_read = {.rw = 1, .addr = 0, .bits2 = 3};
         uint8_t data_out[5] = {stat_read.word};
         uint8_t data_in[5];
@@ -43,6 +47,8 @@ class MAX11254DMA : public MAX11254<> {
     }
 
     void start_continuous_dma() {
+        dmamux_tx_regs_.CCR |= exti_num_ << DMAMUX_CxCR_SYNC_ID_Pos | 4 << DMAMUX_CxCR_NBREQ_Pos | 2 << DMAMUX_CxCR_SPOL_Pos | DMAMUX_CxCR_SE;
+        dmamux_rx_regs_.CCR |= 4 << DMAMUX_CxCR_NBREQ_Pos | DMAMUX_CxCR_EGE;
         spi_dma_.start_continuous_readwrite(dma_buf_out_[0], dma_buf_in_[0], 10);
     }
 
@@ -84,7 +90,7 @@ class MAX11254DMA : public MAX11254<> {
     uint8_t dma_buf_in_[2][5] = {};
     uint8_t dma_buf_out_[2][5] = {};
     int8_t last_buf_ptr_ = -1;
-    DMAMUX_Channel_TypeDef &dmamux_regs_;
+    DMAMUX_Channel_TypeDef &dmamux_tx_regs_, &dmamux_rx_regs_;
     uint8_t exti_num_;
 
 };
