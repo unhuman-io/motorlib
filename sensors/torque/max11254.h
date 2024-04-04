@@ -1,6 +1,6 @@
 #pragma once
-#include "torque_sensor.h"
-#include "logger.h"
+#include "../../torque_sensor.h"
+#include "../../logger.h"
 
 template<bool isolation=true>
 class MAX11254 : public TorqueSensorBase {

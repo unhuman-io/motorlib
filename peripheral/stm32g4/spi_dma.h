@@ -64,6 +64,14 @@ class SPIDMA {
         tx_dma_.CCR = DMA_CCR_EN | DMA_CCR_CIRC | DMA_CCR_MINC | DMA_CCR_DIR; // DIR = 1 > read from memory
     }
 
+    void start_continuous_write(const uint8_t * const data_out, uint8_t length) {
+        length_ = length;
+        tx_dma_.CCR = 0;
+        tx_dma_.CNDTR = length;
+        tx_dma_.CMAR = (uint32_t) data_out;
+        tx_dma_.CCR = DMA_CCR_EN | DMA_CCR_CIRC | DMA_CCR_MINC | DMA_CCR_DIR; // DIR = 1 > read from memory
+    }
+
     void stop_continuous_readwrite() {
         tx_dma_.CCR = 0;
         rx_dma_.CCR = 0;
@@ -117,7 +125,7 @@ class SPIDMA {
     }
 
     volatile int *register_operation_ = &register_operation_local_;
- private:
+
     volatile int register_operation_local_ = 0;
     SPI_TypeDef &regs_;
     GPIO &gpio_cs_;
