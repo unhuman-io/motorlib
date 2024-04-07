@@ -258,6 +258,7 @@ typedef struct{
                                                     // can obtain this value from  motor_index_pos_ - motor_electrical_zero_pos_ 
     float output_encoder_bias;
     float torque_sensor_bias;
+    float torque_sensor_gain;
     float joint_encoder_bias;
     MotorError error_mask;      // can set to ERROR_MASK_ALL or ERROR_MASK_NONE or others
 } Calibration;
