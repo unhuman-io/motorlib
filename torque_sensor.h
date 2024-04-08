@@ -9,8 +9,8 @@ class TorqueSensorBase : public SensorBase {
     bool init() { return true; }
     void trigger() {}
     float read() { return 0; }
-    void set_param(const TorqueSensorParam &param, const float gain) {
-        gain_ = gain;
+    void set_param(const TorqueSensorParam &param) {
+        gain_ = param.gain;
         k_temp_ = param.k_temp;
     }
     // void zero(float current_torque_reading) {

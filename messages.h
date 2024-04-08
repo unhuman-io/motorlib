@@ -187,7 +187,7 @@ typedef struct {
         float motor_controlled_max;   // will attempt to use position control to stay in these limits
         float motor_controlled_min;
     } encoder_limits;
-    TorqueSensorParam torque_sensor;
+    // TorqueSensorParam torque_sensor;
     int16_t host_timeout;                             // 0 to disable, if no commands received before host timeout, go to safe_mode
     MainControlMode safe_mode;                 // goes to this mode and freeze command if error
                                                     // need to send reset from host to exit
@@ -257,9 +257,8 @@ typedef struct{
     float motor_encoder_index_electrical_offset_pos;          // index offset electrial zero in encoder counts
                                                     // can obtain this value from  motor_index_pos_ - motor_electrical_zero_pos_ 
     float output_encoder_bias;
-    float torque_sensor_bias;
-    float torque_sensor_gain;
     float joint_encoder_bias;
+    TorqueSensorParam torque_sensor;
     MotorError error_mask;      // can set to ERROR_MASK_ALL or ERROR_MASK_NONE or others
 } Calibration;
 

@@ -421,7 +421,7 @@ class MainLoop {
       state_controller_.set_param(param_.state_controller_param);
       joint_position_controller_.set_param(param_.joint_position_controller_param);
       admittance_controller_.set_param(param_.admittance_controller_param);
-      torque_sensor_.set_param(param_.torque_sensor, calibration_.torque_sensor_gain);
+      torque_sensor_.set_param(calibration_.torque_sensor);
       if (param_.encoder_limits.motor_hard_max == param_.encoder_limits.motor_hard_min) {
         encoder_limits_.motor_hard_max = INFINITY;
         encoder_limits_.motor_hard_min = -INFINITY;
