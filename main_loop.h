@@ -42,7 +42,7 @@ class MainLoop {
           joint_position_controller_(joint_position_controller), admittance_controller_(admittance_controller), 
           communication_(communication), led_(led), frequency_hz_(frequency_hz), output_encoder_(output_encoder), torque_sensor_(torque),
           output_encoder_correction_table_(param_.output_encoder.table), 
-          torque_correction_table_(param_.torque_sensor.table), driver_(driver), brake_(brake),
+          torque_correction_table_(calibration_.torque_sensor.table), driver_(driver), brake_(brake),
           iq_find_limits_filter_(1.0/frequency_hz, 1), motor_velocity_filter_(1.0/frequency_hz, param.output_filter_hz.motor_velocity), motor_position_filter_(1.0/frequency_hz),
           output_position_filter_(1.0/frequency_hz), output_velocity_filter_(1.0/frequency_hz, param.output_filter_hz.output_velocity), torque_filter_(1.0/frequency_hz) {
           set_param();
@@ -146,7 +146,7 @@ class MainLoop {
       //if (torque_corrected != status_.torque) {
         torque_corrected += param_.torque_correction*status_.fast_loop.foc_status.measured.i_q;
       //}
-      float torque_calibrated = torque_corrected + param_.torque_sensor.table_gain*torque_correction_table_.table_interp(output_encoder_x+output_encoder_bias_*(1.0/(2*M_PI)));
+      float torque_calibrated = torque_corrected + calibration_.torque_sensor.table_gain*torque_correction_table_.table_interp(output_encoder_x+output_encoder_bias_*(1.0/(2*M_PI)));
       status_.torque = torque_calibrated;
 
       if (!position_limits_disable_) {
@@ -453,7 +453,7 @@ class MainLoop {
       output_encoder_bias_ = calibration_.output_encoder_bias;
       error_mask_.all = calibration_.error_mask.all == 0 ? ERROR_MASK_ALL : (calibration_.error_mask.all & ERROR_MASK_ALL);
       output_encoder_dir_ = param_.output_encoder.dir == 0 ? 1 : param_.output_encoder.dir;
-      torque_sensor_dir_ = param_.torque_sensor.dir == 0 ? 1 : param_.torque_sensor.dir;
+      torque_sensor_dir_ = calibration_.torque_sensor.dir == 0 ? 1 : calibration_.torque_sensor.dir;
       vbus_min_ = param_.vbus_min == 0 ? 8 : param_.vbus_min;
       vbus_max_ = param_.vbus_max == 0 ? 58 : param_.vbus_max;
       output_encoder_cpr_ = param_.output_encoder.cpr == 0 ? 1 : param_.output_encoder.cpr;
@@ -463,7 +463,7 @@ class MainLoop {
       output_position_filter_.set_frequency(param_.output_filter_hz.output_position);
       //output_velocity_filter_.set_frequency(param_.output_filter_hz.output_velocity);
       torque_filter_.set_frequency(param_.output_filter_hz.torque);
-      torque_sensor_bias_ = calibration->torque_sensor.bias;
+      torque_sensor_bias_ = calibration_->torque_sensor.bias;
     }
     void set_rollover(float rollover) {
       position_controller_.set_rollover(rollover);
