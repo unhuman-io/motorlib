@@ -463,7 +463,7 @@ class MainLoop {
       output_position_filter_.set_frequency(param_.output_filter_hz.output_position);
       //output_velocity_filter_.set_frequency(param_.output_filter_hz.output_velocity);
       torque_filter_.set_frequency(param_.output_filter_hz.torque);
-      torque_sensor_bias_ = calibration_->torque_sensor.bias;
+      torque_sensor_bias_ = calibration_.torque_sensor.bias;
     }
     void set_rollover(float rollover) {
       position_controller_.set_rollover(rollover);
