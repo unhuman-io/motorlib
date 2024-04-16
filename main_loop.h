@@ -422,6 +422,7 @@ class MainLoop {
       joint_position_controller_.set_param(param_.joint_position_controller_param);
       admittance_controller_.set_param(param_.admittance_controller_param);
       torque_sensor_.set_param(calibration_.torque_sensor);
+      position_limits_disable_ = param_.position_limits_disable;
       if (param_.encoder_limits.motor_hard_max == param_.encoder_limits.motor_hard_min) {
         encoder_limits_.motor_hard_max = INFINITY;
         encoder_limits_.motor_hard_min = -INFINITY;
@@ -451,7 +452,13 @@ class MainLoop {
       motor_temperature_limit_ = param_.motor_temperature_limit == 0 ? 140 : param_.motor_temperature_limit;
       // output_encoder_bias_ = param_.output_encoder.bias;
       output_encoder_bias_ = calibration_.output_encoder_bias;
-      error_mask_.all = calibration_.error_mask.all == 0 ? ERROR_MASK_ALL : (calibration_.error_mask.all & ERROR_MASK_ALL);
+
+      // Error mask is the logical and of the error mask in the calibration and the param
+      // So a disabled error in either will be disabled
+      // Calibration error mask will be ignored if set to 0
+      MotorError error_mask_default; 
+      error_mask_default.all = param_.error_mask.all == 0 ? ERROR_MASK_ALL : param_.error_mask.all & ERROR_MASK_ALL;
+      error_mask_.all = calibration_.error_mask.all == 0 ? error_mask_default.all : (calibration_.error_mask.all & error_mask_default.all);
       output_encoder_dir_ = param_.output_encoder.dir == 0 ? 1 : param_.output_encoder.dir;
       float torque_sensor_dir1 = calibration_.torque_sensor.dir == 0 ? 1 : calibration_.torque_sensor.dir;
       float torque_sensor_dir2 = param_.torque_sensor_dir == 0 ? 1 : param_.torque_sensor_dir;
