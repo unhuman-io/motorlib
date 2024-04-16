@@ -6,6 +6,7 @@ extern "C" {
 }
 
 #include "pin_config.h"
+// Internal STM32G4 temperature sensor, requires V_TEMP_DR to be set up as an ADC input, using GCOMP
 class TempSensor {
  public:
     TempSensor() {
@@ -16,7 +17,7 @@ class TempSensor {
         bias_ = value - read();
     }
     float read() {        
-        value_ = (110.0-30.0)/(*TS_CAL2 - *TS_CAL1) * ((int16_t) V_TEMP_DR / 3.3 - *TS_CAL1) + 30 + bias_;
+        value_ = (130.0-30.0)/(*TS_CAL2 - *TS_CAL1) * ((int16_t) V_TEMP_DR / 3.0 - *TS_CAL1) + 30 + bias_;
 
         return value_;
     }
