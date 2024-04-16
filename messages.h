@@ -213,6 +213,7 @@ typedef struct {
         float Cp;
     } motor_temperature_model;
 
+    float torque_sensor_dir;
 } MainLoopParam;
 
 typedef struct {

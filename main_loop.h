@@ -453,7 +453,9 @@ class MainLoop {
       output_encoder_bias_ = calibration_.output_encoder_bias;
       error_mask_.all = calibration_.error_mask.all == 0 ? ERROR_MASK_ALL : (calibration_.error_mask.all & ERROR_MASK_ALL);
       output_encoder_dir_ = param_.output_encoder.dir == 0 ? 1 : param_.output_encoder.dir;
-      torque_sensor_dir_ = calibration_.torque_sensor.dir == 0 ? 1 : calibration_.torque_sensor.dir;
+      float torque_sensor_dir1 = calibration_.torque_sensor.dir == 0 ? 1 : calibration_.torque_sensor.dir;
+      float torque_sensor_dir2 = param_.torque_sensor_dir == 0 ? 1 : param_.torque_sensor_dir;
+      torque_sensor_dir_ = torque_sensor_dir1 * torque_sensor_dir2;
       vbus_min_ = param_.vbus_min == 0 ? 8 : param_.vbus_min;
       vbus_max_ = param_.vbus_max == 0 ? 58 : param_.vbus_max;
       output_encoder_cpr_ = param_.output_encoder.cpr == 0 ? 1 : param_.output_encoder.cpr;

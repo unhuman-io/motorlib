@@ -500,7 +500,7 @@ void system_init() {
     v3v3 =  *((uint16_t *) (0x1FFF75AA)) * 3.0 / V_REF_DR;
     System::log("3v3: " + std::to_string(v3v3));
     System::log("obias: " +  std::to_string(calibration->output_encoder_bias));
-    System::log("tbias: " + std::to_string(calibration->torque_sensor_bias));
+    System::log("tbias: " + std::to_string(calibration->torque_sensor.bias));
     System::log("offset: " + std::to_string(calibration->motor_encoder_index_electrical_offset_pos));
     System::log("mbias: " + std::to_string(calibration->motor_encoder_bias));
 
