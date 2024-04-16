@@ -6,6 +6,7 @@ extern "C" {
 }
 
 #include "pin_config.h"
+// Internal STM32G4 temperature sensor, requires V_TEMP_DR to be set up as an ADC input, using GCOMP
 class TempSensor {
  public:
     TempSensor() {
