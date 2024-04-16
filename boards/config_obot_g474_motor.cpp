@@ -604,13 +604,13 @@ void main_maintenance() {
         if (config::board_rev.has_bridge_thermistors) {
             float Tmosfet = mosfet_temperature_filter.update(config::temp_bridge.read());
             round_robin_logger.log_data(MOSFET_TEMPERATURE_INDEX, Tmosfet);
-            if (Tmosfet > 150 || Tmosfet < -40) {
+            if (Tmosfet > 125 || Tmosfet < -40) {
                 config::main_loop.status_.error.board_temperature = 1;
             }
             float Tmosfet2 = mosfet_temperature_filter.update(config::temp_bridge2.read());
             round_robin_logger.log_data(MOSFET2_TEMPERATURE_INDEX, Tmosfet2);
             config::temp_bridge2.read();
-            if (Tmosfet2 > 150 || Tmosfet2 < -40) {
+            if (Tmosfet2 > 125 || Tmosfet2 < -40) {
                 config::main_loop.status_.error.board_temperature = 1;
             }
         }
