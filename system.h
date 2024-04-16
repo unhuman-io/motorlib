@@ -174,7 +174,7 @@ class System {
         api.add_api_variable("motor_position_raw", new const APIFloat(&actuator_.fast_loop_.motor_position_));
         api.add_api_variable("obias", new APIFloat(&actuator_.main_loop_.output_encoder_bias_));
         api.add_api_variable("mbias", new APIFloat(&actuator_.main_loop_.motor_encoder_bias_));
-        api.add_api_variable("ttgain", new const APIFloat(&actuator_.main_loop_.param_.torque_sensor.table_gain));
+        api.add_api_variable("ttgain", new const APIFloat(&actuator_.main_loop_.calibration_.torque_sensor.table_gain));
         API_ADD_FILTER(id_filter, FirstOrderLowPassFilter, actuator_.fast_loop_.foc_->id_filter_);
         API_ADD_FILTER(iq_filter, FirstOrderLowPassFilter, actuator_.fast_loop_.foc_->iq_filter_);
         API_ADD_FILTER(output_iq_filter, FirstOrderLowPassFilter, actuator_.fast_loop_.iq_filter_);

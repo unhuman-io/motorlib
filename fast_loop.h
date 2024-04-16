@@ -17,7 +17,7 @@ class FastLoop {
     FastLoop(int32_t frequency_hz, PWM &pwm, MotorEncoder &encoder, const FastLoopParam &param, const Calibration &calibration,
       volatile uint32_t *const i_a_dr, volatile uint32_t *const i_b_dr, volatile uint32_t *const i_c_dr, 
       volatile uint32_t *const v_bus_dr) 
-      : param_(param), calibration_(calibration), pwm_(pwm), encoder_(encoder), i_a_dr_(i_a_dr), i_b_dr_(i_b_dr), i_c_dr_(i_c_dr), v_bus_dr_(v_bus_dr),
+      : param_(param), motor_encoder_index_electrical_offset_pos_(calibration.motor_encoder_index_electrical_offset_pos), pwm_(pwm), encoder_(encoder), i_a_dr_(i_a_dr), i_b_dr_(i_b_dr), i_c_dr_(i_c_dr), v_bus_dr_(v_bus_dr),
         motor_correction_table_(param_.motor_encoder.table), cogging_correction_table_(param_.cogging.table),
         iq_filter_(1.0/frequency_hz), motor_velocity_filter_(1.0/frequency_hz), motor_position_filter_(1.0/frequency_hz) {
        frequency_hz_ = frequency_hz;
@@ -146,7 +146,7 @@ class FastLoop {
             // motor_index_electrical_offset_pos is the value of an electrical zero minus the index position
             // motor_electrical_zero_pos is the offset to the initial encoder value
             // motor_electrical_zero_pos_ = param_.motor_encoder.index_electrical_offset_pos + motor_index_pos_;
-            motor_electrical_zero_pos_ = calibration_.motor_encoder_index_electrical_offset_pos + motor_index_pos_;
+            motor_electrical_zero_pos_ = motor_encoder_index_electrical_offset_pos_ + motor_index_pos_;
          }
          motor_index_pos_set_ = true;
       }           
@@ -327,7 +327,7 @@ class FastLoop {
     }
  private:
     FastLoopParam param_; // reallocate tables in ram
-    Calibration calibration_; // reallocate tables in ram
+    float motor_encoder_index_electrical_offset_pos_;
 
     FOC *foc_;
     PWM &pwm_;
