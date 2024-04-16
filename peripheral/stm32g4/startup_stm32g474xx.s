@@ -369,8 +369,8 @@ g_pfnVectors:
 //	.weak	DebugMon_Handler
 //	.thumb_set DebugMon_Handler,Default_Handler
 
-//	.weak	PendSV_Handler
-//	.thumb_set PendSV_Handler,Default_Handler
+	.weak	PendSV_Handler
+	.thumb_set PendSV_Handler,Default_Handler
 
 //	.weak	SysTick_Handler
 //	.thumb_set SysTick_Handler,Default_Handler*/
@@ -450,8 +450,8 @@ g_pfnVectors:
 	.weak	TIM1_BRK_TIM15_IRQHandler
 	.thumb_set TIM1_BRK_TIM15_IRQHandler,Default_Handler
 
-//	.weak	TIM1_UP_TIM16_IRQHandler
-//	.thumb_set TIM1_UP_TIM16_IRQHandler,Default_Handler
+	.weak	TIM1_UP_TIM16_IRQHandler
+	.thumb_set TIM1_UP_TIM16_IRQHandler,Default_Handler
 
 	.weak	TIM1_TRG_COM_TIM17_IRQHandler
 	.thumb_set TIM1_TRG_COM_TIM17_IRQHandler,Default_Handler

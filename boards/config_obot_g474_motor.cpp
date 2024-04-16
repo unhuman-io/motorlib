@@ -4,9 +4,65 @@
 #include "../util.h"
 #include "../peripheral/stm32g4/pin_config.h"
 #include "../peripheral/stm32g4/drv8323s.h"
+#include "../peripheral/stm32g4/uart.h"
+#include "../peripheral/protocol.h"
+
+#ifdef SCOPE_DEBUG
+#define SET_SCOPE_PIN(X,x) GPIO##X->BSRR = 1 << x
+#define CLEAR_SCOPE_PIN(X,x) GPIO##X->BSRR = 1 << (16 + x)
+#define TOGGLE_SCOPE_PIN(X,x) GPIO##X->ODR ^= 1 << x
+#else
+#define SET_SCOPE_PIN(X,x)
+#define CLEAR_SCOPE_PIN(X,x)
+#define TOGGLE_SCOPE_PIN(X,x)
+#endif
+
+#include "../communication.h"
+#include <protocol_parser.h>
+#include "../peripheral/stm32g4/spi_slave_figure.h"
+#include "../spi_communication_obot.h"
+
+#define COMMS_USB   1
+#define COMMS_SPI   2
+#define COMMS_UART  3
+
+#ifndef COMMS
+  #error "COMMS should be defined"
+#endif
+
+#if (COMMS != COMMS_USB) && (COMMS != COMMS_SPI) && (COMMS != COMMS_UART)
+  #error "Invalid COMMS value"
+#endif
+
+const Param * const param = (const Param * const) 0x8060000;
+const Calibration * const calibration = (const Calibration * const) 0x8070000;
+extern const char * const name = param->name;
+namespace config {
+    const uint32_t system_loop_frequency =  1000;
+};
 
 using PWM = HRPWM;
-using Communication = USBCommunication;
+
+#if COMMS == COMMS_USB
+    using Communication = USBCommunication;
+#endif
+
+#if (COMMS == COMMS_SPI)
+    #include <protocol_parser.h>
+    using Communication = SPICommunication;
+#endif
+
+#if (COMMS == COMMS_UART)
+#ifdef COMMS_UART_OBOT
+    #include <protocol_parser.h>
+    #include "../uart_communication_obot.h"
+#else
+    #include "../uart_communication_protocol.h"
+    using UARTCommunicationProtocol = UARTRawProtocol<>; 
+    #include "../uart_communication.h"
+#endif
+    using Communication = UARTCommunication;
+#endif
 using Driver = DRV8323S;
 uint16_t drv_regs_error = 0;
 
@@ -53,7 +109,7 @@ uint16_t drv_regs_error = 0;
 #include "../peripheral/stm32g4/max31875.h"
 #include "../peripheral/stm32g4/max31889.h"
 #include "../mb85rc64.h"
-
+#include "../messages.h"
 
 extern "C" void SystemClock_Config();
 void pin_config_obot_g474_motor(const BoardRev&);
@@ -62,6 +118,13 @@ extern "C" void board_init() {
     const BoardRev board_rev = get_board_rev();
     SystemClock_Config();
     pin_config_obot_g474_motor(board_rev);
+#ifdef SCOPE_DEBUG
+    GPIO_SETL(C, 0, GPIO_MODE::OUTPUT, GPIO_SPEED::HIGH, 0); // main loop scope
+    GPIO_SETL(C, 1, GPIO_MODE::OUTPUT, GPIO_SPEED::HIGH, 0); // fast loop scope
+    GPIO_SETL(C, 2, GPIO_MODE::OUTPUT, GPIO_SPEED::HIGH, 0); // usb int scope
+    GPIO_SETL(C, 4, GPIO_MODE::OUTPUT, GPIO_SPEED::HIGH, 0); // main() scope
+    GPIO_SETL(A, 0, GPIO_MODE::OUTPUT, GPIO_SPEED::HIGH, 0); // system loop scope
+#endif
 }
 
 
@@ -95,9 +158,135 @@ namespace config {
     MB85RC64 mb85rc64(i2c1, 4);
 
     const BoardRev board_rev = get_board_rev();
+
+#if COMMS == COMMS_SPI
+ SpiSlaveFigure spi({
+      .spi          = SPI1,
+      .gpioPort     = GPIOA,
+      .gpioPinSs    = 4U,
+      .gpioPinSck   = 5U,
+      .gpioPinMosi  = 7U,
+      .gpioPinMiso  = 6U,
+
+      .gpioAlternateFunction = 5U,
+
+      .gpioRccEnableRegister = &RCC->AHB2ENR,
+      .gpioRccEnableBit      = RCC_AHB2ENR_GPIOAEN_Pos,
+      .spiRccEnableRegister = &RCC->APB2ENR,
+      .spiRccEnableBit      = RCC_APB2ENR_SPI1EN_Pos,
+      .spiRccResetRegister  = &RCC->APB2RSTR,
+      .spiRccResetBit       = RCC_APB2RSTR_SPI1RST_Pos,
+
+      .rxDma            = DMA2,
+      .rxDmaIfcrCgif    = DMA_IFCR_CGIF1,
+      .rxDmaChannel     = DMA2_Channel1,
+      .rxDmaMuxChannel  = DMAMUX1_Channel8,
+      .rxDmaMuxId       = 10U,
+      .rxDmaIrqN        = DMA2_Channel1_IRQn,
+      .rxDmaIrqPriority = 1U,
+
+      .txDma            = DMA2,
+      .txDmaIfcrCgif    = DMA_IFCR_CGIF2,
+      .txDmaChannel     = DMA2_Channel2,
+      .txDmaMuxChannel  = DMAMUX1_Channel9,
+      .txDmaMuxId       = 11U,
+      .txDmaIrqN        = DMA2_Channel2_IRQn,
+      .txDmaIrqPriority = 5U,
+    });
+#endif // COMMS_SPI
+
+#if COMMS == COMMS_UART
+#if COMMS_UART_NUMBER == 2
+    Uart uart({
+      .usart        = USART2,
+      .gpioPort     = GPIOA,
+      .gpioPinTx    = 2U,
+      .gpioPinRx    = 3U,
+
+      .gpioAlternateFunction = 7U,
+
+      .gpioRccEnableRegister = &RCC->AHB2ENR,
+      .gpioRccEnableBit      = RCC_AHB2ENR_GPIOAEN_Pos,
+      .uartRccEnableRegister  = &RCC->APB1ENR1,
+      .uartRccEnableBit       = RCC_APB1ENR1_USART2EN_Pos,
+      .uartRccResetRegister   = &RCC->APB1RSTR1,
+      .uartRccResetBit        = RCC_APB1RSTR1_USART2RST_Pos,
+
+      .uartIrqN               = USART2_IRQn,
+
+      .rxDma            = DMA2,
+      .rxDmaIfcrCgif    = DMA_IFCR_CGIF3,
+      .rxDmaChannel     = DMA2_Channel1,
+      .rxDmaMuxChannel  = DMAMUX1_Channel8,
+      .rxDmaMuxId       = 26U,
+      .rxDmaIrqN        = DMA2_Channel1_IRQn,
+
+      .txDma            = DMA2,
+      .txDmaIfcrCgif    = DMA_IFCR_CGIF4,
+      .txDmaChannel     = DMA2_Channel2,
+      .txDmaMuxChannel  = DMAMUX1_Channel9,
+      .txDmaMuxId       = 27U,
+      .txDmaIrqN        = DMA2_Channel2_IRQn,
+
+      .irqPriority = 2U,
+
+      .brrValue         = (uint32_t)((CPU_FREQUENCY_HZ + COMMS_UART_BAUDRATE/2)/ COMMS_UART_BAUDRATE)   // rounding
+    });
+#else // default usart1
+    Uart uart({
+      .usart        = USART1,
+      .gpioPort     = GPIOA,
+      .gpioPinTx    = 9U,
+      .gpioPinRx    = 10U,
+
+      .gpioAlternateFunction = 7U,
+
+      .gpioRccEnableRegister = &RCC->AHB2ENR,
+      .gpioRccEnableBit      = RCC_AHB2ENR_GPIOAEN_Pos,
+      .uartRccEnableRegister  = &RCC->APB2ENR,
+      .uartRccEnableBit       = RCC_APB2ENR_USART1EN_Pos,
+      .uartRccResetRegister   = &RCC->APB2RSTR,
+      .uartRccResetBit        = RCC_APB2RSTR_USART1RST_Pos,
+
+      .uartIrqN               = USART1_IRQn,
+
+      .rxDma            = DMA2,
+      .rxDmaIfcrCgif    = DMA_IFCR_CGIF3,
+      .rxDmaChannel     = DMA2_Channel1,
+      .rxDmaMuxChannel  = DMAMUX1_Channel8,
+      .rxDmaMuxId       = 24U,
+      .rxDmaIrqN        = DMA2_Channel1_IRQn,
+
+      .txDma            = DMA2,
+      .txDmaIfcrCgif    = DMA_IFCR_CGIF4,
+      .txDmaChannel     = DMA2_Channel2,
+      .txDmaMuxChannel  = DMAMUX1_Channel9,
+      .txDmaMuxId       = 25U,
+      .txDmaIrqN        = DMA2_Channel2_IRQn,
+
+      .irqPriority = 2U,
+
+      .brrValue         = (uint32_t)((CPU_FREQUENCY_HZ + COMMS_UART_BAUDRATE/2)/ COMMS_UART_BAUDRATE)   // rounding
+    });
+#endif // COMMS_UART_NUMBER
+#ifdef COMMS_UART_OBOT
+    figure::ProtocolParser uart_protocol(config::uart.rx_buffer_, RX_BUFFER_SIZE);
+#else
+    UARTCommunicationProtocol uart_protocol; 
+#endif
+#endif // COMMS_UART
+
+
+
+#if COMMS == COMMS_SPI
+    figure::ProtocolParser spi_protocol(config::spi.rx_buffer_, RX_BUFFER_SIZE);
+#endif
+
     HRPWM motor_pwm = {pwm_frequency, *HRTIM1, 3, 5, 4, false, 50, 1000, 1000};
     USB1 usb;
-    FastLoop fast_loop = {(int32_t) pwm_frequency, motor_pwm, motor_encoder, param->fast_loop_param, &I_A_DR, &I_B_DR, &I_C_DR, &V_BUS_DR};
+    FastLoop fast_loop = {(int32_t) pwm_frequency, motor_pwm, motor_encoder, param->fast_loop_param, *calibration, &I_A_DR, &I_B_DR, &I_C_DR, &V_BUS_DR};
+
+
     LED led = {const_cast<uint16_t*>(reinterpret_cast<volatile uint16_t *>(get_board_pins(board_rev).led_tim_r)), 
                const_cast<uint16_t*>(reinterpret_cast<volatile uint16_t *>(get_board_pins(board_rev).led_tim_g)),
                const_cast<uint16_t*>(reinterpret_cast<volatile uint16_t *>(get_board_pins(board_rev).led_tim_b))};
@@ -123,14 +312,31 @@ namespace config {
 #ifndef ADMITTANCE_CONTROLLER_OVERRIDE
     AdmittanceController admittance_controller = {1.0/main_loop_frequency};
 #endif
-    MainLoop main_loop = {main_loop_frequency, fast_loop, position_controller, torque_controller, impedance_controller, velocity_controller, state_controller, joint_position_controller, admittance_controller, System::communication_, led, output_encoder, torque_sensor, drv, param->main_loop_param};
+    MainLoop main_loop = {main_loop_frequency, fast_loop, position_controller, torque_controller, impedance_controller, velocity_controller, state_controller, joint_position_controller, admittance_controller, System::communication_, led, output_encoder, torque_sensor, drv, param->main_loop_param, *calibration};
 };
 
+#if COMMS == COMMS_USB
 Communication System::communication_ = {config::usb};
+#endif
+
+#if (COMMS == COMMS_SPI)
+Communication System::communication_(config::spi, config::spi_protocol);
+#endif
+
+#if (COMMS == COMMS_UART)
+Communication System::communication_(config::uart, config::uart_protocol);
+extern "C" void PendSV_Handler(void) {
+  SET_SCOPE_PIN(C,2);
+  System::communication_.parse();
+  CLEAR_SCOPE_PIN(C,2);
+}
+#endif
+
 void usb_interrupt() {
     config::usb.interrupt();
 }
-Actuator System::actuator_ = {config::fast_loop, config::main_loop, param->startup_param};
+
+Actuator System::actuator_ = {config::fast_loop, config::main_loop, param->startup_param, *calibration};
 
 float v3v3 = 3.3;
 
@@ -143,9 +349,16 @@ uint32_t total_uptime;
 
 int32_t index_mod = 0;
 
+uint32_t init_failure = 0;
+
 void config_init();
 
 void system_init() {
+
+#if COMMS == COMMS_UART
+    config::uart.init();
+#endif
+
     DMAMUX1_Channel6->CCR =  DMA_REQUEST_I2C1_TX;
     DMAMUX1_Channel7->CCR =  DMA_REQUEST_I2C1_RX;
     DMAMUX1_Channel2->CCR =  DMA_REQUEST_SPI1_TX;
@@ -154,14 +367,17 @@ void system_init() {
         System::log("Motor encoder init success");
     } else {
         System::log("Motor encoder init failure");
+        init_failure |= 1;
     }
     if (config::output_encoder.init()) {
         System::log("Output encoder init success");
     } else {
         System::log("Output encoder init failure");
+        init_failure |= 1;
     }
     if (drv_regs_error) {
         System::log("drv configure failure");
+        init_failure |= 1;
     } else {
         System::log("drv configure success");
     }
@@ -169,6 +385,7 @@ void system_init() {
         System::log("torque sensor init success");
     } else {
         System::log("torque sensor init failure");
+        init_failure |= 1;
     }
     if (config::board_rev.has_bmi270) {
         config::imu.init();
@@ -258,6 +475,8 @@ void system_init() {
         }));
     }
 
+    System::api.add_api_variable("mcmp", new APIUint32(&HRTIM1->sMasterRegs.MCMP1R));
+    System::api.add_api_variable("t1cmp", new APIUint32(&TIM1->CCR1));
 
     for (auto regs : std::vector<ADC_TypeDef*>{ADC1, ADC2, ADC3, ADC4, ADC5}) {
         regs->CR = ADC_CR_ADVREGEN;
@@ -280,6 +499,10 @@ void system_init() {
 
     v3v3 =  *((uint16_t *) (0x1FFF75AA)) * 3.0 / V_REF_DR;
     System::log("3v3: " + std::to_string(v3v3));
+    System::log("obias: " +  std::to_string(calibration->output_encoder_bias));
+    System::log("tbias: " + std::to_string(calibration->torque_sensor.bias));
+    System::log("offset: " + std::to_string(calibration->motor_encoder_index_electrical_offset_pos));
+    System::log("mbias: " + std::to_string(calibration->motor_encoder_bias));
 
     ADC1->GCOMP = v3v3*4096;
     ADC1->CFGR2 |= ADC_CFGR2_GCOMP;
@@ -292,13 +515,24 @@ void system_init() {
 
     config_init();
 
-    TIM1->CR1 = TIM_CR1_CEN; // start main loop interrupt
+    config::main_loop.init();
+
+//          regs_.sTimerxRegs[ch].TIMxCR |= HRTIM_TIMCR_PREEN | HRTIM_TIMCR_TRSTU | HRTIM_TIMCR_CONT;
+
+    NVIC_SetPriority(HRTIM1_Master_IRQn, NVIC_EncodePriority(NVIC_GetPriorityGrouping(), 1, 0));
+    NVIC_EnableIRQ(HRTIM1_Master_IRQn);
+    HRTIM1->sMasterRegs.MDIER |= HRTIM_MDIER_MCMP1IE; // interrupt on MCMP1
+   
+    HRTIM1->sMasterRegs.MCMP1R = 400;
+    static_assert(config::main_loop_frequency > CPU_FREQUENCY_HZ/4/65536, "Main loop frequency too low");
+    HRTIM1->sMasterRegs.MPER = CPU_FREQUENCY_HZ/4/config::main_loop_frequency;
+    HRTIM1->sMasterRegs.MCR = 0 << HRTIM_MCR_SYNC_SRC_Pos | 2 << HRTIM_MCR_SYNC_OUT_Pos | HRTIM_MCR_CONT | HRTIM_MCR_PREEN | HRTIM_MCR_MREPU | 7 << HRTIM_MCR_CK_PSC_Pos; // CPU_FREQUENCY * 32 / 2^7 = 42.5 MHz
     config::usb.connect();
-    HRTIM1->sMasterRegs.MCR = HRTIM_MCR_TDCEN + HRTIM_MCR_TECEN + HRTIM_MCR_TFCEN; // start high res timer
+
+    HRTIM1->sMasterRegs.MCR |= HRTIM_MCR_MCEN + HRTIM_MCR_TACEN + HRTIM_MCR_TDCEN + HRTIM_MCR_TECEN + HRTIM_MCR_TFCEN; // start high res timer, also triggers TIM1
 }
 
 FrequencyLimiter temp_rate = {10};
-FrequencyLimiter zero_rate = {100};
 float T = 0;
 MedianFilter<> board_temperature_filter;
 MedianFilter<> microcontroller_temperature_filter;
@@ -308,11 +542,43 @@ MedianFilter<> mosfet2_temperature_filter;
 void config_maintenance();
 void system_maintenance() {
     static bool driver_fault = false;
-    if (zero_rate.run()) {
-        if (config::drv.is_enabled() && !(config::main_loop.mode_ == DAMPED)) {
-            config::fast_loop.zero_current_sensors(I_A0_DR, I_B0_DR, I_C0_DR);
-        }
+    if (config::drv.is_enabled() && !(config::main_loop.mode_ == DAMPED)) {
+        config::fast_loop.zero_current_sensors(I_A0_DR, I_B0_DR, I_C0_DR);
+    }   
+    
+    float bus_current = config::main_loop.status_.power/config::main_loop.status_.fast_loop.vbus;
+    if (!config::board_rev.has_I48V_sense) {
+        round_robin_logger.log_data(BUS_CURRENT_INDEX, bus_current);
     }
+    round_robin_logger.log_data(MOTOR_POWER_INDEX, config::main_loop.status_.fast_loop.power);
+    if (!(GPIOC->IDR & 1<<14)) {
+        driver_fault = true;
+    } else if (param->main_loop_param.no_latch_driver_fault) {
+        driver_fault = false;
+    }
+
+    if (config::board_rev.has_5V_sense) {
+        v5v = (float) config::V5V_DR/4096*v3v3*2;
+        round_robin_logger.log_data(VOLTAGE_5V_INDEX, v5v);
+    }
+    if (config::board_rev.has_I5V_sense) {
+        i5v = (float) I5V/4096*v3v3;
+        round_robin_logger.log_data(CURRENT_5V_INDEX, i5v);
+    }
+    if (config::board_rev.has_I48V_sense) {
+        i48v = -((float) I_BUS_DR-2048)/4096*v3v3/20/.0005;
+        round_robin_logger.log_data(BUS_CURRENT_INDEX, i48v);
+    }
+    round_robin_logger.log_data(BUS_VOLTAGE_INDEX, config::main_loop.status_.fast_loop.vbus);
+    round_robin_logger.log_data(USB_ERROR_COUNT_INDEX, config::usb.error_count_);
+    config::main_loop.status_.error.driver_fault |= driver_fault;    // maybe latch driver fault until reset
+    index_mod = config::motor_encoder.index_error(param->fast_loop_param.motor_encoder.cpr);
+    config_maintenance();
+    // unclearable init failure fault
+    config::main_loop.status_.error.init_failure |= init_failure;
+}
+
+void main_maintenance() {
     if (temp_rate.run()) {
         ADC1->CR |= ADC_CR_JADSTART;
         while(ADC1->CR & ADC_CR_JADSTART);
@@ -364,36 +630,7 @@ void system_maintenance() {
 
             config::i2c1.init(400);
         }
-    }   
-    
-    float bus_current = config::main_loop.status_.power/config::main_loop.status_.fast_loop.vbus;
-    if (!config::board_rev.has_I48V_sense) {
-        round_robin_logger.log_data(BUS_CURRENT_INDEX, bus_current);
     }
-    round_robin_logger.log_data(MOTOR_POWER_INDEX, config::main_loop.status_.fast_loop.power);
-    if (!(GPIOC->IDR & 1<<14)) {
-        driver_fault = true;
-    } else if (param->main_loop_param.no_latch_driver_fault) {
-        driver_fault = false;
-    }
-
-    if (config::board_rev.has_5V_sense) {
-        v5v = (float) config::V5V_DR/4096*v3v3*2;
-        round_robin_logger.log_data(VOLTAGE_5V_INDEX, v5v);
-    }
-    if (config::board_rev.has_I5V_sense) {
-        i5v = (float) I5V/4096*v3v3;
-        round_robin_logger.log_data(CURRENT_5V_INDEX, i5v);
-    }
-    if (config::board_rev.has_I48V_sense) {
-        i48v = -((float) I_BUS_DR-2048)/4096*v3v3/20/.0005;
-        round_robin_logger.log_data(BUS_CURRENT_INDEX, i48v);
-    }
-    round_robin_logger.log_data(BUS_VOLTAGE_INDEX, config::main_loop.status_.fast_loop.vbus);
-    round_robin_logger.log_data(USB_ERROR_COUNT_INDEX, config::usb.error_count_);
-    config::main_loop.status_.error.driver_fault |= driver_fault;    // maybe latch driver fault until reset
-    index_mod = config::motor_encoder.index_error(param->fast_loop_param.motor_encoder.cpr);
-    config_maintenance();
 }
 
 void setup_sleep() {

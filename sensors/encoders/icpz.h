@@ -1,13 +1,13 @@
 #ifndef UNHUMAN_MOTORLIB_ICPZ_H_
 #define UNHUMAN_MOTORLIB_ICPZ_H_
 
-#include "encoder.h"
-#include "util.h"
+#include "../../encoder.h"
+#include "../../util.h"
 #include <vector>
 #include <map>
 #include <cmath>
-#include "logger.h"
-#include "parameter_api.h"
+#include "../../logger.h"
+#include "../../parameter_api.h"
 
 static uint8_t CRC_BiSS_43_30bit (uint32_t w_InputData);
 
@@ -28,6 +28,7 @@ static uint8_t CRC_BiSS_43_30bit (uint32_t w_InputData);
     api.add_api_variable(prefix "crc_cnt", new APIUint32(&icpz.crc_error_count_));\
     api.add_api_variable(prefix "raw", new APIUint32(&icpz.raw_value_));\
     api.add_api_variable(prefix "rawh", new const APICallback([](){ return u32_to_hex(icpz.raw_value_); }));\
+    api.add_api_variable(prefix "value", new const APIInt32(&icpz.pos_));\
     api.add_api_variable(prefix "diag", new const APICallback([](){ return icpz.read_diagnosis(); }));\
     api.add_api_variable(prefix "conf_write", new const APICallback([](){ return icpz.write_conf(); }));\
     api.add_api_variable(prefix "auto_ana", new const APICallback([](){ icpz.start_auto_adj_ana(); return "ok"; }));\
@@ -57,12 +58,13 @@ static uint8_t CRC_BiSS_43_30bit (uint32_t w_InputData);
     api.add_api_variable(prefix "ipo_filt2", new APICallbackHex<uint8_t>([](){ return icpz.get_ipo_filt2(); }, \
         [](uint8_t u){ icpz.set_ipo_filt2(u); }));
 
-class ICPZ : public EncoderBase {
+template<typename ConcreteICPZ>
+class ICPZBase : public EncoderBase {
  public:
     const char *disk_names[4] = {"default", "pz03s", "pz08s", "pz16s"};
     enum Disk{Default, PZ03S, PZ08S, PZ16S};
     const float r_disk_um[4] = {1, 10700, 18600, 7200};
-    ICPZ(SPIDMA &spidma, Disk disk = Default) 
+    ICPZBase(SPIDMA &spidma, Disk disk = Default) 
       : spidma_(spidma), disk_(disk) {
       command_[0] = 0xa6; // read position
     }
@@ -90,6 +92,8 @@ class ICPZ : public EncoderBase {
       success = set_register(0, 0, {3}) ? success : false; // fast speed on port a, set first
       success = set_register(7, 9, {0}) ? success : false; // multiturn data length = 0
       success = set_register(7, 0xA, {0}) ? success : false; // spi_ext = 0
+      success &= set_register(7, 0, {0x13, 0x07, 0, 0x11}); // disable prc error, default: {0x13, 0x0F, 0, 0x11}, 
+      success &= set_register(7, 4, {0x0C, 0xC8, 0, 0x02}); // prc is a warning, default: {0x0C, 0xC0, 0, 0x02}, 
       success = set_register(0, 0xF, {4}) ? success : false; // 0x00 ran_fld = 0 -> never update position based on absolute track after initial, tol 4
       success = set_register(2, 3, {0x77}) ? success : false; // moderate dynamic digital calibration
       success = set_register(2, 0, {0x77, 0x7}) ? success: false; // moderate dynamic analog calibration
@@ -121,9 +125,10 @@ class ICPZ : public EncoderBase {
       if (ongoing_read_) {
         spidma_.finish_readwrite();
         uint32_t data = ((data_[1] << 16) | (data_[2] << 8) | data_[3]) << 8;
-        raw_value_ = data | data_[4];
+        raw_value_ = data >> 8;
+        uint32_t word = data | data_[4];
         Diag diag = {.word = data_[4]};
-        uint8_t crc6_calc = ~CRC_BiSS_43_30bit(raw_value_ >> 6) & 0x3f;
+        uint8_t crc6_calc = ~CRC_BiSS_43_30bit(word >> 6) & 0x3f;
         error_count_ += !diag.nErr;
         warn_count_ += !diag.nWarn;
         uint8_t crc_error = diag.crc6 == crc6_calc ? 0 : 1;
@@ -147,31 +152,37 @@ class ICPZ : public EncoderBase {
     bool index_received() const { return true; }
 
     void set_register_operation() {
-       (*register_operation_)++;
+      static_cast<ConcreteICPZ*>(this)->set_register_operation_impl();
+    }
+    void set_register_operation_impl() {
+      (*register_operation_)++;
     }
     void clear_register_operation() {
+      static_cast<ConcreteICPZ*>(this)->clear_register_operation_impl(); 
+    }
+    void clear_register_operation_impl() {
        (*register_operation_)--;
     }
 
     std::string read_diagnosis() {
-      (*register_operation_)++;
+      set_register_operation();
       uint8_t data_out[10] = {0x9C};
       uint8_t data_in[10];
       spidma_.readwrite(data_out, data_in, 10, true);
-      (*register_operation_)--;
       clear_diag();
+      clear_register_operation();
       return bytes_to_hex(data_in+2, 8);
     }
 
     void clear_diag() {
-      (*register_operation_)++;
-      set_register(bank_, Addr::COMMANDS, {SCLEAR});
-      (*register_operation_)--;
+      set_register_operation();
+      set_register(bank_, Addr::COMMANDS, {SCLEAR}, true);
+      clear_register_operation();
     }
 
         // non interrupt context
     std::vector<uint8_t> read_register(uint8_t address, uint8_t length) {
-        (*register_operation_)++;
+        set_register_operation();
         std::vector<uint8_t> data_out(length+3, 0);
         data_out[0] = read_register_opcode_;
         data_out[1] = address;
@@ -179,77 +190,89 @@ class ICPZ : public EncoderBase {
         
         if (type_ == PZ) {
           spidma_.readwrite(data_out.data(), data_in, length+3, true);
-          (*register_operation_)--;
+          clear_register_operation();
           return std::vector<uint8_t>(&data_in[3], &data_in[3+length]);
         } else {
           spidma_.readwrite(data_out.data(), data_in, 2, true);
           data_out[0] = 0xad;
           data_out[1] = 0;
           spidma_.readwrite(data_out.data(), data_in, length+2, true);
-          (*register_operation_)--;
+          clear_register_operation();
           return std::vector<uint8_t>(&data_in[2], &data_in[2+length]);
         }
     }
 
     bool set_bank(uint8_t bank) {
-        (*register_operation_)++;
+        set_register_operation();
         if (bank != bank_) {
           uint8_t data_in[3];
           uint8_t data_out[] = {write_register_opcode_, 0x40, bank};
           spidma_.readwrite(data_out, data_in, 3, true);
           if (read_register(0x40, 1) != std::vector<uint8_t>{bank}) {
             logger.log("ichaus bank " + std::to_string(read_register(0x40, 1)[0]) + " not " + std::to_string(bank));
-            (*register_operation_)--;
+            clear_register_operation();
             return false;
           }
           bank_ = bank;
         }
-        (*register_operation_)--;
+        clear_register_operation();
         return true;
     }
 
     std::vector<uint8_t> read_register(uint8_t bank, uint8_t address, uint8_t length) {
-        (*register_operation_)++;
+        set_register_operation();
         std::vector<uint8_t> data_out(length+3, 0);
         data_out[0] = read_register_opcode_;
         data_out[1] = address;
         uint8_t data_in[length+3];
         if (!set_bank(bank)) {
-          (*register_operation_)--;
+          clear_register_operation();
           return std::vector<uint8_t>(1,0xff);
         }
         if (type_ == PZ) {
           spidma_.readwrite(data_out.data(), data_in, length+3, true);
-          (*register_operation_)--;
+          clear_register_operation();
           return std::vector<uint8_t>(&data_in[3], &data_in[3+length]);
         } else {
           spidma_.readwrite(data_out.data(), data_in, 2, true);
           data_out[0] = 0xad;
           data_out[1] = 0;
           spidma_.readwrite(data_out.data(), data_in, length+2, true);
-          (*register_operation_)--;
+          clear_register_operation();
           return std::vector<uint8_t>(&data_in[2], &data_in[2+length]);
         }
     }
 
     // non interrupt context
-    bool set_register(uint8_t bank, uint8_t address, const std::vector<uint8_t> &value) {
-        (*register_operation_)++;
-        uint8_t data_in[std::max(value.size(),(std::size_t) 3)];
+    bool set_register(uint8_t bank, uint8_t address, const std::vector<uint8_t> &value, bool set_only = false) {
+        set_register_operation();
+        bool retval = true;
+        uint8_t data_in[std::max(value.size()+2,(std::size_t) 3)];
         if (!set_bank(bank)) {
-          (*register_operation_)--;
+          clear_register_operation();
           return false;
         }
         std::vector<uint8_t> data_out = {write_register_opcode_, address};
         data_out.insert(data_out.end(), value.begin(), value.end());
         spidma_.readwrite(data_out.data(), data_in, data_out.size(), true);
-        bool retval = read_register(address, value.size()) == value;
-        (*register_operation_)--;
+        if (!set_only) {
+          std::vector<uint8_t> data_read = read_register(address, value.size());
+          retval = data_read == value;
+          clear_register_operation();
+          if (!retval) {
+            for (unsigned int i=0; i<value.size(); i++) {
+              logger.log_printf("icpz register %x, set%d: %x, read%d: %x", address, i, value[i], i, data_read[i]);
+            }
+          }
+        } else {
+          clear_register_operation();
+        }
         return retval;
     }
 
     void clear_faults() {
-        clear_diag();
+        // todo this is called by mainloop needs to be isr safe to use clear diag here
+        // clear_diag();
         error_count_ = 0;
         warn_count_ = 0;
         crc_error_count_ = 0;
@@ -509,6 +532,11 @@ class ICPZ : public EncoderBase {
     friend void config_init();
     friend void config_maintenance();
 
+};
+
+class ICPZ : public ICPZBase<ICPZ> {
+  public:
+    ICPZ(SPIDMA &spidma, Disk disk = Default) : ICPZBase(spidma, disk) {}
 };
 
 uint8_t tableCRC6[64] = {

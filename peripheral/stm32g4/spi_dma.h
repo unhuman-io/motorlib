@@ -51,11 +51,38 @@ class SPIDMA {
         finish_readwrite(register_operation);
     }
 
+    void start_continuous_readwrite(const uint8_t * const data_out, uint8_t * const data_in, uint8_t length) {
+        length_ = length;
+        asm("nop"); // memory barrier data_out[]
+        tx_dma_.CCR = 0;
+        rx_dma_.CCR = 0;
+        tx_dma_.CNDTR = length;
+        rx_dma_.CNDTR = length;
+        tx_dma_.CMAR = (uint32_t) data_out;
+        rx_dma_.CMAR = (uint32_t) data_in;
+        rx_dma_.CCR = DMA_CCR_EN | DMA_CCR_CIRC | DMA_CCR_MINC;
+        tx_dma_.CCR = DMA_CCR_EN | DMA_CCR_CIRC | DMA_CCR_MINC | DMA_CCR_DIR; // DIR = 1 > read from memory
+    }
+
+    void start_continuous_write(const uint8_t * const data_out, uint8_t length) {
+        length_ = length;
+        tx_dma_.CCR = 0;
+        tx_dma_.CNDTR = length;
+        tx_dma_.CMAR = (uint32_t) data_out;
+        tx_dma_.CCR = DMA_CCR_EN | DMA_CCR_CIRC | DMA_CCR_MINC | DMA_CCR_DIR; // DIR = 1 > read from memory
+    }
+
+    void stop_continuous_readwrite() {
+        tx_dma_.CCR = 0;
+        rx_dma_.CCR = 0;
+    }
+
     void start_readwrite(const uint8_t * const data_out, uint8_t * const data_in, uint8_t length, bool register_operation = false) {
         if (!*register_operation_ || register_operation) {
             reinit();
             gpio_cs_.clear();
             ns_delay(start_cs_delay_ns_);
+            length_ = length;
             tx_dma_.CCR = 0;
             rx_dma_.CCR = 0;
             tx_dma_.CNDTR = length;
@@ -64,6 +91,7 @@ class SPIDMA {
             rx_dma_.CMAR = (uint32_t) data_in;      
             rx_dma_.CCR = DMA_CCR_EN | DMA_CCR_MINC;
             tx_dma_.CCR = DMA_CCR_EN | DMA_CCR_MINC | DMA_CCR_DIR; // DIR = 1 > read from memory
+            time_start_ = get_clock();
             asm("dmb"); // ensure that CMAR writes are not optimized out
         }
     }
@@ -72,6 +100,7 @@ class SPIDMA {
         if (!*register_operation_ || register_operation) {
             gpio_cs_.clear();
             ns_delay(start_cs_delay_ns_);
+            length_ = length;
             tx_dma_.CCR = 0;
             rx_dma_.CCR = 0;
             tx_dma_.CNDTR = length;
@@ -80,19 +109,23 @@ class SPIDMA {
             rx_dma_.CMAR = (uint32_t) tmp_rx_;        
             rx_dma_.CCR = DMA_CCR_EN;
             tx_dma_.CCR = DMA_CCR_EN | DMA_CCR_MINC | DMA_CCR_DIR; // DIR = 1 > read from memory
+            time_start_ = get_clock();
             asm("dmb"); // ensure that CMAR writes are not optimized out
         }
     }
 
     void finish_readwrite(bool register_operation = false) {
         if (!*register_operation_ || register_operation) {
-            while(rx_dma_.CNDTR);
+            uint8_t brr = (regs_.CR1 & SPI_CR1_BR) >> SPI_CR1_BR_Pos;
+            uint32_t timeout = (length_*8+3)*(2 << brr); // 3 extra bits time
+            while(rx_dma_.CNDTR && (get_clock() - time_start_ < timeout)); // Busy wait with timeout
             ns_delay(end_cs_delay_ns_);
             gpio_cs_.set();
         }
     }
+
     volatile int *register_operation_ = &register_operation_local_;
- private:
+
     volatile int register_operation_local_ = 0;
     SPI_TypeDef &regs_;
     GPIO &gpio_cs_;
@@ -101,6 +134,8 @@ class SPIDMA {
     uint16_t end_cs_delay_ns_;
     uint32_t regs_cr1_;
     uint32_t tmp_rx_;
+    uint32_t length_;
+    uint32_t time_start_;
 
     volatile uint32_t old_cr1_, old_cr2_, old_tx_cpar_, old_rx_cpar_;
 

@@ -1,14 +1,6 @@
 
 #include "../../motorlib/system.h"
 
-
-#define SPI_DEBUG_PIN2_SET()   do{GPIOC->ODR |= GPIO_ODR_OD12;}while(0)
-#define SPI_DEBUG_PIN2_CLEAR() do{GPIOC->ODR &= ~GPIO_ODR_OD12;}while(0)
-
-#define SPI_DEBUG_PIN3_SET()   do{GPIOC->ODR |= GPIO_ODR_OD11;}while(0)
-#define SPI_DEBUG_PIN3_CLEAR() do{GPIOC->ODR &= ~GPIO_ODR_OD11;}while(0)
-
-
 void ADC5_IRQHandler(void) __attribute__((section (".ccmram")));
 
 #define INTERRUPT_PROFILE_GLOBALS(loop) uint32_t t_exec_##loop __attribute__((used));\
@@ -33,6 +25,7 @@ void ADC5_IRQHandler(void) __attribute__((section (".ccmram")));
 #include "../../motorlib/util.h"
 INTERRUPT_PROFILE_GLOBALS(fastloop);
 INTERRUPT_PROFILE_GLOBALS(mainloop);
+INTERRUPT_PROFILE_GLOBALS(systemloop);
 INTERRUPT_PROFILE_GLOBALS(comint);
 
 void NMI_Handler(void)
@@ -76,9 +69,9 @@ void DebugMon_Handler(void)
 {
 }
 
-void PendSV_Handler(void)
-{
-}
+// void PendSV_Handler(void)
+// {
+// }
 
 void SysTick_Handler(void)
 {
@@ -93,16 +86,14 @@ void USB_LP_IRQHandler(void)
   CLEAR_SCOPE_PIN(C,2); 
 }
 
-void TIM1_UP_TIM16_IRQHandler(void)
+void TIM1_CC_IRQHandler(void)
 {
-  SPI_DEBUG_PIN3_SET();
-  SET_SCOPE_PIN(C,0);
+  SET_SCOPE_PIN(A,0);
   INTERRUPT_PROFILE_START;
-  main_loop_interrupt();
+  system_loop_interrupt();
   TIM1->SR = 0;
-  INTERRUPT_PROFILE_END(mainloop);
-  CLEAR_SCOPE_PIN(C,0); 
-  SPI_DEBUG_PIN3_CLEAR();
+  INTERRUPT_PROFILE_END(systemloop);
+  CLEAR_SCOPE_PIN(A,0); 
 }
 
 void ADC5_IRQHandler(void)
@@ -113,4 +104,14 @@ void ADC5_IRQHandler(void)
   ADC5->ISR = ADC_ISR_JEOS;
   INTERRUPT_PROFILE_END(fastloop)
   CLEAR_SCOPE_PIN(C,1);
+}
+
+void HRTIM1_Master_IRQHandler(void)
+{
+  SET_SCOPE_PIN(C,0);
+  INTERRUPT_PROFILE_START;
+  main_loop_interrupt();
+  HRTIM1->sMasterRegs.MICR = HRTIM_MICR_MCMP1;
+  INTERRUPT_PROFILE_END(mainloop);
+  CLEAR_SCOPE_PIN(C,0); 
 }

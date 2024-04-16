@@ -75,7 +75,7 @@ class SPITorque final : public TorqueSensorBase {
                 float sum = (float) result0_ + (float) result1_;
                 float tcomp = sum * k_temp_;
                 if (sum != 0) {
-                    torque_ = diff/sum * gain_ + bias_ + tcomp;
+                    torque_ = diff/sum * gain_ + tcomp;
                 }
             }
         }

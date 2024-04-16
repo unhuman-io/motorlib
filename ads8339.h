@@ -24,7 +24,7 @@ class ADS8339 : public TorqueSensorBase {
             spi_dma_.finish_readwrite();
             raw_value_ = data_in_[0] << 8 | data_in_[1];
             signed_value_ = raw_value_ - 0x7FFF;
-            torque_ = signed_value_ * gain_ + bias_;
+            torque_ = signed_value_ * gain_;
 
             // stale values are currently the only fault mechanism
             if (last_new_signed_value_ != signed_value_) {

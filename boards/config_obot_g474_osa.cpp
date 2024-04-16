@@ -4,6 +4,10 @@
 #include "../util.h"
 #include "../driver.h"
 
+const Param * const param = (const Param * const) 0x8060000;
+const Calibration * const calibration = (const Calibration * const) 0x8070000;
+extern const char * const name = param->name;
+
 using Driver = DriverBase;
 using PWM = HRPWM;
 using Communication = USBCommunication;
@@ -24,11 +28,13 @@ uint16_t drv_regs_error = 0;
 #include "pin_config_obot_g474_osa.h"
 #include "../peripheral/stm32g4/temp_sensor.h"
 #include "../peripheral/stm32g4/max31875.h"
+#include "../peripheral/stm32_serial.h"
 
 extern "C" void SystemClock_Config();
 void pin_config_obot_g474_osa();
 
 extern "C" void board_init() {
+    init_serial_number();
     SystemClock_Config();
     pin_config_obot_g474_osa();
 }
@@ -41,7 +47,7 @@ namespace config {
     MAX31875 i2c_temp_sensor(i2c1);
     HRPWM motor_pwm = {pwm_frequency, *HRTIM1, 4, 5, 3, true, 200, 1000, 0};
     USB1 usb;
-    FastLoop fast_loop = {(int32_t) pwm_frequency, motor_pwm, motor_encoder, param->fast_loop_param, &I_A_DR, &I_B_DR, &I_C_DR, &V_BUS_DR};
+    FastLoop fast_loop = {(int32_t) pwm_frequency, motor_pwm, motor_encoder, param->fast_loop_param, *calibration, &I_A_DR, &I_B_DR, &I_C_DR, &V_BUS_DR};
     LED led = {const_cast<uint16_t*>(reinterpret_cast<volatile uint16_t *>(&TIM_R)), 
                const_cast<uint16_t*>(reinterpret_cast<volatile uint16_t *>(&TIM_G)),
                const_cast<uint16_t*>(reinterpret_cast<volatile uint16_t *>(&TIM_B))};
@@ -52,14 +58,14 @@ namespace config {
     StateController state_controller = {(float) (1.0/main_loop_frequency)};
     JointPositionController joint_position_controller(1.0/main_loop_frequency);
     AdmittanceController admittance_controller = {1.0/main_loop_frequency};
-    MainLoop main_loop = {main_loop_frequency, fast_loop, position_controller, torque_controller, impedance_controller, velocity_controller, state_controller, joint_position_controller, admittance_controller, System::communication_, led, output_encoder, torque_sensor, driver, param->main_loop_param};
+    MainLoop main_loop = {main_loop_frequency, fast_loop, position_controller, torque_controller, impedance_controller, velocity_controller, state_controller, joint_position_controller, admittance_controller, System::communication_, led, output_encoder, torque_sensor, driver, param->main_loop_param, *calibration};
 };
 
 Communication System::communication_ = {config::usb};
 void usb_interrupt() {
     config::usb.interrupt();
 }
-Actuator System::actuator_ = {config::fast_loop, config::main_loop, param->startup_param};
+Actuator System::actuator_ = {config::fast_loop, config::main_loop, param->startup_param, *calibration};
 
 float v_ref = 3.0;
 float t_i2c = 0;
@@ -153,6 +159,6 @@ void system_maintenance() {
     
     config_maintenance();
 }
-
+void main_maintenance() {}
 
 #include "../../motorlib/system.cpp"

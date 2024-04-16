@@ -42,18 +42,19 @@ class DRV8323S : public DriverBase {
     }
 
     void disable() {
-        uint32_t status = get_drv_status();
-        logger.log_printf("drv8323 disabled, status1: %03x status2: %03x", status & 0xFFFF, status >> 16);
-        std::string s = "drv8323 status bits";
-        for(int i=0; i<11; i++) {
-            if ((status >> i) & 0x1)
-                s += " " + drv8323_status1_bits[i];
-        }
-        for(int i=0; i<11; i++) {
-            if ((status >> (16+i)) & 0x1)
-                s += " " + drv8323_status2_bits[i];
-        }
-        logger.log(s);
+        uint32_t __attribute((unused)) status = get_drv_status();
+        // todo bring back logger in isr safe way
+        // logger.log_printf("drv8323 disabled, status1: %03x status2: %03x", status & 0xFFFF, status >> 16);
+        // std::string s = "drv8323 status bits";
+        // for(int i=0; i<11; i++) {
+        //     if ((status >> i) & 0x1)
+        //         s += " " + drv8323_status1_bits[i];
+        // }
+        // for(int i=0; i<11; i++) {
+        //     if ((status >> (16+i)) & 0x1)
+        //         s += " " + drv8323_status2_bits[i];
+        // }
+        // logger.log(s);
         GPIOC->BSRR = GPIO_BSRR_BR13; // drv disable
         DriverBase::disable();
     }
@@ -73,15 +74,15 @@ class DRV8323S : public DriverBase {
             if ((reg_in & 0x7FF) != (reg_out & 0x7FF)) {
                 drv_regs_error |= 1 << i;
             }
-            logger.log_printf("address: %d, reg_out: %03x, reg_in: %03x", address, reg_out & 0x7FF, reg_in);
+            // logger.log_printf("address: %d, reg_out: %03x, reg_in: %03x", address, reg_out & 0x7FF, reg_in);
         }
 
         drv_spi_end();
         DriverBase::enable();
         if(!drv_regs_error) {
-            logger.log("drv8323s configure success");
+            // logger.log("drv8323s configure success");
         } else {
-            logger.log_printf("drv8323s configure error: %02x", drv_regs_error);
+            // logger.log_printf("drv8323s configure error: %02x", drv_regs_error);
         }
     }
 
@@ -93,9 +94,15 @@ class DRV8323S : public DriverBase {
     }
 
     uint16_t write_reg(uint16_t reg_out) {
+        uint32_t timeout = get_clock() + US_TO_CPU(100000U); // Timeout 100ms
+        uint16_t reg_in = 0;
         regs_.DR = reg_out;
-        while(!(regs_.SR & SPI_SR_RXNE));
-        uint16_t reg_in = regs_.DR;
+        while((!(regs_.SR & SPI_SR_RXNE)) && (get_clock() < timeout)); // Busy wait with timeout
+
+        if(get_clock() < timeout) // If timeout did not expire
+        {
+          reg_in = regs_.DR;
+        }
         return reg_in;
     }
     
@@ -105,10 +112,16 @@ class DRV8323S : public DriverBase {
     }
 
     uint16_t read_reg(uint8_t address) {
+        uint32_t timeout = get_clock() + US_TO_CPU(100000U); // Timeout 100ms
         uint16_t out_value = 1<<15 | address<<11;
+        uint16_t value = 0;
         regs_.DR = out_value;
-        while(!(regs_.SR & SPI_SR_RXNE));
-        uint16_t value = regs_.DR;
+        while((!(regs_.SR & SPI_SR_RXNE)) && (get_clock() < timeout)); // Busy wait with timeout
+
+        if(get_clock() < timeout) // If timeout did not expire
+        {
+          value = regs_.DR;
+        }
         return value;
     }
 

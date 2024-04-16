@@ -21,8 +21,8 @@
 #define TSENSE ADC2->JDR2
 #define TSENSE2 ADC2->JDR3
 
-#define I5V ADC3->JDR2
-#define I_BUS_DR ADC5->JDR2
+#define I5V ADC3->JDR3
+#define I_BUS_DR ADC5->JDR3
 
 
 struct BoardPins {
@@ -55,7 +55,7 @@ void pin_config_obot_g474_motor(const BoardRev &board_rev) {
      // Peripheral clock enable
         RCC->APB1ENR1 |= RCC_APB1ENR1_SPI3EN | RCC_APB1ENR1_TIM2EN |  RCC_APB1ENR1_TIM4EN | RCC_APB1ENR1_TIM5EN | RCC_APB1ENR1_USBEN | RCC_APB1ENR1_I2C1EN | RCC_APB1ENR1_RTCAPBEN | RCC_APB1ENR1_PWREN;
         RCC->APB2ENR |= RCC_APB2ENR_SPI1EN | RCC_APB2ENR_TIM1EN | RCC_APB2ENR_HRTIM1EN | RCC_APB2ENR_SYSCFGEN;
-        RCC->AHB1ENR |= RCC_AHB1ENR_DMA1EN | RCC_AHB1ENR_DMAMUX1EN;
+        RCC->AHB1ENR |= RCC_AHB1ENR_DMA1EN | RCC_AHB1ENR_DMA2EN | RCC_AHB1ENR_DMAMUX1EN;
         RCC->AHB2ENR |= RCC_AHB2ENR_GPIOAEN | RCC_AHB2ENR_GPIOBEN | RCC_AHB2ENR_GPIOCEN | RCC_AHB2ENR_GPIODEN | RCC_AHB2ENR_ADC12EN | RCC_AHB2ENR_ADC345EN;
         PWR->CR1 |= PWR_CR1_DBP;
         RCC->BDCR |= 2 << RCC_BDCR_RTCSEL_Pos | RCC_BDCR_RTCEN;
@@ -117,11 +117,15 @@ void pin_config_obot_g474_motor(const BoardRev &board_rev) {
         MASK_SET(GPIOC->PUPDR, GPIO_PUPDR_PUPD14, GPIO_PULL::UP);
 
         // TIM1 main loop interrupt        
-        static_assert(CPU_FREQUENCY_HZ / config::main_loop_frequency < 65536, "Main loop frequency too low");
-        TIM1->ARR = CPU_FREQUENCY_HZ / config::main_loop_frequency - 1;
-        TIM1->DIER = TIM_DIER_UIE;
-        NVIC_SetPriority(TIM1_UP_TIM16_IRQn, NVIC_EncodePriority(NVIC_GetPriorityGrouping(), 1, 0));
-        NVIC_EnableIRQ(TIM1_UP_TIM16_IRQn);
+        static_assert(CPU_FREQUENCY_HZ / 16 / config::system_loop_frequency < 65536, "System loop frequency too low");
+        TIM1->ARR = CPU_FREQUENCY_HZ / 16 / config::system_loop_frequency - 1;
+        TIM1->DIER = TIM_DIER_CC1IE;
+        TIM1->CCR1 = 800;
+        TIM1->PSC = 15;
+        TIM1->EGR = TIM_EGR_UG; // update to get the psc to take effect.
+        TIM1->SMCR = TIM_SMCR_TS_3 | 6 << TIM_SMCR_TS_Pos | 6 << TIM_SMCR_SMS_Pos; // trigger mode on tim_itr10 - hrtim_out_sync2
+        NVIC_SetPriority(TIM1_CC_IRQn, NVIC_EncodePriority(NVIC_GetPriorityGrouping(), 3, 0));
+        NVIC_EnableIRQ(TIM1_CC_IRQn);
 
         // RTC
         RTC->WPR = 0xCA;
@@ -171,8 +175,10 @@ void pin_config_obot_g474_motor(const BoardRev &board_rev) {
         ADC2->CFGR2 =  ADC_CFGR2_JOVSE | ADC_CFGR2_ROVSE | (8 << ADC_CFGR2_OVSS_Pos) | (7 << ADC_CFGR2_OVSR_Pos); // 256x oversample
 
         
-        //ADC3,4,5
-        // ADC3 adds PB1 (i5v), then back to current to clear s&h error
+        // ADC3,4,5 triggered from HRTIM both 0 and period, 0 is pwm high, can be used for current sensor zeroing with low side sensing, 
+        // the period is the center of the off time, used for the actual current sense
+        // sample current twice and take only the first, per the errata, assume that ADC1 and 2 are offset due to different SMPR times and 
+        // won't affect the result
         GPIO_SETL(B, 1, GPIO_MODE::ANALOG, GPIO_SPEED::LOW, 0); // i5v
         GPIO_SETH(A, 8, GPIO_MODE::ANALOG, GPIO_SPEED::LOW, 0); // i48v, adc5 in1
         ADC345_COMMON->CCR = ADC_CCR_VREFEN | 3 << ADC_CCR_CKMODE_Pos; // hclk/4 (42.5 MHz)
@@ -181,9 +187,9 @@ void pin_config_obot_g474_motor(const BoardRev &board_rev) {
         ADC4->SMPR2 = 2 << ADC_SMPR2_SMP17_Pos; // 12.5 cycles current_sense, 294 ns, 200 ns min for opamp6
         ADC5->SMPR1 = 2 << ADC_SMPR1_SMP1_Pos | // 12.5 cycles current_sense i48v
                       2 << ADC_SMPR1_SMP5_Pos; // 12.5 cycles current_sense, 294 ns, 200 ns min for opamp4
-        ADC3->JSQR = 2 << ADC_JSQR_JL_Pos | 1 << ADC_JSQR_JEXTEN_Pos | 27 << ADC_JSQR_JEXTSEL_Pos | 13 << ADC_JSQR_JSQ1_Pos | 1 << ADC_JSQR_JSQ2_Pos | 13 << ADC_JSQR_JSQ3_Pos; // trig 27 hrtim adc_trig1 (injected)
-        ADC4->JSQR = 1 << ADC_JSQR_JEXTEN_Pos | 27 << ADC_JSQR_JEXTSEL_Pos | 17 << ADC_JSQR_JSQ1_Pos; // trig 27 hrtim adc_trig1 (injected)
-        ADC5->JSQR = 2 << ADC_JSQR_JL_Pos | 1 << ADC_JSQR_JEXTEN_Pos | 27 << ADC_JSQR_JEXTSEL_Pos | 5 << ADC_JSQR_JSQ1_Pos | 1 << ADC_JSQR_JSQ2_Pos | 5 << ADC_JSQR_JSQ3_Pos;;  // trig 27 hrtim adc_trig1 (injected)
+        ADC3->JSQR = 2 << ADC_JSQR_JL_Pos | 1 << ADC_JSQR_JEXTEN_Pos | 27 << ADC_JSQR_JEXTSEL_Pos | 13 << ADC_JSQR_JSQ1_Pos | 13 << ADC_JSQR_JSQ2_Pos | 1 << ADC_JSQR_JSQ3_Pos; // trig 27 hrtim adc_trig1 (injected)
+        ADC4->JSQR = 1 << ADC_JSQR_JL_Pos | 1 << ADC_JSQR_JEXTEN_Pos | 27 << ADC_JSQR_JEXTSEL_Pos | 17 << ADC_JSQR_JSQ1_Pos | 17 << ADC_JSQR_JSQ2_Pos; // trig 27 hrtim adc_trig1 (injected)
+        ADC5->JSQR = 2 << ADC_JSQR_JL_Pos | 1 << ADC_JSQR_JEXTEN_Pos | 27 << ADC_JSQR_JEXTSEL_Pos | 5 << ADC_JSQR_JSQ1_Pos | 5 << ADC_JSQR_JSQ2_Pos | 1 << ADC_JSQR_JSQ3_Pos;;  // trig 27 hrtim adc_trig1 (injected)
         ADC3->CFGR = ADC_CFGR_JQDIS | ADC_CFGR_OVRMOD | 1 << ADC_CFGR_EXTEN_Pos | 22 << ADC_CFGR_EXTSEL_Pos; // trig 22 hrtim_adc_trig3 (regular)
         ADC4->CFGR = ADC_CFGR_JQDIS | ADC_CFGR_OVRMOD | 1 << ADC_CFGR_EXTEN_Pos | 22 << ADC_CFGR_EXTSEL_Pos; // trig 22 hrtim_adc_trig3 (regular)
         ADC5->CFGR = ADC_CFGR_JQDIS | ADC_CFGR_OVRMOD | 1 << ADC_CFGR_EXTEN_Pos | 22 << ADC_CFGR_EXTSEL_Pos; // trig 22 hrtim_adc_trig3 (regular)

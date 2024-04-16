@@ -1,7 +1,7 @@
 #######################################
 # paths
 #######################################
-# Requires PARAM_FILE, CONFIG_FILE, and TARGET_MCU defined
+# Requires CONFIG_FILE, and TARGET_MCU defined
 
 # Build path
 BUILD_DIR = build
@@ -12,7 +12,6 @@ ifndef OBOT_HASH
 OBOT_HASH := $(shell git rev-parse HEAD)
 endif
 MOTORLIB_HASH := $(shell git -C $(SELF_DIR) rev-parse HEAD)
-$(shell touch $(SELF_DIR)../param_default.h)
 
 ifndef TARGET_MCU
 $(error need to define TARGET_MCU)
@@ -60,17 +59,20 @@ C_INCLUDES +=  \
 LDSCRIPT = $(SELF_DIR)../peripheral/stm32g4/STM32G474RETx_FLASH.ld
 
 CPP_SOURCES += \
-$(SELF_DIR)../peripheral/stm32g4/usb.cpp\
-$(SELF_DIR)../peripheral/stm32g4/spi_slave.cpp\
 $(SELF_DIR)../peripheral/spi_encoder.cpp\
-$(SELF_DIR)../peripheral/spi_protocol.cpp\
-$(SELF_DIR)../peripheral/spi_mailbox.cpp\
-$(SELF_DIR)../peripheral/spi_protocol_states.cpp\
-$(SELF_DIR)../peripheral/spi_protocol_commands.cpp\
+$(SELF_DIR)../peripheral/protocol.cpp\
+$(SELF_DIR)../peripheral/mailbox.cpp\
+$(SELF_DIR)../peripheral/protocol_states_spi.cpp\
+$(SELF_DIR)../peripheral/protocol_states_uart.cpp\
+$(SELF_DIR)../peripheral/protocol_commands.cpp\
 $(SELF_DIR)../peripheral/stm32g4/ams_encoder.cpp\
 $(SELF_DIR)../peripheral/stm32g4/hrpwm.cpp\
 $(SELF_DIR)../peripheral/stm32g4/clock_config.cpp\
 $(SELF_DIR)../peripheral/stm32g4/stm32g4_serial.cpp\
+$(SELF_DIR)../peripheral/stm32g4/usb.cpp\
+$(SELF_DIR)../peripheral/stm32g4/spi_slave.cpp\
+$(SELF_DIR)../peripheral/stm32g4/spi_slave_figure.cpp\
+$(SELF_DIR)../peripheral/stm32g4/uart.cpp
 
 endif # MCU_TARGET == stm32g474
 
@@ -87,15 +89,19 @@ override C_DEFS += \
 -DNOTES=\"$(shell git branch --show-current)\"
 endif
 
+# Uncomment to disable the watchdog timer
+#override C_DEFS += \
+-DNO_WATCHDOG
+
 C_INCLUDES +=  \
 -I. \
 -I$(SELF_DIR)../CMSIS/Include \
--I$(SELF_DIR)../peripheral
-
-C_SOURCES += \
-./$(PARAM_FILE)
+-I$(SELF_DIR)../peripheral \
+-I$(SELF_DIR)../../../lib/protocol \
+-I$(SELF_DIR)../obot-protocol \
 
 CPP_SOURCES += \
+$(SELF_DIR)../malloc.cpp\
 $(SELF_DIR)../control_fun.cpp\
 $(SELF_DIR)../foc.cpp\
 $(SELF_DIR)../gpio.cpp\
@@ -105,7 +111,9 @@ $(SELF_DIR)../hall.cpp\
 $(SELF_DIR)../parameter_api.cpp\
 ./$(CONFIG_FILE)
 
-
-ifdef PARAM_OVERRIDE
-PARAM_INCLUDE=-include $(PARAM_OVERRIDE)
+ifneq ($(findstring protocol_parser.cpp, $(CPP_SOURCES)),)
+$(info protocol_parser.cpp already defined)
+else
+$(info using motorlib protocol_parser.cpp)
+CPP_SOURCES += $(SELF_DIR)../obot-protocol/protocol_parser.cpp
 endif
