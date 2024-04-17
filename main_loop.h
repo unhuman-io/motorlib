@@ -354,7 +354,7 @@ class MainLoop {
               iq_des = velocity_controller_.step(command, status_);
               break;
             case GOTO_POSITION:
-              position_limits_disable_ = false;
+              position_limits_disable_ = position_limits_disable_last_;
               command.position_desired = command_current_.position_desired;
               iq_des = position_controller_.step(command, status_);
               break;
@@ -422,6 +422,8 @@ class MainLoop {
       joint_position_controller_.set_param(param_.joint_position_controller_param);
       admittance_controller_.set_param(param_.admittance_controller_param);
       torque_sensor_.set_param(calibration_.torque_sensor);
+      position_limits_disable_ = param_.position_limits_disable;
+      position_limits_disable_last_ = position_limits_disable_;
       if (param_.encoder_limits.motor_hard_max == param_.encoder_limits.motor_hard_min) {
         encoder_limits_.motor_hard_max = INFINITY;
         encoder_limits_.motor_hard_min = -INFINITY;
@@ -451,7 +453,13 @@ class MainLoop {
       motor_temperature_limit_ = param_.motor_temperature_limit == 0 ? 140 : param_.motor_temperature_limit;
       // output_encoder_bias_ = param_.output_encoder.bias;
       output_encoder_bias_ = calibration_.output_encoder_bias;
-      error_mask_.all = calibration_.error_mask.all == 0 ? ERROR_MASK_ALL : (calibration_.error_mask.all & ERROR_MASK_ALL);
+
+      // Error mask is the logical and of the error mask in the calibration and the param
+      // So a disabled error in either will be disabled
+      // Calibration error mask will be ignored if set to 0
+      MotorError error_mask_default; 
+      error_mask_default.all = param_.error_mask.all == 0 ? ERROR_MASK_ALL : param_.error_mask.all & ERROR_MASK_ALL;
+      error_mask_.all = calibration_.error_mask.all == 0 ? error_mask_default.all : (calibration_.error_mask.all & error_mask_default.all);
       output_encoder_dir_ = param_.output_encoder.dir == 0 ? 1 : param_.output_encoder.dir;
       float torque_sensor_dir1 = calibration_.torque_sensor.dir == 0 ? 1 : calibration_.torque_sensor.dir;
       float torque_sensor_dir2 = param_.torque_sensor_dir == 0 ? 1 : param_.torque_sensor_dir;
@@ -482,6 +490,11 @@ class MainLoop {
         if(mode_ == HARDWARE_BRAKE && mode != HARDWARE_BRAKE) {
           brake_.off();
         }
+        // any mode switch will exit find limits (if active) and its override of position_limits_disable
+        if (mode_ == FIND_LIMITS && mode != FIND_LIMITS) {
+          position_limits_disable_ = position_limits_disable_last_;
+        }
+
         switch (mode) {
           default:
             mode = OPEN;
@@ -559,6 +572,7 @@ class MainLoop {
             break;
           case FIND_LIMITS:
             fast_loop_.current_mode();
+            position_limits_disable_last_ = position_limits_disable_;
             position_limits_disable_ = true;
             find_limits_state_ = FIND_FIRST_LIMIT;
             velocity_controller_.init(status_);
@@ -756,6 +770,7 @@ class MainLoop {
     enum FindLimitsState {FIND_FIRST_LIMIT, FIND_SECOND_LIMIT, VELOCITY_TO_POSITION, GOTO_POSITION} find_limits_state_;
     FirstOrderLowPassFilter iq_find_limits_filter_;
     bool position_limits_disable_ = false;
+    bool position_limits_disable_last_ = false;
 
     float output_position_last_ = 0;
     FIRFilter<> motor_velocity_filter_;

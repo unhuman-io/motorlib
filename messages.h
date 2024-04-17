@@ -214,6 +214,8 @@ typedef struct {
     } motor_temperature_model;
 
     float torque_sensor_dir;
+    uint8_t position_limits_disable;
+    MotorError error_mask;
 } MainLoopParam;
 
 typedef struct {

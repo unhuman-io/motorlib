@@ -79,6 +79,7 @@ void SysTick_Handler(void)
 
 void USB_LP_IRQHandler(void)
 {
+  asm("":::"memory");
   SET_SCOPE_PIN(C,2);
   INTERRUPT_PROFILE_START;
   usb_interrupt();
@@ -88,6 +89,7 @@ void USB_LP_IRQHandler(void)
 
 void TIM1_CC_IRQHandler(void)
 {
+  asm("":::"memory");
   SET_SCOPE_PIN(A,0);
   INTERRUPT_PROFILE_START;
   system_loop_interrupt();
@@ -98,6 +100,7 @@ void TIM1_CC_IRQHandler(void)
 
 void ADC5_IRQHandler(void)
 {
+  asm("":::"memory");
   SET_SCOPE_PIN(C,1);
   INTERRUPT_PROFILE_START;
   fast_loop_interrupt();
@@ -108,6 +111,7 @@ void ADC5_IRQHandler(void)
 
 void HRTIM1_Master_IRQHandler(void)
 {
+  asm("":::"memory");
   SET_SCOPE_PIN(C,0);
   INTERRUPT_PROFILE_START;
   main_loop_interrupt();
