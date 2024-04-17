@@ -54,6 +54,7 @@ class MAX11254DMA : public MAX11254<> {
 
     void trigger(){}
     float read() {
+        asm("" : "=m" (*(uint8_t (*)[10]) dma_buf_in_)); // memory barrier
         uint8_t *data_in = dma_buf_in_[get_new_buf_ptr()];
         raw_value_ = data_in[2] << 16 | data_in[3] << 8 | data_in[4];
         signed_value_ = raw_value_ - 0x7FFFFF;
@@ -81,9 +82,11 @@ class MAX11254DMA : public MAX11254<> {
     }
 
     uint8_t get_new_buf_ptr() {
-        // if CNDTR <= 5, return 1
+        // if CNDTR > 5, return 1
         //   else return 0
-        return rx_dma_.CNDTR <= 5;
+        // buffer 0 is active if CNDTR 10->6,
+        // buffer 1 is active if CNDTR 5->1
+        return rx_dma_.CNDTR > 5;
     }
 
     DMA_Channel_TypeDef &tx_dma_, &rx_dma_;
