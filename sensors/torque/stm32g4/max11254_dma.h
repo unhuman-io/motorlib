@@ -54,6 +54,7 @@ class MAX11254DMA : public MAX11254<> {
 
     void trigger(){}
     float read() {
+        asm("" : "=m" (*(uint8_t (*)[10]) dma_buf_in_)); // memory barrier
         uint8_t *data_in = dma_buf_in_[get_new_buf_ptr()];
         raw_value_ = data_in[2] << 16 | data_in[3] << 8 | data_in[4];
         signed_value_ = raw_value_ - 0x7FFFFF;
