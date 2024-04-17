@@ -491,8 +491,9 @@ class MainLoop {
           brake_.off();
         }
         // any mode switch will exit find limits (if active) and its override of position_limits_disable
-        // would be nice to have a more specific way to handle this
-        position_limits_disable_ = position_limits_disable_last_;
+        if (mode_ == FIND_LIMITS && mode != FIND_LIMITS) {
+          position_limits_disable_ = position_limits_disable_last_;
+        }
 
         switch (mode) {
           default:
