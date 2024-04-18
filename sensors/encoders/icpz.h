@@ -56,7 +56,8 @@ static uint8_t CRC_BiSS_43_30bit (uint32_t w_InputData);
     api.add_api_variable(prefix "ipo_filt1", new APICallbackHex<uint8_t>([](){ return icpz.get_ipo_filt1(); }, \
         [](uint8_t u){ icpz.set_ipo_filt1(u); }));\
     api.add_api_variable(prefix "ipo_filt2", new APICallbackHex<uint8_t>([](){ return icpz.get_ipo_filt2(); }, \
-        [](uint8_t u){ icpz.set_ipo_filt2(u); }));
+        [](uint8_t u){ icpz.set_ipo_filt2(u); })); \
+    api.add_api_variable(prefix "temp", new const APICallbackFloat([]{ return icpz.get_temperature(); }));
 
 template<typename ConcreteICPZ>
 class ICPZBase : public EncoderBase {
@@ -438,6 +439,15 @@ class ICPZBase : public EncoderBase {
         std::snprintf(c, 200, "cos_off: %f, sin_off: %f, sc_gain, %f, sc_phase: %f ai_phase: %f, ai_scale: %f", 
           get_cos_offs(), get_sin_offs(), get_sc_gains(), get_sc_phases(), get_ai_phases(), get_ai_scales());
         return std::string(c);
+    }
+
+    float get_temperature() {
+          auto data = read_register(0x4e, 2);
+          // signed value, 16 bit
+          uint16_t temp_raw = (data[1] << 8 | data[0]);
+          int16_t temp_signed = (int16_t) temp_raw;
+          float temp =  (float) temp_signed/10; 
+          return temp;
     }
 
     // set ac_eto for 10x longer timeout on calibration
