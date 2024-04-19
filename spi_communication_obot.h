@@ -7,6 +7,7 @@
 
 #include "communication.h"
 #include "util.h"
+#include "figure_protocol.h"
 
 class SPICommunication : public CommunicationBase {
  public:
@@ -61,7 +62,7 @@ class SPICommunication : public CommunicationBase {
 
   int receive_string(char* const string) {
     if (new_ascii_str_) {
-      std::memcpy(string, ascii_str_in_, std::strlen(ascii_str_in_)+1);
+      std::memcpy(string, ascii_str_in_, std::min(std::strlen(ascii_str_in_)+1, (size_t) OBOT_ASCII_MAX_RECEIVE_LENGTH));
       new_ascii_str_ = false;
       return std::strlen(ascii_str_in_);
     }
@@ -72,8 +73,8 @@ class SPICommunication : public CommunicationBase {
   bool send_string(const char* string, uint16_t length) {
     // while(send_active());
     uint8_t packet_size;
-    length = std::min(length, (uint16_t) 65); // todo support larger packets
-    uint8_t* packet = protocol_.generatePacket((const uint8_t *) string, length, OBOT_ASCII_RESPONSE, &packet_size);
+    length = std::min(length, (uint16_t) OBOT_ASCII_MAX_SEND_LENGTH); // todo support larger packets
+    uint8_t* packet = protocol_.generatePacket((const uint8_t *) string, length, (size_t) OBOT_ASCII_RESPONSE, &packet_size);
     spi_.tx_buffer_[0] = 0; // Has trouble with the first byte when packet starts mid transaction
     std::memcpy(&spi_.tx_buffer_[1], &packet[0], packet_size);
     SpiSlaveFigure::BufferDescriptor desc = {};
