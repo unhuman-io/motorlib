@@ -3,50 +3,57 @@
 
 #include <string>
 #include <stdarg.h>
-//#include "util.h"
+#ifndef LOGGER_TEST
+#include "util.h"
+#endif
 #include "messages.h"
-#include <cstring>
-#include <iostream>
 #include <atomic>
 
 #define LOGGING_MAX_SIZE 2048
 class Logger {
  public:
     void log(std::string_view str) {
-        //log_queue_.push("(" + std::to_string(get_uptime()) + " " + std::to_string(get_clock()) + ") " + str);
         char header[50];
-        snprintf(header, sizeof(header), "(%d %d) ", 0,0);// get_uptime(), get_clock());
+        snprintf(header, sizeof(header), "(%ld %ld) ", get_uptime(), get_clock());
+        front_log_.set_value(front_atomic_.load(std::memory_order_acquire));
         log_raw(header);
         log_raw(str);
-        log_raw('\0');  
+        log_raw('\0');
+        front_atomic_.store(front_log_, std::memory_order_release);
         num_elements_++;
     }
-    void log_once(std::string_view str) {
-        // if (str != log_queue_.back()) {
-        //     log(str);
-        // }
-    }
+    // void log_once(std::string_view str) {
+    //     // if (str != log_queue_.back()) {
+    //     //     log(str);
+    //     // }
+    // }
+
+    // get_log must be called from the same or lower priority task as log
     std::string get_log() {
         std::string str;
 
-        if (num_elements_ > 0) {
+        if (!empty()) {
+            bool success = false;
             do {
                 str = "";
-                CIndex front_next = front_;
-                CIndex front_expected = front_next;
+                CIndex front_next = front_atomic_.load(std::memory_order_acquire);
+                uint32_t front_expected = front_next;
                 do {
                     str += log_queue_[front_next];
                     ++front_next;
                 } while (log_queue_[front_next] != '\0');
-                front_ = front_next;
-                compare_exchange_strong(front_expected, front_next);
+                ++front_next;
                 num_elements_--;
-            } while (0);
+                success = front_atomic_.compare_exchange_strong(front_expected, front_next);
+            } while (!success);
             
         } else {
             str = "log end";
         }
         return str;
+    }
+    bool empty() const {
+        return front_atomic_.load(std::memory_order_acquire) == back_;
     }
     void log_printf(const char *s, ...) {
         va_list args;
@@ -57,6 +64,10 @@ class Logger {
         log(sout);
     }
     uint32_t num_elements() const { return num_elements_; }
+    static std::string_view extract_string(std::string_view str) {
+        std::string_view data = str.substr(str.find(") ") + 2);
+        return data;
+    }
  private:
     class CIndex {
      public:
@@ -66,17 +77,9 @@ class Logger {
         }
         void inc() { value_++; wrap(); }
         CIndex& operator++() { inc(); return *this; }
-        // bool operator>(const CIndex& other) const {
-        //     if (!wrapped_ == !other.wrapped_) {
-        //         return value_ > other.value_;
-        //     }
-        //     if (wrapped_ && !other.wrapped_) {
-        //         return false;
-        //     } else {
-        //         // !wrapped_ && other.wrapped_
-        //         return true;
-        //     }
-        // }
+        void set_value(uint32_t value) {
+            value_ = value;
+        }
         bool operator==(const CIndex& other) const {
             return value_ == other.value_;
         }
@@ -98,47 +101,24 @@ class Logger {
     }
 
     void log_raw(std::string_view str) {
-        // CIndex next_back = back_ + str.size() + 1;
-
-        // CIndex front_next = front_;
-        // if (front_ > back_ && next_back >= front_) {
-        //     int i=0;
-        //     while(true) {
-        //         ++front_next;
-        //         if (log_queue_[front_next] == '\0') {
-        //             num_elements_--;
-        //             ++front_next;
-        //             if (front_next >= next_back) {
-        //                 break;
-        //             }
-        //         }
-        //         if (i++ > 100000) {
-        //             std::cout << "what " << front_next << std::endl;
-        //             exit(1);
-        //         }
-        //     }
-        // }
-        // std::cout << "front_next: " << front_next << std::endl;
-        // std::cout << "front: " << front_ << std::endl;
-        // front_ = front_next;
-
         for (size_t i = 0; i < str.size(); i++) {
             log_raw(str[i]);
         }
     }
 
     void move_front() {
-        if (back_ == front_) {
+        if (back_ == front_log_) {
             // find next front
-            while (log_queue_[++front_] != '\0');
-            ++front_;
+            while (log_queue_[++front_log_] != '\0');
+            ++front_log_;
             num_elements_--;
         }
     }
 
     uint32_t num_elements_ = 0;
-    CIndex front_;
+    CIndex front_log_;
     CIndex back_;
+    std::atomic<uint32_t> front_atomic_{0};
     char log_queue_[LOGGING_MAX_SIZE] = {};
 };
 
