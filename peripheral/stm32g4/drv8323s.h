@@ -4,11 +4,12 @@
 #include "../../driver.h"
 #include "../../logger.h"
 #include "../../parameter_api.h"
+#include <cstring>
 
 extern uint16_t drv_regs_error;
 
-static const std::string drv8323_status1_bits[11] = {"vds_lc", "vds_hc", "vds_lb", "vds_hb", "vds_la", "vds_ha", "otsd", "uvlo", "gdf", "vds_ocp", "fault"};
-static const std::string drv8323_status2_bits[11] = {"vgs_lc", "vgs_hc", "vgs_lb", "vgs_hb", "vgs_la", "vgs_ha", "cpuv", "otw", "sc_oc", "sb_oc", "sa_oc"};
+static const char* drv8323_status1_bits[11] = {"vds_lc", "vds_hc", "vds_lb", "vds_hb", "vds_la", "vds_ha", "otsd", "uvlo", "gdf", "vds_ocp", "fault"};
+static const char* drv8323_status2_bits[11] = {"vgs_lc", "vgs_hc", "vgs_lb", "vgs_hb", "vgs_la", "vgs_ha", "cpuv", "otw", "sc_oc", "sb_oc", "sa_oc"};
 
 class DRV8323S : public DriverBase {
  public:
@@ -43,18 +44,21 @@ class DRV8323S : public DriverBase {
 
     void disable() {
         uint32_t __attribute((unused)) status = get_drv_status();
-        // todo bring back logger in isr safe way
-        // logger.log_printf("drv8323 disabled, status1: %03x status2: %03x", status & 0xFFFF, status >> 16);
-        // std::string s = "drv8323 status bits";
-        // for(int i=0; i<11; i++) {
-        //     if ((status >> i) & 0x1)
-        //         s += " " + drv8323_status1_bits[i];
-        // }
-        // for(int i=0; i<11; i++) {
-        //     if ((status >> (16+i)) & 0x1)
-        //         s += " " + drv8323_status2_bits[i];
-        // }
-        // logger.log(s);
+        logger.log_printf("drv8323 disabled, status1: %03x status2: %03x", status & 0xFFFF, status >> 16);
+        char buf[100] = "drv8323 status bits: ";
+        for(int i=0; i<11; i++) {
+            if ((status >> i) & 0x1) {
+                strcat(buf, drv8323_status1_bits[i]);
+                strcat(buf, " ");
+            }
+        }
+        for(int i=0; i<11; i++) {
+            if ((status >> (16+i)) & 0x1) {
+                strcat(buf, drv8323_status2_bits[i]);
+                strcat(buf, " ");
+            }
+        }
+        logger.log(buf);
         GPIOC->BSRR = GPIO_BSRR_BR13; // drv disable
         DriverBase::disable();
     }
@@ -74,15 +78,15 @@ class DRV8323S : public DriverBase {
             if ((reg_in & 0x7FF) != (reg_out & 0x7FF)) {
                 drv_regs_error |= 1 << i;
             }
-            // logger.log_printf("address: %d, reg_out: %03x, reg_in: %03x", address, reg_out & 0x7FF, reg_in);
+            logger.log_printf("address: %d, reg_out: %03x, reg_in: %03x", address, reg_out & 0x7FF, reg_in);
         }
 
         drv_spi_end();
         DriverBase::enable();
         if(!drv_regs_error) {
-            // logger.log("drv8323s configure success");
+            logger.log("drv8323s configure success");
         } else {
-            // logger.log_printf("drv8323s configure error: %02x", drv_regs_error);
+            logger.log_printf("drv8323s configure error: %02x", drv_regs_error);
         }
     }
 
