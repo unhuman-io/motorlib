@@ -8,6 +8,7 @@
 
 extern uint16_t drv_regs_error;
 
+#define DRV8323S_STATUS_BITS_STR_LEN (7*13 + 5*3 + 6*4 + 4*2)
 static const char* drv8323_status1_bits[11] = {"vds_lc", "vds_hc", "vds_lb", "vds_hb", "vds_la", "vds_ha", "otsd", "uvlo", "gdf", "vds_ocp", "fault"};
 static const char* drv8323_status2_bits[11] = {"vgs_lc", "vgs_hc", "vgs_lb", "vgs_hb", "vgs_la", "vgs_ha", "cpuv", "otw", "sc_oc", "sb_oc", "sa_oc"};
 
@@ -45,7 +46,7 @@ class DRV8323S : public DriverBase {
     void disable() {
         uint32_t __attribute((unused)) status = get_drv_status();
         logger.log_printf("drv8323 disabled, status1: %03x status2: %03x", status & 0xFFFF, status >> 16);
-        char buf[100] = "drv8323 status bits: ";
+        char buf[21 + 22 + DRV8323S_STATUS_BITS_STR_LEN + 1] = "drv8323 status bits: ";
         for(int i=0; i<11; i++) {
             if ((status >> i) & 0x1) {
                 strcat(buf, drv8323_status1_bits[i]);
