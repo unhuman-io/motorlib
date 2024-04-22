@@ -21,6 +21,7 @@ class ICPZDMA : public ICPZBase<ICPZDMA> {
 
     bool init() {
       bool result = ICPZBase::init();
+      result &= set_register(7, 0, {0xFF, 0xFF, 0x00, 0xFF}); // enable all errors, report in diagnosis, except multiturn
       inited_ = true;
       start_continuous_read();
       return result;
@@ -66,6 +67,10 @@ class ICPZDMA : public ICPZBase<ICPZDMA> {
     }
     std::string read_diagnosis() {
       return bytes_to_hex((uint8_t*) &diag_, 4);
+    }
+    std::string read_diagnosis_str() {
+      uint32_t diag = __builtin_bswap32(diag_);
+      return diagnosis_to_str(diag);
     }
     uint32_t current_buffer_index() const {
       if (spidma_.rx_dma_.CNDTR > 24) {
