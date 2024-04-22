@@ -326,7 +326,6 @@ class FastLoop {
       encoder_.clear_faults();
     }
  private:
-    FastLoopParam param_; // reallocate tables in ram
     float motor_encoder_index_electrical_offset_pos_;
 
     FOC *foc_;
@@ -387,8 +386,6 @@ class FastLoop {
    volatile uint32_t *const v_bus_dr_;
    PChipTable<MOTOR_ENCODER_TABLE_LENGTH> motor_correction_table_;
    PChipTable<COGGING_TABLE_SIZE> cogging_correction_table_;
-   CStack<FastLoopStatus,100> status_;
-   CStack<FastLoopStatus,100> status_log_; // 24*4*100*2 = 19200 bytes
    bool beep_ = false;
    uint32_t beep_end_ = 0;
    bool zero_current_sensors_ = false;
@@ -400,8 +397,9 @@ class FastLoop {
    FirstOrderLowPassFilter motor_velocity_filter_;
    FirstOrderLowPassFilter motor_position_filter_;
    
-   
-
+   FastLoopParam param_; // reallocate tables in ram
+   CStack<FastLoopStatus,100> status_;
+   CStack<FastLoopStatus,100> status_log_; // 24*4*100*2 = 19200 bytes
 
    friend class System;
 };
