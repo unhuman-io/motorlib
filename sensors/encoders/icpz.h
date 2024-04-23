@@ -59,6 +59,7 @@ static uint8_t CRC_BiSS_43_30bit (uint32_t w_InputData);
         [](uint8_t u){ icpz.set_ipo_filt2(u); })); \
     api.add_api_variable(prefix "temp", new const APICallbackFloat([]{ return icpz.get_temperature(); })); \
     api.add_api_variable(prefix "diag_str", new const APICallback([](){ return icpz.read_diagnosis_str(); }));\
+    api.add_api_variable(prefix "clear_diag", new const APICallback([](){ icpz.clear_diag(); return "ok"; }));\
 
 template<typename ConcreteICPZ>
 class ICPZBase : public EncoderBase {
@@ -192,7 +193,6 @@ class ICPZBase : public EncoderBase {
       spidma_.readwrite(data_out, data_in, 10, true);
       clear_diag();
       clear_register_operation();
-      return bytes_to_hex(data_in+2, 8);
       uint32_t diag = data_in[5] << 24 | data_in[4] << 16 | data_in[3] << 8 | data_in[2];
       return diagnosis_to_str(diag);
     }
