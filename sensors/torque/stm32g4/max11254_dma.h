@@ -41,7 +41,9 @@ class MAX11254DMA : public MAX11254<> {
 
         // spi_dma_.readwrite(data_out, data_in, 5);
         // logger.log_printf("max11254 stat: %02x %02x %02x", data_in[2], data_in[3], data_in[4]);
-        start_continuous_dma();
+        if (start_continuous_dma_) {
+            start_continuous_dma();
+        }
 
         return ret_val;
     }
@@ -95,5 +97,6 @@ class MAX11254DMA : public MAX11254<> {
     int8_t last_buf_ptr_ = -1;
     DMAMUX_Channel_TypeDef &dmamux_tx_regs_, &dmamux_rx_regs_;
     uint8_t exti_num_;
+    bool start_continuous_dma_ = true;
 
 };
