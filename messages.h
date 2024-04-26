@@ -252,6 +252,10 @@ typedef struct {
 
 } StartupParam;
 
+
+#ifndef CALIBRATION_RESERVED
+#define CALIBRATION_RESERVED uint32_t reserved[1024]
+#endif
 typedef struct{
     uint8_t schema_version;     // 2
     float motor_encoder_bias;   // for ENCODER_BIAS and ENCODER_BIAS_FROM_OUTPUT: extra bias to add to motor encoder
@@ -263,6 +267,7 @@ typedef struct{
     float joint_encoder_bias;
     TorqueSensorParam torque_sensor;
     MotorError error_mask;      // can set to ERROR_MASK_ALL or ERROR_MASK_NONE or others
+    CALIBRATION_RESERVED;
 } Calibration;
 
 typedef struct {
