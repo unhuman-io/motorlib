@@ -11,6 +11,7 @@ endif
 
 all:: $(BUILD_DIR)/$(TARGET).elf $(BUILD_DIR)/$(TARGET).hex $(BUILD_DIR)/$(TARGET).bin $(BUILD_TGZ)
 
+motorlib: $(BUILD_DIR)/motorlib.a $(BUILD_DIR)/motorlib_g474.a
 
 FORCE:
 
@@ -30,6 +31,16 @@ vpath %.cpp $(sort $(dir $(CPP_SOURCES)))
 OBJECTS += $(addprefix $(BUILD_DIR)/,$(notdir $(ASM_SOURCES:.s=.o)))
 vpath %.s $(sort $(dir $(ASM_SOURCES)))
 
+MOTORLIB_OBJECTS = $(addprefix $(BUILD_DIR)/,$(notdir $(MOTORLIB_CPP_SOURCES:.cpp=.o)))
+vpath %.cpp $(sort $(dir $(MOTORLIB_CPP_SOURCES)))
+
+MOTORLIB_G474_OBJECTS = $(addprefix $(BUILD_DIR)/,$(notdir $(MOTORLIB_G474_CPP_SOURCES:.cpp=.o)))
+vpath %.cpp $(sort $(dir $(MOTORLIB_G474_CPP_SOURCES)))
+MOTORLIB_G474_OBJECTS += $(addprefix $(BUILD_DIR)/,$(notdir $(MOTORLIB_G474_C_SOURCES:.c=.o)))
+vpath %.c $(sort $(dir $(MOTORLIB_G474_C_SOURCES)))
+MOTORLIB_G474_OBJECTS += $(addprefix $(BUILD_DIR)/,$(notdir $(MOTORLIB_G474_ASM_SOURCES:.s=.o)))
+vpath %.s $(sort $(dir $(MOTORLIB_G474_ASM_SOURCES)))
+
 $(BUILD_DIR)/%.o: %.c | $(BUILD_DIR) 
 	@echo "  CC    " $<
 	$(CC) -c $(CFLAGS) -Wa,-a,-ad,-alms=$(BUILD_DIR)/lto.lst $< -o $@
@@ -42,14 +53,22 @@ $(BUILD_DIR)/%.o: %.s | $(BUILD_DIR)
 	@echo "  AS     " $<
 	$(AS) -c $(CFLAGS) $< -o $@
 
-$(BUILD_DIR)/$(TARGET).elf: $(OBJECTS) build_param calibration
+$(BUILD_DIR)/$(TARGET).elf: $(OBJECTS) $(BUILD_DIR)/motorlib.a $(BUILD_DIR)/motorlib_g474.a build_param calibration
 	@echo "  LD     " $@
-	$(CXX) $(OBJECTS) $(PARAM_OUT:bin=o) $(CALIBRATION_OUT:bin=o) $(LDFLAGS) -o $@
+	$(CXX) $(OBJECTS) -flto $(CFLAGS) $(PARAM_OUT:bin=o) $(CALIBRATION_OUT:bin=o) $(LDFLAGS) -L $(BUILD_DIR) -l:motorlib.a -l:motorlib_g474.a $(LTO) -flto -o $@
 	$(SZ) $@
 
 $(BUILD_DIR)/%.hex: $(BUILD_DIR)/%.elf | $(BUILD_DIR)
 	@echo "  HEX    " $@
 	$(HEX) $< $@
+
+$(BUILD_DIR)/motorlib.a: $(MOTORLIB_OBJECTS) | $(BUILD_DIR)
+	@echo "  AR     " $@
+	$(AR) rcs $@ $(MOTORLIB_OBJECTS)
+
+$(BUILD_DIR)/motorlib_g474.a: $(MOTORLIB_G474_OBJECTS) | $(BUILD_DIR)
+	@echo "  AR     " $@
+	$(AR) rcs $@ $(MOTORLIB_OBJECTS)
 	
 	
 $(BUILD_DIR):

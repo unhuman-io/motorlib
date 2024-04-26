@@ -25,15 +25,13 @@ ifeq "$(TARGET_MCU)" "stm32g474"
 # source
 ######################################
 # C sources
-ifndef C_SOURCES
-C_SOURCES =  \
+MOTORLIB_G474_C_SOURCES =  \
 $(SELF_DIR)../device/stm32g4/Src/stm32g4xx_it.c \
 $(SELF_DIR)../device/stm32g4/Src/system_stm32g4xx.c \
 $(SELF_DIR)../device/stm32g4/Src/main.c
-endif
 
 # ASM sources
-ASM_SOURCES += \
+MOTORLIB_G474_ASM_SOURCES += \
 $(SELF_DIR)../peripheral/stm32g4/startup_stm32g474xx.s
 
 # macros for gcc
@@ -58,7 +56,7 @@ C_INCLUDES +=  \
 # link script
 LDSCRIPT = $(SELF_DIR)../peripheral/stm32g4/STM32G474RETx_FLASH.ld
 
-CPP_SOURCES += \
+MOTORLIB_G474_CPP_SOURCES += \
 $(SELF_DIR)../peripheral/spi_encoder.cpp\
 $(SELF_DIR)../peripheral/protocol.cpp\
 $(SELF_DIR)../peripheral/mailbox.cpp\
@@ -100,7 +98,7 @@ C_INCLUDES +=  \
 -I$(SELF_DIR)../../../lib/protocol \
 -I$(SELF_DIR)../obot-protocol \
 
-CPP_SOURCES += \
+MOTORLIB_CPP_SOURCES += \
 $(SELF_DIR)../malloc.cpp\
 $(SELF_DIR)../control_fun.cpp\
 $(SELF_DIR)../foc.cpp\
@@ -108,8 +106,10 @@ $(SELF_DIR)../gpio.cpp\
 $(SELF_DIR)../sincos.cpp\
 $(SELF_DIR)../util.cpp\
 $(SELF_DIR)../hall.cpp\
-$(SELF_DIR)../parameter_api.cpp\
-./$(CONFIG_FILE)
+$(SELF_DIR)../parameter_api.cpp
+
+CPP_SOURCES += \
+./$(CONFIG_FILE)\
 
 ifneq ($(findstring protocol_parser.cpp, $(CPP_SOURCES)),)
 $(info protocol_parser.cpp already defined)

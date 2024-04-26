@@ -35,6 +35,7 @@ AS = $(GCC_PATH)/$(PREFIX)gcc -x assembler-with-cpp
 CP = $(GCC_PATH)/$(PREFIX)objcopy
 SZ = $(GCC_PATH)/$(PREFIX)size
 CXX = $(GCC_PATH)/$(PREFIX)g++
+AR = $(GCC_PATH)/$(PREFIX)gcc-ar
 HEX = $(CP) -O ihex
 BIN = $(CP) -O binary -S
  
