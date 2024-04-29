@@ -2,12 +2,10 @@
 
 #include "icpz_dma.h"
 
-class ICPZ2DMA : public ICPZBase<ICPZ2DMA> {
+class ICPZ2DMA : public EncoderBase {
  public:
-    ICPZ2DMA(SPIDMA &spidma, DMAMUX_Channel_TypeDef &tx_dmamux, DMAMUX_Channel_TypeDef &rx_dmamux, uint8_t exti_num,
-      void(*start_cs_trigger)(), void(*stop_cs_trigger_and_wait_cs_high)(), Disk disk = Default) :
-      ICPZBase(spidma, disk), dmamux_tx_regs_(tx_dmamux), dmamux_rx_regs_(rx_dmamux), exti_num_(exti_num),
-      start_cs_trigger_(start_cs_trigger), stop_cs_trigger_and_wait_cs_high_(stop_cs_trigger_and_wait_cs_high) {
+    ICPZ2DMA(ICPZDMA icpz, ICPZDMA &icpz2, SPIDMA &spidma, DMAMUX_Channel_TypeDef &tx_dmamux, DMAMUX_Channel_TypeDef &rx_dmamux, uint8_t exti_num,
+      void(*start_cs_trigger)(), void(*stop_cs_trigger_and_wait_cs_high)(), icpz_(icpz), icpz2_(icpz2) {
 
       // sequence:
       // temp1,  angle1, angle2,
@@ -49,57 +47,28 @@ class ICPZ2DMA : public ICPZBase<ICPZ2DMA> {
     }
 
     bool init() {
-      bool result = ICPZBase::init();
-      result &= set_register(7, 0, {0xFF, 0xFF, 0x00, 0xF3}); // enable all errors, report in diagnosis, except multiturn, gpio
-      inited_ = true;
-      start_continuous_read();
+      bool result = icpz_.init();
+      result &= icpz2_.init();
       return result;
     }
     void trigger() {}
+
     int32_t read() {
-      if (!*register_operation_) {
-        // Can only read when transactions are not active. Must be guaranteed
-        // by timing setup.
-        uint8_t *data_buf = data_mult_[current_buffer_index()][1];
-        uint32_t data = ((data_buf[1] << 16) | (data_buf[2] << 8) | data_buf[3]) << 8;
-        raw_value_ = data >> 8;
-        uint32_t word = data | data_buf[4];
-        Diag diag = {.word = data_buf[4]};
-        uint8_t crc6_calc = ~CRC_BiSS_43_30bit(word >> 6) & 0x3f;
-        error_count_ += !diag.nErr;
-        warn_count_ += !diag.nWarn;
-        uint8_t crc_error = diag.crc6 == crc6_calc ? 0 : 1;
-        crc_error_count_ += crc_error;
-        if (!crc_error) {
-          int32_t diff = (data - last_data_); // rollover summing
-          pos_ += diff/256;
-          last_data_ = data;
-        }
-      }
-      or_diag();
-      return get_value();
+      uint32_t current_buf_index = current_buffer_index();
+      uint8_t *data_buf1 = data_mult_[current_buf_index][1];
+      uint8_t *data_buf2 = data_mult_[current_buf_index][2];
+      int32_t value1_ = icpz_.read_buf(data_buf1);
+      int32_t value2_ = icpz2_.read_buf(data_buf2);
+
+      return value1_;
     }
-    float get_temperature() {
-      uint8_t *data = &data_mult_[0][0][3];
-      // signed value, 16 bit
-      uint16_t temp_raw = (data[1] << 8 | data[0]);
-      int16_t temp_signed = (int16_t) temp_raw;
-      float temp =  (float) temp_signed/10;
-      return temp;
+
+
+    float get_temperature(uint32_t index) {
+      uint8_t *data = &data_mult_[index-1][0][3];
+      return get_temperature(data);
     }
-    void or_diag() {
-      uint8_t *data = &data_mult_[0][2][2];
-      diag_ |= data[3] << 24 | data[2] << 16 | data[1] << 8 | data[0];
-    }
-    void clear_diag() {
-      diag_ = 0;
-    }
-    std::string read_diagnosis() {
-      return bytes_to_hex((uint8_t*) &diag_, 4);
-    }
-    std::string read_diagnosis_str() {
-      return diagnosis_to_str(diag_);
-    }
+
     uint32_t current_buffer_index() const {
       if (spidma_.rx_dma_.CNDTR > 5*18) {
         return 5;
@@ -151,13 +120,9 @@ class ICPZ2DMA : public ICPZBase<ICPZ2DMA> {
       (*register_operation_)--;
     }
 
-    bool inited_ = false;
-    DMAMUX_Channel_TypeDef &dmamux_tx_regs_;
-    DMAMUX_Channel_TypeDef &dmamux_rx_regs_;
-    uint8_t exti_num_;
-    void (*start_cs_trigger_)();
-    void (*stop_cs_trigger_and_wait_cs_high_)();
     uint8_t command_mult_[6][3][6] = {};
     uint8_t data_mult_[6][3][6] = {};
-    uint32_t diag_ = {};
+    ICPZDMA &icpz_;
+    ICPZDMA &icpz2_;
+    
 };

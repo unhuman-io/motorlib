@@ -24,7 +24,7 @@ class ICPZDMA : public ICPZBase<ICPZDMA> {
       bool result = ICPZBase::init();
       result &= set_register(7, 0, {0xFF, 0xFF, 0x00, 0xF3}); // enable all errors, report in diagnosis, except multiturn, gpio
       inited_ = true;
-      start_continuous_read();
+//      start_continuous_read();
       return result;
     }
     void trigger() {}
@@ -33,20 +33,7 @@ class ICPZDMA : public ICPZBase<ICPZDMA> {
         // Can only read when transactions are not active. Must be guaranteed 
         // by timing setup.
         uint8_t *data_buf = data_mult_[current_buffer_index()];
-        uint32_t data = ((data_buf[1] << 16) | (data_buf[2] << 8) | data_buf[3]) << 8;
-        raw_value_ = data >> 8;
-        uint32_t word = data | data_buf[4];
-        Diag diag = {.word = data_buf[4]};
-        uint8_t crc6_calc = ~CRC_BiSS_43_30bit(word >> 6) & 0x3f;
-        error_count_ += !diag.nErr;
-        warn_count_ += !diag.nWarn;
-        uint8_t crc_error = diag.crc6 == crc6_calc ? 0 : 1;
-        crc_error_count_ += crc_error;
-        if (!crc_error) {
-          int32_t diff = (data - last_data_); // rollover summing
-          pos_ += diff/256;
-          last_data_ = data;
-        }
+        read_buf(data_buf);
       }
       or_diag();
       return get_value();
@@ -54,10 +41,7 @@ class ICPZDMA : public ICPZBase<ICPZDMA> {
     float get_temperature() {
       uint8_t *data = &data_mult_[0][3];
       // signed value, 16 bit
-      uint16_t temp_raw = (data[1] << 8 | data[0]);
-      int16_t temp_signed = (int16_t) temp_raw;
-      float temp =  (float) temp_signed/10; 
-      return temp;
+      return get_temperature(data);
     }
     void or_diag() {
       uint8_t *data = &data_mult_[2][2];

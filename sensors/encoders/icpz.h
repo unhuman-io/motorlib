@@ -133,27 +133,31 @@ class ICPZBase : public EncoderBase {
         spidma_.start_readwrite(command_, data_, sizeof(command_));
       }
     }
+    int32_t read_buf(uint8_t buf[4]) {
+      uint32_t data = ((buf[1] << 16) | (buf[2] << 8) | buf[3]) << 8;
+      raw_value_ = data >> 8;
+      uint32_t word = data | buf[4];
+      Diag diag = {.word = buf[4]};
+      uint8_t crc6_calc = ~CRC_BiSS_43_30bit(word >> 6) & 0x3f;
+      error_count_ += !diag.nErr;
+      warn_count_ += !diag.nWarn;
+      uint8_t crc_error = diag.crc6 == crc6_calc ? 0 : 1;
+      crc_error_count_ += crc_error;
+      if (!crc_error) {
+        int32_t diff = (data - last_data_); // rollover summing
+        pos_ += diff/256;
+        //pos_ = data/256;
+        last_data_ = data;
+      }
+      if (!diag.nErr) {
+        //clear_diag();
+      }
+      return get_value();
+    }
     int32_t read() {
       if (ongoing_read_) {
         spidma_.finish_readwrite();
-        uint32_t data = ((data_[1] << 16) | (data_[2] << 8) | data_[3]) << 8;
-        raw_value_ = data >> 8;
-        uint32_t word = data | data_[4];
-        Diag diag = {.word = data_[4]};
-        uint8_t crc6_calc = ~CRC_BiSS_43_30bit(word >> 6) & 0x3f;
-        error_count_ += !diag.nErr;
-        warn_count_ += !diag.nWarn;
-        uint8_t crc_error = diag.crc6 == crc6_calc ? 0 : 1;
-        crc_error_count_ += crc_error;
-        if (!crc_error) {
-          int32_t diff = (data - last_data_); // rollover summing
-          pos_ += diff/256;
-          //pos_ = data/256;
-          last_data_ = data;
-        }
-        if (!diag.nErr) {
-          //clear_diag();
-        }
+        read_buf(data_);
         ongoing_read_ = false;
       }
       return get_value();
@@ -474,13 +478,18 @@ class ICPZBase : public EncoderBase {
         return std::string(c);
     }
 
+    static float get_temperature(uint8_t buf[2]) {
+        // signed value, 16 bit
+        uint16_t temp_raw = (buf[1] << 8 | buf[0]);
+        int16_t temp_signed = (int16_t) temp_raw;
+        float temp =  (float) temp_signed/10; 
+        return temp;
+    }
+
     float get_temperature() {
           auto data = read_register(0x4e, 2);
           // signed value, 16 bit
-          uint16_t temp_raw = (data[1] << 8 | data[0]);
-          int16_t temp_signed = (int16_t) temp_raw;
-          float temp =  (float) temp_signed/10; 
-          return temp;
+          return get_temperature(data);
     }
 
     // set ac_eto for 10x longer timeout on calibration
