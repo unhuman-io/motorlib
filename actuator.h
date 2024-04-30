@@ -69,13 +69,31 @@ class Actuator {
     }
     void set_bias() {
       MainLoopStatus status = main_loop_.get_status();
-      if (startup_param_.output_encoder_rollover > 0 && status.output_position > startup_param_.output_encoder_rollover) {
-         main_loop_.adjust_output_encoder(-2*M_PI);
-         status.output_position -= 2*M_PI;
-      } else if (startup_param_.output_encoder_rollover < 0 && status.output_position < startup_param_.output_encoder_rollover) {
-         main_loop_.adjust_output_encoder(2*M_PI);
-         status.output_position += 2*M_PI;
+      float output_wrap_adjustment = 0.0;
+      if (startup_param_.output_encoder_rollover > 0) {
+         if (status.output_position > startup_param_.output_encoder_rollover) {
+            logger.log_printf("Output pos (%2.3f) > (%2.3f), sub 2pi", status.output_position, startup_param_.output_encoder_rollover);
+            output_wrap_adjustment = -2*M_PI;
+         } else if (status.output_position < (startup_param_.output_encoder_rollover-2*M_PI)) {
+            logger.log_printf("Output pos (%2.3f) < (%2.3f), add 2pi", status.output_position, startup_param_.output_encoder_rollover-2*M_PI);
+            output_wrap_adjustment = 2*M_PI;
+         } else {
+            logger.log_printf("Output pos (%2.3f), rollover (%f), no adjust", status.output_position, startup_param_.output_encoder_rollover);
+         }
+      } else {
+         if (status.output_position < startup_param_.output_encoder_rollover) {
+            logger.log_printf("Output pos (%2.3f) < (%2.3f), add 2pi", status.output_position, startup_param_.output_encoder_rollover);
+            output_wrap_adjustment = 2*M_PI;
+         } else if (status.output_position > (startup_param_.output_encoder_rollover+2*M_PI)) {
+            logger.log_printf("Output pos (%2.3f) > (%2.3f), sub 2pi", status.output_position, startup_param_.output_encoder_rollover+2*M_PI);
+            output_wrap_adjustment = -2*M_PI;
+         } else {
+            logger.log_printf("Output pos (%2.3f), rollover (%f), no adjust", status.output_position, startup_param_.output_encoder_rollover);
+         }
       }
+      main_loop_.adjust_output_encoder(output_wrap_adjustment);
+      status.output_position += output_wrap_adjustment;
+      logger.log_printf("Output pos after (%f) adjustment: %f", output_wrap_adjustment, status.output_position);
       switch(startup_param_.motor_encoder_startup) {
          default:
          case StartupParam::ENCODER_ZERO:
