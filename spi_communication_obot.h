@@ -113,7 +113,7 @@ class SPICommunication : public CommunicationBase {
     asm("dmb");
     // Packetize obot_status and send
     uint8_t packet_size;
-    uint8_t* packet = protocol_.generatePacket(reinterpret_cast<uint8_t*>(&obot_status_), sizeof(SendData), OBOT_STATUS, &packet_size);
+    uint8_t* packet = protocol_.generatePacket(reinterpret_cast<uint8_t*>(&obot_status_), sizeof(MotorStatusLite), OBOT_STATUS, &packet_size);
     spi_.tx_buffer_[0] = 0; // Has trouble with the first byte when packet starts mid transaction
     std::memcpy(&spi_.tx_buffer_[1], &packet[0], packet_size);
     SpiSlaveFigure::BufferDescriptor desc = {};
