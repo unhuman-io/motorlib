@@ -72,7 +72,8 @@ $(SELF_DIR)../peripheral/stm32g4/stm32g4_serial.cpp\
 $(SELF_DIR)../peripheral/stm32g4/usb.cpp\
 $(SELF_DIR)../peripheral/stm32g4/spi_slave.cpp\
 $(SELF_DIR)../peripheral/stm32g4/spi_slave_figure.cpp\
-$(SELF_DIR)../peripheral/stm32g4/uart.cpp
+$(SELF_DIR)../peripheral/stm32g4/uart.cpp\
+$(SELF_DIR)../peripheral/stm32g4/can.cpp\
 
 endif # MCU_TARGET == stm32g474
 
