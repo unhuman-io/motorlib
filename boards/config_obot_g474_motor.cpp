@@ -131,7 +131,7 @@ extern "C" void board_init() {
 namespace config {
     static_assert(((double) CPU_FREQUENCY_HZ * 8 / 2) / pwm_frequency < 65535);    // check pwm frequency
 #ifdef SPI1_REINIT_CALLBACK
-    DRV8323S drv(*SPI1, spi1_dma.register_operation_, spi1_reinit_callback);
+    DRV8323S drv(*SPI1);//, spi1_dma.register_operation_, spi1_reinit_callback);
 #else
     DRV8323S drv(*SPI1);
 #endif
@@ -150,7 +150,7 @@ namespace config {
 
     // has_bmi270
     GPIO imu_cs(*GPIOC, 4, GPIO::OUTPUT);
-    SPIDMA spi1_dma_bmi270(*SPI1, imu_cs, *DMA1_Channel3, *DMA1_Channel4, 40, 40, drv.register_operation_,
+    SPIDMA spi1_dma_bmi270(SPIDMA::SP1, imu_cs, DMA1_CH3, DMA1_CH4, 1000, 40, 40,
         SPI_CR1_MSTR | (4 << SPI_CR1_BR_Pos) | SPI_CR1_SSI | SPI_CR1_SSM);    // baud = clock/32
     BMI270 imu(spi1_dma_bmi270);
 
