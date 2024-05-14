@@ -193,12 +193,13 @@ class ICPZBase : public EncoderBase {
       spidma_.readwrite(data_out, data_in, 10, true);
       clear_diag();
       clear_register_operation();
-      uint32_t diag = data_in[5] << 24 | data_in[4] << 16 | data_in[3] << 8 | data_in[2];
-      return diagnosis_to_str(diag);
+      uint32_t diag_err = data_in[5] << 24 | data_in[4] << 16 | data_in[3] << 8 | data_in[2];
+      uint32_t diag_warn = data_in[9] << 24 | data_in[8] << 16 | data_in[7] << 8 | data_in[6];
+      return "err: " + diagnosis_to_str(diag_err) + " warn: " + diagnosis_to_str(diag_warn);
     }
 
     static std::string diagnosis_to_str(uint32_t diag) {
-      std::string s = "diag: ";
+      std::string s;
       for (int i=0; i<32; i++) {
         if (diag & (1 << i)) {
           s += std::string(diag_strs[i]) + " ";
