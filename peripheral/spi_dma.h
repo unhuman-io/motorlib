@@ -3,7 +3,7 @@
 #include <cstdint>
 
 class Lock {
-    public:
+ public:
     void wait_lock() {
         unsigned tmp = 0;
         do {
@@ -25,11 +25,17 @@ class Lock {
                      "strex     %1, %1, %0" : "+m" (lock_), "=r" (tmp) : "m" (lock_));
         return tmp == 1;
     }
+    void lock() {
+        unsigned tmp;
+        asm volatile("ldr       %1, %0\n\t"
+                     "add       %1, #1\n\t"
+                     "str       %1, %0" : "+m" (lock_), "=r" (tmp) : "m" (lock_));
+    }
     bool is_locked() {
         asm volatile("" : "=m" (lock_));
         return lock_ > 0;
     }
-    private:
+ private:
     unsigned lock_ = 0;
 };
 
@@ -77,7 +83,7 @@ class SPIDMABase {
         lock_.unlock();
     }
 
-    // call only if guaranteed not to be interrupted
+    // call only if guaranteed not to be interrupted, and no continuous read/write is active
     void start_readwrite_isr(const uint8_t * const data_out, uint8_t * const data_in, uint16_t length) {
         if (!lock_.is_locked()) {
             reinit();
@@ -87,8 +93,16 @@ class SPIDMABase {
         }
     }
 
+    void finish_readwrite_isr() {
+        if (lock_.is_locked()) {
+            static_cast<T*>(this)->finish_readwrite();
+            lock_.unlock();
+        }
+    }
+
     void start_readwrite(const uint8_t * const data_out, uint8_t * const data_in, uint16_t length) {
-        if (lock_.try_lock()) {
+        if (lock_.wait_lock()) {
+            pause_continuous();
             reinit();
             asm("" : : "m" (*(const uint8_t (*)[]) data_out)); // ensure data_out[] is in memory
             static_cast<T*>(this)->start_readwrite(data_out, data_in, length);
@@ -97,8 +111,9 @@ class SPIDMABase {
     }
 
     void start_write(const uint8_t * const data_out, uint16_t length) {
-        if (lock_.try_lock()) {
+        if (lock_.wait_lock()) {
             reinit();
+            pause_continuous();
             asm("" : : "m" (*(const uint8_t (*)[]) data_out)); // ensure data_out[] is in memory
             static_cast<T*>(this)->start_write(data_out, length);
         }
@@ -107,9 +122,9 @@ class SPIDMABase {
     void finish_readwrite() {
         if (lock_.is_locked()) {
             static_cast<T*>(this)->finish_readwrite();
+            unpause_continuous();
             lock_.unlock();
         }
-        
     }
 
     Lock &lock_;
