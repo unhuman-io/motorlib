@@ -169,7 +169,7 @@ class ICPZBase : public EncoderBase {
       set_register_operation();
       uint8_t data_out[10] = {0x9C};
       uint8_t data_in[10];
-      spidma_.readwrite(data_out, data_in, 10, true);
+      spidma_.readwrite(data_out, data_in, 10);
       clear_diag();
       clear_register_operation();
       return bytes_to_hex(data_in+2, 8);
@@ -177,7 +177,7 @@ class ICPZBase : public EncoderBase {
 
     void clear_diag() {
       set_register_operation();
-      set_register(bank_, Addr::COMMANDS, {SCLEAR}, true);
+      set_register(bank_, Addr::COMMANDS, {SCLEAR});
       clear_register_operation();
     }
 
@@ -190,14 +190,14 @@ class ICPZBase : public EncoderBase {
         uint8_t data_in[length+3];
         
         if (type_ == PZ) {
-          spidma_.readwrite(data_out.data(), data_in, length+3, true);
+          spidma_.readwrite(data_out.data(), data_in, length+3);
           clear_register_operation();
           return std::vector<uint8_t>(&data_in[3], &data_in[3+length]);
         } else {
-          spidma_.readwrite(data_out.data(), data_in, 2, true);
+          spidma_.readwrite(data_out.data(), data_in, 2);
           data_out[0] = 0xad;
           data_out[1] = 0;
-          spidma_.readwrite(data_out.data(), data_in, length+2, true);
+          spidma_.readwrite(data_out.data(), data_in, length+2);
           clear_register_operation();
           return std::vector<uint8_t>(&data_in[2], &data_in[2+length]);
         }
@@ -208,7 +208,7 @@ class ICPZBase : public EncoderBase {
         if (bank != bank_) {
           uint8_t data_in[3];
           uint8_t data_out[] = {write_register_opcode_, 0x40, bank};
-          spidma_.readwrite(data_out, data_in, 3, true);
+          spidma_.readwrite(data_out, data_in, 3);
           if (read_register(0x40, 1) != std::vector<uint8_t>{bank}) {
             logger.log("ichaus bank " + std::to_string(read_register(0x40, 1)[0]) + " not " + std::to_string(bank));
             clear_register_operation();
@@ -231,14 +231,14 @@ class ICPZBase : public EncoderBase {
           return std::vector<uint8_t>(1,0xff);
         }
         if (type_ == PZ) {
-          spidma_.readwrite(data_out.data(), data_in, length+3, true);
+          spidma_.readwrite(data_out.data(), data_in, length+3);
           clear_register_operation();
           return std::vector<uint8_t>(&data_in[3], &data_in[3+length]);
         } else {
-          spidma_.readwrite(data_out.data(), data_in, 2, true);
+          spidma_.readwrite(data_out.data(), data_in, 2);
           data_out[0] = 0xad;
           data_out[1] = 0;
-          spidma_.readwrite(data_out.data(), data_in, length+2, true);
+          spidma_.readwrite(data_out.data(), data_in, length+2);
           clear_register_operation();
           return std::vector<uint8_t>(&data_in[2], &data_in[2+length]);
         }
@@ -255,7 +255,7 @@ class ICPZBase : public EncoderBase {
         }
         std::vector<uint8_t> data_out = {write_register_opcode_, address};
         data_out.insert(data_out.end(), value.begin(), value.end());
-        spidma_.readwrite(data_out.data(), data_in, data_out.size(), true);
+        spidma_.readwrite(data_out.data(), data_in, data_out.size());
         if (!set_only) {
           std::vector<uint8_t> data_read = read_register(address, value.size());
           retval = data_read == value;

@@ -131,10 +131,10 @@ class MAX11254 : public TorqueSensorBase {
         register_address reg = {.rw = 0, .addr = address, .bits2 = 3};
         uint8_t data_out[3] = {reg.word, value};
         uint8_t data_in[3];
-        spi_dma_.readwrite(data_out, data_in, 2, true);
+        spi_dma_.readwrite(data_out, data_in, 2);
         reg.rw = 1;
         data_out[0] = reg.word;
-        spi_dma_.readwrite(data_out, data_in, 3, true);
+        spi_dma_.readwrite(data_out, data_in, 3);
         uint16_t read_value = data_in[2];
         if (read_value != value) {
             logger.log_printf("max11254 register error %d: wrote %02x, read %02x", address, value, read_value);
@@ -147,10 +147,10 @@ class MAX11254 : public TorqueSensorBase {
         register_address reg = {.rw = 0, .addr = address, .bits2 = 3};
         uint8_t data_out[5] = {reg.word, (uint8_t) (value>>8 & 0xff), (uint8_t) (value & 0xff)};
         uint8_t data_in[5];
-        spi_dma_.readwrite(data_out, data_in, 3, true);
+        spi_dma_.readwrite(data_out, data_in, 3);
         reg.rw = 1;
         data_out[0] = reg.word;
-        spi_dma_.readwrite(data_out, data_in, 4, true);
+        spi_dma_.readwrite(data_out, data_in, 4);
         uint8_t read_value = data_in[2] << 8 | data_in[3];
         if (read_value != value) {
             logger.log_printf("max11254 register error %d: wrote %02x, read %02x", address, value, read_value);
@@ -163,10 +163,10 @@ class MAX11254 : public TorqueSensorBase {
         register_address reg = {.rw = 1, .addr = address, .bits2 = 3};
         uint8_t data_out[5] = {reg.word, (uint8_t) (value>>16 & 0xff), (uint8_t) (value>>8 & 0xff), (uint8_t) (value & 0xff)};
         uint8_t data_in[5];
-        spi_dma_.readwrite(data_out, data_in, 4, true);
+        spi_dma_.readwrite(data_out, data_in, 4);
         reg.rw = 0;
         data_out[0] = reg.word;
-        spi_dma_.readwrite(data_out, data_in, 5, true);
+        spi_dma_.readwrite(data_out, data_in, 5);
         uint32_t read_value = data_in[2] << 16 | data_in[3] << 8 | data_in[4];
         if (read_value != value) {
             logger.log_printf("max11254 register error %d: wrote %06x, read %06x", address, value, read_value);
@@ -180,10 +180,8 @@ class MAX11254 : public TorqueSensorBase {
             return;
         }
         count_ = 0;
-        if (!*spi_dma_.register_operation_) {
-            ongoing_read_ = true;
-            spi_dma_.start_readwrite(data_out_, data_in_, length_);
-        }
+        ongoing_read_ = true;
+        spi_dma_.start_readwrite(data_out_, data_in_, length_);
     }
 
     float read() {
