@@ -8,7 +8,8 @@ class ICPZDMA : public ICPZBase<ICPZDMA> {
       void(*start_cs_trigger)(), void(*stop_cs_trigger_and_wait_cs_high)(), Disk disk = Default) : 
       ICPZBase(spidma, disk), dmamux_tx_regs_(tx_dmamux), dmamux_rx_regs_(rx_dmamux), exti_num_(exti_num),
       start_cs_trigger_(start_cs_trigger), stop_cs_trigger_and_wait_cs_high_(stop_cs_trigger_and_wait_cs_high) {
-
+      spidma_.pause_.start_callback_ = [this]{start_continuous_read();};
+      spidma_.pause_.stop_callback_ = [this]{stop_continuous_read();};
     }
 
     bool init() {
