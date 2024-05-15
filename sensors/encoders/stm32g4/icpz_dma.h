@@ -41,7 +41,7 @@ class ICPZDMA : public ICPZBase<ICPZDMA> {
     float get_temperature() {
       uint8_t *data = &data_mult_[0][3];
       // signed value, 16 bit
-      return get_temperature(data);
+      return ICPZ::get_temperature(data);
     }
     void or_diag() {
       uint8_t *data = &data_mult_[2][2];

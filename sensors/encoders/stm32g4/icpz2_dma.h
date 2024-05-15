@@ -4,8 +4,10 @@
 
 class ICPZ2DMA : public EncoderBase {
  public:
-    ICPZ2DMA(ICPZDMA icpz, ICPZDMA &icpz2, SPIDMA &spidma, DMAMUX_Channel_TypeDef &tx_dmamux, DMAMUX_Channel_TypeDef &rx_dmamux, uint8_t exti_num,
-      void(*start_cs_trigger)(), void(*stop_cs_trigger_and_wait_cs_high)(), icpz_(icpz), icpz2_(icpz2) {
+    ICPZ2DMA(ICPZ icpz, ICPZ &icpz2, DMAMUX_Channel_TypeDef &tx_dmamux, DMAMUX_Channel_TypeDef &rx_dmamux, uint8_t exti_num,
+      void(*start_cs_trigger)(), void(*stop_cs_trigger_and_wait_cs_high)()) : icpz_(icpz), icpz2_(icpz2), spidma_(icpz.spidma_), 
+      dmamux_tx_regs_(tx_dmamux), dmamux_rx_regs_(rx_dmamux), exti_num_(exti_num),
+      start_cs_trigger_(start_cs_trigger), stop_cs_trigger_and_wait_cs_high_(stop_cs_trigger_and_wait_cs_high) {
 
       // sequence:
       // temp1,  angle1, angle2,
@@ -34,16 +36,19 @@ class ICPZ2DMA : public EncoderBase {
       command_mult_[3][2][0] = 0xa6; // read position
       
       command_mult_[4][0][0] = 0xcf; // clear diagnosis
-      command_mult_[4][0][1] = Addr::COMMANDS;
-      command_mult_[4][0][2] = CMD::SCLEAR;
+      command_mult_[4][0][1] = ICPZ::Addr::COMMANDS;
+      command_mult_[4][0][2] = ICPZ::CMD::SCLEAR;
       command_mult_[4][1][0] = 0xa6; // read position
       command_mult_[4][2][0] = 0xa6; // read position
       
       command_mult_[5][0][0] = 0xcf; // clear diagnosis
-      command_mult_[5][0][1] = Addr::COMMANDS;
-      command_mult_[5][0][2] = CMD::SCLEAR;
+      command_mult_[5][0][1] = ICPZ::Addr::COMMANDS;
+      command_mult_[5][0][2] = ICPZ::CMD::SCLEAR;
       command_mult_[5][1][0] = 0xa6; // read position
       command_mult_[5][2][0] = 0xa6; // read position
+
+      register_operation_  = icpz_.register_operation_;
+      icpz2_.register_operation_ = register_operation_;
     }
 
     bool init() {
@@ -64,9 +69,10 @@ class ICPZ2DMA : public EncoderBase {
     }
 
 
-    float get_temperature(uint32_t index) {
+    float get_temperature() {
+      uint8_t index=1;
       uint8_t *data = &data_mult_[index-1][0][3];
-      return get_temperature(data);
+      return ICPZ::get_temperature(data);
     }
 
     uint32_t current_buffer_index() const {
@@ -122,7 +128,15 @@ class ICPZ2DMA : public EncoderBase {
 
     uint8_t command_mult_[6][3][6] = {};
     uint8_t data_mult_[6][3][6] = {};
-    ICPZDMA &icpz_;
-    ICPZDMA &icpz2_;
-    
+    ICPZ &icpz_;
+    ICPZ &icpz2_;
+    SPIDMA &spidma_;
+
+    bool inited_ = false;
+    DMAMUX_Channel_TypeDef &dmamux_tx_regs_;
+    DMAMUX_Channel_TypeDef &dmamux_rx_regs_;
+    uint8_t exti_num_;
+    void (*start_cs_trigger_)();
+    void (*stop_cs_trigger_and_wait_cs_high_)();
+    volatile int *register_operation_ ;
 };

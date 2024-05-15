@@ -489,7 +489,7 @@ class ICPZBase : public EncoderBase {
     float get_temperature() {
           auto data = read_register(0x4e, 2);
           // signed value, 16 bit
-          return get_temperature(data);
+          return get_temperature(data.data());
     }
 
     // set ac_eto for 10x longer timeout on calibration
