@@ -19,12 +19,12 @@ class SPIDMA : public SPIDMABase<SPIDMA> {
     };
 
     static constexpr SPI_TypeDef *spi_regs[NUM_SPIS] = {SPI1, SPI2, SPI3, SPI4};
-    static Lock spi_lock[NUM_SPIS];
+    static SPIPause spi_pause[NUM_SPIS];
 
     SPIDMA(SPI_INSTANCE inst, GPIO &gpio_cs, DMA_CHANNEL_INSTANCE tx_channel, DMA_CHANNEL_INSTANCE rx_channel, 
         uint32_t baudrate,
         uint16_t start_cs_delay_ns = 100, uint16_t end_cs_delay_ns = 100, uint32_t regs_cr1 = 0) : 
-        SPIDMABase(baudrate, spi_lock[inst]),
+        SPIDMABase(baudrate, spi_pause[inst]),
         regs_(*spi_regs[inst]), gpio_cs_(gpio_cs),
         tx_dma_(*dma_ch_regs[tx_channel]), rx_dma_(*dma_ch_regs[rx_channel]),
         start_cs_delay_ns_(start_cs_delay_ns), end_cs_delay_ns_(end_cs_delay_ns),

@@ -1,49 +1,34 @@
 #pragma once
 
 #include <cstdint>
+#include <functional>
 
-class Lock {
+// shared class between SPIx instances. Provides a signal for a SPIx user to pause all SPIx instances
+// start and stop callbacks are provided by the user and generally involve mux config etc.
+class SPIPause {
  public:
-    void wait_lock() {
-        unsigned tmp = 0;
-        do {
-            asm volatile("ldrex     %1, %0\n\t"
-                         "add       %1, #1\n\t"
-                         "strex     %1, %1, %0" : "+m" (lock_), "=r" (tmp) : "m" (lock_));
-        } while (tmp == 0);
+    void pause() {
+        lock_++;
+        stop_callback_();
     }
-    void unlock() {
-        unsigned tmp;
-        asm volatile("ldrex     %1, %0\n\t"
-                     "sub       %1, #1\n\t"
-                     "strex     %1, %1, %0" : "+m" (lock_), "=r" (tmp) : "m" (lock_));
+    void unpause() {
+        lock_--;
+        start_callback_();
     }
-    bool try_lock() {
-        unsigned tmp;
-        asm volatile("ldrex     %1, %0\n\t"
-                     "add       %1, #1\n\t"
-                     "strex     %1, %1, %0" : "+m" (lock_), "=r" (tmp) : "m" (lock_));
-        return tmp == 1;
-    }
-    void lock() {
-        unsigned tmp;
-        asm volatile("ldr       %1, %0\n\t"
-                     "add       %1, #1\n\t"
-                     "str       %1, %0" : "+m" (lock_), "=r" (tmp) : "m" (lock_));
-    }
-    bool is_locked() {
-        asm volatile("" : "=m" (lock_));
+    bool is_paused() {
         return lock_ > 0;
     }
+    std::function<void()> stop_callback_, start_callback_;
  private:
     unsigned lock_ = 0;
+    
 };
 
 
 template <class T>
 class SPIDMABase {
  public:
-    SPIDMABase(uint32_t baudrate, Lock &lock) : lock_(lock) {
+    SPIDMABase(uint32_t baudrate, SPIPause &pause) : pause_(pause) {
         reinit();
     }
 
@@ -67,42 +52,21 @@ class SPIDMABase {
     // Note, use memory barrier before accesing data_in
     // Example: asm("" : "=m" (*(uint8_t (*)[]) data_in));
     void start_continuous_readwrite(const uint8_t * const data_out, uint8_t * const data_in, uint16_t length) {
-        lock_.wait_lock();
         asm("" : : "m" (*(const uint8_t (*)[]) data_out)); // ensure data_out[] is in memory
         static_cast<T*>(this)->start_continuous_readwrite(data_out, data_in, length);
     }
 
     void start_continuous_write(const uint8_t * const data_out, uint16_t length) {
-        lock_.wait_lock();
         asm("" : : "m" (*(const uint8_t (*)[]) data_out)); // ensure data_out[] is in memory
         static_cast<T*>(this)->start_continuous_write(data_out, length);
     }
 
     void stop_continuous_readwrite() {
         static_cast<T*>(this)->stop_continuous_readwrite();
-        lock_.unlock();
-    }
-
-    // call only if guaranteed not to be interrupted, and no continuous read/write is active
-    void start_readwrite_isr(const uint8_t * const data_out, uint8_t * const data_in, uint16_t length) {
-        if (!lock_.is_locked()) {
-            reinit();
-            asm("" : : "m" (*(const uint8_t (*)[]) data_out)); // ensure data_out[] is in memory
-            static_cast<T*>(this)->start_readwrite(data_out, data_in, length);
-            asm("" : "=m" (*(uint8_t (*)[]) data_in));
-        }
-    }
-
-    void finish_readwrite_isr() {
-        if (lock_.is_locked()) {
-            static_cast<T*>(this)->finish_readwrite();
-            lock_.unlock();
-        }
     }
 
     void start_readwrite(const uint8_t * const data_out, uint8_t * const data_in, uint16_t length) {
-        if (lock_.wait_lock()) {
-            pause_continuous();
+        if (!pause_.is_paused() || claimed_) {
             reinit();
             asm("" : : "m" (*(const uint8_t (*)[]) data_out)); // ensure data_out[] is in memory
             static_cast<T*>(this)->start_readwrite(data_out, data_in, length);
@@ -111,22 +75,29 @@ class SPIDMABase {
     }
 
     void start_write(const uint8_t * const data_out, uint16_t length) {
-        if (lock_.wait_lock()) {
+        if (!pause_.is_paused() || claimed_) {
             reinit();
-            pause_continuous();
             asm("" : : "m" (*(const uint8_t (*)[]) data_out)); // ensure data_out[] is in memory
             static_cast<T*>(this)->start_write(data_out, length);
         }
     }
 
     void finish_readwrite() {
-        if (lock_.is_locked()) {
+        if (!pause_.is_paused()) {
             static_cast<T*>(this)->finish_readwrite();
-            unpause_continuous();
-            lock_.unlock();
         }
     }
 
-    Lock &lock_;
+    void claim() {
+        pause_.pause();
+        claimed_ = true;
+    }
 
+    void release() {
+        claimed_ = false;
+        pause_.unpause();
+    }
+
+    SPIPause &pause_;
+    bool claimed_ = false;
 };
