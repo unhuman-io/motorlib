@@ -18,7 +18,8 @@ class SPIPause {
     bool is_paused() {
         return lock_ > 0;
     }
-    std::function<void()> stop_callback_, start_callback_;
+    std::function<void()> stop_callback_ = []{};
+    std::function<void()> start_callback_ = []{};
  private:
     unsigned lock_ = 0;
     
