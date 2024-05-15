@@ -5,6 +5,7 @@
 #include "st_device.h"
 #include "../../gpio.h"
 #include "../../torque_sensor.h"
+#include "../spi_dma.h"
 
 extern "C" {
 void system_init();
@@ -13,13 +14,11 @@ void system_init();
 // A two reading torque source
 class SPITorque final : public TorqueSensorBase {
  public:
-    SPITorque(SPI_TypeDef &regs, GPIO &gpio_cs, DMA_Channel_TypeDef &tx_dma, DMA_Channel_TypeDef &rx_dma, uint8_t decimation = 50, volatile int *register_operation = nullptr) : 
+    SPITorque(SPI_TypeDef &regs, GPIO &gpio_cs, DMA_Channel_TypeDef &tx_dma, DMA_Channel_TypeDef &rx_dma, 
+        SPIPause spi_pause, uint8_t decimation = 50) : 
         regs_(regs), gpio_cs_(gpio_cs), 
-        tx_dma_(tx_dma), rx_dma_(rx_dma), decimation_(decimation) {
-            if (register_operation != nullptr) {
-                register_operation_ = register_operation;
-            }
-        }
+        tx_dma_(tx_dma), rx_dma_(rx_dma), 
+        spi_pause_(spi_pause), decimation_(decimation) {}
 
     bool init() {
         reinit();
@@ -32,17 +31,15 @@ class SPITorque final : public TorqueSensorBase {
     }
 
     void reinit() {
-        if (!*register_operation_) {
-            regs_.CR2 = (7 << SPI_CR2_DS_Pos) | SPI_CR2_FRXTH | SPI_CR2_RXDMAEN | SPI_CR2_TXDMAEN;    // 8 bit
-            regs_.CR1 = SPI_CR1_MSTR | (3 << SPI_CR1_BR_Pos) | SPI_CR1_CPHA | SPI_CR1_SSI | SPI_CR1_SSM | SPI_CR1_SPE;    // baud = clock/16 spi mode 1
-        }
+        regs_.CR2 = (7 << SPI_CR2_DS_Pos) | SPI_CR2_FRXTH | SPI_CR2_RXDMAEN | SPI_CR2_TXDMAEN;    // 8 bit
+        regs_.CR1 = SPI_CR1_MSTR | (3 << SPI_CR1_BR_Pos) | SPI_CR1_CPHA | SPI_CR1_SSI | SPI_CR1_SSM | SPI_CR1_SPE;    // baud = clock/16 spi mode 1
     }
 
     float get_value() const { return torque_; }
 
     void trigger() {
         count_++;
-        if (!*register_operation_) {
+        if (!spi_pause_.is_paused()) {
             if (count_ < decimation_) {
                 return;
             }
@@ -61,7 +58,7 @@ class SPITorque final : public TorqueSensorBase {
     }
 
     float read() {
-        if (!*register_operation_) {
+        if (!spi_pause_.is_paused()) {
             if (count_ == 0) {
                 // wait until dma complete
                 while(rx_dma_.CNDTR);
@@ -83,8 +80,8 @@ class SPITorque final : public TorqueSensorBase {
     }
 
     void reset(uint32_t a=1) {
+        spi_pause_.pause();
         reinit();
-        (*register_operation_)++;
         if (a) {
             gpio_cs_.clear();
             // start dma transfer
@@ -101,13 +98,13 @@ class SPITorque final : public TorqueSensorBase {
             gpio_cs_.set();
             data_out_[0] = 0x40;
         }
-        (*register_operation_)--;
+        spi_pause_.unpause();
     }
 
     uint32_t reset2() {
         return 0;
     }
-    volatile int *register_operation_ = &register_operation_local_;
+
  private:
     SPI_TypeDef &regs_;
     GPIO &gpio_cs_;
@@ -119,8 +116,8 @@ class SPITorque final : public TorqueSensorBase {
     uint32_t sum_;
     //float torque_ = 0;
     uint8_t count_ = 0;
+    SPIPause spi_pause_;
     uint8_t decimation_;
-    volatile int register_operation_local_ = 0;
     
 
     friend class System;

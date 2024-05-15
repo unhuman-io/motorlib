@@ -9,8 +9,8 @@
 class MA782Encoder final : public MA732Encoder {
  public:
     enum MA782FW {_1, _2, _4, _8, _16, _32, _64, _128, _256, _512, _1024, _2048, _4096}; // us
-    MA782Encoder(SPI_TypeDef &regs, GPIO &gpio_cs, uint8_t filter = _512, volatile int *register_operation = nullptr) : 
-        MA732Encoder(regs, gpio_cs, filter, register_operation) {}
+    MA782Encoder(SPI_TypeDef &regs, GPIO &gpio_cs, SPIPause spi_pause, uint8_t filter = _512) : 
+        MA732Encoder(regs, gpio_cs, filter, spi_pause) {}
     
     virtual void set_filt(uint32_t value) override {
         set_register(0xE, value << 4);
@@ -47,15 +47,15 @@ class MA782Encoder final : public MA732Encoder {
 
         // difference to ma732 is send_and_read(0) & 0xFF
     virtual uint8_t read_register(uint8_t address) override {
+        spi_pause_.pause();
         reinit(); // only really necessary if there are multiple users of the spi
-        (*register_operation_)++;
         MA732reg reg = {};
         reg.bits.address = address;
         reg.bits.command = 0b010; // read register
         send_and_read(reg.word);
         ns_delay(750); // read register delay
         uint8_t retval = send_and_read(0) & 0xFF;
-        (*register_operation_)--;
+        spi_pause_.unpause();
         return retval;
     }
 
