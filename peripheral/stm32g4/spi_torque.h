@@ -15,7 +15,7 @@ void system_init();
 class SPITorque final : public TorqueSensorBase {
  public:
     SPITorque(SPI_TypeDef &regs, GPIO &gpio_cs, DMA_Channel_TypeDef &tx_dma, DMA_Channel_TypeDef &rx_dma, 
-        SPIPause spi_pause, uint8_t decimation = 50) : 
+        SPIPause &spi_pause, uint8_t decimation = 50) : 
         regs_(regs), gpio_cs_(gpio_cs), 
         tx_dma_(tx_dma), rx_dma_(rx_dma), 
         spi_pause_(spi_pause), decimation_(decimation) {}
@@ -116,7 +116,7 @@ class SPITorque final : public TorqueSensorBase {
     uint32_t sum_;
     //float torque_ = 0;
     uint8_t count_ = 0;
-    SPIPause spi_pause_;
+    SPIPause &spi_pause_;
     uint8_t decimation_;
     
 
