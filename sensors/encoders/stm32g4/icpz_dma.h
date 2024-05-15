@@ -8,6 +8,8 @@ class ICPZDMA : public ICPZBase<ICPZDMA> {
       void(*start_cs_trigger)(), void(*stop_cs_trigger_and_wait_cs_high)(), Disk disk = Default) : 
       ICPZBase(spidma, disk), dmamux_tx_regs_(tx_dmamux), dmamux_rx_regs_(rx_dmamux), exti_num_(exti_num),
       start_cs_trigger_(start_cs_trigger), stop_cs_trigger_and_wait_cs_high_(stop_cs_trigger_and_wait_cs_high) {
+      spidma_.pause_.start_callback_ = [this]{start_continuous_read();};
+      spidma_.pause_.stop_callback_ = [this]{stop_continuous_read();};
 
       command_mult_[1][0] = 0xa6; // read position
       command_mult_[3][0] = 0xa6;
@@ -29,7 +31,7 @@ class ICPZDMA : public ICPZBase<ICPZDMA> {
     }
     void trigger() {}
     int32_t read() {
-      if (!*register_operation_) {
+      if (!spidma_.pause_.is_paused()) {
         // Can only read when transactions are not active. Must be guaranteed 
         // by timing setup.
         uint8_t *data_buf = data_mult_[current_buffer_index()];
@@ -102,19 +104,6 @@ class ICPZDMA : public ICPZBase<ICPZDMA> {
       spidma_.stop_continuous_readwrite();
       dmamux_tx_regs_.CCR &= DMAMUX_CxCR_DMAREQ_ID_Msk;
       dmamux_rx_regs_.CCR &= DMAMUX_CxCR_DMAREQ_ID_Msk;
-    }
-
-    void set_register_operation_impl() {
-      (*register_operation_)++;
-      if (inited_ && *register_operation_ == 1) {
-        stop_continuous_read();
-      }
-    }
-    void clear_register_operation_impl() {
-      if (inited_ && *register_operation_ == 1) {
-        start_continuous_read();
-      }
-      (*register_operation_)--;
     }
 
     bool inited_ = false;

@@ -16,7 +16,6 @@ class BMI270 {
         int16_t gyr_x, gyr_y, gyr_z;
     };
     BMI270(SPIDMA &spi_dma) : spi_dma_(spi_dma) {
-        register_operation_ = spi_dma_.register_operation_;
     }
     void init() {
         write_reg(0x7C, 0x00);
@@ -35,11 +34,11 @@ class BMI270 {
         write_reg(0x7C, 0x02);
     }
 
-    void read(bool register_operation = false) {
+    void read() {
         //data_out_[0] = 0x80; // chip id
 
         data_out_[0] = 0x8c;
-        spi_dma_.readwrite(data_out_, data_in_, 14, register_operation);
+        spi_dma_.readwrite(data_out_, data_in_, 14);
         // logger.log(bytes_to_hex(data_in_, 14));
         data_.acc_x = (int16_t) (data_in_[3] << 8 | data_in_[2]);
         data_.acc_y = (int16_t) (data_in_[5] << 8 | data_in_[4]);
@@ -52,48 +51,39 @@ class BMI270 {
         //     data_.gyr_x, data_.gyr_y, data_.gyr_z);
     }
 
-    void read_with_restore() {
-        (*register_operation_)++;
-        spi_dma_.save_state();
-        read(true);
-        spi_dma_.restore_state();
-        (*register_operation_)--;
-    }
-
     void burst_write(uint8_t address, const uint8_t data[], uint16_t length) {
-        (*register_operation_)++;
+        spi_dma_.claim();
         uint8_t data_out[1] = {address};
         uint8_t data_in[1];
-        spi_dma_.start_readwrite(data_out, data_in, 1, true);
+        spi_dma_.start_readwrite(data_out, data_in, 1);
         us_delay(2);
-        spi_dma_.start_write(data, length, true);
-        spi_dma_.finish_readwrite(true);
+        spi_dma_.start_write(data, length);
+        spi_dma_.finish_readwrite();
         us_delay(3);
-        (*register_operation_)--;
+        spi_dma_.release();
     }
 
     void write_reg(uint8_t address, uint8_t value) {
-        (*register_operation_)++;
+        spi_dma_.claim();
         uint8_t data_out[2] = {address, value};
         uint8_t data_in[2];
-        spi_dma_.readwrite(data_out, data_in, 2, true);
+        spi_dma_.readwrite(data_out, data_in, 2);
         us_delay(3);
-        (*register_operation_)--;
+        spi_dma_.release();
     }
 
     uint8_t read_reg(uint8_t address) {
-        (*register_operation_)++;
+        spi_dma_.claim();
         uint8_t data_out[3] = {(uint8_t) (address | 0x80)};
         uint8_t data_in[3];
-        spi_dma_.readwrite(data_out, data_in, 3, true);
+        spi_dma_.readwrite(data_out, data_in, 3);
         us_delay(3);
-        (*register_operation_)--;
+        spi_dma_.release();
         return data_in[2];
     }
 
     std::string get_string() const { char s[100]; std::sprintf(s, "0x%02X", data_in_[2]); return s; }
 
-    volatile int *register_operation_;
  private:
     SPIDMA &spi_dma_;
     uint8_t data_out_[14] = {};
