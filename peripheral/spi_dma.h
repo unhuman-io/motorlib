@@ -33,15 +33,7 @@ class SPIDMABase {
     }
 
     void reinit() {
-        static_cast<T*>(this)->reinit();
-    }
-
-    void save_state() {
-        static_cast<T*>(this)->save_state();
-    }
-
-    void restore_state() {
-        static_cast<T*>(this)->restore_state();
+        static_cast<T*>(this)->reinit_impl();
     }
 
     void readwrite(const uint8_t * const data_out, uint8_t * const data_in, uint16_t length) {
@@ -53,23 +45,23 @@ class SPIDMABase {
     // Example: asm("" : "=m" (*(uint8_t (*)[]) data_in));
     void start_continuous_readwrite(const uint8_t * const data_out, uint8_t * const data_in, uint16_t length) {
         asm("" : : "m" (*(const uint8_t (*)[]) data_out)); // ensure data_out[] is in memory
-        static_cast<T*>(this)->start_continuous_readwrite(data_out, data_in, length);
+        static_cast<T*>(this)->start_continuous_readwrite_impl(data_out, data_in, length);
     }
 
     void start_continuous_write(const uint8_t * const data_out, uint16_t length) {
         asm("" : : "m" (*(const uint8_t (*)[]) data_out)); // ensure data_out[] is in memory
-        static_cast<T*>(this)->start_continuous_write(data_out, length);
+        static_cast<T*>(this)->start_continuous_write_impl(data_out, length);
     }
 
     void stop_continuous_readwrite() {
-        static_cast<T*>(this)->stop_continuous_readwrite();
+        static_cast<T*>(this)->stop_continuous_readwrite_impl();
     }
 
     void start_readwrite(const uint8_t * const data_out, uint8_t * const data_in, uint16_t length) {
         if (!pause_.is_paused() || claimed_) {
             reinit();
             asm("" : : "m" (*(const uint8_t (*)[]) data_out)); // ensure data_out[] is in memory
-            static_cast<T*>(this)->start_readwrite(data_out, data_in, length);
+            static_cast<T*>(this)->start_readwrite_impl(data_out, data_in, length);
             asm("" : "=m" (*(uint8_t (*)[]) data_in));
         }
     }
@@ -78,13 +70,13 @@ class SPIDMABase {
         if (!pause_.is_paused() || claimed_) {
             reinit();
             asm("" : : "m" (*(const uint8_t (*)[]) data_out)); // ensure data_out[] is in memory
-            static_cast<T*>(this)->start_write(data_out, length);
+            static_cast<T*>(this)->start_write_impl(data_out, length);
         }
     }
 
     void finish_readwrite() {
         if (!pause_.is_paused()) {
-            static_cast<T*>(this)->finish_readwrite();
+            static_cast<T*>(this)->finish_readwrite_impl();
         }
     }
 

@@ -37,7 +37,7 @@ class SPIDMA : public SPIDMABase<SPIDMA> {
         reinit();
     }
 
-    void reinit() {
+    void reinit_impl() {
         regs_.CR1 &= ~SPI_CR1_SPE; // disable to change settings
         regs_.CR2 = (7 << SPI_CR2_DS_Pos) | SPI_CR2_FRXTH | SPI_CR2_RXDMAEN | SPI_CR2_TXDMAEN;   // 8 bit
         tx_dma_.CPAR = (uint32_t) &regs_.DR;
@@ -45,22 +45,7 @@ class SPIDMA : public SPIDMABase<SPIDMA> {
         regs_.CR1 = regs_cr1_ | SPI_CR1_SPE; // enable
     }
 
-    void save_state() {
-        old_cr1_ = regs_.CR1;
-        old_cr2_ = regs_.CR2;
-        old_tx_cpar_ = tx_dma_.CPAR;
-        old_rx_cpar_ = rx_dma_.CPAR;
-    }
-
-    void restore_state() {
-        regs_.CR1 &= ~SPI_CR1_SPE; // disable to change settings
-        regs_.CR2 = old_cr2_;
-        tx_dma_.CPAR = old_tx_cpar_;
-        rx_dma_.CPAR = old_rx_cpar_;
-        regs_.CR1 = old_cr1_;
-    }
-
-    void start_continuous_readwrite(const uint8_t * const data_out, uint8_t * const data_in, uint8_t length) {
+    void start_continuous_readwrite_impl(const uint8_t * const data_out, uint8_t * const data_in, uint8_t length) {
         length_ = length;
         tx_dma_.CCR = 0;
         rx_dma_.CCR = 0;
@@ -72,7 +57,7 @@ class SPIDMA : public SPIDMABase<SPIDMA> {
         tx_dma_.CCR = DMA_CCR_EN | DMA_CCR_CIRC | DMA_CCR_MINC | DMA_CCR_DIR; // DIR = 1 > read from memory
     }
 
-    void start_continuous_write(const uint8_t * const data_out, uint8_t length) {
+    void start_continuous_write_impl(const uint8_t * const data_out, uint8_t length) {
         length_ = length;
         tx_dma_.CCR = 0;
         tx_dma_.CNDTR = length;
@@ -80,12 +65,12 @@ class SPIDMA : public SPIDMABase<SPIDMA> {
         tx_dma_.CCR = DMA_CCR_EN | DMA_CCR_CIRC | DMA_CCR_MINC | DMA_CCR_DIR; // DIR = 1 > read from memory
     }
 
-    void stop_continuous_readwrite() {
+    void stop_continuous_readwrite_impl() {
         tx_dma_.CCR = 0;
         rx_dma_.CCR = 0;
     }
 
-    void start_readwrite(const uint8_t * const data_out, uint8_t * const data_in, uint8_t length) {
+    void start_readwrite_impl(const uint8_t * const data_out, uint8_t * const data_in, uint8_t length) {
         gpio_cs_.clear();
         ns_delay(start_cs_delay_ns_);
         length_ = length;
@@ -100,7 +85,7 @@ class SPIDMA : public SPIDMABase<SPIDMA> {
         time_start_ = get_clock();
     }
 
-    void start_write(const uint8_t * const data_out, uint16_t length) {
+    void start_write_impl(const uint8_t * const data_out, uint16_t length) {
         gpio_cs_.clear();
         ns_delay(start_cs_delay_ns_);
         length_ = length;
@@ -115,7 +100,7 @@ class SPIDMA : public SPIDMABase<SPIDMA> {
         time_start_ = get_clock();
     }
 
-    void finish_readwrite() {
+    void finish_readwrite_impl() {
         uint8_t brr = (regs_.CR1 & SPI_CR1_BR) >> SPI_CR1_BR_Pos;
         uint32_t timeout = (length_*8+3)*(2 << brr); // 3 extra bits time
         while(rx_dma_.CNDTR && (get_clock() - time_start_ < timeout)); // Busy wait with timeout
