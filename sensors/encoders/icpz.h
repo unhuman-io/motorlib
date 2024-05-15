@@ -117,33 +117,27 @@ class ICPZBase : public EncoderBase {
        return success;
     }
     void trigger() {
-      if (!*register_operation_) {
-        ongoing_read_ = true;
-        spidma_.start_readwrite(command_, data_, sizeof(command_));
-      }
+      spidma_.start_readwrite(command_, data_, sizeof(command_));
     }
     int32_t read() {
-      if (ongoing_read_) {
-        spidma_.finish_readwrite();
-        uint32_t data = ((data_[1] << 16) | (data_[2] << 8) | data_[3]) << 8;
-        raw_value_ = data >> 8;
-        uint32_t word = data | data_[4];
-        Diag diag = {.word = data_[4]};
-        uint8_t crc6_calc = ~CRC_BiSS_43_30bit(word >> 6) & 0x3f;
-        error_count_ += !diag.nErr;
-        warn_count_ += !diag.nWarn;
-        uint8_t crc_error = diag.crc6 == crc6_calc ? 0 : 1;
-        crc_error_count_ += crc_error;
-        if (!crc_error) {
-          int32_t diff = (data - last_data_); // rollover summing
-          pos_ += diff/256;
-          //pos_ = data/256;
-          last_data_ = data;
-        }
-        if (!diag.nErr) {
-          //clear_diag();
-        }
-        ongoing_read_ = false;
+      spidma_.finish_readwrite();
+      uint32_t data = ((data_[1] << 16) | (data_[2] << 8) | data_[3]) << 8;
+      raw_value_ = data >> 8;
+      uint32_t word = data | data_[4];
+      Diag diag = {.word = data_[4]};
+      uint8_t crc6_calc = ~CRC_BiSS_43_30bit(word >> 6) & 0x3f;
+      error_count_ += !diag.nErr;
+      warn_count_ += !diag.nWarn;
+      uint8_t crc_error = diag.crc6 == crc6_calc ? 0 : 1;
+      crc_error_count_ += crc_error;
+      if (!crc_error) {
+        int32_t diff = (data - last_data_); // rollover summing
+        pos_ += diff/256;
+        //pos_ = data/256;
+        last_data_ = data;
+      }
+      if (!diag.nErr) {
+        //clear_diag();
       }
       return get_value();
     }
@@ -514,10 +508,7 @@ class ICPZBase : public EncoderBase {
     uint8_t data_[5] = {};
     int32_t pos_ = 0;
     uint32_t last_data_ = 0;
-    volatile int register_operation_local_ = 0;
-    volatile int *register_operation_ = &register_operation_local_;
     uint8_t bank_ = 255;
-    bool ongoing_read_ = false;
     uint8_t read_register_opcode_ = 0x81;
     uint8_t write_register_opcode_ = 0xcf;
     enum {PZ, MU} type_ = PZ;
