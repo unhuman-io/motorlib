@@ -9,8 +9,8 @@
 class MA782Encoder final : public MA732Encoder {
  public:
     enum MA782FW {_1, _2, _4, _8, _16, _32, _64, _128, _256, _512, _1024, _2048, _4096}; // us
-    MA782Encoder(SPI_TypeDef &regs, GPIO &gpio_cs, SPIPause spi_pause, uint8_t filter = _512) : 
-        MA732Encoder(regs, gpio_cs, filter, spi_pause) {}
+    MA782Encoder(SPI_TypeDef &regs, GPIO &gpio_cs, SPIPause &spi_pause, uint8_t filter = _512) : 
+        MA732Encoder(regs, gpio_cs, spi_pause, filter) {}
     
     virtual void set_filt(uint32_t value) override {
         set_register(0xE, value << 4);

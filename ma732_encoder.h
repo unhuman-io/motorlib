@@ -18,7 +18,7 @@ class MA732Encoder : public SPIEncoder {
         } bits;
         uint16_t word;
     };
-    MA732Encoder(SPI_TypeDef &regs, GPIO &gpio_cs, SPIPause spi_pause, uint8_t filter = 119) : SPIEncoder(regs, gpio_cs), 
+    MA732Encoder(SPI_TypeDef &regs, GPIO &gpio_cs, SPIPause &spi_pause, uint8_t filter = 119) : SPIEncoder(regs, gpio_cs), 
         filter_(filter), regs_(regs), spi_pause_(spi_pause) {
         reinit();
     }
@@ -155,7 +155,7 @@ class MA732Encoder : public SPIEncoder {
     SPI_TypeDef &regs_;
     uint16_t last_data_ = 0;
     int32_t count_ = 0;
-    SPIPause spi_pause_;
+    SPIPause &spi_pause_;
     uint32_t tmp;
 };
 
