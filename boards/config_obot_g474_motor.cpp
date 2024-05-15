@@ -130,11 +130,8 @@ extern "C" void board_init() {
 
 namespace config {
     static_assert(((double) CPU_FREQUENCY_HZ * 8 / 2) / pwm_frequency < 65535);    // check pwm frequency
-#ifdef SPI1_REINIT_CALLBACK
-    DRV8323S drv(*SPI1);//, spi1_dma.register_operation_, spi1_reinit_callback);
-#else
-    DRV8323S drv(*SPI1);
-#endif
+    DRV8323S drv(*SPI1, SPIDMA::spi_pause[SPIDMA::SP1]);
+
     TempSensor temp_sensor;
     I2C_DMA i2c1(*I2C1, *DMA1_Channel7, *DMA1_Channel8, 400);
     
