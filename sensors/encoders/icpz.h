@@ -168,12 +168,12 @@ class ICPZBase : public EncoderBase {
     }
 
     std::string read_diagnosis_str() {
-      set_register_operation();
+      spidma_.claim();
       uint8_t data_out[10] = {0x9C};
       uint8_t data_in[10];
-      spidma_.readwrite(data_out, data_in, 10, true);
+      spidma_.readwrite(data_out, data_in, 10);
       clear_diag();
-      clear_register_operation();
+      spidma_.release();
       uint32_t diag_err = data_in[5] << 24 | data_in[4] << 16 | data_in[3] << 8 | data_in[2];
       uint32_t diag_warn = data_in[9] << 24 | data_in[8] << 16 | data_in[7] << 8 | data_in[6];
       return "err: " + diagnosis_to_str(diag_err) + " warn: " + diagnosis_to_str(diag_warn);
