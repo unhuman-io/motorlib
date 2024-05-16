@@ -15,7 +15,8 @@ class ADS1235 : public TorqueSensorBase {
     ADS1235(SPIDMA &spidma, PGAGain pga_gain = GAIN_128, SPS sps = SPS_1200) : 
         spidma_(spidma), pga_gain_(pga_gain) {
       command_[0] = 0x12;
-      constructor_init(sps);
+      //constructor_init(sps);
+      sps_ = sps;
     }
     void constructor_init(SPS sps) {
        init_val_ = 0;
@@ -25,6 +26,7 @@ class ADS1235 : public TorqueSensorBase {
        init_val_ += set_register(0x11, 0x34) ? 1000 : 0; // inputs AIN0 AIN1
     }
     uint32_t init() {
+      constructor_init(sps_);
       return init_val_;
     }
     void trigger() {
@@ -67,6 +69,7 @@ class ADS1235 : public TorqueSensorBase {
     uint8_t data_[5] = {};
     PGAGain pga_gain_;
     uint32_t init_val_ = 0;
+    SPS sps_;
 
     friend class System;
     friend void system_init();
