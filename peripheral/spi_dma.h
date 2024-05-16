@@ -21,7 +21,7 @@ class SPIPause {
     std::function<void()> stop_callback_ = []{};
     std::function<void()> start_callback_ = []{};
  private:
-    unsigned lock_ = 0;
+    volatile unsigned lock_ = 0;
     
 };
 
