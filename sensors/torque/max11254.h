@@ -181,12 +181,12 @@ class MAX11254 : public TorqueSensorBase {
         }
         count_ = 0;
         ongoing_read_ = true;
-        spi_dma_.start_readwrite(data_out_, data_in_, length_);
+        spi_dma_.start_readwrite_isr(data_out_, data_in_, length_);
     }
 
     float read() {
         if (count_ == 0 && ongoing_read_) {
-            spi_dma_.finish_readwrite();
+            spi_dma_.finish_readwrite_isr();
             raw_value_ = data_in_[1] << 16 | data_in_[2] << 8 | data_in_[3];
             if (isolation) {
                 raw_value_ = data_in_[2] << 16 | data_in_[3] << 8 | data_in_[4];

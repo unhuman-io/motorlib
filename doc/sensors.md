@@ -38,12 +38,11 @@ struct Sensor {
     ...
     void read() {
         // if paused this readwrite will skip (not block) and not update the outputs
-        spidma_.readwrite(...);
+        spidma_.start_readwrite_isr(...);
+        spidma_.finish_readwrite_isr();
     }
     int get_diag() {
-        spidma_.claim();
         spidma_.readwrite(...);
-        spidma_.release();
     }
     SPIDMA &spidma_;
 };

@@ -117,10 +117,10 @@ class ICPZBase : public EncoderBase {
        return success;
     }
     void trigger() {
-      spidma_.start_readwrite(command_, data_, sizeof(command_));
+      spidma_.start_readwrite_isr(command_, data_, sizeof(command_));
     }
     int32_t read() {
-      spidma_.finish_readwrite();
+      spidma_.finish_readwrite_isr();
       uint32_t data = ((data_[1] << 16) | (data_[2] << 8) | data_[3]) << 8;
       raw_value_ = data >> 8;
       uint32_t word = data | data_[4];
@@ -157,9 +157,7 @@ class ICPZBase : public EncoderBase {
     }
 
     void clear_diag() {
-      spidma_.claim();
       set_register(bank_, Addr::COMMANDS, {SCLEAR});
-      spidma_.release();
     }
 
         // non interrupt context

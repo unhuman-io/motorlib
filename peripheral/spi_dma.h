@@ -37,9 +37,15 @@ class SPIDMABase {
         static_cast<T*>(this)->reinit_impl();
     }
 
+    // main() context only
     void readwrite(const uint8_t * const data_out, uint8_t * const data_in, uint16_t length) {
-        start_readwrite(data_out, data_in, length);
-        finish_readwrite();
+        claim();
+        reinit();
+        asm("" : : "m" (*(const uint8_t (*)[]) data_out)); // ensure data_out[] is in memory
+        static_cast<T*>(this)->start_readwrite_impl(data_out, data_in, length);
+        static_cast<T*>(this)->finish_readwrite_impl();
+        asm("" : "=m" (*(uint8_t (*)[]) data_in));
+        release();
     }
 
     // Note, use memory barrier before accesing data_in
@@ -58,8 +64,9 @@ class SPIDMABase {
         static_cast<T*>(this)->stop_continuous_readwrite_impl();
     }
 
-    void start_readwrite(const uint8_t * const data_out, uint8_t * const data_in, uint16_t length) {
-        if (!pause_.is_paused() || claimed_) {
+    // ISR use only
+    void start_readwrite_isr(const uint8_t * const data_out, uint8_t * const data_in, uint16_t length) {
+        if (!pause_.is_paused()) {
             reinit();
             asm("" : : "m" (*(const uint8_t (*)[]) data_out)); // ensure data_out[] is in memory
             static_cast<T*>(this)->start_readwrite_impl(data_out, data_in, length);
@@ -67,15 +74,17 @@ class SPIDMABase {
         }
     }
 
-    void start_write(const uint8_t * const data_out, uint16_t length) {
-        if (!pause_.is_paused() || claimed_) {
+    // ISR use only
+    void start_write_isr(const uint8_t * const data_out, uint16_t length) {
+        if (!pause_.is_paused()) {
             reinit();
             asm("" : : "m" (*(const uint8_t (*)[]) data_out)); // ensure data_out[] is in memory
             static_cast<T*>(this)->start_write_impl(data_out, length);
         }
     }
 
-    void finish_readwrite() {
+    // ISR use only
+    void finish_readwrite_isr() {
         if (!pause_.is_paused()) {
             static_cast<T*>(this)->finish_readwrite_impl();
         }
@@ -83,14 +92,11 @@ class SPIDMABase {
 
     void claim() {
         pause_.pause();
-        claimed_ = true;
     }
 
     void release() {
-        claimed_ = false;
         pause_.unpause();
     }
 
     SPIPause &pause_;
-    bool claimed_ = false;
 };
