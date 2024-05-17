@@ -29,11 +29,11 @@ class Aksim2Encoder : public EncoderBase {
         nbits_ = std::log2(std::abs(cpr));
     }
     void trigger() {
-        spi_dma_.start_readwrite(data_out_, data_in_, length_);
+        spi_dma_.start_readwrite_isr(data_out_, data_in_, length_);
     }
     bool init() { return true; }
     int32_t read() {
-        spi_dma_.finish_readwrite();
+        spi_dma_.finish_readwrite_isr();
         // 17 bits of nothing, then number of data bits 18-20, then error bit, warn bit, and crc6
         // 17+20+2+6 = 45 -> 6 bytes
         // raw value will be 31 bits with a leading zero

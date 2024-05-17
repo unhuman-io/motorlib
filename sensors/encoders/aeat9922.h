@@ -43,11 +43,11 @@ class AEAT9922 : public EncoderBase {
     }
 
     void trigger() {
-        spidma_.start_readwrite(read_out_, read_in_, 3+isol_);
+        spidma_.start_readwrite_isr(read_out_, read_in_, 3+isol_);
     }
 
     int32_t read() {
-        spidma_.finish_readwrite();
+        spidma_.finish_readwrite_isr();
         
         // May in the future use 24 bit mode, Keeping this code for that case
         // 24 bit

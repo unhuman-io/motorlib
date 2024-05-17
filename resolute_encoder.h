@@ -29,12 +29,12 @@ class ResoluteEncoder : public EncoderBase {
     ResoluteEncoder(SPIDMA &spi_dma) : EncoderBase(), spi_dma_(spi_dma) {}
     void trigger() {
         //spi_dma_.reinit();
-        spi_dma_.start_readwrite(data_out_, data_in_, length_);
+        spi_dma_.start_readwrite_isr(data_out_, data_in_, length_);
     }
     bool init() { return true; }
     int32_t read() {
         GPIOC->BSRR = GPIO_BSRR_BS0;
-        spi_dma_.finish_readwrite();
+        spi_dma_.finish_readwrite_isr();
         GPIOC->BSRR = GPIO_BSRR_BR0;
 
         uint64_t super_raw;

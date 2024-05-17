@@ -30,10 +30,10 @@ class ADS1235 : public TorqueSensorBase {
       return init_val_;
     }
     void trigger() {
-      spidma_.start_readwrite(command_, data_, 5);
+      spidma_.start_readwrite_isr(command_, data_, 5);
     }
     float read() {
-      spidma_.finish_readwrite();
+      spidma_.finish_readwrite_isr();
       int32_t torque_int = signextend<int32_t, 24>((data_[2]) << 16 | (data_[3] << 8) | data_[4]);
       torque_ = gain_*torque_int;
       return torque_;
@@ -41,11 +41,9 @@ class ADS1235 : public TorqueSensorBase {
  protected:
 
     uint8_t read_register(uint8_t address) {
-        spidma_.claim();
         uint8_t command[3] = {(uint8_t) (0x20u+address)};
         uint8_t data_in[3];
         spidma_.readwrite(command, data_in, 3);
-        spidma_.release();
         return data_in[2];
     }
 
