@@ -14,7 +14,7 @@
         [](uint8_t u){ ma732.set_bct(u); }));\
     api.add_api_variable(prefix "et", new APICallbackUint8([]{ return ma732.get_et(); }, \
         [](uint8_t u){ ma732.set_et(u); }));\
-    api.add_api_variable(prefix "mgt", new APICallbackHex<uint8_t>([]{ return ma732.get_magnetic_field_strength(); }, \
+    api.add_api_variable(prefix "mgt", new APICallbackHex<uint16_t>([]{ return ma732.get_magnetic_field_strength(); }, \
         [](uint8_t u){ ma732.set_mgt(u); }));\
 
 // Note MA732 encoder expects cpol 1, cpha 1, max 25 mbit
@@ -187,9 +187,8 @@ class MA732EncoderBase : public SPIEncoder {
 
     int32_t get_value()  const { return count_; }
 
-    bool init() {
-        // filter frequency
-        bool success = set_filt(filter_);
+    bool check_magnetic_field_strength() {
+        bool success = true;
         uint32_t field_strength = get_magnetic_field_strength();
         if (field_strength < 0x202) {
             logger.log_printf("MA732 magnetic field strength too low: %x", field_strength);
@@ -198,6 +197,13 @@ class MA732EncoderBase : public SPIEncoder {
             logger.log_printf("MA732 magnetic field strength too high: %x", field_strength);
             success = false;
         }
+        return success;
+    }
+
+    bool init() {
+        set_filt(filter_);
+        bool success = get_filt() == filter_;
+        success &= check_magnetic_field_strength();
         return success;
     }
 
@@ -219,5 +225,13 @@ class MA732Encoder : public MA732EncoderBase<MA732Encoder> {
     MA732Encoder(SPI_TypeDef &regs, GPIO &gpio_cs, SPIPause &spi_pause, uint8_t filter = 119)
         : MA732EncoderBase(regs, gpio_cs, spi_pause, filter) {}
 };
+
+class MA730Encoder : public MA732Encoder {
+ public:
+    MA730Encoder(SPI_TypeDef& s, GPIO& g, SPIPause &sp) : MA732Encoder(s, g, sp) {}
+    // don't set filter, it is fixed at 23 Hz
+    bool init() { return check_magnetic_field_strength(); }
+};
+
 
 #endif  // UNHUMAN_MOTORLIB_MA732_ENCODER_H_
