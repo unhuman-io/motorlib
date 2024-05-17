@@ -29,10 +29,10 @@ class MoonsEncoder : public EncoderBase {
     // BISS-C, 10 MHz max
     MoonsEncoder(SPIDMA &spi_dma) : EncoderBase(), spi_dma_(spi_dma) {}
     void trigger() {
-        spi_dma_.start_readwrite(data_out_, data_in_, length_);
+        spi_dma_.start_readwrite_isr(data_out_, data_in_, length_);
     }
     int32_t read() {
-        spi_dma_.finish_readwrite();
+        spi_dma_.finish_readwrite_isr();
         // 2 clks of preamble, then ack, start and cds, then 12 data bits, then 2 status bits, then 6 crc bits
         // 2+1+1+1+12+2+6 = 25 -> 4 bytes with 7 padding bits
         // 32 bits read, data mask = 0b00000111'11111111'10000000'0xxxxxxx MSB first, x are padding bits
