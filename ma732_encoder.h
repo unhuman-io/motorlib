@@ -6,9 +6,21 @@
 #include "logger.h"
 #include "peripheral/spi_dma.h"
 
+#define MA732_SET_DEBUG_VARIABLES(prefix, api, ma732) \
+    api.add_api_variable(prefix "err", new APIUint32(&ma732.error_count_));\
+    api.add_api_variable(prefix "filt", new APICallbackUint8([]{ return ma732.get_filt(); }, \
+        [](uint8_t u){ ma732.set_filt(u); }));\
+    api.add_api_variable(prefix "bct", new APICallbackUint8([]{ return ma732.get_bct(); }, \
+        [](uint8_t u){ ma732.set_bct(u); }));\
+    api.add_api_variable(prefix "et", new APICallbackUint8([]{ return ma732.get_et(); }, \
+        [](uint8_t u){ ma732.set_et(u); }));\
+    api.add_api_variable(prefix "mgt", new APICallbackHex<uint8_t>([]{ return ma732.get_magnetic_field_strength(); }, \
+        [](uint8_t u){ ma732.set_mgt(u); }));\
+
 // Note MA732 encoder expects cpol 1, cpha 1, max 25 mbit
 // 80 ns cs start to sclk, 25 ns sclk end to cs end
-class MA732Encoder : public SPIEncoder {
+template <class T>
+class MA732EncoderBase : public SPIEncoder {
  public:
     union MA732reg {
         struct {
@@ -18,7 +30,7 @@ class MA732Encoder : public SPIEncoder {
         } bits;
         uint16_t word;
     };
-    MA732Encoder(SPI_TypeDef &regs, GPIO &gpio_cs, SPIPause &spi_pause, uint8_t filter = 119) : SPIEncoder(regs, gpio_cs), 
+    MA732EncoderBase(SPI_TypeDef &regs, GPIO &gpio_cs, SPIPause &spi_pause, uint8_t filter = 119) : SPIEncoder(regs, gpio_cs), 
         filter_(filter), regs_(regs), spi_pause_(spi_pause) {
         reinit();
     }
@@ -33,16 +45,26 @@ class MA732Encoder : public SPIEncoder {
     }
 
     // interrupt context
-    void trigger()  __attribute__((section (".ccmram"))) {
+    void trigger() {
         if (!spi_pause_.is_paused()) {
             SPIEncoder::trigger();
         }
     }
 
     // interrupt context   
-    int32_t read()  __attribute__((section (".ccmram"))) {
+    int32_t read() {
         if (!spi_pause_.is_paused()) {
             SPIEncoder::read();
+            if (data_ == last_data_) {
+                stall_count_++;
+                if (stall_count_ > 10) {
+                    error_count_++;
+                    stall_count_ = 0;
+                }
+            } else {
+                stall_count_ = 0;
+            }
+
             count_ += (int16_t) (data_ - last_data_); // rollover summing
             last_data_ = data_;
         }
@@ -50,21 +72,26 @@ class MA732Encoder : public SPIEncoder {
     }
 
     // non interrupt context
-    virtual uint8_t read_register(uint8_t address) {
+    uint8_t read_register(uint8_t address) {
         spi_pause_.pause();
         reinit(); // only really necessary if there are multiple users of the spi
+        uint8_t retval = static_cast<T*>(this)->read_register_impl(address);
+        spi_pause_.unpause();
+        return retval;
+    }
+
+    uint8_t read_register_impl(uint8_t address) {
         MA732reg reg = {};
         reg.bits.address = address;
         reg.bits.command = 0b010; // read register
         send_and_read(reg.word);
         ns_delay(750); // read register delay
-        uint8_t retval = send_and_read(0) >> 8;
-        spi_pause_.unpause();
-        return retval;
+        return send_and_read(0) >> 8;
     }
 
+
     // non interrupt context
-    virtual bool set_register(uint8_t address, uint8_t value) {
+    bool set_register(uint8_t address, uint8_t value) {
         reinit();
         spi_pause_.pause();
         bool retval = true;
@@ -102,15 +129,31 @@ class MA732Encoder : public SPIEncoder {
     }
 
     uint32_t get_filt() {
+        return static_cast<T*>(this)->get_filt_impl();
+    }
+
+    uint32_t get_filt_impl() {
         return read_register(0xE);
     }
 
-    virtual void set_filt(uint32_t value) {
+    void set_filt(uint32_t value) {
+        return static_cast<T*>(this)->set_filt_impl(value);
+    }
+
+    void set_filt_impl(uint32_t value) {
         set_register(0xE, value);
     }
 
     void set_mgt(uint32_t value) {
         set_register(0x6, value);
+    }
+
+    uint32_t get_magnetic_field_strength() {
+        spi_pause_.pause();
+        reinit();
+        uint32_t retval = static_cast<T*>(this)->get_magnetic_field_strength_impl();
+        spi_pause_.unpause();
+        return retval;
     }
 
     // The MA732 encoder doesn't give magnetic field strength directly but allows 
@@ -120,7 +163,7 @@ class MA732Encoder : public SPIEncoder {
     // min mT is 40 which is step 2 in MGT. I combine the two readings like this
     // (mght << 0 | (uint16_t) mglt << 8), so the minimum recommended value is about
     // 0x202 or 514.
-    uint32_t get_magnetic_field_strength() {
+    uint32_t get_magnetic_field_strength_impl() {
         uint8_t original_mgt = read_register(0x6);
         uint8_t mght = 0, mglt = 0;
         for (uint8_t i=0; i<8; i++) {
@@ -142,21 +185,39 @@ class MA732Encoder : public SPIEncoder {
         return (mght << 0 | (uint16_t) mglt << 8);
     }
 
-    int32_t get_value()  const __attribute__((section (".ccmram"))) { return count_; }
+    int32_t get_value()  const { return count_; }
 
     bool init() {
         // filter frequency
-        bool success = set_register(0xE, filter_);
+        bool success = set_filt(filter_);
+        uint32_t field_strength = get_magnetic_field_strength();
+        if (field_strength < 0x202) {
+            logger.log_printf("MA732 magnetic field strength too low: %x", field_strength);
+            success = false;
+        } else if (field_strength > 0x606) {
+            logger.log_printf("MA732 magnetic field strength too high: %x", field_strength);
+            success = false;
+        }
         return success;
     }
 
- protected:
+    void clear_faults() {
+        error_count_ = 0;
+    }
+
     uint8_t filter_;
     SPI_TypeDef &regs_;
     uint16_t last_data_ = 0;
     int32_t count_ = 0;
     SPIPause &spi_pause_;
-    uint32_t tmp;
+    uint32_t stall_count_ = 0;
+    uint32_t error_count_ = 0;
+};
+
+class MA732Encoder : public MA732EncoderBase<MA732Encoder> {
+ public:
+    MA732Encoder(SPI_TypeDef &regs, GPIO &gpio_cs, SPIPause &spi_pause, uint8_t filter = 119)
+        : MA732EncoderBase(regs, gpio_cs, spi_pause, filter) {}
 };
 
 #endif  // UNHUMAN_MOTORLIB_MA732_ENCODER_H_
