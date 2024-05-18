@@ -16,6 +16,7 @@
         [](uint8_t u){ ma732.set_et(u); }));\
     api.add_api_variable(prefix "mgt", new APICallbackHex<uint16_t>([]{ return ma732.get_magnetic_field_strength(); }, \
         [](uint8_t u){ ma732.set_mgt(u); }));\
+    api.add_api_variable(prefix "raw", new const APIUint16(&ma732.data_));\
 
 // Note MA732 encoder expects cpol 1, cpha 1, max 25 mbit
 // 80 ns cs start to sclk, 25 ns sclk end to cs end
@@ -57,7 +58,7 @@ class MA732EncoderBase : public SPIEncoder {
             SPIEncoder::read();
             if (data_ == last_data_) {
                 stall_count_++;
-                if (stall_count_ > 10) {
+                if (stall_count_ > stall_count_max_) {
                     error_count_++;
                     stall_count_ = 0;
                 }
@@ -191,12 +192,13 @@ class MA732EncoderBase : public SPIEncoder {
         bool success = true;
         uint32_t field_strength = get_magnetic_field_strength();
         if (field_strength < 0x202) {
-            logger.log_printf("MA732 magnetic field strength too low: %x", field_strength);
+            logger.log_printf("ma7XX magnetic field strength too low: %x", field_strength);
             success = false;
         } else if (field_strength > 0x606) {
-            logger.log_printf("MA732 magnetic field strength too high: %x", field_strength);
+            logger.log_printf("ma7XX magnetic field strength too high: %x", field_strength);
             success = false;
-        }
+        } else {
+            logger.log_printf("ma7XX magnetic field strength ok: %x", field_strength);}
         return success;
     }
 
@@ -218,6 +220,7 @@ class MA732EncoderBase : public SPIEncoder {
     SPIPause &spi_pause_;
     uint32_t stall_count_ = 0;
     uint32_t error_count_ = 0;
+    uint32_t stall_count_max_ = 50;
 };
 
 class MA732Encoder : public MA732EncoderBase<MA732Encoder> {
@@ -228,7 +231,10 @@ class MA732Encoder : public MA732EncoderBase<MA732Encoder> {
 
 class MA730Encoder : public MA732Encoder {
  public:
-    MA730Encoder(SPI_TypeDef& s, GPIO& g, SPIPause &sp) : MA732Encoder(s, g, sp) {}
+    MA730Encoder(SPI_TypeDef& s, GPIO& g, SPIPause &sp) : MA732Encoder(s, g, sp) {
+        // 23 Hz filter has lots of repeated values
+        stall_count_max_ = 1000;
+    }
     // don't set filter, it is fixed at 23 Hz
     bool init() { return check_magnetic_field_strength(); }
 };
