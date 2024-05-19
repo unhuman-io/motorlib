@@ -58,16 +58,21 @@ void CAN::write(uint16_t id, uint8_t* data, uint8_t length) {
         return;
     }
     TX_BUFFER* buffer = reinterpret_cast<TX_BUFFER*>(ram_.TX_BUFFER[buf_num]);
-    ram_.TX_BUFFER[buf_num][0] = 0;
-    ram_.TX_BUFFER[buf_num][1] = 0;
-    buffer->id = id;
-    buffer->efc = 0; // no event
-    buffer->fdf = 1; // CAN FD
-    buffer->brs = 1; // bit rate switch
-    buffer->dlc = length_to_dlc(length);
+    TX_BUFFER::TXWord1 word1 = {
+        .id = id,
+    };
+    TX_BUFFER::TXWord2 word2 = {
+        .dlc = length_to_dlc(length),
+        .brs = 1, // bit rate switch
+        .fdf = 1, // CAN FD
+        .efc = 1, // event
+    };
+    buffer->word1.word = word1.word;
+    buffer->word2.word = word2.word;
 
     uint8_t len_copy = std::min(std::min(length, (uint8_t) sizeof(buffer->data)), (uint8_t) 64);
     std::memcpy(buffer->data, data, len_copy);
+    asm("dmb");
 
     // send
     regs_.TXBAR = 1 << buf_num;

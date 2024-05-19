@@ -50,25 +50,35 @@ class CAN {
     };
 
     struct TX_BUFFER {
-      uint32_t id_low:18;
-      uint32_t id:11;
-      uint32_t rtr:1;
-      uint32_t xtd:1;
-      uint32_t esi:1;
+      union TXWord1 {
+        struct {
+          uint32_t id_low:18;
+          uint32_t id:11;
+          uint32_t rtr:1;
+          uint32_t xtd:1;
+          uint32_t esi:1;
+        };
+        uint32_t word;
+      } word1;
 
-      uint32_t res:16;
-      uint32_t dlc:4;
-      uint32_t brs:1;
-      uint32_t fdf:1;
-      uint32_t res2:1;
-      uint32_t efc:1;
-      uint32_t mm:8;
+      union TXWord2 {
+        struct {
+          uint32_t res:16;
+          uint32_t dlc:4;
+          uint32_t brs:1;
+          uint32_t fdf:1;
+          uint32_t res2:1;
+          uint32_t efc:1;
+          uint32_t mm:8;
+        };
+        uint32_t word;
+      } word2;
 
       uint8_t data[64];
     };
 
     constexpr static uint32_t FDCAN_SIZE = 0x400;
-    constexpr static uint32_t FDCAN_MSG_RAM_SIZE = 0x400;
+    constexpr static uint32_t FDCAN_MSG_RAM_SIZE = 0x350; //0x400;
 
     static uint8_t dlc_to_length(uint8_t dlc);
     static uint8_t length_to_dlc(uint8_t length);
