@@ -1,5 +1,6 @@
 #include "can.h"
 #include <cstring>
+#include <algorithm>
 
 CAN::CAN(CAN_INST inst) : 
     regs_(*reinterpret_cast<FDCAN_GlobalTypeDef *>(inst*FDCAN_SIZE + FDCAN1_BASE)), 
@@ -40,7 +41,8 @@ void CAN::write(uint16_t id, uint8_t* data, uint8_t length) {
     buffer->brs = 1; // bit rate switch
     buffer->dlc = length_to_dlc(length);
 
-    std::memcpy(buffer->data, data, sizeof(buffer->data));
+    uint8_t len_copy = std::min(length, (uint8_t) sizeof(buffer->data));
+    std::memcpy(buffer->data, data, len_copy);
 
     // send
 }

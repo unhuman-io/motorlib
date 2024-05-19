@@ -3,7 +3,7 @@
 #include "../communication.h"
 #include <cstring>
 
-
+template <class CAN>
 class CANCommunication : public CommunicationBase {
  public:
     union CANID {
@@ -25,19 +25,19 @@ class CANCommunication : public CommunicationBase {
 
     CANCommunication(CAN &can) : can_(can) {
       CANID can_id = {.address = address_, .message_id = OBOT_CMD};
-      can_.add_acceptance_filter(can_id, 0);
+      can_.add_acceptance_filter(can_id.word, 0);
       can_id.message_id = OBOT_CMD_STATUS;
-      can_.add_acceptance_filter(can_id, 0);
+      can_.add_acceptance_filter(can_id.word, 0);
       can_id.message_id = OBOT_ASCII;
-      can_.add_acceptance_filter(can_id, 1);
+      can_.add_acceptance_filter(can_id.word, 1);
     };
 
     int receive_data(ReceiveData* const data) {
       CANID can_id = {.address = address_, .message_id = OBOT_CMD};
-      int recv_len = can_.read(0, can_id.word, data);
+      int recv_len = can_.read(0, can_id.word, (uint8_t*) data);
       if (recv_len == 0) {
         can_id.message_id = OBOT_CMD_STATUS;
-        recv_len = can_.read(0, can_id.word, data);
+        recv_len = can_.read(0, can_id.word, (uint8_t*) data);
         send_data_trigger_ = true;
       }
       return recv_len;
@@ -58,8 +58,8 @@ class CANCommunication : public CommunicationBase {
 
     int receive_string(char* const string) {
       CANID can_id = {.address = address_, .message_id = OBOT_ASCII};
-      int recv_len = can_.read(1, can_id.word, string);
-      return 0;
+      int recv_len = can_.read(1, can_id.word, (uint8_t*) string);
+      return recv_len;
     }
 
     bool send_string(const char* string, uint16_t length) {
