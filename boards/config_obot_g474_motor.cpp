@@ -285,10 +285,8 @@ namespace config {
 #endif // COMMS_UART
 
 #if COMMS == COMMS_CAN
-    CAN can(CAN::CAN1);
+    CAN can(CAN_NUM);
 #endif
-
-
 
 #if COMMS == COMMS_SPI
     figure::ProtocolParser spi_protocol(config::spi.rx_buffer_, RX_BUFFER_SIZE);

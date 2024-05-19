@@ -13,9 +13,17 @@ int CAN::read(uint8_t fifo, uint16_t id, uint8_t* data) {
     RX_FIFO* buffer;
     switch (fifo) {
         case 0 :
+            if (!(regs_.RXF0S & FDCAN_RXF0S_F0FL)) {
+                return 0;
+            }
+            ind = (regs_.RXF0S >> FDCAN_RXF0S_F0GI_Pos) & 0x3;
             buffer = reinterpret_cast<RX_FIFO*>(ram_.RX_FIFO0[ind]);
             break;
         case 1:
+            if (!(regs_.RXF1S & FDCAN_RXF1S_F1FL)) {
+                return 0;
+            }
+            ind = (regs_.RXF1S >> FDCAN_RXF1S_F1GI_Pos) & 0x3;
             buffer = reinterpret_cast<RX_FIFO*>(ram_.RX_FIFO1[ind]);
             break;
         default:
@@ -27,24 +35,42 @@ int CAN::read(uint8_t fifo, uint16_t id, uint8_t* data) {
         length = dlc_to_length(buffer->dlc);
         std::memcpy(data, buffer->data, length);
     }
+    switch (fifo) {
+        // acknowledge
+        case 0:
+            regs_.RXF0A = 1 << ind;
+            break;
+        case 1:
+            regs_.RXF1A = 1 << ind;
+            break;
+    }
     return length;
 }
 
 void CAN::write(uint16_t id, uint8_t* data, uint8_t length) {
-    uint8_t fifo = 0; // get current fifo
-    TX_BUFFER* buffer = reinterpret_cast<TX_BUFFER*>(ram_.TX_BUFFER[fifo]);
-    ram_.TX_BUFFER[fifo][0] = 0;
-    ram_.TX_BUFFER[fifo][1] = 0;
+    if (regs_.TXFQS & FDCAN_TXFQS_TFQF) {
+        // queue full
+        return;
+    }
+    uint8_t buf_num = (regs_.TXFQS >> FDCAN_TXFQS_TFQPI_Pos) & 3; // get current fifo
+    if (buf_num > 2) {
+        // shouldn't occur?
+        return;
+    }
+    TX_BUFFER* buffer = reinterpret_cast<TX_BUFFER*>(ram_.TX_BUFFER[buf_num]);
+    ram_.TX_BUFFER[buf_num][0] = 0;
+    ram_.TX_BUFFER[buf_num][1] = 0;
     buffer->id = id;
     buffer->efc = 0; // no event
     buffer->fdf = 1; // CAN FD
     buffer->brs = 1; // bit rate switch
     buffer->dlc = length_to_dlc(length);
 
-    uint8_t len_copy = std::min(length, (uint8_t) sizeof(buffer->data));
+    uint8_t len_copy = std::min(std::min(length, (uint8_t) sizeof(buffer->data)), (uint8_t) 64);
     std::memcpy(buffer->data, data, len_copy);
 
     // send
+    regs_.TXBAR = 1 << buf_num;
 }
 
 bool CAN::add_acceptance_filter(uint16_t id, uint8_t fifo) {
@@ -52,7 +78,7 @@ bool CAN::add_acceptance_filter(uint16_t id, uint8_t fifo) {
         return false;
     }
     FLSSA flssa = {
-        .sfid2 = 0x7ff,
+        .sfid2 = 0x7ff, // mask
         .sfid1 = id,
         .sfec = (uint32_t) (fifo + 1),
         .sft = 2, // classic filter
