@@ -1,16 +1,16 @@
 #ifndef UNHUMAN_MOTORLIB_MA782_ENCODER_H_
 #define UNHUMAN_MOTORLIB_MA782_ENCODER_H_
 
-#include "ma732_encoder.h"
-#include "logger.h"
+#include "ma7xx_encoder.h"
+#include "../../logger.h"
 
 // Note MA782 is similar to MA732 with different registers and such encoder expects cpol 1, cpha 1, max 25 mbit or cpol 0 cpha 0, modes 0 or 3
 // 100 ns cs start to sclk, 20 ns sclk end to cs end
-class MA782Encoder : public MA732EncoderBase<MA782Encoder> {
+class MA782Encoder : public MA7XXEncoderBase<MA782Encoder> {
  public:
     enum MA782FW {_1, _2, _4, _8, _16, _32, _64, _128, _256, _512, _1024, _2048, _4096}; // us
     MA782Encoder(SPI_TypeDef &regs, GPIO &gpio_cs, SPIPause &spi_pause, uint8_t filter = _512) : 
-        MA732EncoderBase(regs, gpio_cs, spi_pause, filter) {}
+        MA7XXEncoderBase(regs, gpio_cs, spi_pause, filter) {}
     
     void set_filt_impl(uint32_t value) {
         set_register(0xE, value << 4);
@@ -20,7 +20,7 @@ class MA782Encoder : public MA732EncoderBase<MA782Encoder> {
         return read_register(0xE) >> 4;
     }
 
-    // see ma732_encoder get_magnetic_field strength
+    // see ma7xx_encoder get_magnetic_field strength
     // difference is set_register(0x6, original_mgt | 1);
     uint32_t get_magnetic_field_strength_impl() {
         uint8_t original_mgt = read_register(0x6);
@@ -49,9 +49,9 @@ class MA782Encoder : public MA732EncoderBase<MA782Encoder> {
         return (mght << 0 | (uint16_t) mglt << 8);
     }
 
-        // difference to ma732 is send_and_read(0) & 0xFF
+        // difference to ma7xx is send_and_read(0) & 0xFF
     uint8_t read_register_impl(uint8_t address) {
-        MA732reg reg = {};
+        MA7XXreg reg = {};
         reg.bits.address = address;
         reg.bits.command = 0b010; // read register
         send_and_read(reg.word);

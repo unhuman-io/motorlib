@@ -1,29 +1,29 @@
-#ifndef UNHUMAN_MOTORLIB_MA732_ENCODER_H_
-#define UNHUMAN_MOTORLIB_MA732_ENCODER_H_
+#ifndef UNHUMAN_MOTORLIB_MA7XX_ENCODER_H_
+#define UNHUMAN_MOTORLIB_MA7XX_ENCODER_H_
 
-#include "peripheral/spi_encoder.h"
-#include "util.h"
-#include "logger.h"
-#include "peripheral/spi_dma.h"
+#include "../../peripheral/spi_encoder.h"
+#include "../../util.h"
+#include "../../logger.h"
+#include "../../peripheral/spi_dma.h"
 
-#define MA732_SET_DEBUG_VARIABLES(prefix, api, ma732) \
-    api.add_api_variable(prefix "err", new APIUint32(&ma732.error_count_));\
-    api.add_api_variable(prefix "filt", new APICallbackUint8([]{ return ma732.get_filt(); }, \
-        [](uint8_t u){ ma732.set_filt(u); }));\
-    api.add_api_variable(prefix "bct", new APICallbackUint8([]{ return ma732.get_bct(); }, \
-        [](uint8_t u){ ma732.set_bct(u); }));\
-    api.add_api_variable(prefix "et", new APICallbackUint8([]{ return ma732.get_et(); }, \
-        [](uint8_t u){ ma732.set_et(u); }));\
-    api.add_api_variable(prefix "mgt", new APICallbackHex<uint16_t>([]{ return ma732.get_magnetic_field_strength(); }, \
-        [](uint8_t u){ ma732.set_mgt(u); }));\
-    api.add_api_variable(prefix "raw", new const APIUint16(&ma732.data_));\
+#define MA7XX_SET_DEBUG_VARIABLES(prefix, api, ma7xx) \
+    api.add_api_variable(prefix "err", new APIUint32(&ma7xx.error_count_));\
+    api.add_api_variable(prefix "filt", new APICallbackUint8([]{ return ma7xx.get_filt(); }, \
+        [](uint8_t u){ ma7xx.set_filt(u); }));\
+    api.add_api_variable(prefix "bct", new APICallbackUint8([]{ return ma7xx.get_bct(); }, \
+        [](uint8_t u){ ma7xx.set_bct(u); }));\
+    api.add_api_variable(prefix "et", new APICallbackUint8([]{ return ma7xx.get_et(); }, \
+        [](uint8_t u){ ma7xx.set_et(u); }));\
+    api.add_api_variable(prefix "mgt", new APICallbackHex<uint16_t>([]{ return ma7xx.get_magnetic_field_strength(); }, \
+        [](uint8_t u){ ma7xx.set_mgt(u); }));\
+    api.add_api_variable(prefix "raw", new const APIUint16(&ma7xx.data_));\
 
-// Note MA732 encoder expects cpol 1, cpha 1, max 25 mbit
+// Note MA7XX encoder expects cpol 1, cpha 1, max 25 mbit
 // 80 ns cs start to sclk, 25 ns sclk end to cs end
 template <class T>
-class MA732EncoderBase : public SPIEncoder {
+class MA7XXEncoderBase : public SPIEncoder {
  public:
-    union MA732reg {
+    union MA7XXreg {
         struct {
             uint16_t value:8;
             uint16_t address:5;
@@ -31,7 +31,7 @@ class MA732EncoderBase : public SPIEncoder {
         } bits;
         uint16_t word;
     };
-    MA732EncoderBase(SPI_TypeDef &regs, GPIO &gpio_cs, SPIPause &spi_pause, uint8_t filter = 119) : SPIEncoder(regs, gpio_cs), 
+    MA7XXEncoderBase(SPI_TypeDef &regs, GPIO &gpio_cs, SPIPause &spi_pause, uint8_t filter = 119) : SPIEncoder(regs, gpio_cs), 
         filter_(filter), regs_(regs), spi_pause_(spi_pause) {
         reinit();
     }
@@ -82,7 +82,7 @@ class MA732EncoderBase : public SPIEncoder {
     }
 
     uint8_t read_register_impl(uint8_t address) {
-        MA732reg reg = {};
+        MA7XXreg reg = {};
         reg.bits.address = address;
         reg.bits.command = 0b010; // read register
         send_and_read(reg.word);
@@ -97,7 +97,7 @@ class MA732EncoderBase : public SPIEncoder {
         spi_pause_.pause();
         bool retval = true;
         if (read_register(address) != value) {
-            MA732reg reg = {};
+            MA7XXreg reg = {};
             reg.bits.address = address;
             reg.bits.command = 0b100; // write register
             reg.bits.value = value;
@@ -106,7 +106,7 @@ class MA732EncoderBase : public SPIEncoder {
             uint8_t read_value = read_register(address);
             retval = read_value == value;
             if (!retval) {
-                logger.log_printf("ma732 set reg %x: %x, read %x", address, value, read_value);
+                logger.log_printf("ma7xx set reg %x: %x, read %x", address, value, read_value);
             }
         }
         spi_pause_.unpause();
@@ -157,7 +157,7 @@ class MA732EncoderBase : public SPIEncoder {
         return retval;
     }
 
-    // The MA732 encoder doesn't give magnetic field strength directly but allows 
+    // The MA7XX encoder doesn't give magnetic field strength directly but allows 
     // you to set high and low thresholds in the 0x6 MGT register, then you can read
     // the 0x1B status register to determine if the field is within those thresholds 
     // or not. The full range of the MGT register is 20 to 126 mT in 8 steps. Recommended
@@ -223,10 +223,10 @@ class MA732EncoderBase : public SPIEncoder {
     uint32_t stall_count_max_ = 50;
 };
 
-class MA732Encoder : public MA732EncoderBase<MA732Encoder> {
+class MA732Encoder : public MA7XXEncoderBase<MA732Encoder> {
  public:
     MA732Encoder(SPI_TypeDef &regs, GPIO &gpio_cs, SPIPause &spi_pause, uint8_t filter = 119)
-        : MA732EncoderBase(regs, gpio_cs, spi_pause, filter) {}
+        : MA7XXEncoderBase(regs, gpio_cs, spi_pause, filter) {}
 };
 
 class MA730Encoder : public MA732Encoder {
@@ -240,4 +240,4 @@ class MA730Encoder : public MA732Encoder {
 };
 
 
-#endif  // UNHUMAN_MOTORLIB_MA732_ENCODER_H_
+#endif  // UNHUMAN_MOTORLIB_MA7XX_ENCODER_H_
