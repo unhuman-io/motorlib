@@ -354,7 +354,7 @@ uint32_t init_failure = 0;
 void config_init();
 
 const uint32_t * const flash_item = (const uint32_t * const) 0x807f000;
-extern uint32_t _eccmram;
+extern uint32_t _eccmram[];
 
 void system_init() {
 
@@ -485,10 +485,17 @@ void system_init() {
         [](uint32_t value){ config::flash.write((uint32_t) flash_item, &value, 4); }));
 
     System::api.add_api_variable("flash_cal", new const APICallback([]{
-        Calibration *cal = (Calibration *) &_eccmram;
-        std::memcpy(cal, calibration, sizeof(Calibration));
-        cal->motor_encoder_bias = 10;
-        // and more
+        void * adr = &_eccmram;
+        Calibration *cal = (Calibration *) adr;
+        std::memcpy(adr, calibration, sizeof(Calibration));
+        cal->motor_encoder_bias = System::actuator_.startup_motor_bias_;
+        cal->torque_sensor.bias = config::main_loop.torque_sensor_bias_;
+        cal->torque_sensor.gain = config::main_loop.torque_sensor_.gain_;
+        //cal->joint_encoder_bias;
+        cal->output_encoder_bias = config::main_loop.output_encoder_bias_;
+        if (std::isfinite(config::fast_loop.motor_index_electrical_offset_measured_)) {
+            cal->motor_encoder_index_electrical_offset_pos = config::fast_loop.motor_index_electrical_offset_measured_;
+        }
         config::flash.write((uint32_t) calibration, (uint32_t*) cal, sizeof(Calibration));
         return "ok";
     }));

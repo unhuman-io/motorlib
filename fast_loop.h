@@ -12,6 +12,8 @@
 #include "table_interp.h"
 #include "cstack.h"
 
+extern "C" void system_init();
+
 class FastLoop {
  public:
     FastLoop(int32_t frequency_hz, PWM &pwm, MotorEncoder &encoder, const FastLoopParam &param, const Calibration &calibration,
@@ -404,6 +406,7 @@ class FastLoop {
 
 
    friend class System;
+   friend void system_init();
 };
 
 #endif  // UNHUMAN_MOTORLIB_FAST_LOOP_H_
