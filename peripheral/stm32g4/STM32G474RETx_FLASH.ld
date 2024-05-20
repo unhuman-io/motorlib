@@ -101,6 +101,7 @@ SECTIONS
     *(.ccmram)
     *(.ccmram*)
     *(.text._ZN8FastLoop6updateEv)
+    KEEP(*flash.o(.text*))
     . = ALIGN(4);
     _eccmram = .;
   } >CCMRAM AT> FLASH

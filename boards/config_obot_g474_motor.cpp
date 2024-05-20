@@ -6,6 +6,7 @@
 #include "../peripheral/stm32g4/drv8323s.h"
 #include "../peripheral/stm32g4/uart.h"
 #include "../peripheral/protocol.h"
+#include "../peripheral/stm32g4/flash.h"
 
 #ifdef SCOPE_DEBUG
 #define SET_SCOPE_PIN(X,x) GPIO##X->BSRR = 1 << x
@@ -153,6 +154,8 @@ namespace config {
 
     // has_mb85rc64
     MB85RC64 mb85rc64(i2c1, 4);
+
+    Flash flash(*FLASH);
 
     const BoardRev board_rev = get_board_rev();
 
@@ -350,6 +353,8 @@ uint32_t init_failure = 0;
 
 void config_init();
 
+const uint32_t * const flash_item = (const uint32_t * const) 0x807f000;
+
 void system_init() {
 
 #if COMMS == COMMS_UART
@@ -474,6 +479,9 @@ void system_init() {
 
     System::api.add_api_variable("mcmp", new APIUint32(&HRTIM1->sMasterRegs.MCMP1R));
     System::api.add_api_variable("t1cmp", new APIUint32(&TIM1->CCR1));
+
+    System::api.add_api_variable("flash", new APICallbackHex<uint32_t>([]{ return *flash_item; }, 
+        [](uint32_t value){ config::flash.write((uint32_t) flash_item, &value, 4); }));
 
     for (auto regs : std::vector<ADC_TypeDef*>{ADC1, ADC2, ADC3, ADC4, ADC5}) {
         regs->CR = ADC_CR_ADVREGEN;
