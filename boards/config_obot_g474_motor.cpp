@@ -354,6 +354,7 @@ uint32_t init_failure = 0;
 void config_init();
 
 const uint32_t * const flash_item = (const uint32_t * const) 0x807f000;
+extern uint32_t _eccmram;
 
 void system_init() {
 
@@ -482,6 +483,15 @@ void system_init() {
 
     System::api.add_api_variable("flash", new APICallbackHex<uint32_t>([]{ return *flash_item; }, 
         [](uint32_t value){ config::flash.write((uint32_t) flash_item, &value, 4); }));
+
+    System::api.add_api_variable("flash_cal", new const APICallback([]{
+        Calibration *cal = (Calibration *) &_eccmram;
+        std::memcpy(cal, calibration, sizeof(Calibration));
+        cal->motor_encoder_bias = 10;
+        // and more
+        config::flash.write((uint32_t) calibration, (uint32_t*) cal, sizeof(Calibration));
+        return "ok";
+    }));
 
     for (auto regs : std::vector<ADC_TypeDef*>{ADC1, ADC2, ADC3, ADC4, ADC5}) {
         regs->CR = ADC_CR_ADVREGEN;
