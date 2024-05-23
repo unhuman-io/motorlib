@@ -63,12 +63,19 @@ class CANCommunication : public CommunicationBase {
     int receive_string(char* const string) {
       CANID can_id = {.address = address_, .message_id = OBOT_ASCII};
       int recv_len = can_.read(1, can_id.word, (uint8_t*) string);
+      if (recv_len == 0) {
+        string[0] = 0;
+      }
       return recv_len;
     }
 
     bool send_string(const char* string, uint16_t length) {
       CANID can_id = {.address = address_, .message_id = OBOT_ASCII_RESPONSE};
-      can_.write(can_id.word, (uint8_t*)&string, std::strlen(string));
+      length = std::min(length, (uint16_t) 63);
+      char buf[64];
+      std::memcpy(buf, string, length);
+      buf[++length] = 0;
+      can_.write(can_id.word, (uint8_t*) string, length);
       return true;
     }
 
