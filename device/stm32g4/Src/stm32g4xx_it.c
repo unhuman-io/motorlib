@@ -2,6 +2,9 @@
 #include "../../motorlib/system.h"
 
 void ADC5_IRQHandler(void) __attribute__((section (".ccmram")));
+void HRTIM1_Master_IRQHandler(void) __attribute__((section (".ccmram")));
+void TIM1_UP_TIM16_IRQHandler(void) __attribute__((section (".ccmram")));
+void USB_LP_IRQHandler(void) __attribute__((section (".ccmram")));
 
 #define INTERRUPT_PROFILE_GLOBALS(loop) uint32_t t_exec_##loop __attribute__((used));\
                                         uint32_t t_period_##loop __attribute__((used));\
