@@ -485,7 +485,7 @@ class MainLoop {
     void adjust_motor_encoder(float adjustment) { motor_encoder_bias_ += adjustment; }
     const MainLoopStatus & get_status() const { return status_stack_.top(); }
     void set_started() { started_ = true; }
-    void set_mode(MainControlMode mode) {
+    void set_mode(MainControlMode mode) __attribute__((section (".ccmram"), externally_visible)) {
       if (mode != mode_ || safe_mode_ != last_safe_mode_) {
         if(mode_ == HARDWARE_BRAKE && mode != HARDWARE_BRAKE) {
           brake_.off();

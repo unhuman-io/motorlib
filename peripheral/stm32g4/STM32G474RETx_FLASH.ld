@@ -100,6 +100,7 @@ SECTIONS
         = OBOT_HASH; */
     *(.ccmram)
     *(.ccmram*)
+    *memcpy.o(.text)
     . = ALIGN(4);
     _eccmram = .;
   } >CCMRAM AT> FLASH
