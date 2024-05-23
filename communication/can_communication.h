@@ -35,11 +35,14 @@ class CANCommunication : public CommunicationBase {
     int receive_data(ReceiveData* const data) {
       CANID can_id = {.address = address_, .message_id = OBOT_CMD};
       int recv_len = can_.read(0, can_id.word, (uint8_t*) data);
-      // if (recv_len == 0) {
-      //   can_id.message_id = OBOT_CMD_STATUS;
-      //   recv_len = can_.read(0, can_id.word, (uint8_t*) data);
-      //   //send_data_trigger_ = true;
-      // }
+
+      if (recv_len == 0) {
+        can_id.message_id = OBOT_CMD_STATUS;
+        recv_len = can_.read(0, can_id.word, (uint8_t*) data);
+        if (recv_len > 0) {
+          send_data_trigger_ = true;
+        }
+      }
       return recv_len;
     }
 
@@ -53,6 +56,7 @@ class CANCommunication : public CommunicationBase {
         CANID can_id = {.address = address_, .message_id = OBOT_STATUS};
         can_.write(can_id.word, (uint8_t*)&data, sizeof(data));
         send_data_trigger_ = false;
+        send_data_counter_ = 0;
       }
     }
 
@@ -70,7 +74,7 @@ class CANCommunication : public CommunicationBase {
 
  private:
     CAN &can_;
-    bool send_data_trigger_ = false;
+    volatile bool send_data_trigger_ = false;
     uint16_t send_data_counter_ = 0;
     uint16_t send_data_default_decimation_ = 100;
     uint8_t address_ = 123;
