@@ -34,15 +34,15 @@ int CAN::read(uint8_t fifo, uint16_t id, uint8_t* data) {
     if (buffer->id == id) {
         length = dlc_to_length(buffer->dlc);
         std::memcpy(data, buffer->data, length);
-    }
-    switch (fifo) {
-        // acknowledge
-        case 0:
-            regs_.RXF0A = 1 << ind;
-            break;
-        case 1:
-            regs_.RXF1A = 1 << ind;
-            break;
+        switch (fifo) {
+            // acknowledge
+            case 0:
+                regs_.RXF0A = ind;
+                break;
+            case 1:
+                regs_.RXF1A = ind;
+                break;
+        }
     }
     return length;
 }
