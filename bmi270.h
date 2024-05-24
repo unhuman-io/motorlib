@@ -19,7 +19,7 @@ class BMI270 {
     }
     void init() {
         uint8_t chip_id = read_reg(0x00);
-        logger.log_printf("bmi270 chip id: 0x%02x, should be 0x24", chip_id);
+        logger.log_printf("bmi270 chip id: 0x%02x, expected 0x24", chip_id);
         write_reg(0x7C, 0x00);
         us_delay(450);
         write_reg(0x59, 0x00);
@@ -28,7 +28,7 @@ class BMI270 {
 
         ms_delay(20);
         uint8_t init_status = read_reg(0x21);
-        logger.log_printf("bmi270 init status: %02x", init_status);
+        logger.log_printf("bmi270 init status: %02x, (01: ok)", init_status);
 
         write_reg(0x7D, 0x0E);
         write_reg(0x40, 0xAA);  // high performance osr2? filter, output rate 400 Hz
