@@ -18,6 +18,8 @@ class BMI270 {
     BMI270(SPIDMA &spi_dma) : spi_dma_(spi_dma) {
     }
     void init() {
+        uint8_t chip_id = read_reg(0x00);
+        logger.log_printf("bmi270 chip id: 0x%02x, should be 0x24", chip_id);
         write_reg(0x7C, 0x00);
         us_delay(450);
         write_reg(0x59, 0x00);
