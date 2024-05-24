@@ -18,6 +18,8 @@ class BMI270 {
     BMI270(SPIDMA &spi_dma) : spi_dma_(spi_dma) {
     }
     void init() {
+        uint8_t chip_id = read_reg(0x00);
+        logger.log_printf("bmi270 chip id: 0x%02x, expected 0x24", chip_id);
         write_reg(0x7C, 0x00);
         us_delay(450);
         write_reg(0x59, 0x00);
@@ -26,7 +28,7 @@ class BMI270 {
 
         ms_delay(20);
         uint8_t init_status = read_reg(0x21);
-        logger.log_printf("bmi270 init status: %02x", init_status);
+        logger.log_printf("bmi270 init status: %02x, (01: ok)", init_status);
 
         write_reg(0x7D, 0x0E);
         write_reg(0x40, 0xAA);  // high performance osr2? filter, output rate 400 Hz
@@ -52,33 +54,27 @@ class BMI270 {
     }
 
     void burst_write(uint8_t address, const uint8_t data[], uint16_t length) {
-        spi_dma_.claim();
         uint8_t data_out[1] = {address};
         uint8_t data_in[1];
-        spi_dma_.start_readwrite(data_out, data_in, 1);
+        spi_dma_.start_readwrite_isr(data_out, data_in, 1);
         us_delay(2);
-        spi_dma_.start_write(data, length);
-        spi_dma_.finish_readwrite();
+        spi_dma_.start_write_isr(data, length);
+        spi_dma_.finish_readwrite_isr();
         us_delay(3);
-        spi_dma_.release();
     }
 
     void write_reg(uint8_t address, uint8_t value) {
-        spi_dma_.claim();
         uint8_t data_out[2] = {address, value};
         uint8_t data_in[2];
         spi_dma_.readwrite(data_out, data_in, 2);
         us_delay(3);
-        spi_dma_.release();
     }
 
     uint8_t read_reg(uint8_t address) {
-        spi_dma_.claim();
         uint8_t data_out[3] = {(uint8_t) (address | 0x80)};
         uint8_t data_in[3];
         spi_dma_.readwrite(data_out, data_in, 3);
         us_delay(3);
-        spi_dma_.release();
         return data_in[2];
     }
 
