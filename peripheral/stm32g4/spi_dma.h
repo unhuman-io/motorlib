@@ -33,7 +33,7 @@ class SPIDMA : public SPIDMABase<SPIDMA> {
             if (regs_cr1 == 0) {
                 regs_cr1_ = regs_.CR1;
             }
-        logger.log_printf("SPI%d init, desired baudrate: %d, applied baudrate: %d", inst+1, baudrate, baudrate);
+        //logger.log_printf("SPI%d init, desired baudrate: %d, applied baudrate: %d", inst+1, baudrate, baudrate);
         reinit();
     }
 

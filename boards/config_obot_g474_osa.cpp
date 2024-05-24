@@ -93,7 +93,7 @@ void system_init() {
     System::api.add_api_variable("vref", new APIFloat(&v_ref));
     std::function<float()> get_t = std::bind(&TempSensor::get_value, &config::temp_sensor);
     std::function<void(float)> set_t = std::bind(&TempSensor::set_value, &config::temp_sensor, std::placeholders::_1);
-    System::api.add_api_variable("Tdsp", new APICallbackFloat(get_t, set_t));
+    System::api.add_api_variable("Tmicro", new APICallbackFloat(get_t, set_t));
     System::api.add_api_variable("Tdrv", new const APIFloat(&t_i2c));
     System::api.add_api_variable("drv_err", new const APICallbackUint32([](){return is_mps_driver_faulted();}));
     System::api.add_api_variable("drv_enable", new APICallbackUint8(mps_driver_enable_status, mps_driver_enable));
@@ -130,6 +130,11 @@ void system_init() {
 
     v_ref =  *((uint16_t *) (0x1FFF75AA)) * 3.0 / V_REF_DR;
     System::log("v_ref: " + std::to_string(v_ref));
+    System::log("obias: " +  std::to_string(calibration->output_encoder_bias));
+    System::log("tbias: " + std::to_string(calibration->torque_sensor.bias));
+    System::log("tgain: " + std::to_string(calibration->torque_sensor.gain));
+    System::log("offset: " + std::to_string(calibration->motor_encoder_index_electrical_offset_pos));
+    System::log("mbias: " + std::to_string(calibration->motor_encoder_bias));
 
     ADC1->GCOMP = 3.0*4096;
     ADC1->CFGR2 |= ADC_CFGR2_GCOMP;
