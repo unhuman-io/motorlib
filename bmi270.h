@@ -52,7 +52,6 @@ class BMI270 {
     }
 
     void burst_write(uint8_t address, const uint8_t data[], uint16_t length) {
-        spi_dma_.claim();
         uint8_t data_out[1] = {address};
         uint8_t data_in[1];
         spi_dma_.start_readwrite_isr(data_out, data_in, 1);
@@ -60,25 +59,20 @@ class BMI270 {
         spi_dma_.start_write_isr(data, length);
         spi_dma_.finish_readwrite_isr();
         us_delay(3);
-        spi_dma_.release();
     }
 
     void write_reg(uint8_t address, uint8_t value) {
-        spi_dma_.claim();
         uint8_t data_out[2] = {address, value};
         uint8_t data_in[2];
         spi_dma_.readwrite(data_out, data_in, 2);
         us_delay(3);
-        spi_dma_.release();
     }
 
     uint8_t read_reg(uint8_t address) {
-        spi_dma_.claim();
         uint8_t data_out[3] = {(uint8_t) (address | 0x80)};
         uint8_t data_in[3];
         spi_dma_.readwrite(data_out, data_in, 3);
         us_delay(3);
-        spi_dma_.release();
         return data_in[2];
     }
 

@@ -432,7 +432,7 @@ void system_init() {
         return config::motor_pwm.deadtime_ns_; }, [](uint16_t u) {config::motor_pwm.set_deadtime(u); }));
 
     if (config::board_rev.has_bmi270) {
-        System::api.add_api_variable("imu_read", new const APICallback([](){ return config::imu.get_string(); }));
+        System::api.add_api_variable("imu_read", new const APICallback([](){ config::imu.read(); return "ok"; }));
         System::api.add_api_variable("ax", new const APICallbackFloat([](){ return config::imu.data_.acc_x*8./pow(2,15); }));
         System::api.add_api_variable("ay", new const APICallbackFloat([](){ return config::imu.data_.acc_y*8./pow(2,15); }));
         System::api.add_api_variable("az", new const APICallbackFloat([](){ return config::imu.data_.acc_z*8./pow(2,15); }));
