@@ -43,11 +43,11 @@ class AEAT9922 : public EncoderBase {
     }
 
     void trigger() {
-        spidma_.start_readwrite(read_out_, read_in_, 3+isol_);
+        spidma_.start_readwrite_isr(read_out_, read_in_, 3+isol_);
     }
 
     int32_t read() {
-        spidma_.finish_readwrite();
+        spidma_.finish_readwrite_isr();
         
         // May in the future use 24 bit mode, Keeping this code for that case
         // 24 bit
@@ -96,7 +96,7 @@ class AEAT9922 : public EncoderBase {
     bool index_received() const { return true; }
 
     bool set_register(uint8_t address, uint8_t value) {
-        (*spidma_.register_operation_)++;
+        spidma_.claim();
         uint8_t data_out[3+isol_] = {0, address};
         data_out[2] = crc(data_out);
 
@@ -112,10 +112,10 @@ class AEAT9922 : public EncoderBase {
         data_out[0] = 0x40;
         spidma_.readwrite(data_out, data_in, 3+isol_, true);
         if (data_in[1+isol_] != data_out[1]) {
-            (*spidma_.register_operation_)--;
+            spidma_.release();
             return false;
         }
-        (*spidma_.register_operation_)--;
+        spidma_.release();
         return true;
     }
 
@@ -133,7 +133,7 @@ class AEAT9922 : public EncoderBase {
     }
 
     uint8_t get_error_register() {
-        (*spidma_.register_operation_)++;
+        spidma_.claim();
         uint8_t data_out[2] = {0x40, 0x21};
         uint8_t data_in[2];
         spidma_.readwrite(data_out, data_in, 2, true);
@@ -142,7 +142,7 @@ class AEAT9922 : public EncoderBase {
         }
         spidma_.readwrite(read_out_, read_in_, 3+isol_, true);
 
-        (*spidma_.register_operation_)--;
+        spidma_.release();
         return read_in_[1+isol_];
     }
     uint8_t crc(uint8_t data[3]) {
