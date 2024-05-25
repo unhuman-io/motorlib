@@ -30,7 +30,7 @@ int CAN::read(uint8_t fifo, uint16_t id, uint8_t* data) {
             return 0;
             break;
     }
-    uint8_t length = 0;
+    uint8_t length = -1;
     if (buffer->id == id) {
         length = dlc_to_length(buffer->dlc);
         std::memcpy(data, buffer->data, length);

@@ -30,16 +30,25 @@ class CANCommunication : public CommunicationBase {
       can_.add_acceptance_filter(can_id.word, 0);
       can_id.message_id = OBOT_ASCII;
       can_.add_acceptance_filter(can_id.word, 1);
+      can_id.message_id = OBOT_ENUM;
+      can_.add_acceptance_filter(can_id.word, 0);
     };
 
     int receive_data(ReceiveData* const data) {
       CANID can_id = {.address = address_, .message_id = OBOT_CMD};
       int recv_len = can_.read(0, can_id.word, (uint8_t*) data);
 
-      if (recv_len == 0) {
+      if (recv_len < 0) {
         can_id.message_id = OBOT_CMD_STATUS;
         recv_len = can_.read(0, can_id.word, (uint8_t*) data);
-        if (recv_len > 0) {
+        if (recv_len < 0) {
+          CANID can_id_enum = {.message_id = OBOT_ENUM};
+          recv_len = can_.read(0, can_id.word, (uint8_t*) nullptr);
+          if (recv_len >= 0) {
+            can_id.message_id = OBOT_ENUM;
+            can_.write(can_id.word, nullptr, 0);
+          }
+        } else if (recv_len > 0) {
           send_data_trigger_ = true;
         }
       }
