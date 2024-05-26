@@ -43,7 +43,7 @@ class CANCommunication : public CommunicationBase {
         recv_len = can_.read(0, can_id.word, (uint8_t*) data);
         if (recv_len < 0) {
           CANID can_id_enum = {.message_id = OBOT_ENUM};
-          recv_len = can_.read(0, can_id.word, (uint8_t*) nullptr);
+          recv_len = can_.read(0, can_id_enum.word, (uint8_t*) nullptr);
           if (recv_len >= 0) {
             can_id.message_id = OBOT_ENUM;
             can_.write(can_id.word, nullptr, 0);
@@ -92,6 +92,6 @@ class CANCommunication : public CommunicationBase {
     CAN &can_;
     volatile bool send_data_trigger_ = false;
     uint16_t send_data_counter_ = 0;
-    uint16_t send_data_default_decimation_ = 100;
+    uint16_t send_data_default_decimation_ = 1000;
     uint8_t address_ = 123;
 };
