@@ -83,8 +83,10 @@ class CANCommunication : public CommunicationBase {
       length = std::min(length, (uint16_t) 63);
       char buf[64];
       std::memcpy(buf, string, length);
-      buf[++length] = 0;
-      can_.write(can_id.word, (uint8_t*) string, length);
+      if (length > 1) {
+        buf[length++] = 0;
+      }
+      can_.write(can_id.word, (uint8_t*) buf, length);
       return true;
     }
 
