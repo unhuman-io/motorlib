@@ -74,7 +74,10 @@ class CAN {
         uint32_t word;
       } word2;
 
-      uint8_t data[64];
+      union {
+        uint8_t data[64];
+        uint32_t data32[16];
+      };
     };
 
     constexpr static uint32_t FDCAN_SIZE = 0x400;

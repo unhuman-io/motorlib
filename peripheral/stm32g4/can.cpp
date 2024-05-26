@@ -71,7 +71,12 @@ void CAN::write(uint16_t id, uint8_t* data, uint8_t length) {
     buffer->word2.word = word2.word;
 
     uint8_t len_copy = std::min(std::min(length, (uint8_t) sizeof(buffer->data)), (uint8_t) 64);
-    std::memcpy(buffer->data, data, len_copy);
+    uint8_t len_copy32 = (len_copy+3) / 4;
+    //std::memcpy(buffer->data, data, len_copy);
+    // can buffer memory requires 32 bit writes
+    for (int i = 0; i < len_copy32; i++) {
+        buffer->data32[i] = *reinterpret_cast<uint32_t *>(&data[i*4]);
+    }
     asm("dmb");
 
     // send
