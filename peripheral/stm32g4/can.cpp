@@ -201,6 +201,12 @@ uint8_t CAN::length_to_dlc(uint8_t length) {
 }
 
 void CAN::interrupt() {
-    interrupt_called_++;
     regs_.IR = FDCAN_IR_RF0N;
+    asm("" ::: "memory");
+    interrupt_called_++;
+    
+    // Note found experimentally that some time may be needed after setting RF0N, otherwise the interrupt may be called 
+    // again. With it at the front of the isr though it seems to work.
+    //asm("nop");
+    //asm("nop");
 }
