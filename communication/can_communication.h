@@ -23,7 +23,7 @@ class CANCommunication : public CommunicationBase {
       OBOT_ENUM = 0xF,
     };
 
-    CANCommunication(CAN &can) : can_(can) {
+    CANCommunication(CAN &can, uint8_t address) : can_(can), address_(address) {
       CANID can_id = {.address = address_, .message_id = OBOT_CMD};
       can_.add_acceptance_filter(can_id.word, 0);
       can_id.message_id = OBOT_CMD_STATUS;
@@ -97,5 +97,5 @@ class CANCommunication : public CommunicationBase {
     volatile bool send_data_trigger_ = false;
     uint16_t send_data_counter_ = 0;
     uint16_t send_data_default_decimation_ = 1000;
-    uint8_t address_ = 123;
+    uint8_t address_ = 0;
 };

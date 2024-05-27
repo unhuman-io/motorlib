@@ -340,7 +340,7 @@ extern "C" void PendSV_Handler(void) {
 #endif
 
 #if (COMMS == COMMS_CAN)
-Communication System::communication_(config::can);
+Communication System::communication_(config::can, param->can_id);
 #endif
 
 void usb_interrupt() {

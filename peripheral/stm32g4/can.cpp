@@ -5,7 +5,46 @@
 CAN::CAN(CAN_INST inst) : 
     regs_(*reinterpret_cast<FDCAN_GlobalTypeDef *>(inst*FDCAN_SIZE + FDCAN1_BASE)), 
     ram_(*reinterpret_cast<FDCANMessageRam *>(inst*FDCAN_MSG_RAM_SIZE + SRAMCAN_BASE)) {
-    // enable queue
+    // Only if not reset
+    // regs_.CCCR |= FDCAN_CCCR_INIT;
+    // while (!(regs_.CCCR & FDCAN_CCCR_INIT));
+    regs_.CCCR |= FDCAN_CCCR_CCE;
+
+    // DTSEG1 + DTSEG2 + 3 = 170/12 -> 14
+    //regs_.DBTP = 8 << FDCAN_DBTP_DTSEG1_Pos | 3 << FDCAN_DBTP_DTSEG2_Pos | 2 << FDCAN_DBTP_DSJW_Pos;
+
+    // // DTSEG1 + DTSEG2 + 3 = 170/5 -> 34
+    regs_.DBTP = 21 << FDCAN_DBTP_DTSEG1_Pos | 10 << FDCAN_DBTP_DTSEG2_Pos | 4 << FDCAN_DBTP_DSJW_Pos | FDCAN_DBTP_TDC | 0 << FDCAN_DBTP_DBRP_Pos;
+    regs_.TDCR = 9 << FDCAN_TDCR_TDCO_Pos | 5 << FDCAN_TDCR_TDCF_Pos; // normal delay 180 ns, glitch filter 150ns*170MHz = 25
+
+    // // DTSEG1 + DTSEG2 + 3 = 170/2/2 -> 42.5 
+    // Note seems to have problems when dBRP > 2
+    regs_.DBTP = 30 << FDCAN_DBTP_DTSEG1_Pos | 10 << FDCAN_DBTP_DTSEG2_Pos | 4 << FDCAN_DBTP_DSJW_Pos | FDCAN_DBTP_TDC | 1 << FDCAN_DBTP_DBRP_Pos;
+    regs_.TDCR = 9 << FDCAN_TDCR_TDCO_Pos | 5 << FDCAN_TDCR_TDCF_Pos; // normal delay 180 ns, glitch filter 150ns*170MHz = 25
+
+    regs_.DBTP = 23 << FDCAN_DBTP_DTSEG1_Pos | 8 << FDCAN_DBTP_DTSEG2_Pos | 8 << FDCAN_DBTP_DSJW_Pos | FDCAN_DBTP_TDC | 0 << FDCAN_DBTP_DBRP_Pos;
+    regs_.TDCR = 9 << FDCAN_TDCR_TDCO_Pos | 5 << FDCAN_TDCR_TDCF_Pos; // normal delay 180 ns, glitch filter 150ns*170MHz = 25
+    
+    // // DTSEG1 + DTSEG2 + 3 = 170/5/2 -> 17
+    // regs_.DBTP = 8 << FDCAN_DBTP_DTSEG1_Pos | 6 << FDCAN_DBTP_DTSEG2_Pos | 4 << FDCAN_DBTP_DSJW_Pos | FDCAN_DBTP_TDC | 4 << FDCAN_DBTP_DBRP_Pos;
+    // regs_.TDCR = 12 << FDCAN_TDCR_TDCO_Pos | 1 << FDCAN_TDCR_TDCF_Pos;
+
+    regs_.CCCR |= FDCAN_CCCR_BRSE | FDCAN_CCCR_FDOE; // bit rate switch, fd mode
+
+
+    // NTSEG1 + NTSEG2 + 3 = 170
+    // regs_.NBTP = 42 << FDCAN_NBTP_NSJW_Pos | 125 << FDCAN_NBTP_NTSEG1_Pos | 42 << FDCAN_NBTP_NTSEG2_Pos; // 10 time quanta, 3 time quanta before sample point
+    // 2Mbps
+    regs_.NBTP = 20 << FDCAN_NBTP_NSJW_Pos | 62 << FDCAN_NBTP_NTSEG1_Pos | 20 << FDCAN_NBTP_NTSEG2_Pos; // 10 time quanta, 3 time quanta before sample point
+
+
+    regs_.TSCC = 1 << FDCAN_TSCC_TSS_Pos; // start counter
+    //regs_.TDCR ?
+    regs_.RXGFC = 4 << FDCAN_RXGFC_LSS_Pos | FDCAN_RXGFC_ANFS | FDCAN_RXGFC_ANFE | FDCAN_RXGFC_RRFE; // 4 acceptance filters, reject everything else
+    regs_.TXBC |= FDCAN_TXBC_TFQM; // transmit fifo request queue mode
+
+
+    regs_.CCCR &= ~FDCAN_CCCR_INIT;
 }
 
 int CAN::read(uint8_t fifo, uint16_t id, uint8_t* data) {
