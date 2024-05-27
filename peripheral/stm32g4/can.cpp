@@ -2,6 +2,12 @@
 #include <cstring>
 #include <algorithm>
 
+CAN *CAN::instances[] = {};
+
+extern "C" void FDCAN3_IT0_IRQHandler() {
+    CAN::instances[CAN::CAN3]->interrupt();
+}
+
 CAN::CAN(CAN_INST inst) : 
     regs_(*reinterpret_cast<FDCAN_GlobalTypeDef *>(inst*FDCAN_SIZE + FDCAN1_BASE)), 
     ram_(*reinterpret_cast<FDCANMessageRam *>(inst*FDCAN_MSG_RAM_SIZE + SRAMCAN_BASE)) {
@@ -42,6 +48,12 @@ CAN::CAN(CAN_INST inst) :
     //regs_.TDCR ?
     regs_.RXGFC = 4 << FDCAN_RXGFC_LSS_Pos | FDCAN_RXGFC_ANFS | FDCAN_RXGFC_ANFE | FDCAN_RXGFC_RRFE; // 4 acceptance filters, reject everything else
     regs_.TXBC |= FDCAN_TXBC_TFQM; // transmit fifo request queue mode
+
+    instances[inst] = this;
+    regs_.IE = FDCAN_IE_RF0NE; // fifo 0 new message
+    regs_.ILE = FDCAN_ILE_EINT0;
+    NVIC_SetPriority(FDCAN3_IT0_IRQn, NVIC_EncodePriority(NVIC_GetPriorityGrouping(), 2, 0));
+    NVIC_EnableIRQ(FDCAN3_IT0_IRQn);
 
 
     regs_.CCCR &= ~FDCAN_CCCR_INIT;
@@ -189,4 +201,6 @@ uint8_t CAN::length_to_dlc(uint8_t length) {
 }
 
 void CAN::interrupt() {
+    interrupt_called_++;
+    regs_.IR = FDCAN_IR_RF0N;
 }

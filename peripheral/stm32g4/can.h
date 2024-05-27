@@ -12,7 +12,7 @@ class CAN {
     void write(uint16_t id, uint8_t* data, uint8_t length);
     bool add_acceptance_filter(uint16_t id, uint8_t fifo);
 
-
+    static CAN *instances[3];
     void interrupt();
  private:
     struct FDCANMessageRam {
@@ -89,6 +89,8 @@ class CAN {
     FDCAN_GlobalTypeDef &regs_;
     FDCANMessageRam &ram_;
     uint8_t acceptance_filter_num_ = 0;
+    uint32_t interrupt_called_ = 0;
+    friend void config_init();
 };
 
 #endif  // UNHUMAN_MOTORLIB_PERIPHERAL_STM32G4_CAN_H_
