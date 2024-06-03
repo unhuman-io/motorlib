@@ -22,17 +22,19 @@ class SPITorque final : public TorqueSensorBase {
 
     bool init() {
         reinit();
-        tx_dma_.CMAR = (uint32_t) data_out_;
-        tx_dma_.CPAR = (uint32_t) &regs_.DR;
-        rx_dma_.CMAR = (uint32_t) data_in_;
-        rx_dma_.CPAR = (uint32_t) &regs_.DR;
         reset();
         return true;
     }
 
     void reinit() {
         regs_.CR2 = (7 << SPI_CR2_DS_Pos) | SPI_CR2_FRXTH | SPI_CR2_RXDMAEN | SPI_CR2_TXDMAEN;    // 8 bit
-        regs_.CR1 = SPI_CR1_MSTR | (3 << SPI_CR1_BR_Pos) | SPI_CR1_CPHA | SPI_CR1_SSI | SPI_CR1_SSM | SPI_CR1_SPE;    // baud = clock/16 spi mode 1
+        regs_.CR1 = SPI_CR1_MSTR | (3 << SPI_CR1_BR_Pos) | SPI_CR1_CPHA | SPI_CR1_SSI | SPI_CR1_SSM;    // baud = clock/16 spi mode 1
+        rx_dma_.CPAR = (uint32_t) &regs_.DR;
+        tx_dma_.CPAR = (uint32_t) &regs_.DR;
+        tx_dma_.CMAR = (uint32_t) data_out_;
+        rx_dma_.CMAR = (uint32_t) data_in_;
+        regs_.CR1 |= SPI_CR1_SPE; // enable
+        
     }
 
     float get_value() const { return torque_; }
@@ -44,6 +46,7 @@ class SPITorque final : public TorqueSensorBase {
                 return;
             }
             count_ = 0;
+            reinit();
 
             // set CS low
             gpio_cs_.clear();
