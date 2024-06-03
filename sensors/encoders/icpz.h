@@ -58,12 +58,23 @@ static uint8_t CRC_BiSS_43_30bit (uint32_t w_InputData);
         [](uint8_t u){ icpz.set_ipo_filt1(u); }));\
     api.add_api_variable(prefix "ipo_filt2", new APICallbackHex<uint8_t>([](){ return icpz.get_ipo_filt2(); }, \
         [](uint8_t u){ icpz.set_ipo_filt2(u); })); \
-    api.add_api_variable(prefix "temp", new const APICallbackFloat([]{ return icpz.get_temperature(); }));
+    api.add_api_variable(prefix "temp", new const APICallbackFloat([]{ return icpz.get_temperature(); })); \
+    api.add_api_variable(prefix "diag_str", new const APICallback([](){ return icpz.read_diagnosis_str(); }));\
+    api.add_api_variable(prefix "clear_diag", new const APICallback([](){ icpz.clear_diag(); return "ok"; }));\
 
 template<typename ConcreteICPZ>
 class ICPZBase : public EncoderBase {
  public:
     const char *disk_names[4] = {"default", "pz03s", "pz08s", "pz16s"};
+    static constexpr const char *diag_strs[32] = {"photo_amp_sat", "led_cur_low", "temp_sense_not_ready", "vddio_low",
+      "interpolator_error", "5", "abz_not_ready", "uvw_not_ready",
+      "alpha_overflow", "omega_overflow", "digital_photo_amp_not_ss", "prc_sync_failed",
+      "analog_adjust_at_boundary", "digital_adjust_at_boundary", "temp_limit_1", "temp_limit_2",
+      "multi_turn_error", "multi_turn_error_2", "multi_turn_error_3", "multi_turn_error_4",
+      "multi_turn_warning", "multi_turn_pos_failed", "pin_ada_stuck_0", "pin_ada_stuck_1",
+      "startup_in_progress", "eeprom_crc_error", "gpio0_in_error", "gpio1_in_error",
+      "startup_aborted_timeout", "user_error_1", "user_error_2", "user_error_3"};
+
     enum Disk{Default, PZ03S, PZ08S, PZ16S};
     const float r_disk_um[4] = {1, 10700, 18600, 7200};
     ICPZBase(SPIDMA &spidma, Disk disk = Default) 
@@ -155,6 +166,28 @@ class ICPZBase : public EncoderBase {
       clear_diag();
       spidma_.release();
       return bytes_to_hex(data_in+2, 8);
+    }
+
+    std::string read_diagnosis_str() {
+      spidma_.claim();
+      uint8_t data_out[10] = {0x9C};
+      uint8_t data_in[10];
+      spidma_.readwrite(data_out, data_in, 10);
+      clear_diag();
+      spidma_.release();
+      uint32_t diag_err = data_in[5] << 24 | data_in[4] << 16 | data_in[3] << 8 | data_in[2];
+      uint32_t diag_warn = data_in[9] << 24 | data_in[8] << 16 | data_in[7] << 8 | data_in[6];
+      return "err: " + diagnosis_to_str(diag_err) + " warn: " + diagnosis_to_str(diag_warn);
+    }
+
+    static std::string diagnosis_to_str(uint32_t diag) {
+      std::string s;
+      for (int i=0; i<32; i++) {
+        if (diag & (1 << i)) {
+          s += std::string(diag_strs[i]) + " ";
+        } 
+      }
+      return s;
     }
 
     void clear_diag() {
