@@ -110,7 +110,7 @@ class ICPZBase : public EncoderBase {
       success &= set_register(0, 0xF, {4});  // 0x00 ran_fld = 0 -> never update position based on absolute track after initial, tol 4
       success &= set_register(2, 3, {0x77}); // moderate dynamic digital calibration
       success &= set_register(2, 0, {0x77, 0x7});  // moderate dynamic analog calibration
-      success &= set_register(0, 3, {0x6e}); // ipo_filt1 per datasheet
+      success &= set_register(0, 3, {0xEA}); // ipo_filt1 per datasheet
 
       if (disk_ == PZ03S) {
         success &= set_register(8, 0, {0, 1}); // fcl = 256

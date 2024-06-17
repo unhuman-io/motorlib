@@ -9,7 +9,7 @@ class LTC4332 {
         // set ss1 pha = 1 in reg 0 / config
         uint8_t data_out[] = {0, 1};
         uint8_t data_in[2];
-        spidma.readwrite(data_out, data_in, 2, true);
+        spidma.readwrite(data_out, data_in, 2);
 
         // Logger not currently functional in constructors
         // // read reg 0 / config
