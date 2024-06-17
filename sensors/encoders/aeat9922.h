@@ -18,7 +18,7 @@ class AEAT9922 : public EncoderBase {
         // status check
         uint8_t data_out[2] = {0x40, 0x21};
         uint8_t data_in[2];
-        spidma_.readwrite(data_out, data_in, 2, true);
+        spidma_.readwrite(data_out, data_in, 2);
         if (isol_) {
             us_delay(2);
         }
@@ -102,15 +102,15 @@ class AEAT9922 : public EncoderBase {
 
         uint8_t data_in[3+isol_];
         // write address
-        spidma_.readwrite(data_out, data_in, 3, true);
+        spidma_.readwrite(data_out, data_in, 3);
         // write data
         data_out[1] = value;
         data_out[2] = 0;
         data_out[2] = crc(data_out);
-        spidma_.readwrite(data_out, data_in, 3, true);
+        spidma_.readwrite(data_out, data_in, 3);
         // read
         data_out[0] = 0x40;
-        spidma_.readwrite(data_out, data_in, 3+isol_, true);
+        spidma_.readwrite(data_out, data_in, 3+isol_);
         if (data_in[1+isol_] != data_out[1]) {
             spidma_.release();
             return false;
@@ -136,11 +136,11 @@ class AEAT9922 : public EncoderBase {
         spidma_.claim();
         uint8_t data_out[2] = {0x40, 0x21};
         uint8_t data_in[2];
-        spidma_.readwrite(data_out, data_in, 2, true);
+        spidma_.readwrite(data_out, data_in, 2);
         if (isol_) {
             us_delay(2);
         }
-        spidma_.readwrite(read_out_, read_in_, 3+isol_, true);
+        spidma_.readwrite(read_out_, read_in_, 3+isol_);
 
         spidma_.release();
         return read_in_[1+isol_];

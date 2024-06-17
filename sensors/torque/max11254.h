@@ -210,7 +210,8 @@ class MAX11254 : public TorqueSensorBase {
             }
             uint8_t data_in;
             command conv = {.rate=0b1111, .mode=3, .b7=1};
-            spi_dma_.readwrite(&conv.word, &data_in, 1);
+            spi_dma_.start_readwrite_isr(&conv.word, &data_in, 1);
+            spi_dma_.finish_readwrite_isr();
         }
         return torque_;
     }
