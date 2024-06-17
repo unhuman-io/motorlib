@@ -9,7 +9,11 @@ void Flash::unlock() {
 
 void Flash::erase_page(uint32_t address) {
     uint32_t page = (address - 0x8000000) / page_size_;
-    regs_.CR = FLASH_CR_PER | page << FLASH_CR_PNB_Pos | 0 << FLASH_CR_BKER_Pos;
+    if (is_sbank()) {
+        regs_.CR = FLASH_CR_PER | page << FLASH_CR_PNB_Pos | 0 << FLASH_CR_BKER_Pos;
+    } else {
+        regs_.CR = FLASH_CR_PER | (page & 0x7F) << FLASH_CR_PNB_Pos | ((page & 0x80) >> 7) << FLASH_CR_BKER_Pos;
+    }
     regs_.CR |= FLASH_CR_STRT;
     while (regs_.SR & FLASH_SR_BSY);
     regs_.CR &= ~FLASH_CR_PER;
