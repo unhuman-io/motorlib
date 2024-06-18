@@ -353,7 +353,6 @@ uint32_t init_failure = 0;
 
 void config_init();
 
-const uint32_t * const flash_item = (const uint32_t * const) 0x807f000;
 extern uint32_t _eccmram[];
 
 void system_init() {
@@ -481,11 +480,9 @@ void system_init() {
     System::api.add_api_variable("mcmp", new APIUint32(&HRTIM1->sMasterRegs.MCMP1R));
     System::api.add_api_variable("t1cmp", new APIUint32(&TIM1->CCR1));
 
-    System::api.add_api_variable("flash", new APICallbackHex<uint32_t>([]{ return *flash_item; }, 
-        [](uint32_t value){ config::flash.write((uint32_t) flash_item, &value, 4); }));
-
     System::api.add_api_variable("flash_cal", new const APICallback([]{
-        void * adr = &_eccmram;
+        void * adr = &_eccmram; // End of ccmram is an empty ram space. The linker script ensures that there is enough 
+                                // space for the calibration to reside here temporarily
         Calibration *cal = (Calibration *) adr;
         std::memcpy(adr, calibration, sizeof(Calibration));
         cal->motor_encoder_bias = System::actuator_.startup_motor_bias_;
