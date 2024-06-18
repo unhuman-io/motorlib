@@ -311,6 +311,21 @@ class FastLoop {
       beep_ = false;
     }
 
+    void set_ia_adc_gain(float gain) {
+      param_.adc1_gain = gain;
+    }
+    void set_ib_adc_gain(float gain) {
+      param_.adc2_gain = gain;
+    }
+    void set_ic_adc_gain(float gain) {
+      param_.adc3_gain = gain;
+    }
+    void set_i_adc_gain(float gain) {
+      set_ia_adc_gain(gain);
+      set_ib_adc_gain(gain);
+      set_ic_adc_gain(gain);
+    }
+
     void zero_current_sensors_on(float t_seconds = 1) {
       zero_current_sensors_ = true;
       zero_current_sensors_end_ = get_clock() + t_seconds*CPU_FREQUENCY_HZ;
