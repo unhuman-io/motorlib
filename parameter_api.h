@@ -121,7 +121,7 @@ class APICallbackHex : public APIVariable {
  public:
    APICallbackHex(std::function<T()> getfun , std::function<void(T)> setfun) : getfun_(getfun), setfun_(setfun) {}
    APICallbackHex(std::function<T()> getfun) : getfun_(getfun) {}
-   void set(std::string s) { setfun_(std::stoi(s, nullptr, 16)); }
+   void set(std::string s) { setfun_(std::stoul(s, nullptr, 16)); }
    std::string get() const {
       T value = getfun_();
       std::vector<char>bytes((char *) &value,(char *) &value+sizeof(T)); 

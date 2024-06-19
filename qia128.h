@@ -29,10 +29,10 @@ class QIA128 : public TorqueSensorBase {
         return true;
     }
     void trigger() {
-        spi_dma_.start_readwrite(command_, data_, length);
+        spi_dma_.start_readwrite_isr(command_, data_, length);
     }
     float read() {
-        spi_dma_.finish_readwrite();
+        spi_dma_.finish_readwrite_isr();
         uint32_t raw = data_[0] << 16 | data_[1] << 8 | data_[2];
         torque_ = ((float) raw - offset_)/(full_scale_ - offset_)*25;
         return torque_;

@@ -121,8 +121,12 @@ class UARTCommunication : public CommunicationBase {
     // todo potential collisions between obot status and ascii responses
     void callback_obot_status(uint8_t *buf, uint16_t length) {
       asm("dmb");
-      // todo packetize
-      std::memcpy(&uart_.tx_buffer_[0], &obot_status_, sizeof(SendData));
+#ifdef USE_MOTOR_STATUS_LITE
+    const size_t buffer_size = sizeof(MotorStatusLite);
+#else
+    const size_t buffer_size = sizeof(MotorStatus);
+#endif
+      std::memcpy(&uart_.tx_buffer_[0], &obot_status_, buffer_size);
       Uart::BufferDescriptor desc = {};
       desc.length = sizeof(SendData);
       desc.txBuffer = uart_.tx_buffer_;

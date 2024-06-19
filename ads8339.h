@@ -16,12 +16,12 @@ class ADS8339 : public TorqueSensorBase {
             return;
         }
         count_ = 0;
-        spi_dma_.start_readwrite(data_out_, data_in_, length_);
+        spi_dma_.start_readwrite_isr(data_out_, data_in_, length_);
     }
 
     float read() {
         if (count_ == 0) {
-            spi_dma_.finish_readwrite();
+            spi_dma_.finish_readwrite_isr();
             raw_value_ = data_in_[0] << 8 | data_in_[1];
             signed_value_ = raw_value_ - 0x7FFF;
             torque_ = signed_value_ * gain_;
