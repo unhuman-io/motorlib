@@ -29,9 +29,7 @@ class SPIPause {
 template <class T>
 class SPIDMABase {
  public:
-    SPIDMABase(uint32_t baudrate, SPIPause &pause) : pause_(pause) {
-        reinit();
-    }
+    SPIDMABase(uint32_t baudrate, SPIPause &pause) : pause_(pause) {}
 
     void reinit() {
         static_cast<T*>(this)->reinit_impl();
