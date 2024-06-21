@@ -1,4 +1,5 @@
 #include <string>
+#include <fcntl.h>
 
 void system_run() {
     System::run();
@@ -26,6 +27,20 @@ uint32_t System::count_ = 0;
 ParameterAPI System::api = {};
 
 // send printf and other stdout/err to the logger
-extern "C" void _write_r(int fd, const char *buf, size_t count) {
+extern "C" void _write(int fd, const char *buf, size_t count) {
     logger.log(std::string_view(buf, count));
+}
+
+
+extern "C" int _fstat (int fd, struct stat * st) 
+{
+  memset (st, 0, sizeof (* st));
+  st->st_mode = S_IFCHR;
+  setbuf(stdout, NULL); // Disable buffering for stdout
+  return (0);
+}
+
+extern "C" int _isatty (int fd) 
+{
+  return (1);
 }
