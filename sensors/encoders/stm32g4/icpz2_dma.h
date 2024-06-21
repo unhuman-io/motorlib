@@ -59,8 +59,8 @@ class ICPZ2DMA : public EncoderBase {
       uint32_t current_buf_index = current_buffer_index();
       uint8_t *data_buf1 = data_mult_[current_buf_index][1];
       uint8_t *data_buf2 = data_mult_[current_buf_index][2];
-      int32_t value1_ = icpz_.read_buf(data_buf1);
-      int32_t value2_ = icpz2_.read_buf(data_buf2);
+      value1_ = icpz_.read_buf(data_buf1);
+      value2_ = icpz2_.read_buf(data_buf2);
 
       return value1_;
     }
@@ -115,6 +115,7 @@ class ICPZ2DMA : public EncoderBase {
     ICPZ &icpz_;
     ICPZ &icpz2_;
     SPIDMA &spidma_;
+    int32_t value1_ = 0, value2_ = 0;
 
     bool inited_ = false;
     DMAMUX_Channel_TypeDef &dmamux_tx_regs_;
