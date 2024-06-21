@@ -76,7 +76,7 @@ class ICPZBase : public EncoderBase {
       "startup_aborted_timeout", "user_error_1", "user_error_2", "user_error_3"};
 
     enum Disk{Default, PZ03S, PZ08S, PZ16S};
-    const float r_disk_um[4] = {1, 10700, 18600, 7200};
+    static constexpr float r_disk_um[4] = {1, 10700, 18600, 7200};
     ICPZBase(SPIDMA &spidma, Disk disk = Default) 
       : spidma_(spidma), disk_(disk) {
       command_[0] = 0xa6; // read position

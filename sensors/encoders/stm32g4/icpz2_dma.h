@@ -54,6 +54,7 @@ class ICPZ2DMA : public EncoderBase {
     bool init() {
       bool result = icpz_.init();
       result &= icpz2_.init();
+      start_continuous_read();
       return result;
     }
     void trigger() {}
