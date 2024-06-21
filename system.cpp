@@ -1,5 +1,6 @@
 #include <string>
 #include <fcntl.h>
+#include <cstring>
 
 void system_run() {
     System::run();
@@ -32,11 +33,13 @@ extern "C" void _write(int fd, const char *buf, size_t count) {
 }
 
 
+// Necessary for _write maybe?
 extern "C" int _fstat (int fd, struct stat * st) 
 {
   memset (st, 0, sizeof (* st));
   st->st_mode = S_IFCHR;
   setbuf(stdout, NULL); // Disable buffering for stdout
+  setbuf(stderr, NULL);
   return (0);
 }
 
