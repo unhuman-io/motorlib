@@ -76,7 +76,7 @@ class TorqueSensorMultiplex : public SensorMultiplex<Sensor1, Sensor2> {
    
    float get_value() const { return this->primary_.get_value(); }
    void clear_faults() { this->primary_.clear_faults(); }
- protected:
+
    float &gain_, &k_temp_, &torque_;
    friend class System;
 };

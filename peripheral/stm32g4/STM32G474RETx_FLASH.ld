@@ -100,10 +100,17 @@ SECTIONS
         = OBOT_HASH; */
     *(.ccmram)
     *(.ccmram*)
-    *(.text._ZN8FastLoop6updateEv)
+    *memcpy.o(.text)
+    KEEP(*flash.o(.text*))
     . = ALIGN(4);
     _eccmram = .;
   } >CCMRAM AT> FLASH
+
+  /* Ensure scratch space in ccmram for a cal section copy */
+  ccmram_alloc (NOLOAD):
+  {
+    . += SIZEOF(calibration_data);
+  } >CCMRAM
 
 
   /* The program code and other data goes into FLASH */

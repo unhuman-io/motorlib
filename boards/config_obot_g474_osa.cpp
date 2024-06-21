@@ -7,6 +7,9 @@
 const Param * const param = (const Param * const) 0x8060000;
 const Calibration * const calibration = (const Calibration * const) 0x8070000;
 extern const char * const name = param->name;
+namespace config {
+    const uint32_t system_loop_frequency =  1000;
+};
 
 using Driver = DriverBase;
 using PWM = HRPWM;
@@ -90,7 +93,7 @@ void system_init() {
     System::api.add_api_variable("vref", new APIFloat(&v_ref));
     std::function<float()> get_t = std::bind(&TempSensor::get_value, &config::temp_sensor);
     std::function<void(float)> set_t = std::bind(&TempSensor::set_value, &config::temp_sensor, std::placeholders::_1);
-    System::api.add_api_variable("Tdsp", new APICallbackFloat(get_t, set_t));
+    System::api.add_api_variable("Tmicro", new APICallbackFloat(get_t, set_t));
     System::api.add_api_variable("Tdrv", new const APIFloat(&t_i2c));
     System::api.add_api_variable("drv_err", new const APICallbackUint32([](){return is_mps_driver_faulted();}));
     System::api.add_api_variable("drv_enable", new APICallbackUint8(mps_driver_enable_status, mps_driver_enable));
@@ -127,6 +130,11 @@ void system_init() {
 
     v_ref =  *((uint16_t *) (0x1FFF75AA)) * 3.0 / V_REF_DR;
     System::log("v_ref: " + std::to_string(v_ref));
+    System::log("obias: " +  std::to_string(calibration->output_encoder_bias));
+    System::log("tbias: " + std::to_string(calibration->torque_sensor.bias));
+    System::log("tgain: " + std::to_string(calibration->torque_sensor.gain));
+    System::log("offset: " + std::to_string(calibration->motor_encoder_index_electrical_offset_pos));
+    System::log("mbias: " + std::to_string(calibration->motor_encoder_bias));
 
     ADC1->GCOMP = 3.0*4096;
     ADC1->CFGR2 |= ADC_CFGR2_GCOMP;
@@ -139,9 +147,19 @@ void system_init() {
 
     config_init();
 
-    TIM1->CR1 = TIM_CR1_CEN; // start main loop interrupt
+    config::main_loop.init();
+
+    NVIC_SetPriority(HRTIM1_Master_IRQn, NVIC_EncodePriority(NVIC_GetPriorityGrouping(), 1, 0));
+    NVIC_EnableIRQ(HRTIM1_Master_IRQn);
+    HRTIM1->sMasterRegs.MDIER |= HRTIM_MDIER_MCMP1IE; // interrupt on MCMP1
+   
+    HRTIM1->sMasterRegs.MCMP1R = 400;
+    static_assert(config::main_loop_frequency > CPU_FREQUENCY_HZ/4/65536, "Main loop frequency too low");
+    HRTIM1->sMasterRegs.MPER = CPU_FREQUENCY_HZ/4/config::main_loop_frequency;
+    HRTIM1->sMasterRegs.MCR = 0 << HRTIM_MCR_SYNC_SRC_Pos | 2 << HRTIM_MCR_SYNC_OUT_Pos | HRTIM_MCR_CONT | HRTIM_MCR_PREEN | HRTIM_MCR_MREPU | 7 << HRTIM_MCR_CK_PSC_Pos; // CPU_FREQUENCY * 32 / 2^7 = 42.5 MHz
     config::usb.connect();
-    HRTIM1->sMasterRegs.MCR = HRTIM_MCR_TDCEN + HRTIM_MCR_TECEN + HRTIM_MCR_TFCEN; // start high res timer
+
+    HRTIM1->sMasterRegs.MCR |= HRTIM_MCR_MCEN + HRTIM_MCR_TACEN + HRTIM_MCR_TDCEN + HRTIM_MCR_TECEN + HRTIM_MCR_TFCEN; // start high res timer, also triggers TIM1
 }
 
 FrequencyLimiter temp_rate = {10};

@@ -46,9 +46,6 @@ class ICPZ2DMA : public EncoderBase {
       command_mult_[5][0][2] = ICPZ::CMD::SCLEAR;
       command_mult_[5][1][0] = 0xa6; // read position
       command_mult_[5][2][0] = 0xa6; // read position
-
-      register_operation_  = icpz_.register_operation_;
-      icpz2_.register_operation_ = register_operation_;
     }
 
     bool init() {
@@ -113,19 +110,6 @@ class ICPZ2DMA : public EncoderBase {
       dmamux_rx_regs_.CCR &= DMAMUX_CxCR_DMAREQ_ID_Msk;
     }
 
-    void set_register_operation_impl() {
-      (*register_operation_)++;
-      if (inited_ && *register_operation_ == 1) {
-        stop_continuous_read();
-      }
-    }
-    void clear_register_operation_impl() {
-      if (inited_ && *register_operation_ == 1) {
-        start_continuous_read();
-      }
-      (*register_operation_)--;
-    }
-
     uint8_t command_mult_[6][3][6] = {};
     uint8_t data_mult_[6][3][6] = {};
     ICPZ &icpz_;
@@ -138,5 +122,4 @@ class ICPZ2DMA : public EncoderBase {
     uint8_t exti_num_;
     void (*start_cs_trigger_)();
     void (*stop_cs_trigger_and_wait_cs_high_)();
-    volatile int *register_operation_ ;
 };
