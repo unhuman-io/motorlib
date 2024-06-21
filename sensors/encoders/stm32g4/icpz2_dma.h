@@ -8,6 +8,9 @@ class ICPZ2DMA : public EncoderBase {
       void(*start_cs_trigger)(), void(*stop_cs_trigger_and_wait_cs_high)()) : icpz_(icpz), icpz2_(icpz2), spidma_(icpz.spidma_), 
       dmamux_tx_regs_(tx_dmamux), dmamux_rx_regs_(rx_dmamux), exti_num_(exti_num),
       start_cs_trigger_(start_cs_trigger), stop_cs_trigger_and_wait_cs_high_(stop_cs_trigger_and_wait_cs_high) {
+      
+      spidma_.pause_.start_callback_ = [this]{start_continuous_read();};
+      spidma_.pause_.stop_callback_ = [this]{stop_continuous_read();};
 
       // sequence:
       // temp1,  angle1, angle2,
@@ -56,12 +59,13 @@ class ICPZ2DMA : public EncoderBase {
     void trigger() {}
 
     int32_t read() {
-      uint32_t current_buf_index = current_buffer_index();
-      uint8_t *data_buf1 = data_mult_[current_buf_index][1];
-      uint8_t *data_buf2 = data_mult_[current_buf_index][2];
-      value1_ = icpz_.read_buf(data_buf1);
-      value2_ = icpz2_.read_buf(data_buf2);
-
+      if (!spidma_.pause_.is_paused()) {
+        uint32_t current_buf_index = current_buffer_index();
+        uint8_t *data_buf1 = data_mult_[current_buf_index][1];
+        uint8_t *data_buf2 = data_mult_[current_buf_index][2];
+        value1_ = icpz_.read_buf(data_buf1);
+        value2_ = icpz2_.read_buf(data_buf2);
+      }
       return value1_;
     }
 
