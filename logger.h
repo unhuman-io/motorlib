@@ -30,22 +30,22 @@ class Logger {
     // }
 
     // get_log must be called from the same or lower priority task as log
-    std::string get_log() {
+    std::string get_log(&CIndex front) {
         std::string str;
 
         if (!empty()) {
             bool success = false;
             do {
                 str = "";
-                CIndex front_next = front_atomic_.load(std::memory_order_acquire);
+                CIndex front_start = front_atomic_.load(std::memory_order_acquire);
                 uint32_t front_expected = front_next;
                 do {
                     str += log_queue_[front_next];
                     ++front_next;
                 } while (log_queue_[front_next] != '\0');
                 ++front_next;
-                num_elements_--;
-                success = front_atomic_.compare_exchange_strong(front_expected, front_next);
+                CIndex front_start2 = front_atomic_.load(std::memory_order_acquire);
+                success = front_start2 == front_start;
             } while (!success);
             
         } else {
@@ -65,6 +65,10 @@ class Logger {
         log(sout);
     }
     uint32_t num_elements() const { return num_elements_; }
+    void reset() {
+
+    }
+
     static std::string_view extract_string(std::string_view str) {
         std::string_view data = str.substr(str.find(") ") + 2);
         return data;
