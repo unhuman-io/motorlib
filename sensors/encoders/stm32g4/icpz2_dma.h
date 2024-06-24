@@ -2,10 +2,14 @@
 
 #include "icpz_dma.h"
 #include <cstring>
+#include "../../../control_fun.h"
 
 #define ICPZ2_SET_DEBUG_VARIABLES(prefix, api, icpz) \
+    ICPZ_SET_DEBUG_VARIABLES(prefix "1", System::api, icpz.icpz_);\
+    ICPZ_SET_DEBUG_VARIABLES(prefix "2", System::api, icpz.icpz2_);\
     api.add_api_variable(prefix "1enc", new const APIInt32(&icpz.value1_));\
     api.add_api_variable(prefix "2enc", new const APIInt32(&icpz.value2_));\
+    api.add_api_variable(prefix "disagreement_error", new APIUint32(&icpz.disagreement_error_));\
     api.add_api_variable(prefix "1temp_nb", new const APICallbackFloat([]{ return icpz.get_temperature(0); }));\
     api.add_api_variable(prefix "2temp_nb", new const APICallbackFloat([]{ return icpz.get_temperature(1); }));\
     api.add_api_variable(prefix "1diag_nb", new const APICallback([]{ return icpz.get_diagnosis(0); }));\
@@ -67,10 +71,27 @@ class ICPZ2DMA : public EncoderBase {
     }
 
     bool init() {
-      bool result = icpz_.init();
-      result &= icpz2_.init();
+      bool result = true;
+      if (!icpz_.init()) {
+        logger.log("icpz1 init failed");
+        result = false;
+      }
+      if (!icpz2_.init()) {
+        logger.log("icpz2 init failed");
+        result = false;
+      }
       result &= icpz_.set_register(7, 0, {0xFF, 0xFF, 0x00, 0xF3}); // enable all errors, report in diagnosis, except multiturn, gpio
       result &= icpz2_.set_register(7, 0, {0xFF, 0xFF, 0x00, 0xF3});
+      clear_faults();
+      icpz_.trigger();
+      icpz2_.trigger();
+      int32_t val1 = icpz_.read();
+      int32_t val2 = icpz2_.read();
+      if (std::abs(val1 - val2) > disagreement_tolerance_) {
+        logger.log_printf("icpz2 disagreement error: %ld, %ld vs %ld, tol %ld", 
+          std::abs(val1 - val2), val1, val2, disagreement_tolerance_);
+        result = false;
+      }
       start_continuous_read();
       return result;
     }
@@ -94,6 +115,9 @@ class ICPZ2DMA : public EncoderBase {
           std::memcpy(&diag_[0], &data_mult_[2][0][2], 4);
           std::memcpy(&diag_[1], &data_mult_[3][0][2], 4);
         }
+        if (std::abs(diff_ - (int32_t) pow(2, 23)) > disagreement_tolerance_) {
+          disagreement_error_++;
+        }
       }
       return value_;
     }
@@ -109,6 +133,13 @@ class ICPZ2DMA : public EncoderBase {
     }
     std::string get_diagnosis_str(int index) {
       return ICPZ::diagnosis_to_str(diag_[index]);
+    }
+    bool index_received() const { return true; }
+
+    void clear_faults() {
+      icpz_.clear_faults();
+      icpz2_.clear_faults();
+      disagreement_error_ = 0;
     }
 
     uint32_t current_buffer_index() const {
@@ -158,6 +189,8 @@ class ICPZ2DMA : public EncoderBase {
     SPIDMA &spidma_;
     int32_t value_ = 0, value1_ = 0, value2_ = 0;
     int32_t diff_ = 0;
+    uint32_t disagreement_error_ = 0;
+    int32_t disagreement_tolerance_ = .1/2/M_PI*pow(2,24);
 
     bool inited_ = false;
     DMAMUX_Channel_TypeDef &dmamux_tx_regs_;
