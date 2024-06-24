@@ -44,6 +44,8 @@ static uint8_t CRC_BiSS_43_30bit (uint32_t w_InputData);
         [](uint8_t u){ icpz.set_ran_fld(u); }));\
     api.add_api_variable(prefix "ecc_um", new APICallbackFloat([](){ return icpz.get_ecc_um(); }, \
         [](float f){ icpz.set_ecc_um(f); }));\
+    api.add_api_variable(prefix "ecc_phase_deg", new APICallbackFloat([](){ return icpz.get_ecc_phase(); }, \
+        [](float f){ icpz.set_ecc_phase(f); }));\
     api.add_api_variable(prefix "low", new APICallbackUint8([](){ return icpz.get_ac_eto(); }, \
         [](uint8_t u){ icpz.set_ac_eto(u); }));\
     api.add_api_variable(prefix "ac_count", new APICallbackUint8([](){ return icpz.get_ac_count(); }, \
@@ -544,6 +546,11 @@ class ICPZBase : public EncoderBase {
         uint32_t ecc_raw = ecc/r_disk_um[disk_] / 1.407e-9;
         set_register(2, 4, {(uint8_t) (ecc_raw & 0xff), (uint8_t) ((ecc_raw >> 8) & 0xff), 
           (uint8_t) ((ecc_raw >> 16) & 0xff), (uint8_t) ((ecc_raw >> 24) & 0xff)});
+    }
+
+    void set_ecc_phase(float phase_deg) {
+        int16_t phase_raw = phase_deg/360 * std::pow(2, 14);
+        set_register(2, 8, {(uint8_t) ((phase_raw << 2) & 0xff), (uint8_t) ((phase_raw >> 6) & 0xff)});
     }
 
     uint8_t get_ipo_filt1() {

@@ -12,6 +12,8 @@
     api.add_api_variable(prefix "2diag_nb", new const APICallback([]{ return icpz.get_diagnosis(1); }));\
     api.add_api_variable(prefix "1diag_str_nb", new const APICallback([]{ return icpz.get_diagnosis_str(0); }));\
     api.add_api_variable(prefix "2diag_str_nb", new const APICallback([]{ return icpz.get_diagnosis_str(1); }));\
+    api.add_api_variable(prefix "diff", new const APIInt32(&icpz.diff_));\
+    api.add_api_variable(prefix "value_avg", new const APIInt32(&icpz.value_));\
 
 
 
@@ -81,6 +83,8 @@ class ICPZ2DMA : public EncoderBase {
         uint8_t *data_buf2 = data_mult_[current_buf_index][2];
         value1_ = icpz_.read_buf(data_buf1);
         value2_ = icpz2_.read_buf(data_buf2);
+        value_ = (value1_ + value2_)/2;
+        diff_ = value1_ - value2_;
         if (current_buf_index == 1) {
           // copy temperature data to extra buffer
           std::memcpy(data_temperature_[0], &data_mult_[0][0][3], 2);
@@ -91,9 +95,10 @@ class ICPZ2DMA : public EncoderBase {
           std::memcpy(&diag_[1], &data_mult_[3][0][2], 4);
         }
       }
-      return value1_;
+      return value_;
     }
 
+    int32_t get_value() const { return value_; }
 
     float get_temperature(int index) {
       return ICPZ::get_temperature(data_temperature_[index]);
@@ -151,7 +156,8 @@ class ICPZ2DMA : public EncoderBase {
     ICPZ &icpz_;
     ICPZ &icpz2_;
     SPIDMA &spidma_;
-    int32_t value1_ = 0, value2_ = 0;
+    int32_t value_ = 0, value1_ = 0, value2_ = 0;
+    int32_t diff_ = 0;
 
     bool inited_ = false;
     DMAMUX_Channel_TypeDef &dmamux_tx_regs_;
