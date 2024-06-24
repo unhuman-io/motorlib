@@ -1,6 +1,19 @@
 #pragma once
 
 #include "icpz_dma.h"
+#include <cstring>
+
+#define ICPZ2_SET_DEBUG_VARIABLES(prefix, api, icpz) \
+    api.add_api_variable(prefix "1enc", new const APIInt32(&icpz.value1_));\
+    api.add_api_variable(prefix "2enc", new const APIInt32(&icpz.value2_));\
+    api.add_api_variable(prefix "1temp_nb", new const APICallbackFloat([]{ return icpz.get_temperature(0); }));\
+    api.add_api_variable(prefix "2temp_nb", new const APICallbackFloat([]{ return icpz.get_temperature(1); }));\
+    api.add_api_variable(prefix "1diag_nb", new const APICallback([]{ return icpz.get_diagnosis(0); }));\
+    api.add_api_variable(prefix "2diag_nb", new const APICallback([]{ return icpz.get_diagnosis(1); }));\
+    api.add_api_variable(prefix "1diag_str_nb", new const APICallback([]{ return icpz.get_diagnosis_str(0); }));\
+    api.add_api_variable(prefix "2diag_str_nb", new const APICallback([]{ return icpz.get_diagnosis_str(1); }));\
+
+
 
 class ICPZ2DMA : public EncoderBase {
  public:
@@ -54,6 +67,8 @@ class ICPZ2DMA : public EncoderBase {
     bool init() {
       bool result = icpz_.init();
       result &= icpz2_.init();
+      result &= icpz_.set_register(7, 0, {0xFF, 0xFF, 0x00, 0xF3}); // enable all errors, report in diagnosis, except multiturn, gpio
+      result &= icpz2_.set_register(7, 0, {0xFF, 0xFF, 0x00, 0xF3});
       start_continuous_read();
       return result;
     }
@@ -66,15 +81,29 @@ class ICPZ2DMA : public EncoderBase {
         uint8_t *data_buf2 = data_mult_[current_buf_index][2];
         value1_ = icpz_.read_buf(data_buf1);
         value2_ = icpz2_.read_buf(data_buf2);
+        if (current_buf_index == 1) {
+          // copy temperature data to extra buffer
+          std::memcpy(data_temperature_[0], &data_mult_[0][0][3], 2);
+          std::memcpy(data_temperature_[1], &data_mult_[1][0][3], 2);
+        } else if (current_buf_index == 3) {
+          // copy diag data to extra buffer
+          std::memcpy(&diag_[0], &data_mult_[2][0][2], 4);
+          std::memcpy(&diag_[1], &data_mult_[3][0][2], 4);
+        }
       }
       return value1_;
     }
 
 
-    float get_temperature() {
-      uint8_t index=1;
-      uint8_t *data = &data_mult_[index-1][0][3];
-      return ICPZ::get_temperature(data);
+    float get_temperature(int index) {
+      return ICPZ::get_temperature(data_temperature_[index]);
+    }
+
+    std::string get_diagnosis(int index) {
+      return bytes_to_hex((uint8_t*) &diag_[index], 4);
+    }
+    std::string get_diagnosis_str(int index) {
+      return ICPZ::diagnosis_to_str(diag_[index]);
     }
 
     uint32_t current_buffer_index() const {
@@ -117,6 +146,8 @@ class ICPZ2DMA : public EncoderBase {
 
     uint8_t command_mult_[6][3][6] = {};
     uint8_t data_mult_[6][3][6] = {};
+    uint8_t data_temperature_[2][2] = {};
+    uint32_t diag_[2] = {};
     ICPZ &icpz_;
     ICPZ &icpz2_;
     SPIDMA &spidma_;
