@@ -40,6 +40,8 @@ static uint8_t CRC_BiSS_43_30bit (uint32_t w_InputData);
         [](uint8_t u){ icpz.set_ecc_correction(u); }));\
     api.add_api_variable(prefix "ran_tol", new APICallbackUint8([](){ return icpz.get_ran_tol(); }, \
         [](uint8_t u){ icpz.set_ran_tol(u); }));\
+    api.add_api_variable(prefix "ran_fld", new APICallbackUint8([](){ return icpz.get_ran_fld(); }, \
+        [](uint8_t u){ icpz.set_ran_fld(u); }));\
     api.add_api_variable(prefix "ecc_um", new APICallbackFloat([](){ return icpz.get_ecc_um(); }, \
         [](float f){ icpz.set_ecc_um(f); }));\
     api.add_api_variable(prefix "low", new APICallbackUint8([](){ return icpz.get_ac_eto(); }, \
@@ -61,6 +63,7 @@ static uint8_t CRC_BiSS_43_30bit (uint32_t w_InputData);
     api.add_api_variable(prefix "temp", new const APICallbackFloat([]{ return icpz.get_temperature(); })); \
     api.add_api_variable(prefix "diag_str", new const APICallback([](){ return icpz.read_diagnosis_str(); }));\
     api.add_api_variable(prefix "clear_diag", new const APICallback([](){ icpz.clear_diag(); return "ok"; }));\
+    api.add_api_variable(prefix "last_error_pos", new APIUint32(&icpz.last_error_pos_));\
 
 template<typename ConcreteICPZ>
 class ICPZBase : public EncoderBase {
@@ -144,11 +147,10 @@ class ICPZBase : public EncoderBase {
       if (!crc_error) {
         int32_t diff = (data - last_data_); // rollover summing
         pos_ += diff/256;
-        //pos_ = data/256;
         last_data_ = data;
-      }
-      if (!diag.nErr) {
-        //clear_diag();
+        if (!diag.nErr) {
+          last_error_pos_ = raw_value_;
+        }
       }
       return get_value();
     }
@@ -350,6 +352,17 @@ class ICPZBase : public EncoderBase {
     uint8_t get_ran_tol() {
         uint8_t ran_reg = read_register(0, 0xF, 1)[0];
         return ran_reg & 0xF;
+    }
+
+    void set_ran_fld(uint8_t val) {
+        uint8_t tmp = read_register(0, 0xF, 1)[0] & 0xF;
+        tmp |= (val<<8) & 0xF;
+        set_register(0, 0xF, {tmp});
+    }
+
+    uint8_t get_ran_fld() {
+        uint8_t ran_reg = read_register(0, 0xF, 1)[0];
+        return ran_reg >> 7;
     }
 
     float get_ai_phase() {
@@ -563,6 +576,7 @@ class ICPZBase : public EncoderBase {
     uint8_t read_register_opcode_ = 0x81;
     uint8_t write_register_opcode_ = 0xcf;
     enum {PZ, MU} type_ = PZ;
+    uint32_t last_error_pos_ = 0;
 
     uint32_t error_count_ = 0;
     uint32_t warn_count_ = 0;
