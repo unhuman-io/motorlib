@@ -136,7 +136,8 @@ class ICPZBase : public EncoderBase {
     void trigger() {
       spidma_.start_readwrite_isr(command_, data_, sizeof(command_));
     }
-    int32_t read_buf(uint8_t buf[4]) {
+
+    uint32_t read_raw_buf(uint8_t buf[4], bool &crc_error) {
       uint32_t data = ((buf[1] << 16) | (buf[2] << 8) | buf[3]) << 8;
       raw_value_ = data >> 8;
       uint32_t word = data | buf[4];
@@ -144,15 +145,21 @@ class ICPZBase : public EncoderBase {
       uint8_t crc6_calc = ~CRC_BiSS_43_30bit(word >> 6) & 0x3f;
       error_count_ += !diag.nErr;
       warn_count_ += !diag.nWarn;
-      uint8_t crc_error = diag.crc6 == crc6_calc ? 0 : 1;
+      crc_error = diag.crc6 == crc6_calc ? false : true;
       crc_error_count_ += crc_error;
+      if (!diag.nErr) {
+        last_error_pos_ = raw_value_;
+      }
+      return raw_value_;
+    }
+
+    int32_t read_buf(uint8_t buf[4]) {
+      bool crc_error;
+      uint32_t data = read_raw_buf(buf, &crc_error);
       if (!crc_error) {
-        int32_t diff = (data - last_data_); // rollover summing
-        pos_ += diff/256;
+        int32_t diff = (data<<8 - last_data_<<8)>>8; // rollover summing
+        pos_ += diff;
         last_data_ = data;
-        if (!diag.nErr) {
-          last_error_pos_ = raw_value_;
-        }
       }
       return get_value();
     }

@@ -17,7 +17,6 @@
     api.add_api_variable(prefix "1diag_str_nb", new const APICallback([]{ return icpz.get_diagnosis_str(0); }));\
     api.add_api_variable(prefix "2diag_str_nb", new const APICallback([]{ return icpz.get_diagnosis_str(1); }));\
     api.add_api_variable(prefix "diff", new const APIInt32(&icpz.diff_));\
-    api.add_api_variable(prefix "value_avg", new const APIInt32(&icpz.value_));\
 
 
 
@@ -102,10 +101,20 @@ class ICPZ2DMA : public EncoderBase {
         uint32_t current_buf_index = current_buffer_index();
         uint8_t *data_buf1 = data_mult_[current_buf_index][1];
         uint8_t *data_buf2 = data_mult_[current_buf_index][2];
-        value1_ = icpz_.read_buf(data_buf1);
-        value2_ = icpz2_.read_buf(data_buf2);
-        value_ = (value1_ + value2_)/2;
-        diff_ = value1_ - value2_;
+        bool crc_error1, crc_error2;
+        value1_ = icpz_.read_raw_buf(data_buf1, crc_error1);
+        value2_ = icpz2_.read_raw_buf(data_buf2, crc_error2);
+        if (!crc_error1 & !crc_error2) {
+          pos_ = unroll(value1_, value2_);
+          diff_ = value1_ - value2_;
+          if (std::abs(diff_ - (int32_t) pow(2, 23)) > disagreement_tolerance_) {
+            disagreement_error_++;
+          }
+        }
+        total_error_count_ = icpz_.error_count_ + icpz2_.error_count_ + disagreement_error_;
+        total_crc_error_count_ = icpz_.crc_error_count_ + icpz2_.crc_error_count_;
+
+        // save other diagnostic data to extra buffers
         if (current_buf_index == 1) {
           // copy temperature data to extra buffer
           std::memcpy(data_temperature_[0], &data_mult_[0][0][3], 2);
@@ -114,17 +123,23 @@ class ICPZ2DMA : public EncoderBase {
           // copy diag data to extra buffer
           std::memcpy(&diag_[0], &data_mult_[2][0][2], 4);
           std::memcpy(&diag_[1], &data_mult_[3][0][2], 4);
-        }
-        if (std::abs(diff_ - (int32_t) pow(2, 23)) > disagreement_tolerance_) {
-          disagreement_error_++;
-        }
-        total_error_count_ = icpz_.error_count_ + icpz2_.error_count_ + disagreement_error_;
-        total_crc_error_count_ = icpz_.crc_error_count_ + icpz2_.crc_error_count_;
+        }        
       }
-      return value_;
+      return get_value();
     }
 
-    int32_t get_value() const { return value_; }
+    int32_t unroll(uint32_t value1, uint32_t value2) {
+      int32_t diff = value1 - value2;
+      if (diff > pow(2, 23)) {
+        return value1 - pow(2, 24);
+      } else if (diff < -pow(2, 23)) {
+        return value1 + pow(2, 24);
+      } else {
+        return value1;
+      }
+    }
+
+    int32_t get_value() const { return pos_; }
 
     float get_temperature(int index) {
       return ICPZ::get_temperature(data_temperature_[index]);
@@ -191,7 +206,7 @@ class ICPZ2DMA : public EncoderBase {
     ICPZ &icpz_;
     ICPZ &icpz2_;
     SPIDMA &spidma_;
-    int32_t value_ = 0, value1_ = 0, value2_ = 0;
+    int32_t pos_ = 0, value1_ = 0, value2_ = 0;
     int32_t diff_ = 0;
     uint32_t disagreement_error_ = 0;
     int32_t disagreement_tolerance_ = .1/2/M_PI*pow(2,24);
