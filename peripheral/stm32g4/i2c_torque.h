@@ -2,7 +2,7 @@
 #define UNHUMAN_MOTORLIB_PERIPHERAL_STM32G4_I2C_TORQUE_H_
 
 #include <cstdint>
-#include "../st_device.h"
+#include "st_device.h"
 #include "../../gpio.h"
 #include "../../torque_sensor.h"
 #include "i2c_dma.h"
@@ -48,7 +48,7 @@ class I2CTorque final : public TorqueSensorBase {
                 float sum = (float) result0_ + (float) result1_;
                 float tcomp = sum * k_temp_;
                 if (sum != 0) {
-                    torque_ = diff/sum * gain_ + bias_ + tcomp;
+                    torque_ = diff/sum * gain_ + tcomp;
                 }
             }
         }

@@ -31,7 +31,8 @@ std::vector<char> hex_to_bytes(const std::string& hex) {
 std::string byte_to_hex(const uint8_t byte) {
     const char hexval[16] = {'0', '1', '2', '3', '4', '5', '6', '7', '8', '9', 'a', 'b', 'c', 'd', 'e', 'f'};
     char c[3] = { hexval[(byte >> 4) & 0xF], hexval[byte & 0xF] };
-    return c;
+    std::string s = c;
+    return s;
 }
 
 std::string u16_to_hex(const uint16_t w) {
@@ -44,6 +45,14 @@ std::string u32_to_hex(const uint32_t w) {
 }
 
 std::string bytes_to_hex(const std::vector<char>& bytes) { 
+    std::string s;   
+    for (uint8_t b : bytes) {
+        s += byte_to_hex(b);
+    }
+    return s;
+}
+
+std::string bytes_to_hex(const std::vector<uint8_t>& bytes) { 
     std::string s;   
     for (uint8_t b : bytes) {
         s += byte_to_hex(b);

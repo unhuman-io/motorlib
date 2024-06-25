@@ -1,5 +1,6 @@
 #include "control_fun.h"
 //#include "hal_fun.h"
+#include "util.h"
 #include <cmath>
 
 // 11 point Savitzky-Golay linear polynomial filter, first derivative (for velocity)
@@ -91,6 +92,18 @@ void PI2Controller::set_param(const PI2Param &pi_param) {
     command_max_ = pi_param.command_max;
 }
 
+PI2Param PI2Controller::get_param() const {
+    PI2Param p;
+    p.ki = ki_;
+    p.kp = kp_;
+    p.ki2 = ki2_;
+    p.kp2 = kp2_;
+    p.value2 = value2_;
+    p.ki_limit = ki_limit_;
+    p.command_max = command_max_;
+    return p;
+}
+
 float PI2Controller::step(float desired, float measured) {
     float error = desired - measured;
     float ratio = (value2_ - fabsf2(desired))*inv_value2_; // 1: all k, 0: all k2
@@ -173,4 +186,24 @@ float PIDWrapController::step(float desired, float velocity_desired, float measu
 float PIDDeadbandController::step(float desired, float velocity_desired, float deadband, float measured, float velocity_limit) {
     float desired_with_deadband = fsignf(desired-measured)*fmaxf(fabsf(desired-measured) - deadband, 0) + measured;
     return PIDController::step(desired_with_deadband, velocity_desired, measured, velocity_limit);
+}
+
+void DFT::step(float value, float frequency_hz, mcu_time time) {
+    float t_seconds = (time - time_start_)*(1.0/CPU_FREQUENCY_HZ);
+    real_ += value * std::cos(-2*M_PI*frequency_hz*t_seconds)/num_points_;
+    imag_ += value * std::sin(-2*M_PI*frequency_hz*t_seconds)/num_points_;
+    frequency_ += frequency_hz/num_points_;
+    count_++;
+    if (count_ > num_points_) {
+        count_ = 1;
+        frequency_last_ = frequency_;
+        magnitude_last_ = std::sqrt(real_ * real_ + imag_ * imag_) * 2;
+        phase_last_ = std::atan2(imag_, real_);
+        real_last_ = real_;
+        imag_last_ = imag_;
+        time_start_ = time;
+        frequency_ = 0;
+        imag_ = 0;
+        real_ = 0;
+    }
 }

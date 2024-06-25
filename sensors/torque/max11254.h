@@ -1,6 +1,6 @@
 #pragma once
-#include "torque_sensor.h"
-#include "logger.h"
+#include "../../torque_sensor.h"
+#include "../../logger.h"
 
 template<bool isolation=true>
 class MAX11254 : public TorqueSensorBase {
@@ -22,7 +22,7 @@ class MAX11254 : public TorqueSensorBase {
         };
         uint8_t word;
     };
-    union cr1_register {
+    union cr1_register { // address 1
         struct {
             uint8_t contsc:1;
             uint8_t scycle:1;
@@ -34,7 +34,7 @@ class MAX11254 : public TorqueSensorBase {
         uint8_t word;
     };
 
-    union cr2_register {
+    union cr2_register { // address 2
         struct {
             uint8_t pga:3;
             uint8_t pgaen:1;
@@ -45,6 +45,13 @@ class MAX11254 : public TorqueSensorBase {
         };
         uint8_t word;
     };
+    union delay_register { // address 5
+        struct {
+            uint8_t mux;
+            uint8_t gpo;   
+        };
+        uint16_t word;
+    };
     union chmap_register {
         struct {
             uint8_t gpoen:1;
@@ -54,13 +61,13 @@ class MAX11254 : public TorqueSensorBase {
         };
         uint8_t word;
     };
-    union chmap24_register {
+    union chmap24_register { // address 7
         struct {
             chmap_register ch0, ch1, ch2;
         };
         uint32_t word;
     };
-    union seq_register {
+    union seq_register { // address 8
         struct {
             uint8_t rdyben:1;
             uint8_t mdren:1;
@@ -71,8 +78,9 @@ class MAX11254 : public TorqueSensorBase {
         uint8_t word;
     };
 
-    MAX11254(SPIDMA &spi_dma, uint8_t decimation=1) :
-        TorqueSensorBase(), spi_dma_(spi_dma), decimation_(decimation) {
+    MAX11254(SPIDMA &spi_dma, uint8_t decimation=1, bool mux_delay_en = true) :
+        TorqueSensorBase(), spi_dma_(spi_dma), decimation_(decimation),
+        mux_delay_en_(mux_delay_en) {
         
         //init();
         register_address dr = {.rw = 1, .addr = 14, .bits2 = 3};
@@ -83,7 +91,7 @@ class MAX11254 : public TorqueSensorBase {
         uint8_t data_out[5] = {stat_read.word};
         uint8_t data_in[5];
         spi_dma_.readwrite(data_out, data_in, 5);
-        logger.log_printf("max11274 stat: %02x %02x %02x", data_in[2], data_in[3], data_in[4]);
+        logger.log_printf("max11254 stat: %02x %02x %02x", data_in[2], data_in[3], data_in[4]);
         bool ret_val = true;
         //ret_val &= write_reg(8, 0x40); // in 1
         // reset sequence
@@ -92,7 +100,7 @@ class MAX11254 : public TorqueSensorBase {
         spi_dma_.readwrite(&conv.word, data_in, 1);
         ms_delay(28);
         spi_dma_.readwrite(data_out, data_in, 5);
-        logger.log_printf("max11274 stat: %02x %02x %02x", data_in[2], data_in[3], data_in[4]);
+        logger.log_printf("max11254 stat: %02x %02x %02x", data_in[2], data_in[3], data_in[4]);
 
         cr1_register cr1 = {.scycle=1, .format=1};
         ret_val &= write_reg(1, cr1.word);   // single conversion
@@ -102,18 +110,20 @@ class MAX11254 : public TorqueSensorBase {
         //cr2_register cr2 = {.ldoen=1};
         ret_val &= write_reg(2, cr2.word);
         ret_val &= write_reg(9, 0x1); //  GPO0 on
+        delay_register delay = {.mux=150, .gpo=0}; // 150 -> 600 us delay before sampling
+        ret_val &= write_reg(5, delay.word);
         // sample channel 1
-        //seq_register seq = {.mux=1};
-        //ret_val &= write_reg(8, seq.word);
+        seq_register seq = {.mdren=mux_delay_en_};
+        ret_val &= write_reg(8, seq.word);
 
         spi_dma_.readwrite(data_out, data_in, 5);
-        logger.log_printf("max11274 stat: %02x %02x %02x", data_in[2], data_in[3], data_in[4]);
+        logger.log_printf("max11254 stat: %02x %02x %02x", data_in[2], data_in[3], data_in[4]);
 
         command conv2 = {.rate=0b1100, .mode=3, .b7=1}; // 8khz rate
         spi_dma_.readwrite(&conv2.word, data_in, 1);
 
         spi_dma_.readwrite(data_out, data_in, 5);
-        logger.log_printf("max11274 stat: %02x %02x %02x", data_in[2], data_in[3], data_in[4]);
+        logger.log_printf("max11254 stat: %02x %02x %02x", data_in[2], data_in[3], data_in[4]);
         return ret_val;
     }
 
@@ -125,9 +135,25 @@ class MAX11254 : public TorqueSensorBase {
         reg.rw = 1;
         data_out[0] = reg.word;
         spi_dma_.readwrite(data_out, data_in, 3);
-        uint8_t read_value = data_in[2];
+        uint16_t read_value = data_in[2];
         if (read_value != value) {
-            logger.log_printf("max11274 register error %d: wrote %02x, read %02x", address, value, read_value);
+            logger.log_printf("max11254 register error %d: wrote %02x, read %02x", address, value, read_value);
+            return false;
+        }
+        return true;
+    }
+
+    bool write_reg16(uint8_t address, uint16_t value) {
+        register_address reg = {.rw = 0, .addr = address, .bits2 = 3};
+        uint8_t data_out[5] = {reg.word, (uint8_t) (value>>8 & 0xff), (uint8_t) (value & 0xff)};
+        uint8_t data_in[5];
+        spi_dma_.readwrite(data_out, data_in, 3);
+        reg.rw = 1;
+        data_out[0] = reg.word;
+        spi_dma_.readwrite(data_out, data_in, 4);
+        uint8_t read_value = data_in[2] << 8 | data_in[3];
+        if (read_value != value) {
+            logger.log_printf("max11254 register error %d: wrote %02x, read %02x", address, value, read_value);
             return false;
         }
         return true;
@@ -143,7 +169,7 @@ class MAX11254 : public TorqueSensorBase {
         spi_dma_.readwrite(data_out, data_in, 5);
         uint32_t read_value = data_in[2] << 16 | data_in[3] << 8 | data_in[4];
         if (read_value != value) {
-            logger.log_printf("max11274 register error %d: wrote %06x, read %06x", address, value, read_value);
+            logger.log_printf("max11254 register error %d: wrote %06x, read %06x", address, value, read_value);
             return false;
         }
         return true;
@@ -154,18 +180,19 @@ class MAX11254 : public TorqueSensorBase {
             return;
         }
         count_ = 0;
-        spi_dma_.start_readwrite(data_out_, data_in_, length_);
+        ongoing_read_ = true;
+        spi_dma_.start_readwrite_isr(data_out_, data_in_, length_);
     }
 
     float read() {
-        if (count_ == 0) {
-            spi_dma_.finish_readwrite();
+        if (count_ == 0 && ongoing_read_) {
+            spi_dma_.finish_readwrite_isr();
             raw_value_ = data_in_[1] << 16 | data_in_[2] << 8 | data_in_[3];
             if (isolation) {
                 raw_value_ = data_in_[2] << 16 | data_in_[3] << 8 | data_in_[4];
             }
             signed_value_ = raw_value_ - 0x7FFFFF;
-            torque_ = signed_value_ * gain_ + bias_;
+            torque_ = signed_value_ * gain_;
 
             // stale values are currently the only fault mechanism
             if (last_new_signed_value_ != signed_value_) {
@@ -181,11 +208,11 @@ class MAX11254 : public TorqueSensorBase {
             if (raw_value_ == 0 || raw_value_ == 0xFFFFFF) {
                 read_error_++;
             }
-
+            uint8_t data_in;
+            command conv = {.rate=0b1111, .mode=3, .b7=1};
+            spi_dma_.start_readwrite_isr(&conv.word, &data_in, 1);
+            spi_dma_.finish_readwrite_isr();
         }
-        uint8_t data_in;
-        command conv = {.rate=0b1111, .mode=3, .b7=1};
-        spi_dma_.readwrite(&conv.word, &data_in, 1);
         return torque_;
     }
 
@@ -203,8 +230,10 @@ class MAX11254 : public TorqueSensorBase {
     uint32_t read_error_ = 0;
     uint32_t raw_value_ = 0;
     SPIDMA &spi_dma_;
+    bool ongoing_read_ = false;
     static const uint8_t length_ = 5;
     uint8_t data_out_[length_] = {};
     uint8_t data_in_[length_] = {};
-    uint8_t decimation_ = 1;
+    uint8_t decimation_;
+    bool mux_delay_en_;
 };

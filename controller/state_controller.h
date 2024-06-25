@@ -3,6 +3,7 @@
 
 #include "controller.h"
 #include "../control_fun.h"
+#include "../parameter_api.h"
 
 class StateController : public Controller {
  public:
@@ -42,6 +43,15 @@ class StateController : public Controller {
         output_filter_.set_frequency(param.output_filter_frequency_hz);
         position_desired_filter_.set_frequency(param.position_desired_filter_frequency_hz);
         param_ = param;
+    }
+    void set_debug_variables(ParameterAPI &api) {
+        api.add_api_variable("state_command_max", new APIFloat(&param_.command_max));
+        api.add_api_variable("state_ff_tau", new APIFloat(&param_.ff_tau));
+        API_ADD_FILTER(state_output_filter, FirstOrderLowPassFilter, output_filter_);
+        API_ADD_FILTER(state_velocity_error_filter, FirstOrderLowPassFilter, velocity_error_filter_);
+        API_ADD_FILTER(state_torque_error_filter, FirstOrderLowPassFilter, torque_error_filter_);
+        API_ADD_FILTER(state_torque_dot_error_filter, FirstOrderLowPassFilter, torque_dot_error_filter_);
+        API_ADD_FILTER(state_position_desired_filter, SecondOrderLowPassFilter, position_desired_filter_);
     }
     void set_rollover(float rollover) { /* doesn't support rollover */ }
  private:

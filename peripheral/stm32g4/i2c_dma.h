@@ -9,28 +9,32 @@ class I2C_DMA {
  public:
     I2C_DMA(I2C_TypeDef &regs, DMA_Channel_TypeDef &tx_dma, DMA_Channel_TypeDef &rx_dma, uint16_t speed_khz = 100) : 
         regs_(regs), tx_dma_(tx_dma), rx_dma_(rx_dma) {
-            tx_dma_.CPAR = (uint32_t) &regs_.TXDR;
-            rx_dma_.CPAR = (uint32_t) &regs_.RXDR;
-            switch (speed_khz) {
-                case 1000:
-                    regs_.TIMINGR = 0x00802172; // 1 Mbps at 170 MHz clock
-                    break;
-                case 400:
-                    regs_.TIMINGR = 0x10802d9b; // 400 kHz at 170 MHz clock
-                    break;
-                default:
-                case 100:
-                    regs_.TIMINGR = 0x30a0a7fb; // 100 kHz at 170 MHz clock
-                    break;
-            }            
-            
-            regs_.CR1 |= I2C_CR1_PE;
-            regs_.CR1 |= I2C_CR1_RXDMAEN | I2C_CR1_TXDMAEN;
+        init(speed_khz);
+    }
 
+    void init(uint16_t speed_khz) {
+        regs_.CR1 &= ~I2C_CR1_PE;
+        tx_dma_.CPAR = (uint32_t) &regs_.TXDR;
+        rx_dma_.CPAR = (uint32_t) &regs_.RXDR;
+        switch (speed_khz) {
+            case 1000:
+                regs_.TIMINGR = 0x00802172; // 1 Mbps at 170 MHz clock
+                break;
+            case 400:
+                regs_.TIMINGR = 0x10802d9b; // 400 kHz at 170 MHz clock
+                break;
+            default:
+            case 100:
+                regs_.TIMINGR = 0x30a0a7fb; // 100 kHz at 170 MHz clock
+                break;
+        }            
+        
+        regs_.CR1 |= I2C_CR1_PE;
+        regs_.CR1 |= I2C_CR1_RXDMAEN | I2C_CR1_TXDMAEN;
     }
 
     // return 1 for not ready, 0 for success
-    int async_write(uint8_t address, int8_t nbytes, uint8_t *data, bool stop = false) {
+    int async_write(uint8_t address, uint8_t nbytes, const uint8_t *data, bool stop = false) {
         if (!(regs_.CR2 & I2C_CR2_AUTOEND)) {
             // this will be new or a repeat start, still need to wait for dma to be complete
             if(tx_dma_.CNDTR != 0) {
@@ -88,7 +92,7 @@ class I2C_DMA {
     }
 
     // return <= 0 for error, nbytes for success
-    int write(uint8_t address, int8_t nbytes, uint8_t *data, bool stop=false, uint16_t timeout_us=1000) {
+    int write(uint8_t address, int8_t nbytes, const uint8_t *data, bool stop=false, uint16_t timeout_us=1000) {
         bool error;
         uint32_t t_start = get_clock();
         bool timeout = false;
@@ -115,7 +119,7 @@ class I2C_DMA {
     }
 
     // return <= 0 for error, nbytes for success
-    int read(uint8_t address, int8_t nbytes, uint8_t *data, uint16_t timeout_us=1000) {
+    int read(uint8_t address, uint8_t nbytes, uint8_t *data, uint16_t timeout_us=1000) {
         bool error;
         uint32_t t_start = get_clock();
         bool timeout = false;

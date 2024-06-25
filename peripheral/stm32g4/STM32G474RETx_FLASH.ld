@@ -55,7 +55,7 @@ ENTRY(Reset_Handler)
 /* Highest address of the user mode stack */
 _estack = 0x20018000;    /* end of RAM */
 /* Generate a link error if heap and stack don't fit into RAM */
-_Min_Heap_Size = 0x8000;      /* required amount of heap  */
+_Min_Heap_Size = 32 * 1024;   /* required amount of heap  */
 _Min_Stack_Size = 0x2000; /* required amount of stack */
 
 /* Specify the memory areas */
@@ -64,7 +64,8 @@ MEMORY
 RAM (xrw)      : ORIGIN = 0x20000000, LENGTH = 96K
 CCMRAM (xrw)   : ORIGIN = 0x10000000, LENGTH = 32K
 FLASH (rx)      : ORIGIN = 0x8000000, LENGTH = 384K
-SECTOR_7 (rx)  : ORIGIN = 0x8060000, LENGTH = 128K
+PARAM_DATA (rx)  : ORIGIN = 0x8060000, LENGTH = 64K
+CALIBRATION_DATA (rx) : ORIGIN = 0x8070000, LENGTH = 64K
 }
 
 /* Define output sections */
@@ -74,28 +75,42 @@ SECTIONS
   flash_param :
   {
     . = ALIGN(4);
-    *(flash_param)         /* .rodata sections (constants, strings, etc.) */
+    KEEP(*(flash_param))         /* .rodata sections (constants, strings, etc.) */
     . = ALIGN(4);
-  } >SECTOR_7
-  /* The startup code goes first into FLASH */
-/*  .isr_vector :
+  } >PARAM_DATA
+
+  calibration_data :
   {
-    . = ALIGN(4);
-    KEEP(*(.isr_vector)) */ /* Startup code */
-/*    . = ALIGN(4);
-  } >FLASH */
+      . = ALIGN(4);
+      KEEP(*(calibration_data)) 
+      . = ALIGN(4);
+  } >CALIBRATION_DATA
+
   _siccmram = LOADADDR(.ccmram);
   .ccmram :
   {
     . = ALIGN(4);
     _sccmram = .;
     KEEP(*(.isr_vector)) /* Startup code */
+    . = ALIGN(512);
+    KEEP(*(flash_start)) /* Address 0x8000200 */
+    . = ALIGN(4);
+    /* use example : 
+      const char obot_hash[41] __attribute__((section("flash_start"),used)) 
+        = OBOT_HASH; */
     *(.ccmram)
     *(.ccmram*)
-    *(.text._ZN8FastLoop6updateEv)
+    *memcpy.o(.text)
+    KEEP(*flash.o(.text*))
     . = ALIGN(4);
     _eccmram = .;
   } >CCMRAM AT> FLASH
+
+  /* Ensure scratch space in ccmram for a cal section copy */
+  ccmram_alloc (NOLOAD):
+  {
+    . += SIZEOF(calibration_data);
+  } >CCMRAM
 
 
   /* The program code and other data goes into FLASH */

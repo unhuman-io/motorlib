@@ -21,7 +21,7 @@ class EncoderBase : public SensorBase {
     EncoderBase() { }
 
     // init is called by system_init()
-    bool init() { return false; }
+    bool init() { return true; }
 
     // Always called before read. One trigger and one read per control loop cycle. Trigger
     // sould be called at a fixed frequency, ideally with little jitter.

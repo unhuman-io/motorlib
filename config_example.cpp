@@ -1,5 +1,5 @@
 #include "usb_communication.h"
-#include "../st_device.h"
+#include "st_device.h"
 #include "system.h"
 #include "qep_encoder.h"
 #include "peripheral/stm32g4/hrpwm.h"

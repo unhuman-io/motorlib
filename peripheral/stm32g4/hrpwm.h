@@ -3,7 +3,7 @@
 
 #include "../pwm.h"
 #include <cstdint>
-#include "../../../st_device.h"
+#include "stm32g474xx.h"
 #include <vector>
 #include "pin_config.h"
 
@@ -59,7 +59,7 @@ class HRPWM : public PWMBase {
       uint32_t deadprescale = 0;
       uint32_t deadtime = deadtime_ns_ * count_per_ns_; // 9 bits at 170e6*32/4 gives 376 ns
       for(auto ch : std::vector<uint8_t>{ch_a_, ch_b_, ch_c_}) {
-         regs_.sTimerxRegs[ch].OUTxR = HRTIM_OUTR_DTEN;
+         regs_.sTimerxRegs[ch].OUTxR |= HRTIM_OUTR_DTEN;
          regs_.sTimerxRegs[ch].DTxR = (deadtime << HRTIM_DTR_DTF_Pos) | (deadtime << HRTIM_DTR_DTR_Pos) | (deadprescale << HRTIM_DTR_DTPRSC_Pos);
       }
    }
@@ -87,6 +87,7 @@ class HRPWM3 : public HRPWM {
       ch_b_ = ch_b;
       ch_c_ = ch_c;
       pwm3_mode_ = true;
+      base_frequency_hz_ = frequency_hz;
       set_frequency_hz(frequency_hz, min_off_ns, min_on_ns);
       set_vbus(12);
       init();

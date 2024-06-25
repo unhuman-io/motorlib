@@ -5,13 +5,15 @@
 #include <queue>
 #include <stdarg.h>
 #include "util.h"
+#include "messages.h"
 
 class Logger {
  public:
     void log(std::string str) {
-        if (log_queue_.size() < 103) {
-            log_queue_.push("(" + std::to_string(get_uptime()) + " " + std::to_string(get_clock()) + ") " + str);
+        if (log_queue_.size() > 102) {
+            log_queue_.pop();
         }
+        log_queue_.push("(" + std::to_string(get_uptime()) + " " + std::to_string(get_clock()) + ") " + str);
     }
     void log_once(std::string str) {
         if (str != log_queue_.back()) {

@@ -110,9 +110,20 @@ Original_Reset_Handler:
   ldr	r1, =0xE0042008
   str   r0, [r1]		// IWDG stop on debug
   ldr	r0, =0xCCCC
-#endif
   ldr	r1, =IWDG_KR
+  str	r0, [r1]		// start watchdog
+  ldr	r0, =0x5555		// access IWDG_PR key
   str	r0, [r1]
+  // wait for IWDR_SR PVU to be 0
+pvu_zero_wait:
+  ldr	r0, [r1, #12]
+  cmp	r0, #1
+  beq	pvu_zero_wait
+  
+  ldr	r0, =0
+  str	r0, [r1, #4]	// Set PR to 0 (default but bootloader sets to 6)
+#endif
+
   ldr   r0, =_estack
   mov   sp, r0          /* set stack pointer */
 
@@ -163,6 +174,7 @@ LoopFillZerobss:
 
 /* Call the clock system intitialization function.*/
     bl  SystemInit
+	bl  board_init
 /* Call static constructors */
     bl __libc_init_array
 /* Call the application's entry point.*/
@@ -357,8 +369,8 @@ g_pfnVectors:
 //	.weak	DebugMon_Handler
 //	.thumb_set DebugMon_Handler,Default_Handler
 
-//	.weak	PendSV_Handler
-//	.thumb_set PendSV_Handler,Default_Handler
+	.weak	PendSV_Handler
+	.thumb_set PendSV_Handler,Default_Handler
 
 //	.weak	SysTick_Handler
 //	.thumb_set SysTick_Handler,Default_Handler*/
@@ -438,8 +450,8 @@ g_pfnVectors:
 	.weak	TIM1_BRK_TIM15_IRQHandler
 	.thumb_set TIM1_BRK_TIM15_IRQHandler,Default_Handler
 
-//	.weak	TIM1_UP_TIM16_IRQHandler
-//	.thumb_set TIM1_UP_TIM16_IRQHandler,Default_Handler
+	.weak	TIM1_UP_TIM16_IRQHandler
+	.thumb_set TIM1_UP_TIM16_IRQHandler,Default_Handler
 
 	.weak	TIM1_TRG_COM_TIM17_IRQHandler
 	.thumb_set TIM1_TRG_COM_TIM17_IRQHandler,Default_Handler
@@ -531,11 +543,11 @@ g_pfnVectors:
 	.weak	TIM7_DAC_IRQHandler
 	.thumb_set TIM7_DAC_IRQHandler,Default_Handler
 
-	.weak	DMA2_Channel1_IRQHandler
-	.thumb_set DMA2_Channel1_IRQHandler,Default_Handler
+	//.weak	DMA2_Channel1_IRQHandler
+	//.thumb_set DMA2_Channel1_IRQHandler,Default_Handler
 
-	.weak	DMA2_Channel2_IRQHandler
-	.thumb_set DMA2_Channel2_IRQHandler,Default_Handler
+	//.weak	DMA2_Channel2_IRQHandler
+	//.thumb_set DMA2_Channel2_IRQHandler,Default_Handler
 
 	.weak	DMA2_Channel3_IRQHandler
 	.thumb_set DMA2_Channel3_IRQHandler,Default_Handler

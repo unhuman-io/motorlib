@@ -1,0 +1,22 @@
+name: build
+
+on:
+  push:
+
+jobs:
+  build:
+    timeout-minutes: 10
+    runs-on: ubuntu-latest
+    container: leemagnusson/arm-gcc:latest
+    steps:
+    - uses: actions/checkout@main
+      with:
+        submodules: recursive
+    - name: make otp test
+      run: |
+        cd peripheral/stm32g4/otp
+        make NAME=motor_molex REV=MR0 NUM=25 GCC_PATH=/gcc/bin
+        # also check for failing cases
+        ! make GCC_PATH=/gcc/bin
+        ! make NAME=fail REV=MR0 NUM=25 GCC_PATH=/gcc/bin
+        ! make REV=MR0 GCC_PATH=/gcc/bin

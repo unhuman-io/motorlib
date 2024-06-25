@@ -1,13 +1,14 @@
 #include "../usb.h"
 #include <algorithm>
 #include <cstring>
-#include "../version.h"
+#include "version.h"
 
 #include "stm32g4xx.h"
 #include "../../util.h"
 #include <cstdio>
 #include "../../messages.h"
 #include "../../logger.h"
+#include "../stm32_serial.h"
 
 extern const char * const name;
 
@@ -194,7 +195,7 @@ bool USB1::tx_active(uint8_t endpoint) {
 }
 
 USB1::USB1() {
-    USB->CNTR = USB_CNTR_L1REQM | USB_CNTR_RESETM | USB_CNTR_SUSPM | USB_CNTR_WKUPM | USB_CNTR_ERRM | USB_CNTR_CTRM;
+    USB->CNTR = USB_CNTR_L1REQM | USB_CNTR_RESETM | USB_CNTR_WKUPM | USB_CNTR_ERRM | USB_CNTR_CTRM;
 }
 
 void USB1::connect() {
@@ -320,25 +321,16 @@ void epr_set_toggle(uint8_t endpoint, uint16_t set_bits, uint16_t set_mask) {
     USBEPR->EP[endpoint].EPR = epr_total;
 }
 
-// This is the serial number used by the bootloader, 13 bytes with null terminator
-void Get_SerialNum(char * buffer)
-{
-  uint32_t deviceserial0, deviceserial1, deviceserial2;
-
-  deviceserial0 = *(uint32_t *)DEVICE_ID1;
-  deviceserial1 = *(uint32_t *)DEVICE_ID2;
-  deviceserial2 = *(uint32_t *)DEVICE_ID3;
-
-  deviceserial0 += deviceserial2;
-  std::sprintf(buffer,"%lX%X",deviceserial0, (uint16_t) (deviceserial1>>16));
-}
-
 void USB1::interrupt() {
+    // Reading USB->ISTR seems to take many clock cyles. Read just once where possible
+    uint16_t istr = USB->ISTR;
     /* Handle Reset Interrupt */
-    if (USB->ISTR & USB_ISTR_RESET)
+    if (istr & USB_ISTR_RESET)
     {
         reset_count_++;
-        logger.log("usb reset");
+        error_count_ = 0;
+        // todo bring back logger in isr safe way
+        // logger.log("usb reset");
         // Set up endpoint 0
         USB->EP0R = USB_EP_CONTROL;
         USBPMA->btable[0].ADDR_TX = offsetof(USBPMA_TypeDef, buffer[0].EP_TX);
@@ -356,15 +348,9 @@ void USB1::interrupt() {
         USB->ISTR &= ~USB_ISTR_RESET;
     }
 
-    // Suspend interrupt
-    if (USB->ISTR & USB_ISTR_SUSP) {
-        USB->ISTR &= ~USB_ISTR_SUSP;
-    }
-
     // Endpoint correct transfer interrupt
-    if(USB->ISTR & USB_ISTR_CTR)
+    if(istr & USB_ISTR_CTR)
     {
-        uint16_t istr = USB->ISTR;
         switch (istr & USB_ISTR_EP_ID) {
             case 0:
                 if (istr & USB_ISTR_DIR) { // RX
@@ -417,9 +403,9 @@ void USB1::interrupt() {
         }
     }
 
-    if (USB->ISTR & (USB_ISTR_ERR | USB_ISTR_ESOF)) {
+    if (istr & USB_ISTR_ERR) {
         error_count_++;
-        USB->ISTR &= ~(USB_ISTR_ERR | USB_ISTR_ESOF);
+        USB->ISTR &= ~USB_ISTR_ERR;
     }
 
     // clear anything remaining
@@ -454,13 +440,11 @@ void USB1::interrupt() {
                                     break;
                                 case 0x03:
                                 { 
-                                    char sn_buffer[13];
-                                    Get_SerialNum(sn_buffer);
-                                    send_string(0, sn_buffer, std::strlen(sn_buffer));
+                                    send_string(0, get_serial_number(), std::strlen(get_serial_number()));
                                     break;
                                 }
                                 case 0x04:
-                                    send_string(0, GIT_HASH " " BUILD_DATETIME, std::strlen(GIT_HASH " " BUILD_DATETIME));
+                                    send_string(0, OBOT_VERSION " " BUILD_DATETIME, std::strlen(OBOT_VERSION " " BUILD_DATETIME));
                                     break;
                                 case 0x05:
                                     send_string(0, const_cast<const char*>(name), std::strlen(const_cast<const char*>(name)));
