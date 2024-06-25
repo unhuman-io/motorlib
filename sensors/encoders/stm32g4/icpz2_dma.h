@@ -118,6 +118,8 @@ class ICPZ2DMA : public EncoderBase {
         if (std::abs(diff_ - (int32_t) pow(2, 23)) > disagreement_tolerance_) {
           disagreement_error_++;
         }
+        total_error_count_ = icpz_.error_count_ + icpz2_.error_count_ + disagreement_error_;
+        total_crc_error_count_ = icpz_.crc_error_count_ + icpz2_.crc_error_count_;
       }
       return value_;
     }
@@ -140,6 +142,8 @@ class ICPZ2DMA : public EncoderBase {
       icpz_.clear_faults();
       icpz2_.clear_faults();
       disagreement_error_ = 0;
+      total_error_count_ = 0;
+      total_crc_error_count_ = 0;
     }
 
     uint32_t current_buffer_index() const {
@@ -191,6 +195,8 @@ class ICPZ2DMA : public EncoderBase {
     int32_t diff_ = 0;
     uint32_t disagreement_error_ = 0;
     int32_t disagreement_tolerance_ = .1/2/M_PI*pow(2,24);
+    uint32_t total_error_count_ = 0;
+    uint32_t total_crc_error_count_ = 0;
 
     bool inited_ = false;
     DMAMUX_Channel_TypeDef &dmamux_tx_regs_;
