@@ -25,7 +25,7 @@ $(BUILD_DIR)/%.tgz: $(BUILD_DIR)/%.bin $(PARAM_OUT) $(CALIBRATION_OUT) | $(BUILD
 	cp $(<:.bin=_noparam.bin) $(BUILD_DIR)/$(TARGET)
 	cp $(PARAM_OUT) $(BUILD_DIR)/$(TARGET)/$(notdir $(<:.bin=_param_only.bin))
 	cp $(CALIBRATION_OUT) $(BUILD_DIR)/$(TARGET)/
-	echo "#!/bin/bash -e\n$(DFU_START_LINE)\n$(dfu_firmware)\n$(dfu_param)\n$(dfu_calibration)\n$(dfu_leave)" > $(BUILD_DIR)/$(TARGET)/load_$(TARGET).sh
+	echo "#!/bin/bash -e\n$(DFU_START_LINE)\n$(dfu_firmware)\n$(dfu_param)\n$(dfu_leave)" > $(BUILD_DIR)/$(TARGET)/load_$(TARGET).sh
 	chmod +x $(BUILD_DIR)/$(TARGET)/load_$(TARGET).sh
 	echo "#!/bin/bash -e\n$(DFU_START_LINE)\n$(dfu_param)\n$(dfu_leave)" > $(BUILD_DIR)/$(TARGET)/load_$(TARGET)_param.sh
 	chmod +x $(BUILD_DIR)/$(TARGET)/load_$(TARGET)_param.sh
