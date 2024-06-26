@@ -155,9 +155,9 @@ class ICPZBase : public EncoderBase {
 
     int32_t read_buf(uint8_t buf[4]) {
       bool crc_error;
-      uint32_t data = read_raw_buf(buf, &crc_error);
+      uint32_t data = read_raw_buf(buf, crc_error);
       if (!crc_error) {
-        int32_t diff = (data<<8 - last_data_<<8)>>8; // rollover summing
+        int32_t diff = ((data<<8) - (last_data_<<8))>>8; // rollover summing
         pos_ += diff;
         last_data_ = data;
       }
