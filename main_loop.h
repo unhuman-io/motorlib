@@ -34,16 +34,18 @@ class MainLoop {
  public:
     MainLoop(int32_t frequency_hz, FastLoop &fast_loop, PositionController &position_controller,  TorqueController &torque_controller, 
         ImpedanceController &impedance_controller, VelocityController &velocity_controller, StateController &state_controller, 
-        JointPositionController &joint_position_controller, AdmittanceController &admittance_controller, Communication &communication,
+        JointPositionController &joint_position_controller, AdmittanceController &admittance_controller,
+        FindLimitsController &find_limits_controller, Communication &communication,
         LED &led, OutputEncoder &output_encoder, TorqueSensor &torque, Driver &driver, const MainLoopParam &param, const Calibration &calibration,
         HardwareBrake &brake=no_brake_) : 
           param_(param), calibration_(calibration), fast_loop_(fast_loop), position_controller_(position_controller), torque_controller_(torque_controller), 
           impedance_controller_(impedance_controller), velocity_controller_(velocity_controller), state_controller_(state_controller),  
           joint_position_controller_(joint_position_controller), admittance_controller_(admittance_controller), 
+          find_limits_controller_(find_limits_controller),
           communication_(communication), led_(led), frequency_hz_(frequency_hz), output_encoder_(output_encoder), torque_sensor_(torque),
           output_encoder_correction_table_(param_.output_encoder.table), 
           torque_correction_table_(calibration_.torque_sensor.table), driver_(driver), brake_(brake),
-          iq_find_limits_filter_(1.0/frequency_hz, 1), motor_velocity_filter_(1.0/frequency_hz, param.output_filter_hz.motor_velocity), motor_position_filter_(1.0/frequency_hz),
+          motor_velocity_filter_(1.0/frequency_hz, param.output_filter_hz.motor_velocity), motor_position_filter_(1.0/frequency_hz),
           output_position_filter_(1.0/frequency_hz), output_velocity_filter_(1.0/frequency_hz, param.output_filter_hz.output_velocity), torque_filter_(1.0/frequency_hz) {
           set_param();
         }
@@ -167,7 +169,6 @@ class MainLoop {
 
       float __attribute((unused)) output_velocity = (status_.output_position - output_position_last_)/dt_;
       output_position_last_ = status_.output_position;
-      iq_find_limits_filter_.update(status_.fast_loop.foc_status.measured.i_q);
       status_.motor_velocity_filtered = motor_velocity_filter_.update(status_.motor_position);//(status_.fast_loop.motor_velocity.velocity_filtered);
       status_.motor_position_filtered = motor_position_filter_.update(status_.motor_position);
       status_.output_position_filtered = output_position_filter_.update(status_.output_position);
@@ -318,50 +319,8 @@ class MainLoop {
           fast_loop_.set_id_des(command_current_.current_desired);
           break;
         case FIND_LIMITS:
-        {
-          ReceiveData command = {};
-          switch (find_limits_state_) {
-            case FIND_FIRST_LIMIT:
-              command.velocity_desired = command_current_.velocity_desired;
-              if (iq_find_limits_filter_.get_value() > command_current_.current_desired) {
-                find_limits_state_ = FIND_SECOND_LIMIT;
-                // record positive limit
-                //motor_positive_limit_ = status_.motor_position;
-                //output_positive_limit_ = status_.output_position;
-              }
-              iq_des = velocity_controller_.step(command, status_);
-              break;
-            case FIND_SECOND_LIMIT:
-              command.velocity_desired = -command_current_.velocity_desired;
-              if (iq_find_limits_filter_.get_value() < -command_current_.current_desired) {
-                find_limits_state_ = VELOCITY_TO_POSITION;
-                // record negative limit
-                // change encoder biases around
-                adjust_output_encoder(-(status_.output_position - encoder_limits_.output_hard_min));
-                adjust_motor_encoder(-(status_.motor_position - encoder_limits_.motor_hard_min));
-                velocity_controller_.init(status_);
-              }
-              iq_des = velocity_controller_.step(command, status_);
-              break;
-            case VELOCITY_TO_POSITION:
-              command.velocity_desired = command_current_.velocity_desired;
-              if (status_.motor_position >= command_current_.position_desired) {
-                find_limits_state_ = GOTO_POSITION;
-                // record negative limit
-                // change encoder biases around
-                position_controller_.init(status_);
-              }
-              iq_des = velocity_controller_.step(command, status_);
-              break;
-            case GOTO_POSITION:
-              position_limits_disable_ = position_limits_disable_last_;
-              command.position_desired = command_current_.position_desired;
-              iq_des = position_controller_.step(command, status_);
-              break;
-          }
-          
+          iq_des = find_limits_controller_.step(command_current_, status_);
           break;
-        }
         default:
           break;
       }
@@ -572,10 +531,9 @@ class MainLoop {
             break;
           case FIND_LIMITS:
             fast_loop_.current_mode();
+            find_limits_controller_.init(status_);
             position_limits_disable_last_ = position_limits_disable_;
             position_limits_disable_ = true;
-            find_limits_state_ = FIND_FIRST_LIMIT;
-            velocity_controller_.init(status_);
             led_.set_color(LED::BLUE);
             break;
           case DRIVER_ENABLE:
@@ -719,6 +677,7 @@ class MainLoop {
     StateController &state_controller_;
     JointPositionController &joint_position_controller_;
     AdmittanceController &admittance_controller_;
+    FindLimitsController &find_limits_controller_;
     Communication &communication_;
     MainLoopParam::EncoderLimits encoder_limits_;
     MotorError error_mask_;
@@ -753,7 +712,7 @@ class MainLoop {
     TrajectoryGenerator tuning_trajectory_generator_;
     uint32_t timestamp_ = 0;
     uint32_t last_timestamp_ = 0;
-    float *reserved0_ = &status_.fast_loop.vbus;
+    uint32_t *reserved0_ = &status_.fast_loop.vbus;
     PChipTable<OUTPUT_ENCODER_TABLE_LENGTH> output_encoder_correction_table_;
     PChipTable<TORQUE_TABLE_LENGTH> torque_correction_table_;
     CStack<MainLoopStatus,2> status_stack_;
@@ -767,8 +726,6 @@ class MainLoop {
 
     DFTResponse dft_;
 
-    enum FindLimitsState {FIND_FIRST_LIMIT, FIND_SECOND_LIMIT, VELOCITY_TO_POSITION, GOTO_POSITION} find_limits_state_;
-    FirstOrderLowPassFilter iq_find_limits_filter_;
     bool position_limits_disable_ = false;
     bool position_limits_disable_last_ = false;
 
