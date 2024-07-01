@@ -18,6 +18,8 @@
     api.add_api_variable(prefix "2diag_str_nb", new const APICallback([]{ return icpz.get_diagnosis_str(1); }));\
     api.add_api_variable(prefix "diff", new const APIInt32(&icpz.diff_));\
     api.add_api_variable(prefix "value", new const APIUint32(&icpz.value_.word));\
+    api.add_api_variable(prefix "ivalue", new const APICallbackInt32([] { return icpz.value_.pos; }));\
+
 
 
 
