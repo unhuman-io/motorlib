@@ -7,6 +7,7 @@
 
 #include "communication.h"
 #include "util.h"
+#include "figure_protocol.h"
 
 class UARTCommunication : public CommunicationBase {
  public:
@@ -61,7 +62,7 @@ class UARTCommunication : public CommunicationBase {
 
   int receive_string(char* const string) {
     if (new_ascii_str_) {
-      std::memcpy(string, ascii_str_in_, std::strlen(ascii_str_in_)+1);
+      std::memcpy(string, ascii_str_in_, std::min(std::strlen(ascii_str_in_)+1, (size_t) OBOT_ASCII_MAX_RECEIVE_LENGTH));
       new_ascii_str_ = false;
       return std::strlen(ascii_str_in_);
     }
@@ -72,8 +73,8 @@ class UARTCommunication : public CommunicationBase {
   bool send_string(const char* string, uint16_t length) {
     // while(send_active());
     uint8_t packet_size;
-    length = std::min(length, (uint16_t) 255); // todo support larger packets
-    uint8_t* packet = protocol_.generatePacket((const uint8_t *) string, length, OBOT_ASCII_RESPONSE, &packet_size);
+    length = std::min(length, (uint16_t) OBOT_ASCII_MAX_SEND_LENGTH); // todo support larger packets
+    uint8_t* packet = protocol_.generatePacket((const uint8_t *) string, length, (size_t) OBOT_ASCII_RESPONSE, &packet_size);
     std::memcpy(&uart_.tx_buffer_[0], &packet[0], packet_size);
     Uart::BufferDescriptor desc = {};
     desc.length = packet_size;
@@ -111,7 +112,12 @@ class UARTCommunication : public CommunicationBase {
     asm("dmb");
     // Packetize obot_status and send
     uint8_t packet_size;
-    uint8_t* packet = protocol_.generatePacket(reinterpret_cast<uint8_t*>(&obot_status_), sizeof(SendData), OBOT_STATUS, &packet_size);
+#ifdef USE_MOTOR_STATUS_LITE
+    const uint32_t buffer_size = sizeof(MotorStatusLite);
+#else
+    const uint32_t buffer_size = sizeof(MotorStatus);
+#endif
+    uint8_t* packet = protocol_.generatePacket(reinterpret_cast<uint8_t*>(&obot_status_), buffer_size, OBOT_STATUS, &packet_size);
     std::memcpy(&uart_.tx_buffer_[0], &packet[0], packet_size);
     Uart::BufferDescriptor desc = {};
     desc.length = packet_size;

@@ -31,25 +31,36 @@ OBJECTS += $(addprefix $(BUILD_DIR)/,$(notdir $(ASM_SOURCES:.s=.o)))
 vpath %.s $(sort $(dir $(ASM_SOURCES)))
 
 $(BUILD_DIR)/%.o: %.c | $(BUILD_DIR) 
+	@echo "  CC    " $<
 	$(CC) -c $(CFLAGS) -Wa,-a,-ad,-alms=$(BUILD_DIR)/lto.lst $< -o $@
 
 $(BUILD_DIR)/%.o: %.cpp | $(BUILD_DIR) 
+	@echo "  CXX    " $<
 	$(CXX) -c $(CPPFLAGS) -std=c++17 -Wa,-a,-ad,-alms=$(BUILD_DIR)/lto.lst $< -o $@
 
+# ensure flash commands stay in allocated section
+$(BUILD_DIR)/flash.o: flash.cpp | $(BUILD_DIR)
+	@echo "  CXX NO LTO" $<
+	$(CXX) -c $(filter-out $(LTO), $(CPPFLAGS)) -std=c++17 -Wa,-a,-ad,-alms=$(BUILD_DIR)/lto.lst $< -o $@
+
 $(BUILD_DIR)/%.o: %.s | $(BUILD_DIR)
+	@echo "  AS     " $<
 	$(AS) -c $(CFLAGS) $< -o $@
 
-$(BUILD_DIR)/$(TARGET).elf: $(OBJECTS)
-	$(CXX) $(OBJECTS) $(LDFLAGS) -o $@
+$(BUILD_DIR)/$(TARGET).elf: $(OBJECTS) build_param calibration
+	@echo "  LD     " $@
+	$(CXX) $(OBJECTS) $(PARAM_OUT:bin=o) $(CALIBRATION_OUT:bin=o) $(LDFLAGS) -o $@
 	$(SZ) $@
 
 $(BUILD_DIR)/%.hex: $(BUILD_DIR)/%.elf | $(BUILD_DIR)
+	@echo "  HEX    " $@
 	$(HEX) $< $@
 	
 	
 $(BUILD_DIR):
 	$(MKDIR) $@
 
+$(VERBOSE).SILENT:
 
 #######################################
 # clean up

@@ -10,7 +10,12 @@ class USBCommunication : public CommunicationBase {
       return usb_.receive_data(2, (uint8_t *const) data, sizeof(*data));
     }
     void send_data(const SendData &data) {
-       usb_.send_data(2, reinterpret_cast<const uint8_t *>(&data), sizeof(SendData), false);
+#ifdef USE_MOTOR_STATUS_LITE
+    const uint16_t buffer_size = sizeof(MotorStatusLite);
+#else
+    const uint16_t buffer_size = sizeof(MotorStatus);
+#endif
+       usb_.send_data(2, reinterpret_cast<const uint8_t *>(&data), buffer_size, false);
     }
     int receive_string(char * const string) {
        int count = usb_.receive_data(1, (uint8_t * const) string, 64);

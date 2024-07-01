@@ -12,12 +12,14 @@
 #include "table_interp.h"
 #include "cstack.h"
 
+extern "C" void system_init();
+
 class FastLoop {
  public:
-    FastLoop(int32_t frequency_hz, PWM &pwm, MotorEncoder &encoder, const FastLoopParam &param,
+    FastLoop(int32_t frequency_hz, PWM &pwm, MotorEncoder &encoder, const FastLoopParam &param, const Calibration &calibration,
       volatile uint32_t *const i_a_dr, volatile uint32_t *const i_b_dr, volatile uint32_t *const i_c_dr, 
       volatile uint32_t *const v_bus_dr) 
-      : param_(param), pwm_(pwm), encoder_(encoder), i_a_dr_(i_a_dr), i_b_dr_(i_b_dr), i_c_dr_(i_c_dr), v_bus_dr_(v_bus_dr),
+      : param_(param), motor_encoder_index_electrical_offset_pos_(calibration.motor_encoder_index_electrical_offset_pos), pwm_(pwm), encoder_(encoder), i_a_dr_(i_a_dr), i_b_dr_(i_b_dr), i_c_dr_(i_c_dr), v_bus_dr_(v_bus_dr),
         motor_correction_table_(param_.motor_encoder.table), cogging_correction_table_(param_.cogging.table),
         iq_filter_(1.0/frequency_hz), motor_velocity_filter_(1.0/frequency_hz), motor_position_filter_(1.0/frequency_hz) {
        frequency_hz_ = frequency_hz;
@@ -145,7 +147,8 @@ class FastLoop {
          if (param_.motor_encoder.use_index_electrical_offset_pos) {
             // motor_index_electrical_offset_pos is the value of an electrical zero minus the index position
             // motor_electrical_zero_pos is the offset to the initial encoder value
-            motor_electrical_zero_pos_ = param_.motor_encoder.index_electrical_offset_pos + motor_index_pos_;
+            // motor_electrical_zero_pos_ = param_.motor_encoder.index_electrical_offset_pos + motor_index_pos_;
+            motor_electrical_zero_pos_ = motor_encoder_index_electrical_offset_pos_ + motor_index_pos_;
          }
          motor_index_pos_set_ = true;
       }           
@@ -310,6 +313,21 @@ class FastLoop {
       beep_ = false;
     }
 
+    void set_ia_adc_gain(float gain) {
+      param_.adc1_gain = gain;
+    }
+    void set_ib_adc_gain(float gain) {
+      param_.adc2_gain = gain;
+    }
+    void set_ic_adc_gain(float gain) {
+      param_.adc3_gain = gain;
+    }
+    void set_i_adc_gain(float gain) {
+      set_ia_adc_gain(gain);
+      set_ib_adc_gain(gain);
+      set_ic_adc_gain(gain);
+    }
+
     void zero_current_sensors_on(float t_seconds = 1) {
       zero_current_sensors_ = true;
       zero_current_sensors_end_ = get_clock() + t_seconds*CPU_FREQUENCY_HZ;
@@ -326,6 +344,7 @@ class FastLoop {
     }
  private:
     FastLoopParam param_; // reallocate tables in ram
+    float motor_encoder_index_electrical_offset_pos_;
 
     FOC *foc_;
     PWM &pwm_;
@@ -402,6 +421,7 @@ class FastLoop {
 
 
    friend class System;
+   friend void system_init();
 };
 
 #endif  // UNHUMAN_MOTORLIB_FAST_LOOP_H_

@@ -62,7 +62,7 @@ template<class Sensor1, class Sensor2>
 class TorqueSensorMultiplex : public SensorMultiplex<Sensor1, Sensor2> {
  public:
    TorqueSensorMultiplex(Sensor1 &primary, Sensor2 &secondary, uint8_t decimation = 0) : SensorMultiplex<Sensor1, Sensor2>(primary, secondary, decimation),
-      gain_(primary.gain_), bias_(primary.bias_), k_temp_(primary.k_temp_), torque_(primary.torque_) {}
+      gain_(primary.gain_), k_temp_(primary.k_temp_), torque_(primary.torque_) {}
    using SensorMultiplex<Sensor1, Sensor2>::trigger;
    using SensorMultiplex<Sensor1, Sensor2>::init;
    void set_param(const TorqueSensorParam &param) { this->primary_.set_param(param); }
@@ -76,8 +76,8 @@ class TorqueSensorMultiplex : public SensorMultiplex<Sensor1, Sensor2> {
    
    float get_value() const { return this->primary_.get_value(); }
    void clear_faults() { this->primary_.clear_faults(); }
- protected:
-   float &gain_, &bias_, &k_temp_, &torque_;
+
+   float &gain_, &k_temp_, &torque_;
    friend class System;
 };
 

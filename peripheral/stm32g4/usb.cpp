@@ -195,7 +195,7 @@ bool USB1::tx_active(uint8_t endpoint) {
 }
 
 USB1::USB1() {
-    USB->CNTR = USB_CNTR_L1REQM | USB_CNTR_RESETM | USB_CNTR_SUSPM | USB_CNTR_WKUPM | USB_CNTR_ERRM | USB_CNTR_CTRM;
+    USB->CNTR = USB_CNTR_L1REQM | USB_CNTR_RESETM | USB_CNTR_WKUPM | USB_CNTR_ERRM | USB_CNTR_CTRM;
 }
 
 void USB1::connect() {
@@ -322,8 +322,10 @@ void epr_set_toggle(uint8_t endpoint, uint16_t set_bits, uint16_t set_mask) {
 }
 
 void USB1::interrupt() {
+    // Reading USB->ISTR seems to take many clock cyles. Read just once where possible
+    uint16_t istr = USB->ISTR;
     /* Handle Reset Interrupt */
-    if (USB->ISTR & USB_ISTR_RESET)
+    if (istr & USB_ISTR_RESET)
     {
         reset_count_++;
         error_count_ = 0;
@@ -346,15 +348,9 @@ void USB1::interrupt() {
         USB->ISTR &= ~USB_ISTR_RESET;
     }
 
-    // Suspend interrupt
-    if (USB->ISTR & USB_ISTR_SUSP) {
-        USB->ISTR &= ~USB_ISTR_SUSP;
-    }
-
     // Endpoint correct transfer interrupt
-    if(USB->ISTR & USB_ISTR_CTR)
+    if(istr & USB_ISTR_CTR)
     {
-        uint16_t istr = USB->ISTR;
         switch (istr & USB_ISTR_EP_ID) {
             case 0:
                 if (istr & USB_ISTR_DIR) { // RX
@@ -407,9 +403,9 @@ void USB1::interrupt() {
         }
     }
 
-    if (USB->ISTR & (USB_ISTR_ERR | USB_ISTR_ESOF)) {
+    if (istr & USB_ISTR_ERR) {
         error_count_++;
-        USB->ISTR &= ~(USB_ISTR_ERR | USB_ISTR_ESOF);
+        USB->ISTR &= ~USB_ISTR_ERR;
     }
 
     // clear anything remaining

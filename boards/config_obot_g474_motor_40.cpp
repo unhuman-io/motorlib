@@ -5,7 +5,12 @@
 #include "../driver_mps.h"
 
 const Param * const param = (const Param * const) 0x8060000;
+const Calibration * const calibration = (const Calibration * const) 0x8070000;
 extern const char * const name = param->name;
+
+namespace config {
+    const uint32_t system_loop_frequency =  1000;
+};
 
 using PWM = HRPWM;
 using Communication = USBCommunication;
@@ -37,6 +42,7 @@ extern "C" void board_init() {
     pin_config_obot_g474_motor_40();
 }
 
+
 namespace config {
     static_assert(((double) CPU_FREQUENCY_HZ * 8 / 2) / pwm_frequency < 65535);    // check pwm frequency
     TempSensor temp_sensor;
@@ -46,7 +52,7 @@ namespace config {
 
     HRPWM motor_pwm(pwm_frequency, *HRTIM1, 3, 5, 4, true, 50, 1000, 0);
     USB1 usb;
-    FastLoop fast_loop = {(int32_t) pwm_frequency, motor_pwm, motor_encoder, param->fast_loop_param, &I_A_DR, &I_B_DR, &I_C_DR, &V_BUS_DR};
+    FastLoop fast_loop = {(int32_t) pwm_frequency, motor_pwm, motor_encoder, param->fast_loop_param, *calibration, &I_A_DR, &I_B_DR, &I_C_DR, &V_BUS_DR};
     LED led = {const_cast<uint16_t*>(reinterpret_cast<volatile uint16_t *>(&TIM_R)), 
                const_cast<uint16_t*>(reinterpret_cast<volatile uint16_t *>(&TIM_G)),
                const_cast<uint16_t*>(reinterpret_cast<volatile uint16_t *>(&TIM_B))};
@@ -57,14 +63,14 @@ namespace config {
     StateController state_controller = {(float) (1.0/main_loop_frequency)};
     JointPositionController joint_position_controller(1.0/main_loop_frequency);
     AdmittanceController admittance_controller = {1.0/main_loop_frequency};
-    MainLoop main_loop(main_loop_frequency, fast_loop, position_controller, torque_controller, impedance_controller, velocity_controller, state_controller, joint_position_controller, admittance_controller, System::communication_, led, output_encoder, torque_sensor, driver, param->main_loop_param);
+    MainLoop main_loop(main_loop_frequency, fast_loop, position_controller, torque_controller, impedance_controller, velocity_controller, state_controller, joint_position_controller, admittance_controller, System::communication_, led, output_encoder, torque_sensor, driver, param->main_loop_param, *calibration);
 };
 
 Communication System::communication_ = {config::usb};
 void usb_interrupt() {
     config::usb.interrupt();
 }
-Actuator System::actuator_ = {config::fast_loop, config::main_loop, param->startup_param};
+Actuator System::actuator_ = {config::fast_loop, config::main_loop, param->startup_param, *calibration};
 
 float v3v3 = 3.3;
 
@@ -144,9 +150,19 @@ void system_init() {
 
     config_init();
 
-    TIM1->CR1 = TIM_CR1_CEN; // start main loop interrupt
+    config::main_loop.init();
+
+    NVIC_SetPriority(HRTIM1_Master_IRQn, NVIC_EncodePriority(NVIC_GetPriorityGrouping(), 1, 0));
+    NVIC_EnableIRQ(HRTIM1_Master_IRQn);
+    HRTIM1->sMasterRegs.MDIER |= HRTIM_MDIER_MCMP1IE; // interrupt on MCMP1
+   
+    HRTIM1->sMasterRegs.MCMP1R = 400;
+    static_assert(config::main_loop_frequency > CPU_FREQUENCY_HZ/4/65536, "Main loop frequency too low");
+    HRTIM1->sMasterRegs.MPER = CPU_FREQUENCY_HZ/4/config::main_loop_frequency;
+    HRTIM1->sMasterRegs.MCR = 0 << HRTIM_MCR_SYNC_SRC_Pos | 2 << HRTIM_MCR_SYNC_OUT_Pos | HRTIM_MCR_CONT | HRTIM_MCR_PREEN | HRTIM_MCR_MREPU | 7 << HRTIM_MCR_CK_PSC_Pos; // CPU_FREQUENCY * 32 / 2^7 = 42.5 MHz
     config::usb.connect();
-    HRTIM1->sMasterRegs.MCR = HRTIM_MCR_TDCEN + HRTIM_MCR_TECEN + HRTIM_MCR_TFCEN; // start high res timer
+
+    HRTIM1->sMasterRegs.MCR |= HRTIM_MCR_MCEN + HRTIM_MCR_TACEN + HRTIM_MCR_TDCEN + HRTIM_MCR_TECEN + HRTIM_MCR_TFCEN; // start high res timer, also triggers TIM1
 }
 
 FrequencyLimiter temp_rate = {10};
@@ -175,6 +191,7 @@ void system_maintenance() {
     index_mod = config::motor_encoder.index_error(param->fast_loop_param.motor_encoder.cpr);
     config_maintenance();
 }
+void main_maintenance() {}
 
 void setup_sleep() {
     NVIC_DisableIRQ(TIM1_UP_TIM16_IRQn);

@@ -6,8 +6,8 @@
 
 class ADS1235_2 : public ADS1235 {
  public:
-    ADS1235_2(SPIDMA &spidma, volatile int* register_operation = nullptr) : 
-        ADS1235(spidma, register_operation) {
+    ADS1235_2(SPIDMA &spidma) : 
+        ADS1235(spidma) {
     }
     uint32_t init() {
       uint32_t retval = ADS1235::init();
@@ -42,7 +42,7 @@ class ADS1235_2 : public ADS1235 {
         }
         last_torque1_ = torque1_;
         toggle_ ^= true;
-        torque_diff_ = torque1_ - torque2_ + bias_;
+        torque_diff_ = torque1_ - torque2_;
         spidma_.readwrite(mux, data_, 2);
       }
       return torque_diff_;

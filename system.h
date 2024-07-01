@@ -15,6 +15,7 @@ extern uint32_t t_period_fastloop;
 extern uint32_t t_period_mainloop;
 
 void system_maintenance();
+void main_maintenance();
 
 #ifndef TOGGLE_SCOPE_PIN
 #define TOGGLE_SCOPE_PIN(X,x)
@@ -102,8 +103,8 @@ class System {
         actuator_.main_loop_.torque_controller_.set_debug_variables(api);
         actuator_.main_loop_.state_controller_.set_debug_variables(api);
         api.add_api_variable("tgain", new APIFloat(&actuator_.main_loop_.torque_sensor_.gain_));
-        api.add_api_variable("tbias", new APIFloat(&actuator_.main_loop_.torque_sensor_.bias_));
-        api.add_api_variable("torque", new const APIFloat(&actuator_.main_loop_.torque_sensor_.torque_));
+        api.add_api_variable("tbias", new APIFloat(&actuator_.main_loop_.torque_sensor_bias_));
+        api.add_api_variable("torque", new const APIFloat(&actuator_.main_loop_.status_.torque));
         api.add_api_variable("t_i_correction", new const APIFloat(&actuator_.main_loop_.param_.torque_correction));
         api.add_api_variable("log", new APICallback(get_log, log));
         api.add_api_variable("messages_version", new APICallback([](){ return MOTOR_MESSAGES_VERSION; }, [](std::string s) {} ));
@@ -173,7 +174,7 @@ class System {
         api.add_api_variable("motor_position_raw", new const APIFloat(&actuator_.fast_loop_.motor_position_));
         api.add_api_variable("obias", new APIFloat(&actuator_.main_loop_.output_encoder_bias_));
         api.add_api_variable("mbias", new APIFloat(&actuator_.main_loop_.motor_encoder_bias_));
-        api.add_api_variable("ttgain", new const APIFloat(&actuator_.main_loop_.param_.torque_sensor.table_gain));
+        api.add_api_variable("ttgain", new const APIFloat(&actuator_.main_loop_.calibration_.torque_sensor.table_gain));
         API_ADD_FILTER(id_filter, FirstOrderLowPassFilter, actuator_.fast_loop_.foc_->id_filter_);
         API_ADD_FILTER(iq_filter, FirstOrderLowPassFilter, actuator_.fast_loop_.foc_->iq_filter_);
         API_ADD_FILTER(output_iq_filter, FirstOrderLowPassFilter, actuator_.fast_loop_.iq_filter_);
@@ -288,9 +289,7 @@ class System {
                 communication_.send_string(response.c_str(), response.length());
                 t_start = get_clock();
             }
-            system_maintenance();
-            actuator_.maintenance();
-            round_robin_logger.log_data(UPTIME_INDEX, get_uptime());
+            main_maintenance();
         }
     }
     static void main_loop_interrupt() {
@@ -298,6 +297,11 @@ class System {
     }
     static void fast_loop_interrupt() {
         actuator_.fast_loop_.update();
+    }
+    static void system_loop() {
+        system_maintenance();
+        actuator_.maintenance();
+        round_robin_logger.log_data(UPTIME_INDEX, get_uptime());
     }
     static void log(std::string str) {
         logger.log(str);
@@ -325,6 +329,7 @@ void system_init();
 void system_run();
 void main_loop_interrupt();
 void fast_loop_interrupt();
+void system_loop_interrupt();
 void usb_interrupt();
 
 #ifdef __cplusplus

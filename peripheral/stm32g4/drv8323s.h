@@ -4,6 +4,7 @@
 #include "../../driver.h"
 #include "../../logger.h"
 #include "../../parameter_api.h"
+#include "../spi_dma.h"
 
 extern uint16_t drv_regs_error;
 
@@ -12,15 +13,12 @@ static const std::string drv8323_status2_bits[11] = {"vgs_lc", "vgs_hc", "vgs_lb
 
 class DRV8323S : public DriverBase {
  public:
-    DRV8323S(SPI_TypeDef &regs, volatile int* register_operation = nullptr, void (*spi_reinit_callback)() = nullptr)
-        : regs_(regs), spi_reinit_callback_(spi_reinit_callback) {
-        if (register_operation != nullptr) {
-            register_operation_ = register_operation;
-        }
+    DRV8323S(SPI_TypeDef &regs, SPIPause &spi_pause)
+        : regs_(regs), spi_pause_(spi_pause) {
     }
 
     void drv_spi_start() {
-        (*register_operation_)++;
+        spi_pause_.pause();
         GPIO_SETL(A, 4, 2, 3, 5); // pin A4 NSS
         regs_.CR1 = 0; // clear SPE
         regs_.CR2 = (15 << SPI_CR2_DS_Pos) | SPI_CR2_FRF;   // 16 bit TI mode
@@ -35,14 +33,11 @@ class DRV8323S : public DriverBase {
         GPIOA->BSRR = GPIO_ODR_OD4;
 
         // SPI needs reinit
-        if (spi_reinit_callback_ != nullptr) {
-            spi_reinit_callback_();
-        }
-        (*register_operation_)--;
+        spi_pause_.unpause();
     }
 
     void disable() {
-        uint32_t status = get_drv_status();
+        uint32_t __attribute((unused)) status = get_drv_status();
         // todo bring back logger in isr safe way
         // logger.log_printf("drv8323 disabled, status1: %03x status2: %03x", status & 0xFFFF, status >> 16);
         // std::string s = "drv8323 status bits";
@@ -134,7 +129,6 @@ class DRV8323S : public DriverBase {
 
             return value;
     }
-    volatile int *register_operation_ = &register_operation_local_;
 
     void set_debug_variables(ParameterAPI &api) {
         api.add_api_variable("drv_idrivep_hs", new APICallbackUint8([this](){ return this->get_idrivep_hs(); },
@@ -203,8 +197,7 @@ class DRV8323S : public DriverBase {
 
  private:
     SPI_TypeDef &regs_;
-    volatile int register_operation_local_ = 0;
-    void (*spi_reinit_callback_)();
+    SPIPause &spi_pause_;
 };
 
 #endif  // UNHUMAN_MOTORLIB_PERIPHERAL_STM32G4_DRV8323S_H_

@@ -55,7 +55,7 @@ void pin_config_obot_g474_motor(const BoardRev &board_rev) {
      // Peripheral clock enable
         RCC->APB1ENR1 |= RCC_APB1ENR1_SPI3EN | RCC_APB1ENR1_TIM2EN |  RCC_APB1ENR1_TIM4EN | RCC_APB1ENR1_TIM5EN | RCC_APB1ENR1_USBEN | RCC_APB1ENR1_I2C1EN | RCC_APB1ENR1_RTCAPBEN | RCC_APB1ENR1_PWREN;
         RCC->APB2ENR |= RCC_APB2ENR_SPI1EN | RCC_APB2ENR_TIM1EN | RCC_APB2ENR_HRTIM1EN | RCC_APB2ENR_SYSCFGEN;
-        RCC->AHB1ENR |= RCC_AHB1ENR_DMA1EN | RCC_AHB1ENR_DMAMUX1EN;
+        RCC->AHB1ENR |= RCC_AHB1ENR_DMA1EN | RCC_AHB1ENR_DMA2EN | RCC_AHB1ENR_DMAMUX1EN;
         RCC->AHB2ENR |= RCC_AHB2ENR_GPIOAEN | RCC_AHB2ENR_GPIOBEN | RCC_AHB2ENR_GPIOCEN | RCC_AHB2ENR_GPIODEN | RCC_AHB2ENR_ADC12EN | RCC_AHB2ENR_ADC345EN;
         PWR->CR1 |= PWR_CR1_DBP;
         RCC->BDCR |= 2 << RCC_BDCR_RTCSEL_Pos | RCC_BDCR_RTCEN;
@@ -117,11 +117,15 @@ void pin_config_obot_g474_motor(const BoardRev &board_rev) {
         MASK_SET(GPIOC->PUPDR, GPIO_PUPDR_PUPD14, GPIO_PULL::UP);
 
         // TIM1 main loop interrupt        
-        static_assert(CPU_FREQUENCY_HZ / config::main_loop_frequency < 65536, "Main loop frequency too low");
-        TIM1->ARR = CPU_FREQUENCY_HZ / config::main_loop_frequency - 1;
-        TIM1->DIER = TIM_DIER_UIE;
-        NVIC_SetPriority(TIM1_UP_TIM16_IRQn, NVIC_EncodePriority(NVIC_GetPriorityGrouping(), 1, 0));
-        NVIC_EnableIRQ(TIM1_UP_TIM16_IRQn);
+        static_assert(CPU_FREQUENCY_HZ / 16 / config::system_loop_frequency < 65536, "System loop frequency too low");
+        TIM1->ARR = CPU_FREQUENCY_HZ / 16 / config::system_loop_frequency - 1;
+        TIM1->DIER = TIM_DIER_CC1IE;
+        TIM1->CCR1 = 800;
+        TIM1->PSC = 15;
+        TIM1->EGR = TIM_EGR_UG; // update to get the psc to take effect.
+        TIM1->SMCR = TIM_SMCR_TS_3 | 6 << TIM_SMCR_TS_Pos | 6 << TIM_SMCR_SMS_Pos; // trigger mode on tim_itr10 - hrtim_out_sync2
+        NVIC_SetPriority(TIM1_CC_IRQn, NVIC_EncodePriority(NVIC_GetPriorityGrouping(), 3, 0));
+        NVIC_EnableIRQ(TIM1_CC_IRQn);
 
         // RTC
         RTC->WPR = 0xCA;

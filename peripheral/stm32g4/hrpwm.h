@@ -29,7 +29,8 @@ class HRPWM : public PWMBase {
    }
    void init() {
       for(auto ch : std::vector<uint8_t>{ch_a_, ch_b_, ch_c_}) {
-         regs_.sTimerxRegs[ch].TIMxCR2 = HRTIM_TIMCR2_UDM;
+         regs_.sTimerxRegs[ch].TIMxCR2 = HRTIM_TIMCR2_UDM | 2 << HRTIM_TIMCR2_ROM_Pos; // up/down mode, update only on period
+                                                                                       // period also triggers interrupt 
          if (pwm3_mode_) {
             regs_.sTimerxRegs[ch].SETx2R = HRTIM_SET2R_SST;
          }
@@ -59,7 +60,7 @@ class HRPWM : public PWMBase {
       uint32_t deadprescale = 0;
       uint32_t deadtime = deadtime_ns_ * count_per_ns_; // 9 bits at 170e6*32/4 gives 376 ns
       for(auto ch : std::vector<uint8_t>{ch_a_, ch_b_, ch_c_}) {
-         regs_.sTimerxRegs[ch].OUTxR = HRTIM_OUTR_DTEN;
+         regs_.sTimerxRegs[ch].OUTxR |= HRTIM_OUTR_DTEN;
          regs_.sTimerxRegs[ch].DTxR = (deadtime << HRTIM_DTR_DTF_Pos) | (deadtime << HRTIM_DTR_DTR_Pos) | (deadprescale << HRTIM_DTR_DTPRSC_Pos);
       }
    }

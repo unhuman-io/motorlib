@@ -64,7 +64,7 @@ typedef struct {
     FOCParam foc_param;
     uint8_t phase_mode;     // two possible motor wiring states: 0: standard, 1: reverse (i.e. two motor leads flipped)
     struct {
-        float index_electrical_offset_pos;          // index offset electrial zero in encoder counts
+        // float index_electrical_offset_pos;          // index offset electrial zero in encoder counts
                                                     // can obtain this value from  motor_index_pos_ - motor_electrical_zero_pos_ 
                                                     // in fast_loop if use_index_electrical_offset_pos == 0 
         uint8_t use_index_electrical_offset_pos;    // Set to 1 to enable using the index_electrical_offset_pos above, 0 to disable
@@ -174,7 +174,7 @@ typedef struct {
     struct {
         float table[OUTPUT_ENCODER_TABLE_LENGTH][4];
         float cpr;                                  // output encoder cpr \sa FastLoopParam.motor_encoder.cpr
-        float bias;
+        // float bias;
         float dir;                                  // -1 or 1
         float disagreement_tolerance;               // fault if |output_encoder - startup_param.gear_ratio*motor_encoder| > disagreement_tolerance
                                                     // 0 to disable
@@ -187,7 +187,7 @@ typedef struct {
         float motor_controlled_max;   // will attempt to use position control to stay in these limits
         float motor_controlled_min;
     } encoder_limits;
-    TorqueSensorParam torque_sensor;
+    // TorqueSensorParam torque_sensor;
     int16_t host_timeout;                             // 0 to disable, if no commands received before host timeout, go to safe_mode
     MainControlMode safe_mode;                 // goes to this mode and freeze command if error
                                                     // need to send reset from host to exit
@@ -195,7 +195,7 @@ typedef struct {
     float vbus_min;
     float vbus_max;
     float motor_temperature_limit;
-    MotorError error_mask;              // can set to ERROR_MASK_ALL or ERROR_MASK_NONE or others
+    // MotorError error_mask;              // can set to ERROR_MASK_ALL or ERROR_MASK_NONE or others
     uint8_t safe_mode_driver_disable;   // driver is disabled in safe mode
     uint8_t no_latch_driver_fault;      // 1 allows for the driver_fault to be reset by software
 
@@ -213,6 +213,9 @@ typedef struct {
         float Cp;
     } motor_temperature_model;
 
+    float torque_sensor_dir;
+    uint8_t position_limits_disable;
+    MotorError error_mask;
 } MainLoopParam;
 
 typedef struct {
@@ -236,7 +239,7 @@ typedef struct {
     } motor_encoder_startup;
     float gear_ratio;   // gear ratio from input to output
     float gear_a, gear_b, gear_c, gear_d;       // cubic constants for gear ratio, 0 to not use
-    float motor_encoder_bias;   // for ENCODER_BIAS and ENCODER_BIAS_FROM_OUTPUT: extra bias to add to motor encoder
+    // float motor_encoder_bias;   // for ENCODER_BIAS and ENCODER_BIAS_FROM_OUTPUT: extra bias to add to motor encoder
                                 // for ENCODER_BIAS_*_WITH_MOTOR_CORRECTION: motor bias to give a desired motor zero position
                                     // for example when output position = 0 if motor position is -1, then motor_encoder_bias = 1
     float num_encoder_poles;    // if motor encoder is only absolute per revolution % num_encoder_poles
@@ -246,7 +249,21 @@ typedef struct {
     uint8_t no_zero_current_sensors;   // default of 0 will zero current sensors for 2 seconds on startup
                                        // 1 to disable and use fast_loop_param.i*_bias
     uint8_t no_driver_enable;       // 1 to require sending driver_enable mode and clear faults to enable the driver
+
 } StartupParam;
+
+typedef struct{
+    uint8_t schema_version;     // 2
+    float motor_encoder_bias;   // for ENCODER_BIAS and ENCODER_BIAS_FROM_OUTPUT: extra bias to add to motor encoder
+                                // for ENCODER_BIAS_*_WITH_MOTOR_CORRECTION: motor bias to give a desired motor zero position
+                                    // for example when output position = 0 if motor position is -1, then motor_encoder_bias = 1
+    float motor_encoder_index_electrical_offset_pos;          // index offset electrial zero in encoder counts
+                                                    // can obtain this value from  motor_index_pos_ - motor_electrical_zero_pos_ 
+    float output_encoder_bias;
+    float joint_encoder_bias;
+    TorqueSensorParam torque_sensor;
+    MotorError error_mask;      // can set to ERROR_MASK_ALL or ERROR_MASK_NONE or others
+} Calibration;
 
 typedef struct {
     struct { float i_d, i_q, v_q; } desired;         // desired current in A, i_d typically 0, i_q creates torque, v_q in V is a feedforward
