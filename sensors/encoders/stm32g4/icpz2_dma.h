@@ -7,8 +7,8 @@
 #define ICPZ2_SET_DEBUG_VARIABLES(prefix, api, icpz) \
     ICPZ_SET_DEBUG_VARIABLES(prefix "1", System::api, icpz.icpz_);\
     ICPZ_SET_DEBUG_VARIABLES(prefix "2", System::api, icpz.icpz2_);\
-    api.add_api_variable(prefix "1enc", new const APIInt32(&icpz.value1_));\
-    api.add_api_variable(prefix "2enc", new const APIInt32(&icpz.value2_));\
+    api.add_api_variable(prefix "1enc", new const APIUint32(&icpz.value1_.word));\
+    api.add_api_variable(prefix "2enc", new const APIUint32(&icpz.value2_.word));\
     api.add_api_variable(prefix "disagreement_error", new APIUint32(&icpz.disagreement_error_));\
     api.add_api_variable(prefix "1temp_nb", new const APICallbackFloat([]{ return icpz.get_temperature(0); }));\
     api.add_api_variable(prefix "2temp_nb", new const APICallbackFloat([]{ return icpz.get_temperature(1); }));\
@@ -105,17 +105,17 @@ class ICPZ2DMA : public EncoderBase {
         uint8_t *data_buf1 = data_mult_[current_buf_index][1];
         uint8_t *data_buf2 = data_mult_[current_buf_index][2];
         bool crc_error1, crc_error2;
-        value1_ = icpz_.read_raw_buf(data_buf1, crc_error1);
-        value2_ = ((icpz2_.read_raw_buf(data_buf2, crc_error2)<<8) + (uint32_t) pow(2, 31))>>8;
+        value1_.word = icpz_.read_raw_buf(data_buf1, crc_error1);
+        value2_.word = icpz2_.read_raw_buf(data_buf2, crc_error2) + (uint32_t) pow(2, 23);
 
         if (!crc_error1 & !crc_error2) {
-          value_.word = (value1_ + value2_)>>1;
+          value_.ipos = (value1_.ipos + value2_.ipos)/2;
           ICPZ::Encoder24 diffe = {};
           diffe.pos = value_.pos - last_value_.pos;
           int32_t diff = diffe.ipos;
           pos_ += diff;
           last_value_ = value_;
-          diff_ = value1_ - value2_;
+          diff_ = value1_.ipos - value2_.ipos;
           if (std::abs(diff_ - (int32_t) pow(2, 23)) > disagreement_tolerance_) {
             disagreement_error_++;
           }
@@ -204,8 +204,8 @@ class ICPZ2DMA : public EncoderBase {
     ICPZ &icpz_;
     ICPZ &icpz2_;
     SPIDMA &spidma_;
-    int32_t pos_ = 0, value1_ = 0, value2_ = 0;
-    ICPZ::Encoder24 value_ = {}, last_value_ = {};
+    int32_t pos_ = 0;
+    ICPZ::Encoder24 value_ = {}, last_value_ = {}, value1_ = {}, value2_ = {};
     int32_t diff_ = 0;
     uint32_t disagreement_error_ = 0;
     int32_t disagreement_tolerance_ = .1/2/M_PI*pow(2,24);
