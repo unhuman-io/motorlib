@@ -84,7 +84,10 @@ class ICPZBase : public EncoderBase {
     struct Encoder24 {
       union {
         struct {
-          int32_t pos:24;
+          uint32_t pos:24;
+        };
+        struct {
+          int32_t ipos:24;
         };
         uint32_t word;
       };
