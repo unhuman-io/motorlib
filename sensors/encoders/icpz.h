@@ -81,6 +81,15 @@ class ICPZBase : public EncoderBase {
       "startup_aborted_timeout", "user_error_1", "user_error_2", "user_error_3"};
 
     enum Disk{Default, PZ03S, PZ08S, PZ16S};
+    struct Encoder24 {
+      union {
+        struct {
+          int32_t pos:24;
+        };
+        uint32_t word;
+      };
+    };
+
     static constexpr float r_disk_um[4] = {1, 10700, 18600, 7200};
     ICPZBase(SPIDMA &spidma, Disk disk = Default) 
       : spidma_(spidma), disk_(disk) {
@@ -155,11 +164,12 @@ class ICPZBase : public EncoderBase {
 
     int32_t read_buf(uint8_t buf[4]) {
       bool crc_error;
-      uint32_t data = read_raw_buf(buf, crc_error);
+      Encoder24 enc = {};
+      enc.word = read_raw_buf(buf, crc_error);
       if (!crc_error) {
-        int32_t diff = (int32_t) ((data<<8) - (last_data_<<8))/256; // rollover summing
+        int32_t diff = enc.pos - last_enc_.pos; // rollover summing
         pos_ += diff;
-        last_data_ = data;
+        last_enc_ = enc;
       }
       return get_value();
     }
@@ -585,7 +595,7 @@ class ICPZBase : public EncoderBase {
     uint8_t command_[5] = {};
     uint8_t data_[5] = {};
     int32_t pos_ = 0;
-    uint32_t last_data_ = 0;
+    Encoder24 last_enc_ = {};
     uint8_t bank_ = 255;
     uint8_t read_register_opcode_ = 0x81;
     uint8_t write_register_opcode_ = 0xcf;

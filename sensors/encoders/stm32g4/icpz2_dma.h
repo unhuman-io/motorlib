@@ -17,7 +17,7 @@
     api.add_api_variable(prefix "1diag_str_nb", new const APICallback([]{ return icpz.get_diagnosis_str(0); }));\
     api.add_api_variable(prefix "2diag_str_nb", new const APICallback([]{ return icpz.get_diagnosis_str(1); }));\
     api.add_api_variable(prefix "diff", new const APIInt32(&icpz.diff_));\
-    api.add_api_variable(prefix "value", new const APIInt32(&icpz.value_));\
+    api.add_api_variable(prefix "value", new const APIUint32(&icpz.value_.word));\
 
 
 
@@ -107,8 +107,10 @@ class ICPZ2DMA : public EncoderBase {
         value2_ = ((icpz2_.read_raw_buf(data_buf2, crc_error2)<<8) + (uint32_t) pow(2, 31))>>8;
 
         if (!crc_error1 & !crc_error2) {
-          value_ = (value1_ + value2_)>>1;
-          pos_ = unroll(pos_, value_, last_value_);
+          value_.word = (value1_ + value2_)>>1;
+
+          int32_t diff = value_.pos - last_value_.pos;
+          pos_ += diff;
           last_value_ = value_;
           diff_ = value1_ - value2_;
           if (std::abs(diff_ - (int32_t) pow(2, 23)) > disagreement_tolerance_) {
@@ -130,12 +132,6 @@ class ICPZ2DMA : public EncoderBase {
         }        
       }
       return get_value();
-    }
-
-    int32_t unroll(int32_t unrolled, uint32_t value, uint32_t last_value) {
-      int32_t diff = (value<<8) - (last_value<<8);
-      unrolled += diff/256;
-      return unrolled;
     }
 
     int32_t get_value() const { return pos_; }
@@ -205,7 +201,8 @@ class ICPZ2DMA : public EncoderBase {
     ICPZ &icpz_;
     ICPZ &icpz2_;
     SPIDMA &spidma_;
-    int32_t pos_ = 0, value_ = 0, value1_ = 0, value2_ = 0, last_value_ = 0;
+    int32_t pos_ = 0, value1_ = 0, value2_ = 0;
+    ICPZ::Encoder24 value_ = {}, last_value_ = {};
     int32_t diff_ = 0;
     uint32_t disagreement_error_ = 0;
     int32_t disagreement_tolerance_ = .1/2/M_PI*pow(2,24);
