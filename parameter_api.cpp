@@ -121,6 +121,8 @@ std::string ParameterAPI::get_api_variable_name(uint16_t index) const {
     return retval;
 }
 
+ParameterAPI::string_iterator
+
 void APIFloat::set(std::string s) {
     *value_ = std::stof(s);
 }
