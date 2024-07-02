@@ -6,6 +6,7 @@
 #include <malloc.h>
 
 #define US_TO_CPU(t_us) (t_us*(CPU_FREQUENCY_HZ/1000000))
+#define CPU_TO_US(t_cpu) (t_cpu/(CPU_FREQUENCY_HZ/1000000))
 extern volatile uint32_t * const cpu_clock;
 extern volatile uint32_t uptime;
 

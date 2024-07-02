@@ -495,6 +495,7 @@ void system_init() {
     System::api.add_api_variable("t1cmp", new APIUint32(&TIM1->CCR1));
 
     System::api.add_api_variable("flash_cal", new const APICallback([]{
+        mcu_time t_start = get_clock();
         void * adr = &_eccmram; // End of ccmram is an empty ram space. The linker script ensures that there is enough 
                                 // space for the calibration to reside here temporarily
         Calibration *cal = (Calibration *) adr;
@@ -507,8 +508,14 @@ void system_init() {
         if (std::isfinite(config::fast_loop.motor_index_electrical_offset_measured_)) {
             cal->motor_encoder_index_electrical_offset_pos = config::fast_loop.motor_index_electrical_offset_measured_;
         }
-        config::flash.write((uint32_t) calibration, (uint32_t*) cal, sizeof(Calibration));
-        return "ok";
+        bool retval = config::flash.write((uint32_t) calibration, (uint32_t*) cal, sizeof(Calibration));
+        mcu_time t_end = get_clock();
+        logger.log_printf("flash cal success: %d, time: %ld us", retval, CPU_TO_US(t_end - t_start));
+        if (retval) {
+            return "ok";
+        } else {
+            return "error";
+        }
     }));
 
     System::api.add_api_variable("flash_cal_lock", new APICallbackUint8(

@@ -14,9 +14,10 @@ class Flash : public FlashBase<Flash> {
     void unlock();
     void unlock_opt();
     void save_opt(bool load=true);
-    void erase_page(uint32_t address);
-    void write_dword(uint32_t address, const uint32_t* data);
-    void write_impl(uint32_t address, const void *data, uint32_t size);
+    bool check_general_error();
+    bool erase_page(uint32_t address);
+    bool write_dword(uint32_t address, const uint32_t* data);
+    bool write_impl(uint32_t address, const void *data, uint32_t size);
     bool is_sbank() const { return (regs_.OPTR & FLASH_OPTR_DBANK) == 0; } // Also *((uint8_t *) 0x1fff7802) & 0x40) == 0;
     void lock_section(uint32_t address, uint32_t size);
     void unlock_section(uint32_t address, uint32_t size);
