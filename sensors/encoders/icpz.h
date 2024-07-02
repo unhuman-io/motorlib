@@ -151,12 +151,16 @@ class ICPZBase : public EncoderBase {
         last_data_ = data;
       }
       if (!diag.nErr) {
-        last_error_pos_ = pos_;
-        //clear_diag();
+        if (last_diag_.nErr) {
+          last_error_pos_ = pos_;
+        }
       }
       if (!diag.nWarn) {
-        last_warn_pos_ = pos_;
+        if (last_diag_.nWarn) {
+          last_warn_pos_ = pos_;
+        }
       }
+      last_diag_ = diag;
       return get_value();
     }
     int32_t get_value() const {
@@ -565,7 +569,8 @@ class ICPZBase : public EncoderBase {
     uint32_t warn_count_ = 0;
     uint32_t crc_error_count_ = 0;
     uint32_t raw_value_ = 0;
-
+    
+    Diag last_diag_ = {};
     int32_t last_error_pos_ = 0;
     int32_t last_warn_pos_ = 0;
 
