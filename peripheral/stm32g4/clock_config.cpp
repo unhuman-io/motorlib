@@ -52,7 +52,8 @@ extern "C" void SystemClock_Config(void)
 
   RCC->CCIPR = 0 << RCC_CCIPR_CLK48SEL_Pos | // HSI48 (0) for usb
     2 << RCC_CCIPR_ADC12SEL_Pos | 2 << RCC_CCIPR_ADC345SEL_Pos | // (2) sysclk
-    0 << RCC_CCIPR_I2C1SEL_Pos | 0 << RCC_CCIPR_I2C2SEL_Pos; // (0) pclk
+    0 << RCC_CCIPR_I2C1SEL_Pos | 0 << RCC_CCIPR_I2C2SEL_Pos | // (0) pclk
+    2 << RCC_CCIPR_FDCANSEL_Pos; // (2) pclk fdcan
 
 
   RCC->APB1ENR1 |= RCC_APB1ENR1_CRSEN;
