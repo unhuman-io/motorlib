@@ -8,6 +8,7 @@
 #endif
 #include "messages.h"
 #include <atomic>
+#include <string_view>
 
 #define LOGGING_MAX_SIZE 4096
 class Logger {

@@ -29,7 +29,7 @@ declare -A sha=( [x86_64]=6cd1bbc1d9ae57312bcd169ae283153a9572bd6a8e4eeae2fedfbc
 arch=$(uname -m)
 fname=arm-gnu-toolchain-$version-$arch-arm-none-eabi
 url=https://developer.arm.com/-/media/Files/downloads/gnu/$version/binrel/$fname.tar.xz
-wget $url
+wget $url -O $fname.tar.xz
 cat <(printf "${sha[$arch]} $fname.tar.xz\n")
 sha256sum -c <(printf "${sha[$arch]} $fname.tar.xz\n")
 tar xf $fname.tar.xz --strip-components=1

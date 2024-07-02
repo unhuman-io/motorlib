@@ -12,6 +12,8 @@
 #include "table_interp.h"
 #include "cstack.h"
 
+extern "C" void system_init();
+
 class FastLoop {
  public:
     FastLoop(int32_t frequency_hz, PWM &pwm, MotorEncoder &encoder, const FastLoopParam &param, const Calibration &calibration,
@@ -311,6 +313,21 @@ class FastLoop {
       beep_ = false;
     }
 
+    void set_ia_adc_gain(float gain) {
+      param_.adc1_gain = gain;
+    }
+    void set_ib_adc_gain(float gain) {
+      param_.adc2_gain = gain;
+    }
+    void set_ic_adc_gain(float gain) {
+      param_.adc3_gain = gain;
+    }
+    void set_i_adc_gain(float gain) {
+      set_ia_adc_gain(gain);
+      set_ib_adc_gain(gain);
+      set_ic_adc_gain(gain);
+    }
+
     void zero_current_sensors_on(float t_seconds = 1) {
       zero_current_sensors_ = true;
       zero_current_sensors_end_ = get_clock() + t_seconds*CPU_FREQUENCY_HZ;
@@ -402,6 +419,7 @@ class FastLoop {
    CStack<FastLoopStatus,100> status_log_; // 24*4*100*2 = 19200 bytes
 
    friend class System;
+   friend void system_init();
 };
 
 #endif  // UNHUMAN_MOTORLIB_FAST_LOOP_H_

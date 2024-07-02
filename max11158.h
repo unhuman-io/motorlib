@@ -18,12 +18,12 @@ class MAX11158 : public TorqueSensorBase {
             return;
         }
         count_ = 0;
-        spi_dma_.start_readwrite(data_out_, data_in_, length_);
+        spi_dma_.start_readwrite_isr(data_out_, data_in_, length_);
     }
 
     float read() {
         if (count_ == 0) {
-            spi_dma_.finish_readwrite();
+            spi_dma_.finish_readwrite_isr();
             raw_value_ = ~(data_in_[0] << 16 | data_in_[1] << 8 | data_in_[2]) & 0xFFFFFF; // invert for mistake on board
             signed_value_ = (int32_t) (raw_value_ >> 6) - 0x20000;
             torque_ = signed_value_ * gain_;

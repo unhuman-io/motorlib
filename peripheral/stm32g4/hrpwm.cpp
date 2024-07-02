@@ -14,11 +14,11 @@ void HRPWM::set_vbus(float vbus) {
 }
 
 void HRPWM::open_mode() {
-    regs_.sCommonRegs.ODISR = 0xFFF;
+    regs_.sCommonRegs.ODISR = 3 << 2*ch_a_ | 3 << 2*ch_b_ | 3 << 2*ch_c_; // disable CH1 and CH2
 }
 void HRPWM::brake_mode() {
-    regs_.sCommonRegs.ODISR = 0x555;
-    regs_.sCommonRegs.OENR = 0xAAA;
+    regs_.sCommonRegs.ODISR = 1 << 2*ch_a_ | 1 << 2*ch_b_ | 1 << 2*ch_c_; // disable CH1
+    regs_.sCommonRegs.OENR = 2 << 2*ch_a_ | 2 << 2*ch_b_ | 2 << 2*ch_c_; // enable CH2
     regs_.sCommonRegs.CR1 = 0x7F; // disable updates
     regs_.sTimerxRegs[ch_a_].SETx1R = HRTIM_SET1R_SST; // set active state for some reason
     regs_.sTimerxRegs[ch_b_].SETx1R = HRTIM_SET1R_SST;
@@ -38,7 +38,7 @@ void HRPWM::voltage_mode() {
     regs_.sTimerxRegs[ch_b_].SETx1R = HRTIM_SET1R_CMP1;
     regs_.sTimerxRegs[ch_c_].SETx1R = HRTIM_SET1R_CMP1;
     regs_.sCommonRegs.CR1 = 0x0; // enable updates
-    regs_.sCommonRegs.OENR = 0xFFF;
+    regs_.sCommonRegs.OENR = 3 << 2*ch_a_ | 3 << 2*ch_b_ | 3 << 2*ch_c_; // enable CH1 and CH2
 }
 
 // todo doesn't work at startup before regs exist
@@ -104,12 +104,12 @@ void HRPWM3::voltage_mode() {
     regs_.sTimerxRegs[ch_b_].SETx2R = HRTIM_SET2R_CMP2;
     regs_.sTimerxRegs[ch_c_].SETx1R = HRTIM_SET1R_CMP1;
     regs_.sCommonRegs.CR1 = 0x0; // enable updates
-    regs_.sCommonRegs.OENR = 0xFFF;
+    regs_.sCommonRegs.OENR = 3 << 2*ch_a_ | 3 << 2*ch_b_ | 3 << 2*ch_c_; // enable CH1 and CH2;
 }
 
 void HRPWM3::brake_mode() {
-    regs_.sCommonRegs.ODISR = 0x555;
-    regs_.sCommonRegs.OENR = 0xAAA;
+    regs_.sCommonRegs.ODISR = 1 << 2*ch_a_ | 1 << 2*ch_b_ | 1 << 2*ch_c_; // disable CH1
+    regs_.sCommonRegs.OENR = 2 << 2*ch_a_ | 2 << 2*ch_b_ | 2 << 2*ch_c_; // enable CH2;
     regs_.sCommonRegs.CR1 = 0x7F; // disable updates
     regs_.sTimerxRegs[ch_a_].SETx1R = HRTIM_SET1R_SST; // set active state for some reason
     regs_.sTimerxRegs[ch_b_].SETx2R = HRTIM_SET2R_SST;

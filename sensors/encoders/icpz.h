@@ -31,6 +31,7 @@ static uint8_t CRC_BiSS_43_30bit (uint32_t w_InputData);
     api.add_api_variable(prefix "value", new const APIInt32(&icpz.pos_));\
     api.add_api_variable(prefix "diag", new const APICallback([](){ return icpz.read_diagnosis(); }));\
     api.add_api_variable(prefix "conf_write", new const APICallback([](){ return icpz.write_conf(); }));\
+    api.add_api_variable(prefix "conf_write_no_check", new const APICallback([](){ return icpz.write_conf_no_check(); }));\
     api.add_api_variable(prefix "auto_ana", new const APICallback([](){ icpz.start_auto_adj_ana(); return "ok"; }));\
     api.add_api_variable(prefix "auto_dig", new const APICallback([](){ icpz.start_auto_adj_dig(); return "ok"; }));\
     api.add_api_variable(prefix "readj_dig", new const APICallback([](){ icpz.start_auto_readj_dig(); return "ok"; }));\
@@ -57,12 +58,25 @@ static uint8_t CRC_BiSS_43_30bit (uint32_t w_InputData);
         [](uint8_t u){ icpz.set_ipo_filt1(u); }));\
     api.add_api_variable(prefix "ipo_filt2", new APICallbackHex<uint8_t>([](){ return icpz.get_ipo_filt2(); }, \
         [](uint8_t u){ icpz.set_ipo_filt2(u); })); \
-    api.add_api_variable(prefix "temp", new const APICallbackFloat([]{ return icpz.get_temperature(); }));
+    api.add_api_variable(prefix "temp", new const APICallbackFloat([]{ return icpz.get_temperature(); })); \
+    api.add_api_variable(prefix "diag_str", new const APICallback([](){ return icpz.read_diagnosis_str(); }));\
+    api.add_api_variable(prefix "clear_diag", new const APICallback([](){ icpz.clear_diag(); return "ok"; }));\
+    api.add_api_variable(prefix "last_error_pos", new const APIInt32(&icpz.last_error_pos_));\
+    api.add_api_variable(prefix "last_warn_pos", new const APIInt32(&icpz.last_warn_pos_));\
 
 template<typename ConcreteICPZ>
 class ICPZBase : public EncoderBase {
  public:
     const char *disk_names[4] = {"default", "pz03s", "pz08s", "pz16s"};
+    static constexpr const char *diag_strs[32] = {"photo_amp_sat", "led_cur_low", "temp_sense_not_ready", "vddio_low",
+      "interpolator_error", "5", "abz_not_ready", "uvw_not_ready",
+      "alpha_overflow", "omega_overflow", "digital_photo_amp_not_ss", "prc_sync_failed",
+      "analog_adjust_at_boundary", "digital_adjust_at_boundary", "temp_limit_1", "temp_limit_2",
+      "multi_turn_error", "multi_turn_error_2", "multi_turn_error_3", "multi_turn_error_4",
+      "multi_turn_warning", "multi_turn_pos_failed", "pin_ada_stuck_0", "pin_ada_stuck_1",
+      "startup_in_progress", "eeprom_crc_error", "gpio0_in_error", "gpio1_in_error",
+      "startup_aborted_timeout", "user_error_1", "user_error_2", "user_error_3"};
+
     enum Disk{Default, PZ03S, PZ08S, PZ16S};
     const float r_disk_um[4] = {1, 10700, 18600, 7200};
     ICPZBase(SPIDMA &spidma, Disk disk = Default) 
@@ -90,61 +104,63 @@ class ICPZBase : public EncoderBase {
       IWDG->KR = 0xAAAA;
 
       //set_register(7, 9, {0});
-      success = set_register(0, 0, {3}) ? success : false; // fast speed on port a, set first
-      success = set_register(7, 9, {0}) ? success : false; // multiturn data length = 0
-      success = set_register(7, 0xA, {0}) ? success : false; // spi_ext = 0
+      success &= set_register(0, 0, {3}); // fast speed on port a, set first
+      success &= set_register(7, 9, {0}); // multiturn data length = 0
+      success &= set_register(7, 0xA, {0}); // spi_ext = 0
       success &= set_register(7, 0, {0x13, 0x07, 0, 0x11}); // disable prc error, default: {0x13, 0x0F, 0, 0x11}, 
       success &= set_register(7, 4, {0x0C, 0xC8, 0, 0x02}); // prc is a warning, default: {0x0C, 0xC0, 0, 0x02}, 
-      success = set_register(0, 0xF, {4}) ? success : false; // 0x00 ran_fld = 0 -> never update position based on absolute track after initial, tol 4
-      success = set_register(2, 3, {0x77}) ? success : false; // moderate dynamic digital calibration
-      success = set_register(2, 0, {0x77, 0x7}) ? success: false; // moderate dynamic analog calibration
+      success &= set_register(0, 0xF, {4});  // 0x00 ran_fld = 0 -> never update position based on absolute track after initial, tol 4
+      success &= set_register(2, 3, {0x77}); // moderate dynamic digital calibration
+      success &= set_register(2, 0, {0x77, 0x7});  // moderate dynamic analog calibration
+      success &= set_register(0, 3, {0xEA}); // ipo_filt1 per datasheet
 
       if (disk_ == PZ03S) {
-        success = set_register(8, 0, {0, 1}) ? success : false; // fcl = 256
-        success = set_register(8, 2, {0, 0}) ? success : false; // fcs = 0
-        success = set_register(0, 7, {8 << 4}) ? success : false; // sys_ovr = 8
-        //success = set_register(1, 0xB, {9}) ? success : false; // ai_scale = 9 (1.0048),
+        success &= set_register(8, 0, {0, 1}); // fcl = 256
+        success &= set_register(8, 2, {0, 0}); // fcs = 0
+        success &= set_register(0, 7, {8 << 4}); // sys_ovr = 8
       } else if (disk_ == PZ08S) {
-        success = set_register(8, 0, {0xBE, 1}) ? success : false; // fcl = 446 (0x1BE)
-        success = set_register(8, 2, {216, 0}) ? success : false; // fcs = 216
-        success = set_register(0, 7, {9 << 4}) ? success : false; // sys_ovr = 9
+        success &= set_register(8, 0, {0xBE, 1}); // fcl = 446 (0x1BE)
+        success &= set_register(8, 2, {216, 0}); // fcs = 216
+        success &= set_register(0, 7, {9 << 4}); // sys_ovr = 9
         // ai phase -20
       } else if (disk_ == PZ16S) {
-        success = set_register(8, 0, {172, 0}) ? success : false; // fcl = 172
-        success = set_register(8, 2, {27, 0}) ? success : false; // fcs = 27
-        success = set_register(0, 7, {8 << 4}) ? success : false; // sys_ovr = 8
+        success &= set_register(8, 0, {172, 0}); // fcl = 172
+        success &= set_register(8, 2, {27, 0}); // fcs = 27
+        success &= set_register(0, 7, {8 << 4}); // sys_ovr = 8
       }
        return success;
     }
     void trigger() {
-      if (!*register_operation_) {
-        ongoing_read_ = true;
-        spidma_.start_readwrite(command_, data_, sizeof(command_));
-      }
+      spidma_.start_readwrite_isr(command_, data_, sizeof(command_));
     }
     int32_t read() {
-      if (ongoing_read_) {
-        spidma_.finish_readwrite();
-        uint32_t data = ((data_[1] << 16) | (data_[2] << 8) | data_[3]) << 8;
-        raw_value_ = data >> 8;
-        uint32_t word = data | data_[4];
-        Diag diag = {.word = data_[4]};
-        uint8_t crc6_calc = ~CRC_BiSS_43_30bit(word >> 6) & 0x3f;
-        error_count_ += !diag.nErr;
-        warn_count_ += !diag.nWarn;
-        uint8_t crc_error = diag.crc6 == crc6_calc ? 0 : 1;
-        crc_error_count_ += crc_error;
-        if (!crc_error) {
-          int32_t diff = (data - last_data_); // rollover summing
-          pos_ += diff/256;
-          //pos_ = data/256;
-          last_data_ = data;
-        }
-        if (!diag.nErr) {
-          //clear_diag();
-        }
-        ongoing_read_ = false;
+      spidma_.finish_readwrite_isr();
+      uint32_t data = ((data_[1] << 16) | (data_[2] << 8) | data_[3]) << 8;
+      raw_value_ = data >> 8;
+      uint32_t word = data | data_[4];
+      Diag diag = {.word = data_[4]};
+      uint8_t crc6_calc = ~CRC_BiSS_43_30bit(word >> 6) & 0x3f;
+      error_count_ += !diag.nErr;
+      warn_count_ += !diag.nWarn;
+      uint8_t crc_error = diag.crc6 == crc6_calc ? 0 : 1;
+      crc_error_count_ += crc_error;
+      if (!crc_error) {
+        int32_t diff = (data - last_data_); // rollover summing
+        pos_ += diff/256;
+        //pos_ = data/256;
+        last_data_ = data;
       }
+      if (!diag.nErr) {
+        if (last_diag_.nErr) {
+          last_error_pos_ = pos_;
+        }
+      }
+      if (!diag.nWarn) {
+        if (last_diag_.nWarn) {
+          last_warn_pos_ = pos_;
+        }
+      }
+      last_diag_ = diag;
       return get_value();
     }
     int32_t get_value() const {
@@ -152,121 +168,128 @@ class ICPZBase : public EncoderBase {
     }
     bool index_received() const { return true; }
 
-    void set_register_operation() {
-      static_cast<ConcreteICPZ*>(this)->set_register_operation_impl();
-    }
-    void set_register_operation_impl() {
-      (*register_operation_)++;
-    }
-    void clear_register_operation() {
-      static_cast<ConcreteICPZ*>(this)->clear_register_operation_impl(); 
-    }
-    void clear_register_operation_impl() {
-       (*register_operation_)--;
-    }
-
     std::string read_diagnosis() {
-      set_register_operation();
+      spidma_.claim();
       uint8_t data_out[10] = {0x9C};
       uint8_t data_in[10];
-      spidma_.readwrite(data_out, data_in, 10, true);
+      spidma_.readwrite(data_out, data_in, 10);
       clear_diag();
-      clear_register_operation();
+      spidma_.release();
       return bytes_to_hex(data_in+2, 8);
     }
 
+    std::string read_diagnosis_str() {
+      spidma_.claim();
+      uint8_t data_out[10] = {0x9C};
+      uint8_t data_in[10];
+      spidma_.readwrite(data_out, data_in, 10);
+      clear_diag();
+      spidma_.release();
+      uint32_t diag_err = data_in[5] << 24 | data_in[4] << 16 | data_in[3] << 8 | data_in[2];
+      uint32_t diag_warn = data_in[9] << 24 | data_in[8] << 16 | data_in[7] << 8 | data_in[6];
+      return "err: " + diagnosis_to_str(diag_err) + " warn: " + diagnosis_to_str(diag_warn);
+    }
+
+    static std::string diagnosis_to_str(uint32_t diag) {
+      std::string s;
+      for (int i=0; i<32; i++) {
+        if (diag & (1 << i)) {
+          s += std::string(diag_strs[i]) + " ";
+        } 
+      }
+      return s;
+    }
+
     void clear_diag() {
-      set_register_operation();
-      set_register(bank_, Addr::COMMANDS, {SCLEAR}, true);
-      clear_register_operation();
+      set_register(bank_, Addr::COMMANDS, {SCLEAR});
     }
 
         // non interrupt context
     std::vector<uint8_t> read_register(uint8_t address, uint8_t length) {
-        set_register_operation();
+        spidma_.claim();
         std::vector<uint8_t> data_out(length+3, 0);
         data_out[0] = read_register_opcode_;
         data_out[1] = address;
         uint8_t data_in[length+3];
         
         if (type_ == PZ) {
-          spidma_.readwrite(data_out.data(), data_in, length+3, true);
-          clear_register_operation();
+          spidma_.readwrite(data_out.data(), data_in, length+3);
+          spidma_.release();
           return std::vector<uint8_t>(&data_in[3], &data_in[3+length]);
         } else {
-          spidma_.readwrite(data_out.data(), data_in, 2, true);
+          spidma_.readwrite(data_out.data(), data_in, 2);
           data_out[0] = 0xad;
           data_out[1] = 0;
-          spidma_.readwrite(data_out.data(), data_in, length+2, true);
-          clear_register_operation();
+          spidma_.readwrite(data_out.data(), data_in, length+2);
+          spidma_.release();
           return std::vector<uint8_t>(&data_in[2], &data_in[2+length]);
         }
     }
 
     bool set_bank(uint8_t bank) {
-        set_register_operation();
+        spidma_.claim();
         if (bank != bank_) {
           uint8_t data_in[3];
           uint8_t data_out[] = {write_register_opcode_, 0x40, bank};
-          spidma_.readwrite(data_out, data_in, 3, true);
+          spidma_.readwrite(data_out, data_in, 3);
           if (read_register(0x40, 1) != std::vector<uint8_t>{bank}) {
             logger.log("ichaus bank " + std::to_string(read_register(0x40, 1)[0]) + " not " + std::to_string(bank));
-            clear_register_operation();
+            spidma_.release();
             return false;
           }
           bank_ = bank;
         }
-        clear_register_operation();
+        spidma_.release();
         return true;
     }
 
     std::vector<uint8_t> read_register(uint8_t bank, uint8_t address, uint8_t length) {
-        set_register_operation();
+        spidma_.claim();
         std::vector<uint8_t> data_out(length+3, 0);
         data_out[0] = read_register_opcode_;
         data_out[1] = address;
         uint8_t data_in[length+3];
         if (!set_bank(bank)) {
-          clear_register_operation();
+          spidma_.release();
           return std::vector<uint8_t>(1,0xff);
         }
         if (type_ == PZ) {
-          spidma_.readwrite(data_out.data(), data_in, length+3, true);
-          clear_register_operation();
+          spidma_.readwrite(data_out.data(), data_in, length+3);
+          spidma_.release();
           return std::vector<uint8_t>(&data_in[3], &data_in[3+length]);
         } else {
-          spidma_.readwrite(data_out.data(), data_in, 2, true);
+          spidma_.readwrite(data_out.data(), data_in, 2);
           data_out[0] = 0xad;
           data_out[1] = 0;
-          spidma_.readwrite(data_out.data(), data_in, length+2, true);
-          clear_register_operation();
+          spidma_.readwrite(data_out.data(), data_in, length+2);
+          spidma_.release();
           return std::vector<uint8_t>(&data_in[2], &data_in[2+length]);
         }
     }
 
     // non interrupt context
     bool set_register(uint8_t bank, uint8_t address, const std::vector<uint8_t> &value, bool set_only = false) {
-        set_register_operation();
+        spidma_.claim();
         bool retval = true;
         uint8_t data_in[std::max(value.size()+2,(std::size_t) 3)];
         if (!set_bank(bank)) {
-          clear_register_operation();
+          spidma_.release();
           return false;
         }
         std::vector<uint8_t> data_out = {write_register_opcode_, address};
         data_out.insert(data_out.end(), value.begin(), value.end());
-        spidma_.readwrite(data_out.data(), data_in, data_out.size(), true);
+        spidma_.readwrite(data_out.data(), data_in, data_out.size());
         if (!set_only) {
           std::vector<uint8_t> data_read = read_register(address, value.size());
           retval = data_read == value;
-          clear_register_operation();
+          spidma_.release();
           if (!retval) {
             for (unsigned int i=0; i<value.size(); i++) {
               logger.log_printf("icpz register %x, set%d: %x, read%d: %x", address, i, value[i], i, data_read[i]);
             }
           }
         } else {
-          clear_register_operation();
+          spidma_.release();
         }
         return retval;
     }
@@ -281,13 +304,23 @@ class ICPZBase : public EncoderBase {
 
     std::string write_conf() {
         set_register(0, Addr::COMMANDS, {CMD::CONF_WRITE_ALL});
-        wait_while_false_with_timeout_us(read_register(Addr::COMMANDS, 1)[0] == 0, 100);
+        // 20 ms timeout found experimentally (15 seems ok 10 too short)
+        wait_while_false_with_timeout_us(read_register(Addr::COMMANDS, 1)[0] == 0, 20000);
+        uint8_t result = read_register(Addr::COMMANDS, 1)[0];
+        if (result != 0) {
+          return "conf timeout error: " + std::to_string(result);
+        }
         auto data = read_register(Addr::CMD_STAT, 1);
         if (data[0] == 0) {
           return "conf write success";
         } else {
           return "conf error: " + std::to_string(data[0]);
         }
+    }
+
+    std::string write_conf_no_check() {
+        set_register(0, Addr::COMMANDS, {CMD::CONF_WRITE_ALL});
+        return "ok";
     }
 
     void start_auto_adj_ana() {
@@ -429,14 +462,14 @@ class ICPZBase : public EncoderBase {
 
     std::string get_cal_string() {
         char c[200];
-        std::snprintf(c, 200, "cos_off: %f, sin_off: %f, sc_gain, %f, sc_phase: %f ai_phase: %f, ai_scale: %f, ecc_amp: %f, ecc_phase: %f", 
+        std::snprintf(c, 200, "cos_off: %f, sin_off: %f, sc_gain: %f, sc_phase: %f, ai_phase: %f, ai_scale: %f, ecc_amp: %f, ecc_phase: %f", 
           get_cos_off(), get_sin_off(), get_sc_gain(), get_sc_phase(), get_ai_phase(), get_ai_scale(), get_ecc_um(), get_ecc_phase());
         return std::string(c);
     }
 
     std::string get_cals_string() {
         char c[200];
-        std::snprintf(c, 200, "cos_off: %f, sin_off: %f, sc_gain, %f, sc_phase: %f ai_phase: %f, ai_scale: %f", 
+        std::snprintf(c, 200, "cos_off: %f, sin_off: %f, sc_gain: %f, sc_phase: %f, ai_phase: %f, ai_scale: %f", 
           get_cos_offs(), get_sin_offs(), get_sc_gains(), get_sc_phases(), get_ai_phases(), get_ai_scales());
         return std::string(c);
     }
@@ -527,10 +560,7 @@ class ICPZBase : public EncoderBase {
     uint8_t data_[5] = {};
     int32_t pos_ = 0;
     uint32_t last_data_ = 0;
-    volatile int register_operation_local_ = 0;
-    volatile int *register_operation_ = &register_operation_local_;
     uint8_t bank_ = 255;
-    bool ongoing_read_ = false;
     uint8_t read_register_opcode_ = 0x81;
     uint8_t write_register_opcode_ = 0xcf;
     enum {PZ, MU} type_ = PZ;
@@ -539,6 +569,11 @@ class ICPZBase : public EncoderBase {
     uint32_t warn_count_ = 0;
     uint32_t crc_error_count_ = 0;
     uint32_t raw_value_ = 0;
+    
+    Diag last_diag_ = {};
+    int32_t last_error_pos_ = 0;
+    int32_t last_warn_pos_ = 0;
+
     friend void config_init();
     friend void config_maintenance();
 
