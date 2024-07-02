@@ -19,7 +19,7 @@ class SPIEncoder : public EncoderBase {
     // for configuration values, make sure to only call when trigger and read
     // are not running
     uint16_t send_and_read(uint16_t value);
- protected:
+
     SPI_TypeDef &regs_;
     GPIO &gpio_cs_;
     uint16_t data_;
