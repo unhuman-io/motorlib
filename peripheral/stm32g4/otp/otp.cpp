@@ -4,11 +4,15 @@
 #error Must define NAME, REV, and NUM to use this file
 #endif
 
-static_assert(NAME == "motor_molex" || NAME == "motor");
-
 static_assert(NAME == "motor_molex" ? 
     REV == "MR0" || REV == "MR0P" || REV == "MR1" || REV == "MR2" : 
-    REV == "R0" || REV == "R1" || REV == "R3" || REV == "R4");
+    NAME == "motor" ?
+    REV == "R0" || REV == "R1" || REV == "R3" || REV == "R4" :
+    NAME == "trace" ?
+    REV == "R0" :
+    false);
+
+
 
 
 const volatile OTP __attribute__ ((section ("otp"), used)) otp1 = {
