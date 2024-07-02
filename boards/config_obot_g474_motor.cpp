@@ -511,6 +511,19 @@ void system_init() {
         return "ok";
     }));
 
+    System::api.add_api_variable("flash_cal_lock", new APICallbackUint8(
+        []{ return config::flash.is_section_locked((uint32_t) calibration, sizeof(Calibration)); },
+    [](uint8_t b){
+        if (b) {
+            config::flash.lock_section((uint32_t) calibration, sizeof(Calibration));
+        } else {
+            config::flash.unlock_section((uint32_t) calibration, sizeof(Calibration));
+        }
+    }));
+
+    System::api.add_api_variable("sbank", new APICallbackUint8([]{ return config::flash.is_sbank(); },
+        [](uint8_t b){ config::flash.set_sbank(b); }));
+
     for (auto regs : std::vector<ADC_TypeDef*>{ADC1, ADC2, ADC3, ADC4, ADC5}) {
         regs->CR = ADC_CR_ADVREGEN;
         ns_delay(20000);

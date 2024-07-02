@@ -1,4 +1,5 @@
 #include "flash.h"
+#include "../../logger.h"
 
 void Flash::unlock() {
     if (regs_.CR & FLASH_CR_LOCK) {
@@ -7,8 +8,68 @@ void Flash::unlock() {
     }
 }
 
+void Flash::unlock_opt() {
+    if (regs_.CR & FLASH_CR_OPTLOCK) {
+        regs_.OPTKEYR = 0x08192A3B;
+        regs_.OPTKEYR = 0x4C5D6E7F;
+    }
+}
+
+void Flash::set_sbank(bool sbank) {
+    unlock_opt();
+    if (sbank) {
+        regs_.OPTR &= ~FLASH_OPTR_DBANK;
+    } else {
+        regs_.OPTR |= FLASH_OPTR_DBANK;
+    }
+    save_opt();
+    // will cause reset (and crash due to different flash)
+}
+
+void Flash::lock_section(uint32_t address, uint32_t size) {
+    unlock_opt();
+    uint32_t start_page = address_to_page(address);
+    uint32_t end_page = address_to_page(address + size - 1);
+    logger.log_printf("Locking pages %d-%d\n", start_page, end_page);
+
+    if (is_sbank() || start_page < 128) {
+        regs_.WRP1AR = start_page << FLASH_WRP1AR_WRP1A_STRT_Pos | end_page << FLASH_WRP1AR_WRP1A_END_Pos;
+    } else {
+        regs_.WRP2AR = (start_page - 128) << FLASH_WRP2AR_WRP2A_STRT_Pos | (end_page - 128) << FLASH_WRP2AR_WRP2A_END_Pos;
+    }
+    save_opt();
+}
+
+void Flash::unlock_section(uint32_t address, uint32_t size) {
+    unlock_opt();
+    // just unlock all
+    // below are default values
+    regs_.WRP1AR = 0xFF << FLASH_WRP1AR_WRP1A_STRT_Pos | 0x00 << FLASH_WRP1AR_WRP1A_END_Pos;
+    regs_.WRP2AR = 0xFF << FLASH_WRP2AR_WRP2A_STRT_Pos | 0x00 << FLASH_WRP2AR_WRP2A_END_Pos;
+    save_opt();
+}
+
+bool Flash::is_section_locked(uint32_t address, uint32_t size) const {
+    uint32_t start_page = address_to_page(address);
+    uint32_t end_page = address_to_page(address + size - 1);
+    if (is_sbank() || start_page < 128) {
+        return regs_.WRP1AR & (start_page << FLASH_WRP1AR_WRP1A_STRT_Pos) && regs_.WRP1AR & (end_page << FLASH_WRP1AR_WRP1A_END_Pos);
+    } else {
+        return regs_.WRP2AR & ((start_page - 128) << FLASH_WRP2AR_WRP2A_STRT_Pos) && regs_.WRP2AR & ((end_page - 128) << FLASH_WRP2AR_WRP2A_END_Pos);
+    }
+}
+
+void Flash::save_opt(bool load) {
+    regs_.CR = FLASH_CR_OPTSTRT;
+    while (regs_.SR & FLASH_SR_BSY);
+    if (load) {
+        regs_.CR = FLASH_CR_OBL_LAUNCH;
+    }
+    while (regs_.SR & FLASH_SR_BSY);
+}
+
 void Flash::erase_page(uint32_t address) {
-    uint32_t page = (address - 0x8000000) / page_size_;
+    uint32_t page = address_to_page(address);
     if (is_sbank()) {
         regs_.CR = FLASH_CR_PER | page << FLASH_CR_PNB_Pos | 0 << FLASH_CR_BKER_Pos;
     } else {
@@ -49,4 +110,8 @@ void Flash::write_impl(uint32_t address, const void *data, uint32_t size) {
     }
     regs_.CR &= ~FLASH_CR_PG;
     __enable_irq();
+}
+
+uint32_t Flash::address_to_page(uint32_t address) const {
+    return (address - 0x8000000) / page_size_;
 }
