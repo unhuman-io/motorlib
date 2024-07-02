@@ -42,12 +42,19 @@ class ICPZDMA : public ICPZBase<ICPZDMA> {
         uint8_t crc6_calc = ~CRC_BiSS_43_30bit(word >> 6) & 0x3f;
         error_count_ += !diag.nErr;
         warn_count_ += !diag.nWarn;
+
         uint8_t crc_error = diag.crc6 == crc6_calc ? 0 : 1;
         crc_error_count_ += crc_error;
         if (!crc_error) {
           int32_t diff = (data - last_data_); // rollover summing
           pos_ += diff/256;
           last_data_ = data;
+        }
+        if (!diag.nErr) {
+          last_error_pos_ = pos_;
+        }
+        if (!diag.nWarn) {
+          last_warn_pos_ = pos_;
         }
       }
       or_diag();
