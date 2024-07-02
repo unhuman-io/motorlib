@@ -2,31 +2,59 @@
 #define UNHUMAN_MOTORLIB_LOGGER_H_
 
 #include <string>
-#include <queue>
 #include <stdarg.h>
+#ifndef LOGGER_TEST
 #include "util.h"
+#endif
 #include "messages.h"
+#include <atomic>
+#include <string_view>
 
+#define LOGGING_MAX_SIZE 4096
 class Logger {
  public:
-    void log(std::string str) {
-        if (log_queue_.size() > 102) {
-            log_queue_.pop();
-        }
-        log_queue_.push("(" + std::to_string(get_uptime()) + " " + std::to_string(get_clock()) + ") " + str);
+    void log(std::string_view str) {
+        char header[50];
+        snprintf(header, sizeof(header), "(%lu %lu) ", get_uptime(), get_clock());
+        front_log_.set_value(front_atomic_.load(std::memory_order_acquire));
+        log_raw(header);
+        log_raw(str);
+        log_raw('\0');
+        front_atomic_.store(front_log_, std::memory_order_release);
+        num_elements_++;
     }
-    void log_once(std::string str) {
-        if (str != log_queue_.back()) {
-            log(str);
-        }
-    }
+    // void log_once(std::string_view str) {
+    //     // if (str != log_queue_.back()) {
+    //     //     log(str);
+    //     // }
+    // }
+
+    // get_log must be called from the same or lower priority task as log
     std::string get_log() {
-        std::string str = "log end";
-        if (!log_queue_.empty()) {
-            str = log_queue_.front();
-            log_queue_.pop();
+        std::string str;
+
+        if (!empty()) {
+            bool success = false;
+            do {
+                str = "";
+                CIndex front_next = front_atomic_.load(std::memory_order_acquire);
+                uint32_t front_expected = front_next;
+                do {
+                    str += log_queue_[front_next];
+                    ++front_next;
+                } while (log_queue_[front_next] != '\0');
+                ++front_next;
+                num_elements_--;
+                success = front_atomic_.compare_exchange_strong(front_expected, front_next);
+            } while (!success);
+            
+        } else {
+            str = "log end";
         }
         return str;
+    }
+    bool empty() const {
+        return front_atomic_.load(std::memory_order_acquire) == back_;
     }
     void log_printf(const char *s, ...) {
         va_list args;
@@ -36,8 +64,63 @@ class Logger {
         va_end(args);
         log(sout);
     }
+    uint32_t num_elements() const { return num_elements_; }
+    static std::string_view extract_string(std::string_view str) {
+        std::string_view data = str.substr(str.find(") ") + 2);
+        return data;
+    }
  private:
-    std::queue<std::string> log_queue_ = {};
+    class CIndex {
+     public:
+        CIndex() = default;
+        CIndex(uint32_t value) : value_(value) {
+            wrap();
+        }
+        void inc() { value_++; wrap(); }
+        CIndex& operator++() { inc(); return *this; }
+        void set_value(uint32_t value) {
+            value_ = value;
+        }
+        bool operator==(const CIndex& other) const {
+            return value_ == other.value_;
+        }
+        bool wrapped() const { return wrapped_; }
+        operator uint32_t() const { return value_; }
+        void wrap() {
+            wrapped_ = value_ >= LOGGING_MAX_SIZE;
+            value_ %= LOGGING_MAX_SIZE;
+        }
+     private:
+        uint32_t value_ = 0;
+        bool wrapped_ = false;
+    };
+
+    void log_raw(char c) {
+        log_queue_[back_] = c;
+        ++back_;
+        move_front();
+    }
+
+    void log_raw(std::string_view str) {
+        for (size_t i = 0; i < str.size(); i++) {
+            log_raw(str[i]);
+        }
+    }
+
+    void move_front() {
+        if (back_ == front_log_) {
+            // find next front
+            while (log_queue_[++front_log_] != '\0');
+            ++front_log_;
+            num_elements_--;
+        }
+    }
+
+    uint32_t num_elements_ = 0;
+    CIndex front_log_;
+    CIndex back_;
+    std::atomic<uint32_t> front_atomic_{0};
+    char log_queue_[LOGGING_MAX_SIZE] = {};
 };
 
 extern Logger logger;
