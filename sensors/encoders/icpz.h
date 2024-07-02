@@ -61,6 +61,8 @@ static uint8_t CRC_BiSS_43_30bit (uint32_t w_InputData);
     api.add_api_variable(prefix "temp", new const APICallbackFloat([]{ return icpz.get_temperature(); })); \
     api.add_api_variable(prefix "diag_str", new const APICallback([](){ return icpz.read_diagnosis_str(); }));\
     api.add_api_variable(prefix "clear_diag", new const APICallback([](){ icpz.clear_diag(); return "ok"; }));\
+    api.add_api_variable(prefix "last_error_pos", new const APIInt32(&icpz.last_error_pos_));\
+    api.add_api_variable(prefix "last_warn_pos", new const APIInt32(&icpz.last_warn_pos_));\
 
 template<typename ConcreteICPZ>
 class ICPZBase : public EncoderBase {
@@ -110,7 +112,7 @@ class ICPZBase : public EncoderBase {
       success &= set_register(0, 0xF, {4});  // 0x00 ran_fld = 0 -> never update position based on absolute track after initial, tol 4
       success &= set_register(2, 3, {0x77}); // moderate dynamic digital calibration
       success &= set_register(2, 0, {0x77, 0x7});  // moderate dynamic analog calibration
-      success &= set_register(0, 3, {0x6e}); // ipo_filt1 per datasheet
+      success &= set_register(0, 3, {0xEA}); // ipo_filt1 per datasheet
 
       if (disk_ == PZ03S) {
         success &= set_register(8, 0, {0, 1}); // fcl = 256
@@ -149,8 +151,16 @@ class ICPZBase : public EncoderBase {
         last_data_ = data;
       }
       if (!diag.nErr) {
-        //clear_diag();
+        if (last_diag_.nErr) {
+          last_error_pos_ = pos_;
+        }
       }
+      if (!diag.nWarn) {
+        if (last_diag_.nWarn) {
+          last_warn_pos_ = pos_;
+        }
+      }
+      last_diag_ = diag;
       return get_value();
     }
     int32_t get_value() const {
@@ -559,6 +569,11 @@ class ICPZBase : public EncoderBase {
     uint32_t warn_count_ = 0;
     uint32_t crc_error_count_ = 0;
     uint32_t raw_value_ = 0;
+    
+    Diag last_diag_ = {};
+    int32_t last_error_pos_ = 0;
+    int32_t last_warn_pos_ = 0;
+
     friend void config_init();
     friend void config_maintenance();
 

@@ -6,6 +6,7 @@
 #include "../peripheral/stm32g4/drv8323s.h"
 #include "../peripheral/stm32g4/uart.h"
 #include "../peripheral/protocol.h"
+#include "../peripheral/stm32g4/flash.h"
 
 #ifdef SCOPE_DEBUG
 #define SET_SCOPE_PIN(X,x) GPIO##X->BSRR = 1 << x
@@ -161,6 +162,8 @@ namespace config {
 
     // has_mb85rc64
     MB85RC64 mb85rc64(i2c1, 4);
+
+    Flash flash(*FLASH);
 
     const BoardRev board_rev = get_board_rev();
 
@@ -364,6 +367,8 @@ uint32_t init_failure = 0;
 
 void config_init();
 
+extern uint32_t _eccmram[];
+
 void system_init() {
 
 #if COMMS == COMMS_UART
@@ -488,6 +493,23 @@ void system_init() {
 
     System::api.add_api_variable("mcmp", new APIUint32(&HRTIM1->sMasterRegs.MCMP1R));
     System::api.add_api_variable("t1cmp", new APIUint32(&TIM1->CCR1));
+
+    System::api.add_api_variable("flash_cal", new const APICallback([]{
+        void * adr = &_eccmram; // End of ccmram is an empty ram space. The linker script ensures that there is enough 
+                                // space for the calibration to reside here temporarily
+        Calibration *cal = (Calibration *) adr;
+        std::memcpy(adr, calibration, sizeof(Calibration));
+        cal->motor_encoder_bias = System::actuator_.startup_motor_bias_;
+        cal->torque_sensor.bias = config::main_loop.torque_sensor_bias_;
+        cal->torque_sensor.gain = config::main_loop.torque_sensor_.gain_;
+        //cal->joint_encoder_bias;
+        cal->output_encoder_bias = config::main_loop.output_encoder_bias_;
+        if (std::isfinite(config::fast_loop.motor_index_electrical_offset_measured_)) {
+            cal->motor_encoder_index_electrical_offset_pos = config::fast_loop.motor_index_electrical_offset_measured_;
+        }
+        config::flash.write((uint32_t) calibration, (uint32_t*) cal, sizeof(Calibration));
+        return "ok";
+    }));
 
     for (auto regs : std::vector<ADC_TypeDef*>{ADC1, ADC2, ADC3, ADC4, ADC5}) {
         regs->CR = ADC_CR_ADVREGEN;

@@ -29,7 +29,8 @@ class HRPWM : public PWMBase {
    }
    void init() {
       for(auto ch : std::vector<uint8_t>{ch_a_, ch_b_, ch_c_}) {
-         regs_.sTimerxRegs[ch].TIMxCR2 = HRTIM_TIMCR2_UDM;
+         regs_.sTimerxRegs[ch].TIMxCR2 = HRTIM_TIMCR2_UDM | 2 << HRTIM_TIMCR2_ROM_Pos; // up/down mode, update only on period
+                                                                                       // period also triggers interrupt 
          if (pwm3_mode_) {
             regs_.sTimerxRegs[ch].SETx2R = HRTIM_SET2R_SST;
          }
