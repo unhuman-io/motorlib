@@ -17,6 +17,7 @@ class Actuator {
     }
     void start() {
       if (!startup_param_.no_driver_enable) {
+         us_delay(1000);
          main_loop_.driver_.enable();
          main_loop_.set_mode(CLEAR_FAULTS);
       }

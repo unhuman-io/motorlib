@@ -74,15 +74,20 @@ $(SELF_DIR)../peripheral/stm32g4/spi_slave.cpp\
 $(SELF_DIR)../peripheral/stm32g4/spi_slave_figure.cpp\
 $(SELF_DIR)../peripheral/stm32g4/uart.cpp\
 $(SELF_DIR)../peripheral/stm32g4/spi_dma.cpp\
+$(SELF_DIR)../peripheral/stm32g4/flash.cpp\
+$(SELF_DIR)../peripheral/stm32g4/can.cpp\
 
 
 endif # MCU_TARGET == stm32g474
-
+# __attribute ((init_priority(X))) is used to set constructor initialization order
 override C_DEFS +=  \
 -DOBOT_VERSION=\"$(OBOT_VERSION)\" \
 -DOBOT_HASH=\"$(OBOT_HASH)\" \
 -DMOTORLIB_HASH=\"$(MOTORLIB_HASH)\" \
--DCONFIG=\"$(CONFIG)\"
+-DCONFIG=\"$(CONFIG)\" \
+-DLOGGER_INIT_PRIORITY=200 \
+-DSPIDMA_INIT_PRIORITY=201 \
+
 ifdef NOTES
 override C_DEFS += \
 -DNOTES=\"-$(NOTES)\"

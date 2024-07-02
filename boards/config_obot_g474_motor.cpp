@@ -6,6 +6,7 @@
 #include "../peripheral/stm32g4/drv8323s.h"
 #include "../peripheral/stm32g4/uart.h"
 #include "../peripheral/protocol.h"
+#include "../peripheral/stm32g4/flash.h"
 
 #ifdef SCOPE_DEBUG
 #define SET_SCOPE_PIN(X,x) GPIO##X->BSRR = 1 << x
@@ -25,12 +26,13 @@
 #define COMMS_USB   1
 #define COMMS_SPI   2
 #define COMMS_UART  3
+#define COMMS_CAN   4
 
 #ifndef COMMS
   #error "COMMS should be defined"
 #endif
 
-#if (COMMS != COMMS_USB) && (COMMS != COMMS_SPI) && (COMMS != COMMS_UART)
+#if (COMMS != COMMS_USB) && (COMMS != COMMS_SPI) && (COMMS != COMMS_UART) && (COMMS != COMMS_CAN)
   #error "Invalid COMMS value"
 #endif
 
@@ -63,6 +65,13 @@ using PWM = HRPWM;
 #endif
     using Communication = UARTCommunication;
 #endif
+
+#if (COMMS == COMMS_CAN)
+    #include "../communication/can_communication.h"
+    #include "../peripheral/stm32g4/can.h"
+    using Communication = CANCommunication<CAN>;
+#endif
+
 using Driver = DRV8323S;
 uint16_t drv_regs_error = 0;
 
@@ -153,6 +162,8 @@ namespace config {
 
     // has_mb85rc64
     MB85RC64 mb85rc64(i2c1, 4);
+
+    Flash flash(*FLASH);
 
     const BoardRev board_rev = get_board_rev();
 
@@ -273,7 +284,9 @@ namespace config {
 #endif
 #endif // COMMS_UART
 
-
+#if COMMS == COMMS_CAN
+    CAN can(CAN_NUM);
+#endif
 
 #if COMMS == COMMS_SPI
     figure::ProtocolParser spi_protocol(config::spi.rx_buffer_, RX_BUFFER_SIZE);
@@ -329,6 +342,10 @@ extern "C" void PendSV_Handler(void) {
 }
 #endif
 
+#if (COMMS == COMMS_CAN)
+Communication System::communication_(config::can, param->can_id);
+#endif
+
 void usb_interrupt() {
     config::usb.interrupt();
 }
@@ -349,6 +366,8 @@ int32_t index_mod = 0;
 uint32_t init_failure = 0;
 
 void config_init();
+
+extern uint32_t _eccmram[];
 
 void system_init() {
 
@@ -432,7 +451,7 @@ void system_init() {
         return config::motor_pwm.deadtime_ns_; }, [](uint16_t u) {config::motor_pwm.set_deadtime(u); }));
 
     if (config::board_rev.has_bmi270) {
-        System::api.add_api_variable("imu_read", new const APICallback([](){ return config::imu.get_string(); }));
+        System::api.add_api_variable("imu_read", new const APICallback([](){ config::imu.read(); return "ok"; }));
         System::api.add_api_variable("ax", new const APICallbackFloat([](){ return config::imu.data_.acc_x*8./pow(2,15); }));
         System::api.add_api_variable("ay", new const APICallbackFloat([](){ return config::imu.data_.acc_y*8./pow(2,15); }));
         System::api.add_api_variable("az", new const APICallbackFloat([](){ return config::imu.data_.acc_z*8./pow(2,15); }));
@@ -475,6 +494,23 @@ void system_init() {
     System::api.add_api_variable("mcmp", new APIUint32(&HRTIM1->sMasterRegs.MCMP1R));
     System::api.add_api_variable("t1cmp", new APIUint32(&TIM1->CCR1));
 
+    System::api.add_api_variable("flash_cal", new const APICallback([]{
+        void * adr = &_eccmram; // End of ccmram is an empty ram space. The linker script ensures that there is enough 
+                                // space for the calibration to reside here temporarily
+        Calibration *cal = (Calibration *) adr;
+        std::memcpy(adr, calibration, sizeof(Calibration));
+        cal->motor_encoder_bias = System::actuator_.startup_motor_bias_;
+        cal->torque_sensor.bias = config::main_loop.torque_sensor_bias_;
+        cal->torque_sensor.gain = config::main_loop.torque_sensor_.gain_;
+        //cal->joint_encoder_bias;
+        cal->output_encoder_bias = config::main_loop.output_encoder_bias_;
+        if (std::isfinite(config::fast_loop.motor_index_electrical_offset_measured_)) {
+            cal->motor_encoder_index_electrical_offset_pos = config::fast_loop.motor_index_electrical_offset_measured_;
+        }
+        config::flash.write((uint32_t) calibration, (uint32_t*) cal, sizeof(Calibration));
+        return "ok";
+    }));
+
     for (auto regs : std::vector<ADC_TypeDef*>{ADC1, ADC2, ADC3, ADC4, ADC5}) {
         regs->CR = ADC_CR_ADVREGEN;
         ns_delay(20000);
@@ -498,6 +534,7 @@ void system_init() {
     System::log("3v3: " + std::to_string(v3v3));
     System::log("obias: " +  std::to_string(calibration->output_encoder_bias));
     System::log("tbias: " + std::to_string(calibration->torque_sensor.bias));
+    System::log("tgain: " + std::to_string(calibration->torque_sensor.gain));
     System::log("offset: " + std::to_string(calibration->motor_encoder_index_electrical_offset_pos));
     System::log("mbias: " + std::to_string(calibration->motor_encoder_bias));
 
