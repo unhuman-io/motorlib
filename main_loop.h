@@ -12,8 +12,9 @@
 #include "hardware_brake.h"
 #include "round_robin_logger.h"
 #include "temperature_model.h"
+#include <cstring>
 
-static const std::string error_bit_strings[32] = ERROR_BIT_STRINGS;
+static const char *error_bit_strings[32] = ERROR_BIT_STRINGS;
 
 extern "C" {
 void system_init();
@@ -184,15 +185,15 @@ class MainLoop {
       if (status_.error.all & error_mask_.all && !(receive_data_.mode_desired == DRIVER_ENABLE || receive_data_.mode_desired == CLEAR_FAULTS)) {
           status_.error.fault = 1;
           if (safe_mode_ != true) {
-            // todo bring back logger in isr safe way
-            // logger.log_printf("fault detected, error: %08x", status_.error.all);
-            // std::string s = "fault bits:";
-            // for (int i=0; i<32; i++) {
-            //   if ((status_.error.all >> i) & 0x1) {
-            //     s += " " + error_bit_strings[i];
-            //   }
-            // }
-            // logger.log(s);
+            logger.log_printf("fault detected, error: %08x", status_.error.all);
+            char s[600] = "fault bits:";
+            for (int i=0; i<32; i++) {
+              if ((status_.error.all >> i) & 0x1) {
+                std::strcat(s, " "); 
+                std::strcat(s, error_bit_strings[i]);
+              }
+            }
+            logger.log(s);
           }
           safe_mode_ = true;
           set_mode(param_.safe_mode);
