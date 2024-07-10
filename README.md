@@ -10,7 +10,7 @@ The main loop is intended to run several different controllers that are identifi
 
 Motorlib has support for several different sensors and driver configurations. It is designed to be statically compiled for the specific hardware configuration including microcontroller, sensors, driver, and communication method. It is configured by means of the headers that you include and by typedefs. For example the `MainLoop` requires a `MotorEncoder` to operate. If your motor encoder is of type `MA732Encoder` you would configure as follows:
 ```c
-#include "ma732_encoder.h"
+#include "sensors/encoders/ma7xx_encoder.h"
 using MotorEncoder = MA732Encoder;
 #include "main_loop.h"
 ```

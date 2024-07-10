@@ -19,9 +19,9 @@ class FastLoop {
     FastLoop(int32_t frequency_hz, PWM &pwm, MotorEncoder &encoder, const FastLoopParam &param, const Calibration &calibration,
       volatile uint32_t *const i_a_dr, volatile uint32_t *const i_b_dr, volatile uint32_t *const i_c_dr, 
       volatile uint32_t *const v_bus_dr) 
-      : param_(param), motor_encoder_index_electrical_offset_pos_(calibration.motor_encoder_index_electrical_offset_pos), pwm_(pwm), encoder_(encoder), i_a_dr_(i_a_dr), i_b_dr_(i_b_dr), i_c_dr_(i_c_dr), v_bus_dr_(v_bus_dr),
-        motor_correction_table_(param_.motor_encoder.table), cogging_correction_table_(param_.cogging.table),
-        iq_filter_(1.0/frequency_hz), motor_velocity_filter_(1.0/frequency_hz), motor_position_filter_(1.0/frequency_hz) {
+      : motor_encoder_index_electrical_offset_pos_(calibration.motor_encoder_index_electrical_offset_pos), pwm_(pwm), encoder_(encoder), i_a_dr_(i_a_dr), i_b_dr_(i_b_dr), i_c_dr_(i_c_dr), v_bus_dr_(v_bus_dr),
+        motor_correction_table_(param.motor_encoder.table), cogging_correction_table_(param.cogging.table),
+        iq_filter_(1.0/frequency_hz), motor_velocity_filter_(1.0/frequency_hz), motor_position_filter_(1.0/frequency_hz), param_(param) {
        frequency_hz_ = frequency_hz;
        float dt = 1.0f/frequency_hz;
        foc_ = new FOC(dt);
@@ -343,7 +343,6 @@ class FastLoop {
       encoder_.clear_faults();
     }
  private:
-    FastLoopParam param_; // reallocate tables in ram
     float motor_encoder_index_electrical_offset_pos_;
 
     FOC *foc_;
@@ -404,8 +403,6 @@ class FastLoop {
    volatile uint32_t *const v_bus_dr_;
    PChipTable<MOTOR_ENCODER_TABLE_LENGTH> motor_correction_table_;
    PChipTable<COGGING_TABLE_SIZE> cogging_correction_table_;
-   CStack<FastLoopStatus,100> status_;
-   CStack<FastLoopStatus,100> status_log_; // 24*4*100*2 = 19200 bytes
    bool beep_ = false;
    uint32_t beep_end_ = 0;
    bool zero_current_sensors_ = false;
@@ -417,8 +414,9 @@ class FastLoop {
    FirstOrderLowPassFilter motor_velocity_filter_;
    FirstOrderLowPassFilter motor_position_filter_;
    
-   
-
+   FastLoopParam param_; // reallocate tables in ram
+   CStack<FastLoopStatus,100> status_;
+   CStack<FastLoopStatus,100> status_log_; // 24*4*100*2 = 19200 bytes
 
    friend class System;
    friend void system_init();
