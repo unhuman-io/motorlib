@@ -163,6 +163,17 @@ class ICPZBase : public EncoderBase {
       if (!diag.nErr) {
         last_error_pos_ = raw_value_;
       }
+      if (!diag.nErr) {
+        if (last_diag_.nErr) {
+          last_error_pos_ = pos_;
+        }
+      }
+      if (!diag.nWarn) {
+        if (last_diag_.nWarn) {
+          last_warn_pos_ = pos_;
+        }
+      }
+      last_diag_ = diag;
       return raw_value_;
     }
 
@@ -175,17 +186,6 @@ class ICPZBase : public EncoderBase {
         pos_ += diff;
         last_enc_ = enc;
       }
-      if (!diag.nErr) {
-        if (last_diag_.nErr) {
-          last_error_pos_ = pos_;
-        }
-      }
-      if (!diag.nWarn) {
-        if (last_diag_.nWarn) {
-          last_warn_pos_ = pos_;
-        }
-      }
-      last_diag_ = diag;
       return get_value();
     }
     int32_t read() {
@@ -615,7 +615,6 @@ class ICPZBase : public EncoderBase {
     uint8_t read_register_opcode_ = 0x81;
     uint8_t write_register_opcode_ = 0xcf;
     enum {PZ, MU} type_ = PZ;
-    uint32_t last_error_pos_ = 0;
 
     uint32_t error_count_ = 0;
     uint32_t warn_count_ = 0;
