@@ -19,6 +19,7 @@
     api.add_api_variable(prefix "diff", new const APIInt32(&icpz.diff_));\
     api.add_api_variable(prefix "value", new const APIUint32(&icpz.value_.word));\
     api.add_api_variable(prefix "ivalue", new const APICallbackInt32([] { return icpz.value_.ipos; }));\
+    api.add_api_variable(prefix "use_encoder", new APIUint8(&icpz.use_encoder_));\
 
 
 
@@ -109,7 +110,18 @@ class ICPZ2DMA : public EncoderBase {
         value2_.word = icpz2_.read_raw_buf(data_buf2, crc_error2) + (uint32_t) pow(2, 23);
 
         if (!crc_error1 & !crc_error2) {
-          value_.ipos = (value1_.ipos + value2_.ipos)/2;
+          switch (use_encoder_) {
+            default:
+            case 1:
+              value_.word = value1_.word;
+              break;
+            case 2:
+              value_.word = value2_.word;
+              break;
+            case 3:
+              value_.ipos = (value1_.ipos + value2_.ipos)/2;
+              break;
+          }
           ICPZ::Encoder24 diffe = {};
           diffe.pos = value_.pos - last_value_.pos;
           int32_t diff = diffe.ipos;
@@ -218,4 +230,5 @@ class ICPZ2DMA : public EncoderBase {
     uint8_t exti_num_;
     void (*start_cs_trigger_)();
     void (*stop_cs_trigger_and_wait_cs_high_)();
+    uint8_t use_encoder_ = 1;
 };
