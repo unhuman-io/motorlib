@@ -71,6 +71,7 @@ static uint8_t CRC_BiSS_43_30bit (uint32_t w_InputData);
     api.add_api_variable(prefix "clear_diag", new const APICallback([](){ icpz.clear_diag(); return "ok"; }));\
     api.add_api_variable(prefix "last_error_pos", new const APIInt32(&icpz.last_error_pos_));\
     api.add_api_variable(prefix "last_warn_pos", new const APIInt32(&icpz.last_warn_pos_));\
+    api.add_api_variable(prefix "i2c", new const APICallbackHex<uint16_t>([]{ return icpz.get_i2c_data(); }));\
 
 template<typename ConcreteICPZ>
 class ICPZBase : public EncoderBase {
@@ -621,6 +622,32 @@ class ICPZBase : public EncoderBase {
 
     void set_ipo_filt2(uint8_t u) {
         set_register(0, 4, {u});
+    }
+
+    uint16_t get_i2c_data() {
+        static uint8_t i;
+        uint16_t data = get_i2c_data(i) | i << 8;
+        i++;
+        return data;
+    }
+
+    uint8_t get_i2c_data(uint8_t address) {
+        uint8_t data_out[2] = {Opcode::REQ_I2C, address};
+        uint8_t data_in[2];
+        spidma_.claim();
+        spidma_.readwrite(data_out, data_in, 2);
+        uint8_t i2c_data;
+        wait_while_true_with_timeout_us(get_i2c_transaction_info_and_data(&i2c_data) == 1, 20000);
+        spidma_.release();
+        return i2c_data;
+    }
+
+    uint8_t get_i2c_transaction_info_and_data(uint8_t *i2c_data) {
+        uint8_t data_out[3] = {Opcode::GET_TRANS_INFO};
+        uint8_t data_in[3];
+        spidma_.readwrite(data_out, data_in, 3);
+        *i2c_data = data_in[2];
+        return data_in[1];
     }
 
     std::string get_cmd_result() {
