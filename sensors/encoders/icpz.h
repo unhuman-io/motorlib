@@ -137,6 +137,8 @@ class ICPZBase : public EncoderBase {
       success &= set_register(2, 0, {0x77, 0x7});  // moderate dynamic analog calibration
       success &= set_register(0, 3, {0xEA}); // ipo_filt1 per datasheet
 
+      success &= set_register(0xA, 0, {0x50 << 1});
+
       if (disk_ == PZ03S) {
         success &= set_register(8, 0, {0, 1}); // fcl = 256
         success &= set_register(8, 2, {0, 0}); // fcs = 0
@@ -302,6 +304,11 @@ class ICPZBase : public EncoderBase {
           spidma_.release();
           return std::vector<uint8_t>(&data_in[2], &data_in[2+length]);
         }
+    }
+
+    // use for register addresses >= 0x40 to skip bank selection
+    bool set_register(uint8_t address, const std::vector<uint8_t> &value, bool set_only = false) {
+        return set_register(bank_, address, value, set_only);
     }
 
     // non interrupt context
@@ -624,10 +631,12 @@ class ICPZBase : public EncoderBase {
         set_register(0, 4, {u});
     }
 
+    uint8_t i2c_index_ = 0;
     uint16_t get_i2c_data() {
-        static uint8_t i;
-        uint16_t data = get_i2c_data(i) | i << 8;
-        i++;
+        
+        set_bank(0x41);
+        uint16_t data = get_i2c_data(i2c_index_) | i2c_index_ << 8;
+        i2c_index_++;
         return data;
     }
 
