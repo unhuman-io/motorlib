@@ -42,35 +42,35 @@ class ICPZ2DMA : public EncoderBase {
       // cdiag1, angle1, angle2,
       // cdiag2, angle1, angle2,
 
-      command_mult_[0][0][0] = 0x81; // read temperature
+      command_mult_[0][0][0] = ICPZ::Opcode::READ_REG; // read temperature
       command_mult_[0][0][1] = 0x4e;
-      command_mult_[0][1][0] = 0xa6; // read position
-      command_mult_[0][2][0] = 0xa6; // read position
+      command_mult_[0][1][0] = ICPZ::Opcode::READ_POS; // read position
+      command_mult_[0][2][0] = ICPZ::Opcode::READ_POS; // read position
 
-      command_mult_[1][0][0] = 0x81; // read temperature
+      command_mult_[1][0][0] = ICPZ::Opcode::READ_REG; // read temperature
       command_mult_[1][0][1] = 0x4e;
-      command_mult_[1][1][0] = 0xa6; // read position
-      command_mult_[1][2][0] = 0xa6; // read position
+      command_mult_[1][1][0] = ICPZ::Opcode::READ_POS; // read position
+      command_mult_[1][2][0] = ICPZ::Opcode::READ_POS; // read position
 
-      command_mult_[2][0][0] = 0x9c; // read diagnosis
-      command_mult_[2][1][0] = 0xa6; // read position
-      command_mult_[2][2][0] = 0xa6; // read position
+      command_mult_[2][0][0] = ICPZ::Opcode::READ_DIAG; // read diagnosis
+      command_mult_[2][1][0] = ICPZ::Opcode::READ_POS; // read position
+      command_mult_[2][2][0] = ICPZ::Opcode::READ_POS; // read position
 
-      command_mult_[3][0][0] = 0x9c; // read diagnosis
-      command_mult_[3][1][0] = 0xa6; // read position
-      command_mult_[3][2][0] = 0xa6; // read position
+      command_mult_[3][0][0] = ICPZ::Opcode::READ_DIAG; // read diagnosis
+      command_mult_[3][1][0] = ICPZ::Opcode::READ_POS; // read position
+      command_mult_[3][2][0] = ICPZ::Opcode::READ_POS; // read position
       
-      command_mult_[4][0][0] = 0xcf; // clear diagnosis
+      command_mult_[4][0][0] = ICPZ::Opcode::WRITE_REG; // clear diagnosis
       command_mult_[4][0][1] = ICPZ::Addr::COMMANDS;
       command_mult_[4][0][2] = ICPZ::CMD::SCLEAR;
-      command_mult_[4][1][0] = 0xa6; // read position
-      command_mult_[4][2][0] = 0xa6; // read position
+      command_mult_[4][1][0] = ICPZ::Opcode::READ_POS; // read position
+      command_mult_[4][2][0] = ICPZ::Opcode::READ_POS; // read position
       
-      command_mult_[5][0][0] = 0xcf; // clear diagnosis
+      command_mult_[5][0][0] = ICPZ::Opcode::WRITE_REG; // clear diagnosis
       command_mult_[5][0][1] = ICPZ::Addr::COMMANDS;
       command_mult_[5][0][2] = ICPZ::CMD::SCLEAR;
-      command_mult_[5][1][0] = 0xa6; // read position
-      command_mult_[5][2][0] = 0xa6; // read position
+      command_mult_[5][1][0] = ICPZ::Opcode::READ_POS; // read position
+      command_mult_[5][2][0] = ICPZ::Opcode::READ_POS; // read position
     }
 
     bool init() {

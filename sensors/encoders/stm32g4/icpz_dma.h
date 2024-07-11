@@ -11,13 +11,13 @@ class ICPZDMA : public ICPZBase<ICPZDMA> {
       spidma_.pause_.start_callback_ = [this]{start_continuous_read();};
       spidma_.pause_.stop_callback_ = [this]{stop_continuous_read();};
 
-      command_mult_[1][0] = 0xa6; // read position
-      command_mult_[3][0] = 0xa6;
-      command_mult_[5][0] = 0xa6;
-      command_mult_[0][0] = 0x81; // read temperature
+      command_mult_[1][0] = ICPZ::Opcode::READ_POS; // read position
+      command_mult_[3][0] = ICPZ::Opcode::READ_POS;
+      command_mult_[5][0] = ICPZ::Opcode::READ_POS;
+      command_mult_[0][0] = ICPZ::Opcode::READ_REG; // read temperature
       command_mult_[0][1] = 0x4e;
-      command_mult_[2][0] = 0x9c; // read diagnosis
-      command_mult_[4][0] = 0xcf; // clear diagnosis
+      command_mult_[2][0] = ICPZ::Opcode::READ_DIAG; // read diagnosis
+      command_mult_[4][0] = ICPZ::Opcode::WRITE_REG; // clear diagnosis
       command_mult_[4][1] = Addr::COMMANDS;
       command_mult_[4][2] = CMD::SCLEAR;
     }

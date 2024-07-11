@@ -97,7 +97,7 @@ class ICPZBase : public EncoderBase {
     static constexpr float r_disk_um[4] = {1, 10700, 18600, 7200};
     ICPZBase(SPIDMA &spidma, Disk disk = Default) 
       : spidma_(spidma), disk_(disk) {
-      command_[0] = 0xa6; // read position
+      command_[0] = Opcode::READ_POS;
     }
     union Diag {
       struct {
@@ -107,6 +107,7 @@ class ICPZBase : public EncoderBase {
       };
       uint8_t word;
     };
+    enum Opcode {READ_REG=0x81, WRITE_REG=0xCF, READ_POS=0xA6, WRITE_COMMAND=0xD9, READ_DIAG=0x9C, REQ_I2C=0xD2, GET_TRANS_INFO=0xAD};
     enum Addr {CMD_STAT=0x76, COMMANDS=0x77};
     enum CMD {REBOOT=0x10, SCLEAR=0x20, CONF_WRITE_ALL=0x41, AUTO_ADJ_ANA=0xB0, AUTO_ADJ_DIG=0xB1, AUTO_READJ_DIG=0xB2, AUTO_ADJ_ECC=0xB3};
 
@@ -200,7 +201,7 @@ class ICPZBase : public EncoderBase {
 
     std::string read_diagnosis() {
       spidma_.claim();
-      uint8_t data_out[10] = {0x9C};
+      uint8_t data_out[10] = {Opcode::READ_DIAG};
       uint8_t data_in[10];
       spidma_.readwrite(data_out, data_in, 10);
       clear_diag();
@@ -210,7 +211,7 @@ class ICPZBase : public EncoderBase {
 
     std::string read_diagnosis_str() {
       spidma_.claim();
-      uint8_t data_out[10] = {0x9C};
+      uint8_t data_out[10] = {Opcode::READ_DIAG};
       uint8_t data_in[10];
       spidma_.readwrite(data_out, data_in, 10);
       clear_diag();
@@ -238,7 +239,7 @@ class ICPZBase : public EncoderBase {
     std::vector<uint8_t> read_register(uint8_t address, uint8_t length) {
         spidma_.claim();
         std::vector<uint8_t> data_out(length+3, 0);
-        data_out[0] = read_register_opcode_;
+        data_out[0] = Opcode::READ_REG;
         data_out[1] = address;
         uint8_t data_in[length+3];
         
@@ -248,7 +249,7 @@ class ICPZBase : public EncoderBase {
           return std::vector<uint8_t>(&data_in[3], &data_in[3+length]);
         } else {
           spidma_.readwrite(data_out.data(), data_in, 2);
-          data_out[0] = 0xad;
+          data_out[0] = Opcode::GET_TRANS_INFO;
           data_out[1] = 0;
           spidma_.readwrite(data_out.data(), data_in, length+2);
           spidma_.release();
@@ -260,7 +261,7 @@ class ICPZBase : public EncoderBase {
         spidma_.claim();
         if (bank != bank_) {
           uint8_t data_in[3];
-          uint8_t data_out[] = {write_register_opcode_, 0x40, bank};
+          uint8_t data_out[] = {Opcode::WRITE_REG, 0x40, bank};
           spidma_.readwrite(data_out, data_in, 3);
           if (read_register(0x40, 1) != std::vector<uint8_t>{bank}) {
             logger.log("ichaus bank " + std::to_string(read_register(0x40, 1)[0]) + " not " + std::to_string(bank));
@@ -276,7 +277,7 @@ class ICPZBase : public EncoderBase {
     std::vector<uint8_t> read_register(uint8_t bank, uint8_t address, uint8_t length) {
         spidma_.claim();
         std::vector<uint8_t> data_out(length+3, 0);
-        data_out[0] = read_register_opcode_;
+        data_out[0] = Opcode::READ_REG;
         data_out[1] = address;
         uint8_t data_in[length+3];
         if (!set_bank(bank)) {
@@ -289,7 +290,7 @@ class ICPZBase : public EncoderBase {
           return std::vector<uint8_t>(&data_in[3], &data_in[3+length]);
         } else {
           spidma_.readwrite(data_out.data(), data_in, 2);
-          data_out[0] = 0xad;
+          data_out[0] = Opcode::GET_TRANS_INFO;
           data_out[1] = 0;
           spidma_.readwrite(data_out.data(), data_in, length+2);
           spidma_.release();
@@ -306,7 +307,7 @@ class ICPZBase : public EncoderBase {
           spidma_.release();
           return false;
         }
-        std::vector<uint8_t> data_out = {write_register_opcode_, address};
+        std::vector<uint8_t> data_out = {Opcode::WRITE_REG, address};
         data_out.insert(data_out.end(), value.begin(), value.end());
         spidma_.readwrite(data_out.data(), data_in, data_out.size());
         if (!set_only) {
@@ -612,8 +613,6 @@ class ICPZBase : public EncoderBase {
     int32_t pos_ = 0;
     Encoder24 last_enc_ = {};
     uint8_t bank_ = 255;
-    uint8_t read_register_opcode_ = 0x81;
-    uint8_t write_register_opcode_ = 0xcf;
     enum {PZ, MU} type_ = PZ;
 
     uint32_t error_count_ = 0;
