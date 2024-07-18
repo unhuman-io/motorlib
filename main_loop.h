@@ -172,7 +172,8 @@ class MainLoop {
       status_.motor_position_filtered = motor_position_filter_.update(status_.motor_position);
       status_.output_position_filtered = output_position_filter_.update(status_.output_position);
       status_.output_velocity_filtered = output_velocity_filter_.update(status_.output_position);//(output_velocity);
-      status_.torque_filtered = torque_filter_.update(status_.torque);
+      //status_.torque_filtered = torque_filter_.update(status_.torque);
+      status_.torque_filtered = isnan(status_.torque) ? NAN : torque_filter_.update(status_.torque);
 
       status_.motor_temperature_estimate = motor_temperature_model_.step(status_.fast_loop.foc_status.measured.i_d, status_.fast_loop.foc_status.measured.i_q);
       round_robin_logger.log_data(MOTOR_TEMPERATURE_ESTIMATE_INDEX, status_.motor_temperature_estimate);
