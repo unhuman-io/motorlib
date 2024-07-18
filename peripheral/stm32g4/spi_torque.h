@@ -206,14 +206,14 @@ class SPITorque final : public TorqueSensorBase {
 
     uint32_t duplicates_ = 0;
 
-    float offset_A = 0.001879708100018f;
-    float offset_B = -0.002594712102985f;
-    float offset_C = -0.002387269502772f;
+    float offset_A = 0;//0.001879708100018f;
+    float offset_B = 0;//-0.002594712102985f;
+    float offset_C = 0;//-0.002387269502772f;
 
-    float gain_A = 1.0f;
-    float gain_B = 1.04f;
-    float gain_C = 0.61f;
-    float gain_T = 313000;
+    float gain_A = 1;//1.0f;
+    float gain_B = 1;//1.04f;
+    float gain_C = 1;//0.61f;
+    float gain_T = 100000;
     
     //float torque_ = 0;
     uint8_t count_ = 0;
