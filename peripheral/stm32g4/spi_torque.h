@@ -20,6 +20,18 @@ class SPITorque final : public TorqueSensorBase {
         regs_(regs), gpio_cs_(gpio_cs),
         tx_dma_(tx_dma), rx_dma_(rx_dma),
         spi_pause_(spi_pause), decimation_(decimation) {}
+
+    void set_param(const TorqueSensorParam &param) {
+        TorqueSensorBase::set_param(param);
+	offset_A = param.offset_A;
+	offset_B = param.offset_B;
+	offset_C = param.offset_C;
+	gain_A = param.gain_A;
+	gain_B = param.gain_B;
+	gain_C = param.gain_C;
+	gain_T = param.gain_T;
+    }
+
     bool init() {
         reinit();
         reset();
