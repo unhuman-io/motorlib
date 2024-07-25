@@ -18,8 +18,9 @@ class TorqueSensorBase : public SensorBase {
     // }
     float get_value() const { return torque_; }
  //protected:
-    float gain_ = 0, k_temp_ = 0;
-    float torque_ = 0;
+    float gain_ = 1;
+    float k_temp_ = 0;
+    float torque_ = -1;
  //   friend class System;
 };
 
