@@ -86,19 +86,15 @@ class MA732Encoder : public SPIEncoder {
     }
 
     void save_nvm() {
-        // (*register_operation_)++; // From Freebot
         spi_pause_.pause();
         reinit();
-        // bool retval = true; // Unused, leaving for now
 
         MA732reg reg = {};
         reg.bits.address = 0x0;
         reg.bits.command = 0b110; // write register
         reg.bits.value = 0x00;
         send_and_read(reg.word);
-        ms_delay(20); 
-
-        // (*register_operation_)--; // From Freebot
+        ms_delay(20);
     }
 
 
