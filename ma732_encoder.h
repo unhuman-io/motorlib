@@ -85,23 +85,51 @@ class MA732Encoder : public SPIEncoder {
         return retval;
     }
 
+    void save_nvm() {
+        spi_pause_.pause();
+        reinit();
+
+        MA732reg reg = {};
+        reg.bits.address = 0x0;
+        reg.bits.command = 0b110; // write register
+        reg.bits.value = 0x00;
+        send_and_read(reg.word);
+        ms_delay(20);
+    }
+
+
     void set_bct(uint32_t value) {
         set_register(0x2, value);
     }
 
     uint32_t get_bct() {
+        // Register 0x2 corresponds to BCT, an 8 bit value
+        // BCT - bias current trimming, For side-shaft configuration: reduces bias current of the X or Y hall device
         return read_register(0x2);
     }
 
     void set_et(uint32_t value) {
+        // ETX & ETY can hold values of 0 or 1
+        // Therefore the value sent is either 00, 01, 10, or 11 [Y,X]
+        // should values be binary? or a max value of 3 in base 10
+        // 0 = 00(b), 1 = 01(b), 2 = 10(b), 3 = 11(b)
+        // Only accept values from 0-3
+        if(value < 0 || value > 3){
+            value = 0;
+        }
         set_register(0x3, value);
     }
 
     uint32_t get_et() {
+        // Register 0x3 corresponds to ET, a 2 bit value
+        // ET - edge trimming, biased current trimmed in the X/Y direction Hall device
+        // Bit [1] is ETY & bit [0] is ETX
         return read_register(0x3);
     }
 
     uint32_t get_filt() {
+        // Register 0xE corresponds to FW, a 4 bit value
+        // FW - filter window, size of the filter window. Determines the resolution
         return read_register(0xE);
     }
 
