@@ -42,6 +42,7 @@ extern "C" void board_init() {
     pin_config_obot_g474_osa();
 }
 
+Calibration MainLoop::no_calibration_;
 namespace config {
     static_assert(((double) CPU_FREQUENCY_HZ * 8 / 2) / pwm_frequency < 65535);    // check pwm frequency
     TempSensor temp_sensor;
@@ -61,7 +62,11 @@ namespace config {
     StateController state_controller = {(float) (1.0/main_loop_frequency)};
     JointPositionController joint_position_controller(1.0/main_loop_frequency);
     AdmittanceController admittance_controller = {1.0/main_loop_frequency};
+#ifndef DISABLE_CALIBRATION
     MainLoop main_loop = {main_loop_frequency, fast_loop, position_controller, torque_controller, impedance_controller, velocity_controller, state_controller, joint_position_controller, admittance_controller, System::communication_, led, output_encoder, torque_sensor, driver, param->main_loop_param, *calibration};
+#else
+    MainLoop main_loop = {main_loop_frequency, fast_loop, position_controller, torque_controller, impedance_controller, velocity_controller, state_controller, joint_position_controller, admittance_controller, System::communication_, led, output_encoder, torque_sensor, driver, param->main_loop_param};
+#endif
 };
 
 Communication System::communication_ = {config::usb};
@@ -130,11 +135,13 @@ void system_init() {
 
     v_ref =  *((uint16_t *) (0x1FFF75AA)) * 3.0 / V_REF_DR;
     System::log("v_ref: " + std::to_string(v_ref));
+#ifndef DISABLE_CALIBRATION
     System::log("obias: " +  std::to_string(calibration->output_encoder_bias));
     System::log("tbias: " + std::to_string(calibration->torque_sensor.bias));
     System::log("tgain: " + std::to_string(calibration->torque_sensor.gain));
     System::log("offset: " + std::to_string(calibration->motor_encoder_index_electrical_offset_pos));
     System::log("mbias: " + std::to_string(calibration->motor_encoder_bias));
+#endif
 
     ADC1->GCOMP = 3.0*4096;
     ADC1->CFGR2 |= ADC_CFGR2_GCOMP;
