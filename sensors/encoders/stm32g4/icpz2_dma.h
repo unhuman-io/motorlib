@@ -107,7 +107,7 @@ class ICPZ2DMA : public EncoderBase {
         uint8_t *data_buf2 = data_mult_[current_buf_index][2];
         bool crc_error1, crc_error2;
         value1_.word = icpz_.read_raw_buf(data_buf1, crc_error1);
-        value2_.word = icpz2_.read_raw_buf(data_buf2, crc_error2) + (uint32_t) pow(2, 23);
+        value2_.pos = icpz2_.read_raw_buf(data_buf2, crc_error2) + (uint32_t) pow(2, 23);
 
         if (!crc_error1 & !crc_error2) {
           switch (use_encoder_) {
