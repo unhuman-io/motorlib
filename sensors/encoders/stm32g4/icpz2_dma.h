@@ -9,6 +9,7 @@
     ICPZ_SET_DEBUG_VARIABLES(prefix "2", System::api, icpz.icpz2_);\
     api.add_api_variable(prefix "1enc", new const APIUint32(&icpz.value1_.word));\
     api.add_api_variable(prefix "2enc", new const APIUint32(&icpz.value2_.word));\
+    api.add_api_variable(prefix "3enc", new const APIUint32(&icpz.value3_.word));\
     api.add_api_variable(prefix "disagreement_error", new APIUint32(&icpz.disagreement_error_));\
     api.add_api_variable(prefix "1temp_nb", new const APICallbackFloat([]{ return icpz.get_temperature(0); }));\
     api.add_api_variable(prefix "2temp_nb", new const APICallbackFloat([]{ return icpz.get_temperature(1); }));\
@@ -108,6 +109,7 @@ class ICPZ2DMA : public EncoderBase {
         bool crc_error1, crc_error2;
         value1_.word = icpz_.read_raw_buf(data_buf1, crc_error1);
         value2_.pos = icpz2_.read_raw_buf(data_buf2, crc_error2) + (uint32_t) pow(2, 23);
+        value3_.ipos = (value1_.ipos + value2_.ipos)/2;
 
         if (!crc_error1 & !crc_error2) {
           switch (use_encoder_) {
@@ -119,7 +121,7 @@ class ICPZ2DMA : public EncoderBase {
               value_.word = value2_.word;
               break;
             case 3:
-              value_.ipos = (value1_.ipos + value2_.ipos)/2;
+              value_.ipos = value3_.ipos;
               break;
           }
           ICPZ::Encoder24 diffe = {};
@@ -127,7 +129,9 @@ class ICPZ2DMA : public EncoderBase {
           int32_t diff = diffe.ipos;
           pos_ += diff;
           last_value_ = value_;
-          diff_ = value1_.ipos - value2_.ipos;
+          ICPZ::Encoder24 diff_ref = {};
+          diff_ref.ipos = value1_.ipos - value2_.ipos;
+          diff_ = diff_ref.ipos;
           if (std::abs(diff_ - (int32_t) pow(2, 23)) > disagreement_tolerance_) {
             disagreement_error_++;
           }
@@ -217,7 +221,7 @@ class ICPZ2DMA : public EncoderBase {
     ICPZ &icpz2_;
     SPIDMA &spidma_;
     int32_t pos_ = 0;
-    ICPZ::Encoder24 value_ = {}, last_value_ = {}, value1_ = {}, value2_ = {};
+    ICPZ::Encoder24 value_ = {}, last_value_ = {}, value1_ = {}, value2_ = {}, value3_ = {};
     int32_t diff_ = 0;
     uint32_t disagreement_error_ = 0;
     int32_t disagreement_tolerance_ = .1/2/M_PI*pow(2,24);
