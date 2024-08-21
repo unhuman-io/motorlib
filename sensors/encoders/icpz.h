@@ -86,6 +86,7 @@ class ICPZBase : public EncoderBase {
       union {
         struct {
           uint32_t pos:24;
+          uint32_t sign:1;
         };
         struct {
           int32_t ipos:24;

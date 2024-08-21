@@ -109,7 +109,11 @@ class ICPZ2DMA : public EncoderBase {
         bool crc_error1, crc_error2;
         value1_.word = icpz_.read_raw_buf(data_buf1, crc_error1);
         value2_.pos = icpz2_.read_raw_buf(data_buf2, crc_error2) + (uint32_t) pow(2, 23);
-        value3_.ipos = (value1_.ipos + value2_.ipos)/2;
+        ICPZ::Encoder24 diff_ref = {};
+        diff_ref.ipos = value1_.ipos - value2_.ipos;
+        diff_ = diff_ref.ipos;
+        // A way of averaging the two 24 bit rolling over values
+        value3_.pos = value2_.word + diff_/2;
 
         if (!crc_error1 & !crc_error2) {
           switch (use_encoder_) {
@@ -129,9 +133,7 @@ class ICPZ2DMA : public EncoderBase {
           int32_t diff = diffe.ipos;
           pos_ += diff;
           last_value_ = value_;
-          ICPZ::Encoder24 diff_ref = {};
-          diff_ref.ipos = value1_.ipos - value2_.ipos;
-          diff_ = diff_ref.ipos;
+
           if (std::abs(diff_ - (int32_t) pow(2, 23)) > disagreement_tolerance_) {
             disagreement_error_++;
           }
