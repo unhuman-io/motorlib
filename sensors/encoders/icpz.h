@@ -19,10 +19,14 @@ static uint8_t CRC_BiSS_43_30bit (uint32_t w_InputData);
     api.add_api_variable(prefix "sc_phase", new const APICallbackFloat([](){ return icpz.get_sc_phase(); }));\
     api.add_api_variable(prefix "ai_phases", new const APICallbackFloat([](){ return icpz.get_ai_phases(); }));\
     api.add_api_variable(prefix "ai_scales", new const APICallbackFloat([](){ return icpz.get_ai_scales(); }));\
+    api.add_api_variable(prefix "ai_sel", new APICallbackHex<uint8_t>([](){ return icpz.get_ai_sel(); }, \
+        [](uint8_t u){ icpz.set_ai_sel(u); }));\
     api.add_api_variable(prefix "cos_offs", new const APICallbackFloat([](){ return icpz.get_cos_offs(); }));\
     api.add_api_variable(prefix "sin_offs", new const APICallbackFloat([](){ return icpz.get_sin_offs(); }));\
     api.add_api_variable(prefix "sc_gains", new const APICallbackFloat([](){ return icpz.get_sc_gains(); }));\
     api.add_api_variable(prefix "sc_phases", new const APICallbackFloat([](){ return icpz.get_sc_phases(); }));\
+    api.add_api_variable(prefix "sc_sel", new APICallbackHex<uint16_t>([](){ return icpz.get_sc_sel(); }, \
+        [](uint16_t u){ icpz.set_sc_sel(u); }));\
     api.add_api_variable(prefix "err", new APIUint32(&icpz.error_count_));\
     api.add_api_variable(prefix "warn", new APIUint32(&icpz.warn_count_));\
     api.add_api_variable(prefix "crc_cnt", new APIUint32(&icpz.crc_error_count_));\
@@ -128,7 +132,7 @@ class ICPZBase : public EncoderBase {
       success &= set_register(7, 0, {0x13, 0x07, 0, 0x11}); // disable prc error, default: {0x13, 0x0F, 0, 0x11}, 
       success &= set_register(7, 4, {0x0C, 0xC8, 0, 0x02}); // prc is a warning, default: {0x0C, 0xC0, 0, 0x02}, 
       success &= set_register(0, 0xF, {4});  // 0x00 ran_fld = 0 -> never update position based on absolute track after initial, tol 4
-      success &= set_register(2, 3, {0x77}); // moderate dynamic digital calibration
+      success &= set_register(2, 3, {0x00}); // moderate dynamic digital calibration
       success &= set_register(2, 0, {0x77, 0x7});  // moderate dynamic analog calibration
       success &= set_register(0, 3, {0xEA}); // ipo_filt1 per datasheet
 
@@ -457,6 +461,14 @@ class ICPZBase : public EncoderBase {
         return ai_scale;
     }
 
+    uint8_t get_ai_sel() {
+        return read_register(2, 3, 1)[0];
+    }
+    
+    void set_ai_sel(uint8_t sel) {
+        set_register(2, 3, {sel});
+    }
+
     float get_cos_offs() {
         auto data = read_register(1, 0x20, 2);
         int16_t off_raw = ((int16_t) (data[1] << 8 | data[0])) >> 6;
@@ -483,6 +495,14 @@ class ICPZBase : public EncoderBase {
         int16_t phase_raw = ((int16_t) (data[1] << 8 | data[0])) >> 6;
         float phase =  (float) phase_raw/511 * 11.4; 
         return phase;
+    }
+
+    uint16_t get_sc_sel() {
+        return *((uint16_t *) read_register(2, 0, 2).data()) & 0xFFF;
+    }
+
+    void set_sc_sel(uint16_t sel) {
+        set_register(2, 0, {(uint8_t) (sel & 0xFF), (uint8_t) ((sel >> 8) & 0xFF)});
     }
 
     uint8_t get_led_cur() {
