@@ -71,7 +71,12 @@ static uint8_t CRC_BiSS_43_30bit (uint32_t w_InputData);
     api.add_api_variable(prefix "clear_diag", new const APICallback([](){ icpz.clear_diag(); return "ok"; }));\
     api.add_api_variable(prefix "last_error_pos", new const APIInt32(&icpz.last_error_pos_));\
     api.add_api_variable(prefix "last_warn_pos", new const APIInt32(&icpz.last_warn_pos_));\
-    api.add_api_variable(prefix "i2c", new const APICallbackHex<uint16_t>([]{ return icpz.get_i2c_data(); }));\
+    api.add_api_variable(prefix "i2c_bank", new APICallbackHex<uint8_t>([](){ return icpz.i2c_bank_; }, \
+        [](uint8_t u){ icpz.i2c_bank_ = u; }));\
+    api.add_api_variable(prefix "i2c_adr", new APICallbackHex<uint8_t>([](){ return icpz.i2c_adr_; }, \
+        [](uint8_t u){ icpz.i2c_adr_ = u; }));\
+    api.add_api_variable(prefix "i2c", new APICallbackHex<uint8_t>([]{ return icpz.get_i2c_data(); }, \
+        [](uint8_t d){ icpz.set_i2c_data(d); }));\
 
 template<typename ConcreteICPZ>
 class ICPZBase : public EncoderBase {
@@ -113,7 +118,7 @@ class ICPZBase : public EncoderBase {
       };
       uint8_t word;
     };
-    enum Opcode {READ_REG=0x81, WRITE_REG=0xCF, READ_POS=0xA6, WRITE_COMMAND=0xD9, READ_DIAG=0x9C, REQ_I2C=0xD2, GET_TRANS_INFO=0xAD};
+    enum Opcode {READ_REG=0x81, WRITE_REG=0xCF, READ_POS=0xA6, WRITE_COMMAND=0xD9, READ_DIAG=0x9C, REQ_I2C=0x97, TRANSMIT_I2C=0xD2, GET_TRANS_INFO=0xAD};
     enum Addr {CMD_STAT=0x76, COMMANDS=0x77};
     enum CMD {REBOOT=0x10, SCLEAR=0x20, CONF_WRITE_ALL=0x41, AUTO_ADJ_ANA=0xB0, AUTO_ADJ_DIG=0xB1, AUTO_READJ_DIG=0xB2, AUTO_ADJ_ECC=0xB3};
 
@@ -137,7 +142,7 @@ class ICPZBase : public EncoderBase {
       success &= set_register(2, 0, {0x77, 0x7});  // moderate dynamic analog calibration
       success &= set_register(0, 3, {0xEA}); // ipo_filt1 per datasheet
 
-      success &= set_register(0xA, 0, {0x50 << 1});
+      success &= set_register(0xA, 0, {0x40 << 1});
 
       if (disk_ == PZ03S) {
         success &= set_register(8, 0, {0, 1}); // fcl = 256
@@ -631,12 +636,12 @@ class ICPZBase : public EncoderBase {
         set_register(0, 4, {u});
     }
 
-    uint8_t i2c_index_ = 0;
-    uint16_t get_i2c_data() {
-        
-        set_bank(0x41);
-        uint16_t data = get_i2c_data(i2c_index_) | i2c_index_ << 8;
-        i2c_index_++;
+    uint8_t i2c_bank_ = 0x24;
+    uint8_t i2c_adr_ = 0x0;
+    uint8_t get_i2c_data() {
+        set_bank(i2c_bank_);
+        uint8_t data = get_i2c_data(i2c_adr_);
+        i2c_adr_++;
         return data;
     }
 
@@ -649,6 +654,15 @@ class ICPZBase : public EncoderBase {
         wait_while_true_with_timeout_us(get_i2c_transaction_info_and_data(&i2c_data) == 1, 20000);
         spidma_.release();
         return i2c_data;
+    }
+
+    void set_i2c_data(uint8_t data) {
+        set_bank(i2c_bank_);
+        uint8_t data_out[3] = {Opcode::REQ_I2C, i2c_adr_, data};
+        uint8_t data_in[3];
+        spidma_.claim();
+        spidma_.readwrite(data_out, data_in, 3);
+        spidma_.release();
     }
 
     uint8_t get_i2c_transaction_info_and_data(uint8_t *i2c_data) {
