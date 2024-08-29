@@ -193,26 +193,26 @@ class ICPZ2DMA : public EncoderBase {
       }
     }
     void start_continuous_read() {
-      dmamux_tx_regs_.CCR |= exti_num_ << DMAMUX_CxCR_SYNC_ID_Pos | 5 << DMAMUX_CxCR_NBREQ_Pos | 2 << DMAMUX_CxCR_SPOL_Pos | DMAMUX_CxCR_SE;
-      dmamux_rx_regs_.CCR |= 5 << DMAMUX_CxCR_NBREQ_Pos | DMAMUX_CxCR_EGE;
-      spidma_.start_continuous_readwrite(command_mult_[0][0], data_mult_[0][0], sizeof(command_mult_));
-      // start automatic CS
-      //HRTIM1->sTimerxRegs[0].TIMxDIER = HRTIM_TIMDIER_CMP1DE;
-      start_cs_trigger_();
-     // HRTIM1->sTimerxRegs[0].CMP1xR = 47000;
-      //DMA1_Channel5->CCR = DMA_CCR_CIRC | DMA_CCR_DIR | DMA_CCR_EN | DMA_CCR_MINC | DMA_CCR_MSIZE_1 | DMA_CCR_PSIZE_1;
+      if (!stopped_) {
+        dmamux_tx_regs_.CCR |= exti_num_ << DMAMUX_CxCR_SYNC_ID_Pos | 5 << DMAMUX_CxCR_NBREQ_Pos | 2 << DMAMUX_CxCR_SPOL_Pos | DMAMUX_CxCR_SE;
+        dmamux_rx_regs_.CCR |= 5 << DMAMUX_CxCR_NBREQ_Pos | DMAMUX_CxCR_EGE;
+        spidma_.start_continuous_readwrite(command_mult_[0][0], data_mult_[0][0], sizeof(command_mult_));
+        // start automatic CS
+        start_cs_trigger_();
+      }
     }
     void stop_continuous_read() {
       // stop automatic CS
-     // DMA1_Channel5->CCR = 0;
-     // HRTIM1->sTimerxRegs[0].CMP1xR = 0;
-      //HRTIM1->sTimerxRegs[0].TIMxDIER = 0;
       stop_cs_trigger_and_wait_cs_high_();
       // wait for CS high
-      //while(!(GPIOD->IDR & 0x4));
       spidma_.stop_continuous_readwrite();
       dmamux_tx_regs_.CCR &= DMAMUX_CxCR_DMAREQ_ID_Msk;
       dmamux_rx_regs_.CCR &= DMAMUX_CxCR_DMAREQ_ID_Msk;
+    }
+
+    void stop() {
+      stopped_ = true;
+      stop_continuous_read();
     }
 
     uint8_t command_mult_[6][3][6] = {};
@@ -237,4 +237,5 @@ class ICPZ2DMA : public EncoderBase {
     void (*start_cs_trigger_)();
     void (*stop_cs_trigger_and_wait_cs_high_)();
     uint8_t use_encoder_ = 1;
+    bool stopped_ = false;
 };
