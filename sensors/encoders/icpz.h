@@ -651,7 +651,7 @@ class ICPZBase : public EncoderBase {
         spidma_.claim();
         spidma_.readwrite(data_out, data_in, 2);
         uint8_t i2c_data;
-        wait_while_true_with_timeout_us(get_i2c_transaction_info_and_data(&i2c_data) == 1, 20000);
+        wait_while_true_with_timeout_us(get_i2c_transaction_info_and_data(&i2c_data), 20000);
         spidma_.release();
         return i2c_data;
     }
