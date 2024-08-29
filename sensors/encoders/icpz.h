@@ -348,11 +348,11 @@ class ICPZBase : public EncoderBase {
 
     std::string write_conf() {
         set_register(0, Addr::COMMANDS, {CMD::CONF_WRITE_ALL});
-        // 20 ms timeout found experimentally (15 seems ok 10 too short)
-        wait_while_false_with_timeout_us(read_register(Addr::COMMANDS, 1)[0] == 0, 20000);
+        // 200 ms timeout found experimentally
+        wait_while_false_with_timeout_us(read_register(Addr::COMMANDS, 1)[0] == 0, 200000);
         uint8_t result = read_register(Addr::COMMANDS, 1)[0];
         if (result != 0) {
-          return "conf timeout error: " + std::to_string(result);
+          return "conf write timeout error (200 ms)";
         }
         auto data = read_register(Addr::CMD_STAT, 1);
         if (data[0] == 0) {
