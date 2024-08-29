@@ -658,7 +658,7 @@ class ICPZBase : public EncoderBase {
 
     void set_i2c_data(uint8_t data) {
         set_bank(i2c_bank_);
-        uint8_t data_out[3] = {Opcode::REQ_I2C, i2c_adr_, data};
+        uint8_t data_out[3] = {Opcode::TRANSMIT_I2C, i2c_adr_, data};
         uint8_t data_in[3];
         spidma_.claim();
         spidma_.readwrite(data_out, data_in, 3);
