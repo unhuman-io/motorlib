@@ -56,10 +56,14 @@ class ICPZDMA : public ICPZBase<ICPZDMA> {
       diag_ = 0;
     }
     std::string read_diagnosis() {
-      return bytes_to_hex((uint8_t*) &diag_, 4);
+      std::string s = bytes_to_hex((uint8_t*) &diag_, 4);
+      clear_diag();
+      return s;
     }
     std::string read_diagnosis_str() {
-      return diagnosis_to_str(diag_);
+      std::string s = diagnosis_to_str(diag_);
+      clear_diag();
+      return s;
     }
     uint32_t current_buffer_index() const {
       if (spidma_.rx_dma_.CNDTR > 24) {

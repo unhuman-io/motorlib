@@ -148,8 +148,10 @@ class ICPZ2DMA : public EncoderBase {
           std::memcpy(data_temperature_[1], &data_mult_[1][0][3], 2);
         } else if (current_buf_index == 3) {
           // copy diag data to extra buffer
-          std::memcpy(&diag_[0], &data_mult_[2][0][2], 4);
-          std::memcpy(&diag_[1], &data_mult_[3][0][2], 4);
+          uint8_t *data = &data_mult_[2][0][2];
+          diag_[0] |= data[3] << 24 | data[2] << 16 | data[1] << 8 | data[0];
+          data = &data_mult_[3][0][2];
+          diag_[1] |= data[3] << 24 | data[2] << 16 | data[1] << 8 | data[0];
         }        
       }
       return get_value();
@@ -157,15 +159,24 @@ class ICPZ2DMA : public EncoderBase {
 
     int32_t get_value() const { return pos_; }
 
+    void clear_diag(int index) {
+      diag_[index] = 0;
+    }
+
     float get_temperature(int index) {
       return ICPZ::get_temperature(data_temperature_[index]);
     }
 
     std::string get_diagnosis(int index) {
-      return bytes_to_hex((uint8_t*) &diag_[index], 4);
+      std::string s = bytes_to_hex((uint8_t*) &diag_[index], 4);
+      clear_diag(index);
+      return s;
     }
+
     std::string get_diagnosis_str(int index) {
-      return ICPZ::diagnosis_to_str(diag_[index]);
+      std::string s = ICPZ::diagnosis_to_str(diag_[index]);
+      clear_diag(index);
+      return s;
     }
     bool index_received() const { return true; }
 

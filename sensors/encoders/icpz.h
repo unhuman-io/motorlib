@@ -349,9 +349,11 @@ class ICPZBase : public EncoderBase {
     }
 
     void reset() {
+      spidma_.claim();
       send_command(REBOOT);
       // The datasheet doesn't specify if there is any way to check for success on this command.
       ms_delay(40);
+      spidma_.release();
     }
 
     void clear_faults() {
