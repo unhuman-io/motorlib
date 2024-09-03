@@ -77,6 +77,7 @@ static uint8_t CRC_BiSS_43_30bit (uint32_t w_InputData);
         [](uint8_t u){ icpz.i2c_adr_ = u; }));\
     api.add_api_variable(prefix "i2c", new APICallbackHex<uint8_t>([]{ return icpz.get_i2c_data(); }, \
         [](uint8_t d){ icpz.set_i2c_data(d); }));\
+    api.add_api_variable(prefix "reset", new const APICallback([](){ icpz.reset(); return "ok"; }));\
 
 template<typename ConcreteICPZ>
 class ICPZBase : public EncoderBase {
@@ -125,24 +126,22 @@ class ICPZBase : public EncoderBase {
     bool init() {
       bool success = true;
       logger.log_printf("icpz init start with disk: %s", disk_names[disk_]);
-      // send reboot (still not working)
-      set_register(0, 0, {3});
-      set_register(bank_, Addr::COMMANDS, {REBOOT});
-      ms_delay(40);
-      IWDG->KR = 0xAAAA;
+      
+      set_register(0, 0, {3}); // fast speed on port a, set first
+      reset();
+      IWDG->KR = 0xAAAA; // watchdog due to slow reset at init stage
 
-      //set_register(7, 9, {0});
       success &= set_register(0, 0, {3}); // fast speed on port a, set first
       success &= set_register(7, 9, {0}); // multiturn data length = 0
       success &= set_register(7, 0xA, {0}); // spi_ext = 0
       success &= set_register(7, 0, {0x13, 0x07, 0, 0x11}); // disable prc error, default: {0x13, 0x0F, 0, 0x11}, 
       success &= set_register(7, 4, {0x0C, 0xC8, 0, 0x02}); // prc is a warning, default: {0x0C, 0xC0, 0, 0x02}, 
       success &= set_register(0, 0xF, {4});  // 0x00 ran_fld = 0 -> never update position based on absolute track after initial, tol 4
-      success &= set_register(2, 3, {0x00}); // moderate dynamic digital calibration
-      success &= set_register(2, 0, {0x77, 0x7});  // moderate dynamic analog calibration
+      success &= set_register(2, 3, {0x00}); // no dynamic digital calibration
+      success &= set_register(2, 0, {0x00, 0x0});  // no dynamic analog calibration
       success &= set_register(0, 3, {0xEA}); // ipo_filt1 per datasheet
 
-      success &= set_register(0xA, 0, {0x40 << 1});
+      success &= set_register(0xA, 0, {0x40 << 1}); // i2c address 0x40 for debug purposes
 
       if (disk_ == PZ03S) {
         success &= set_register(8, 0, {0, 1}); // fcl = 256
@@ -341,6 +340,18 @@ class ICPZBase : public EncoderBase {
           spidma_.release();
         }
         return retval;
+    }
+
+    void send_command(uint8_t command) {
+        uint8_t data_out[2] = {Opcode::WRITE_COMMAND, command};
+        uint8_t data_in[2];
+        spidma_.readwrite(data_out, data_in, 2);
+    }
+
+    void reset() {
+      send_command(REBOOT);
+      // The datasheet doesn't specify if there is any way to check for success on this command.
+      ms_delay(40);
     }
 
     void clear_faults() {
