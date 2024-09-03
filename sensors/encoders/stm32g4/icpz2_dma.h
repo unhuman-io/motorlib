@@ -5,8 +5,8 @@
 #include "../../../control_fun.h"
 
 #define ICPZ2_SET_DEBUG_VARIABLES(prefix, api, icpz) \
-    ICPZ_SET_DEBUG_VARIABLES(prefix "1", System::api, icpz.icpz_);\
-    ICPZ_SET_DEBUG_VARIABLES(prefix "2", System::api, icpz.icpz2_);\
+    ICPZ_SET_DEBUG_VARIABLES(prefix "1", api, icpz.icpz_);\
+    ICPZ_SET_DEBUG_VARIABLES(prefix "2", api, icpz.icpz2_);\
     api.add_api_variable(prefix "1enc", new const APIUint32(&icpz.value1_.word));\
     api.add_api_variable(prefix "2enc", new const APIUint32(&icpz.value2_.word));\
     api.add_api_variable(prefix "3enc", new const APIUint32(&icpz.value3_.word));\

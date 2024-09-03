@@ -2,6 +2,9 @@
 
 #include "../icpz.h"
 
+#define ICPZDMA_SET_DEBUG_VARIABLES(prefix, api, icpz) \
+    ICPZ_SET_DEBUG_VARIABLES(prefix "1", api, icpz);\
+
 class ICPZDMA : public ICPZBase<ICPZDMA> {
  public:
     ICPZDMA(SPIDMA &spidma, DMAMUX_Channel_TypeDef &tx_dmamux, DMAMUX_Channel_TypeDef &rx_dmamux, uint8_t exti_num,
@@ -26,7 +29,7 @@ class ICPZDMA : public ICPZBase<ICPZDMA> {
       bool result = ICPZBase::init();
       result &= set_register(7, 0, {0xFF, 0xFF, 0x00, 0xF3}); // enable all errors, report in diagnosis, except multiturn, gpio
       inited_ = true;
-//      start_continuous_read();
+      start_continuous_read();
       return result;
     }
     void trigger() {}
