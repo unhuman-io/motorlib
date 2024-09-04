@@ -15,6 +15,9 @@ class RoundRobinLogger {
       }
     }
     void get_next_data(RoundRobinData *data) {
+       if (data_[index].type == FLAGS32_T) {
+          data_[index].data_u32 = 0;
+       }
        if (++index_ == RR_DATA_LENGTH) {
          index_ = 0;
        } 
@@ -30,6 +33,10 @@ class RoundRobinLogger {
     void log_data(uint8_t index, int32_t data) {
       data_[index].data_i32 = data;
       data_[index].type = INT32_T;
+    }
+    void log_flags(uint8_t index, uint32_t data) {
+      data_[index].data_u32 |= data;
+      data_[index].type = FLAGS32_T;
     }
  private:
     uint8_t index_;
