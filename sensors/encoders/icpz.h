@@ -12,8 +12,10 @@
 static uint8_t CRC_BiSS_43_30bit (uint32_t w_InputData);
 
 #define ICPZ_SET_DEBUG_VARIABLES(prefix, api, icpz) \
-    api.add_api_variable(prefix "ai_phase", new const APICallbackFloat([](){ return icpz.get_ai_phase(); }));\
-    api.add_api_variable(prefix "ai_scale", new const APICallbackFloat([](){ return icpz.get_ai_scale(); }));\
+    api.add_api_variable(prefix "ai_phase", new APICallbackFloat([]{ return icpz.get_ai_phase(); },\
+      [](float f){ icpz.set_ai_phase(f); }));\
+    api.add_api_variable(prefix "ai_scale", new APICallbackFloat([]{ return icpz.get_ai_scale(); },\
+      [](float f){ icpz.set_ai_scale(f); }));\
     api.add_api_variable(prefix "cos_off", new const APICallbackFloat([](){ return icpz.get_cos_off(); }));\
     api.add_api_variable(prefix "sc_gain", new const APICallbackFloat([](){ return icpz.get_sc_gain(); }));\
     api.add_api_variable(prefix "sc_phase", new const APICallbackFloat([](){ return icpz.get_sc_phase(); }));\
@@ -438,11 +440,23 @@ class ICPZBase : public EncoderBase {
         return ai_phase;
     }
 
+    void set_ai_phase(float f) {
+        int16_t ai_phase_raw = f/180*512;
+        std::vector<uint8_t> data = {(uint8_t) (ai_phase_raw << 6), (uint8_t) (ai_phase_raw >> 2)};
+        set_register(1, 0x8, data);
+    }
+
     float get_ai_scale() {
         auto data = read_register(1, 0xa, 2);
         int16_t ai_scale_raw = ((int16_t) (data[1] << 8 | data[0])) >> 7;
         float ai_scale = (float) ai_scale_raw/1820 + 1;
         return ai_scale;
+    }
+
+    void set_ai_scale(float f) {
+        int16_t ai_scale_raw = (f-1)*1820;
+        std::vector<uint8_t> data = {(uint8_t) (ai_scale_raw << 7), (uint8_t) (ai_scale_raw >> 1)};
+        set_register(1, 0xa, data);
     }
 
     float get_cos_off() {
