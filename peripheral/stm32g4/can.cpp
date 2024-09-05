@@ -35,13 +35,11 @@ CAN::CAN(CAN_INST inst, ArbitrationBaudRate arb, DataBaudRate data) :
         switch (data) {
             case DataBaudRate::DATA_1M:
                 // psc = 4, nq = 34 samp point = 0.7647
-                regs_.DBTP = 24 << FDCAN_DBTP_DTSEG1_Pos | 7 << FDCAN_DBTP_DTSEG2_Pos | 15 << FDCAN_DBTP_DSJW_Pos | FDCAN_DBTP_TDC | 4 << FDCAN_DBTP_DBRP_Pos;
-                regs_.TDCR = 127 << FDCAN_TDCR_TDCO_Pos | 25 << FDCAN_TDCR_TDCF_Pos; // normal delay 180 ns, glitch filter 150ns*170MHz = 25
+                regs_.DBTP = 24 << FDCAN_DBTP_DTSEG1_Pos | 7 << FDCAN_DBTP_DTSEG2_Pos | 15 << FDCAN_DBTP_DSJW_Pos | 4 << FDCAN_DBTP_DBRP_Pos;
                 break;
             case DataBaudRate::DATA_2M:
                 // psc = 4, nq = 17 samp point = 0.7647
-                regs_.DBTP = 11 << FDCAN_DBTP_DTSEG1_Pos | 3 << FDCAN_DBTP_DTSEG2_Pos | 10 << FDCAN_DBTP_DSJW_Pos | FDCAN_DBTP_TDC | 4 << FDCAN_DBTP_DBRP_Pos;
-                regs_.TDCR = 65 << FDCAN_TDCR_TDCO_Pos | 25 << FDCAN_TDCR_TDCF_Pos; // normal delay 180 ns, glitch filter 150ns*170MHz = 25
+                regs_.DBTP = 11 << FDCAN_DBTP_DTSEG1_Pos | 3 << FDCAN_DBTP_DTSEG2_Pos | 10 << FDCAN_DBTP_DSJW_Pos | 4 << FDCAN_DBTP_DBRP_Pos;
                 break;
             case DataBaudRate::DATA_5M:
                 // psc = 0, nq = 34  samp point = 0.7647
