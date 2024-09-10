@@ -61,15 +61,14 @@ class ResoluteEncoder : public EncoderBase {
         diag.word = (super_raw >> (40 - 2 - leading_zeros)) & 0xFF;
         diag_.err = diag.err;
         diag_.warn = diag.warn;
-        uint64_t crc_val_raw = (super_raw >> 6) & 0x3FFFFFFFF;
+        uint64_t crc_val_raw = (super_raw >> (46 - 2 -leading_zeros)) & 0x3FFFFFFFF;
         crc_calc_ = ~CRC_BiSS_43_36bit(crc_val_raw) & 0x3F; // crc of data plus 2 status bits
         diag_.crc6 = 1; // todo, get crc working
-        // diag_.crc6 = crc_calc_ == diag.crc6;
-        // if (!diag_.crc6) {
-        //     crc_error_raw_latch_ = raw_value_;
-        //     crc_err_count_++;
-        // } else {
-        {
+        diag_.crc6 = crc_calc_ == diag.crc6;
+        if (!diag_.crc6) {
+            crc_error_raw_latch_ = raw_value_;
+            crc_err_count_++;
+        } else {
             if (!diag_.err) {
                 diag_err_count_++;
             }
