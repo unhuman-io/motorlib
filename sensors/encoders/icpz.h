@@ -699,7 +699,9 @@ class ICPZBase : public EncoderBase {
         *i2c_data = data_in[2];
         return data_in[1];
     }
-
+    uint8_t get_active_command() {
+        return read_register(Addr::COMMANDS, 1)[0];
+    }
     std::string get_cmd_result() {
         return "command: " + std::to_string(read_register(Addr::COMMANDS, 1)[0]) + ", result: " + std::to_string(read_register(Addr::CMD_STAT, 1)[0]);
     }
