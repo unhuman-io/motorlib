@@ -38,7 +38,6 @@ class ResoluteEncoder : public EncoderBase {
         GPIOC->BSRR = GPIO_BSRR_BR0;
 
         uint64_t super_raw;
-        //uint32_t leading_zeros;
         // variable ack length. Find start bit. Skip a few bytes to save time
         
         for (int i=4; i<length_; i++) {
@@ -50,23 +49,20 @@ class ResoluteEncoder : public EncoderBase {
                 break;
             }
         }
-        // leading zeros example start bit in bit 2 (0000 010X)
-        // leading zeros => 24+5=29
-        // right shift 9 = 32-29-2+16
+        // super_raw is 64 bits with >=8 bits of leading zeros
+        // e.g. 00 02 FF FF FF FF 3F 00
+        //          s| position  |e|crc
+        // above clz returns 30. right shift to data is 16 = 48 - 2 - 30
         raw_value_ = super_raw >> (48 - 2 - leading_zeros);
-        raw_value2_ = data_in_[6] << 24 | data_in_[7] << 16 | data_in_[8] << 8 | data_in_[9];
-        raw_value3_ = data_in_[10] << 24 | data_in_[11] << 16 | data_in_[12] << 8 | data_in_[13];
-        raw_value4_ = data_in_[14] << 24 | data_in_[15] << 16 | data_in_[16] << 8 | data_in_[17];
         Diag diag;
         diag.word = (super_raw >> (40 - 2 - leading_zeros)) & 0xFF;
         diag_.err = diag.err;
         diag_.warn = diag.warn;
         uint64_t crc_val_raw = (super_raw >> (46 - 2 -leading_zeros)) & 0x3FFFFFFFF;
         crc_calc_ = ~CRC_BiSS_43_36bit(crc_val_raw) & 0x3F; // crc of data plus 2 status bits
-        diag_.crc6 = 1; // todo, get crc working
+        diag_.crc6 = 1;
         diag_.crc6 = crc_calc_ == diag.crc6;
         if (!diag_.crc6) {
-            crc_error_raw_latch_ = raw_value_;
             crc_err_count_++;
         } else {
             if (!diag_.err) {
@@ -105,10 +101,6 @@ class ResoluteEncoder : public EncoderBase {
     uint32_t diag_err_count_ = 0;
     uint32_t diag_warn_count_ = 0;
     uint32_t raw_value_ = 0;
-    uint32_t raw_value2_ = 0;
-        uint32_t raw_value3_ = 0;
-        uint32_t raw_value4_ = 0;
-    uint32_t crc_error_raw_latch_ = 0;
     uint32_t leading_zeros=0;
     uint8_t byte_ind=0;
 
