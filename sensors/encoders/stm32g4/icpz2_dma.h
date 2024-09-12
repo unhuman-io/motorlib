@@ -23,17 +23,33 @@
     api.add_api_variable(prefix "use_encoder", new APIUint8(&icpz.use_encoder_));\
 
 
-
+class ICPZ2 : public ICPZBase<ICPZ2> {
+  public:
+    ICPZ2(SPIDMA &spidma, Disk disk = Default) : ICPZBase(spidma, disk) {}
+    void enable_commands_impl() {
+      command_mult_[0] = ICPZ::Opcode::WRITE_REG; // clear diagnosis
+      command_mult_[1] = Addr::COMMANDS;
+      command_mult_[2] = CMD::SCLEAR;
+    }
+    void disable_commands_impl() {
+      command_mult_[0] = 0;
+      command_mult_[1] = 0;
+      command_mult_[2] = 0;
+    }
+    uint8_t *command_mult_;
+};
 
 class ICPZ2DMA : public EncoderBase {
  public:
-    ICPZ2DMA(ICPZ &icpz, ICPZ &icpz2, DMAMUX_Channel_TypeDef &tx_dmamux, DMAMUX_Channel_TypeDef &rx_dmamux, uint8_t exti_num,
+    ICPZ2DMA(ICPZ2 &icpz, ICPZ2 &icpz2, DMAMUX_Channel_TypeDef &tx_dmamux, DMAMUX_Channel_TypeDef &rx_dmamux, uint8_t exti_num,
       void(*start_cs_trigger)(), void(*stop_cs_trigger_and_wait_cs_high)()) : icpz_(icpz), icpz2_(icpz2), spidma_(icpz.spidma_), 
       dmamux_tx_regs_(tx_dmamux), dmamux_rx_regs_(rx_dmamux), exti_num_(exti_num),
       start_cs_trigger_(start_cs_trigger), stop_cs_trigger_and_wait_cs_high_(stop_cs_trigger_and_wait_cs_high) {
       
       spidma_.pause_.start_callback_ = [this]{start_continuous_read();};
       spidma_.pause_.stop_callback_ = [this]{stop_continuous_read();};
+      icpz_.command_mult_ = command_mult_[4][0];
+      icpz2_.command_mult_ = command_mult_[5][0];
 
       // sequence:
       // temp1,  angle1, angle2,
