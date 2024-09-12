@@ -344,12 +344,6 @@ class ICPZBase : public EncoderBase {
         return retval;
     }
 
-    void send_command(uint8_t command) {
-        uint8_t data_out[2] = {Opcode::WRITE_COMMAND, command};
-        uint8_t data_in[2];
-        spidma_.readwrite(data_out, data_in, 2);
-    }
-
     void reset() {
       spidma_.claim();
       send_command(REBOOT);
@@ -716,9 +710,31 @@ class ICPZBase : public EncoderBase {
     uint8_t get_active_command() {
         return read_register(Addr::COMMANDS, 1)[0];
     }
-    std::string get_cmd_result() {
-        return "command: " + std::to_string(get_active_command()) + ", result: " + std::to_string(read_register(Addr::CMD_STAT, 1)[0]);
+    
+    void send_command(uint8_t command) {
+        static_cast<ConcreteICPZ*>(this)->disable_commands_impl();
+        uint8_t data_out[2] = {Opcode::WRITE_COMMAND, command};
+        uint8_t data_in[2];
+        spidma_.readwrite(data_out, data_in, 2);
     }
+
+    std::string get_cmd_result() {
+        uint8_t command  = get_active_command();
+        std::string s = "command: " + std::to_string(command) + ", result: " + std::to_string(read_register(Addr::CMD_STAT, 1)[0]);
+        if (command == 0) {
+          static_cast<ConcreteICPZ*>(this)->enable_commands_impl();
+        }
+        return s;
+    }
+
+    void enable_commands_impl() {
+        // default nothing
+    }
+
+    void disable_commands_impl() {
+        // default nothing
+    }
+
 
     SPIDMA &spidma_;
     Disk disk_;

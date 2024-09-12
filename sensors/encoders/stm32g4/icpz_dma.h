@@ -20,7 +20,7 @@ class ICPZDMA : public ICPZBase<ICPZDMA> {
       command_mult_[0][0] = ICPZ::Opcode::READ_REG; // read temperature
       command_mult_[0][1] = 0x4e;
       command_mult_[2][0] = ICPZ::Opcode::READ_DIAG; // read diagnosis
-      enable_clear_diag();
+      enable_commands_impl();
     }
 
     bool init() {
@@ -53,29 +53,17 @@ class ICPZDMA : public ICPZBase<ICPZDMA> {
     void clear_diag() {
       diag_ = 0;
     }
-    void enable_clear_diag() {
+    void enable_commands_impl() {
       command_mult_[4][0] = ICPZ::Opcode::WRITE_REG; // clear diagnosis
       command_mult_[4][1] = Addr::COMMANDS;
       command_mult_[4][2] = CMD::SCLEAR;
     }
-    void disable_clear_diag() {
+    void disable_commands_impl() {
       command_mult_[4][0] = 0;
       command_mult_[4][1] = 0;
       command_mult_[4][2] = 0;
     }
-    void send_command(uint8_t command) {
-        disable_clear_diag();
-        ICPZBase::send_command(command);
-    }
 
-    std::string get_cmd_result() {
-        std::string s = ICPZBase::get_cmd_result();
-        uint8_t command  = get_active_command();
-        if (command == 0) {
-          enable_clear_diag();
-        }
-        return s;
-    }
     std::string read_diagnosis() {
       std::string s = bytes_to_hex((uint8_t*) &diag_, 4);
       clear_diag();
