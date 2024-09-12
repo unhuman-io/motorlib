@@ -443,9 +443,7 @@ class ICPZBase : public EncoderBase {
 
     float get_ai_phase() {
         auto data = read_register(1, 0x8, 2);
-        int16_t ai_phase_raw = ((int16_t) (data[1] << 8 | data[0])) >> 6;
-        float ai_phase = (float) ai_phase_raw/512*180;
-        return ai_phase;
+        return get_ai_phase(data.data());
     }
 
     void set_ai_phase(float f) {
@@ -495,11 +493,15 @@ class ICPZBase : public EncoderBase {
         return phase;
     }
 
-    float get_ai_phases() {
-        auto data = read_register(1, 0x28, 2);
+    static float get_ai_phase(uint8_t data[2]) {
         int16_t ai_phase_raw = ((int16_t) (data[1] << 8 | data[0])) >> 6;
         float ai_phase = (float) ai_phase_raw/512*180;
         return ai_phase;
+    }
+
+    float get_ai_phases() {
+        auto data = read_register(1, 0x28, 2);
+        return get_ai_phase(data.data());
     }
 
     float get_ai_scales() {

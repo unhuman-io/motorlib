@@ -17,10 +17,13 @@ class ICPZDMA : public ICPZBase<ICPZDMA> {
       command_mult_[1][0] = ICPZ::Opcode::READ_POS; // read position
       command_mult_[3][0] = ICPZ::Opcode::READ_POS;
       command_mult_[5][0] = ICPZ::Opcode::READ_POS;
+      command_mult_[7][0] = ICPZ::Opcode::READ_POS;
       command_mult_[0][0] = ICPZ::Opcode::READ_REG; // read temperature
       command_mult_[0][1] = 0x4e;
       command_mult_[2][0] = ICPZ::Opcode::READ_DIAG; // read diagnosis
       enable_commands_impl();
+      command_mult_[6][0] = ICPZ::Opcode::READ_REG; // read ai_phases
+      command_mult_[6][1] = 0x28;
     }
 
     bool init() {
@@ -45,6 +48,12 @@ class ICPZDMA : public ICPZBase<ICPZDMA> {
       uint8_t *data = &data_mult_[0][3];
       // signed value, 16 bit
       return ICPZ::get_temperature(data);
+    }
+
+    float get_ai_phases() {
+      uint8_t *data = &data_mult_[6][3];
+      // signed value, 16 bit
+      return ICPZ::get_ai_phase(data);
     }
     void or_diag() {
       uint8_t *data = &data_mult_[2][2];
@@ -75,12 +84,14 @@ class ICPZDMA : public ICPZBase<ICPZDMA> {
       return s;
     }
     uint32_t current_buffer_index() const {
-      if (spidma_.rx_dma_.CNDTR > 24) {
-        return 5;
-      } else if (spidma_.rx_dma_.CNDTR > 12) {
+      if (spidma_.rx_dma_.CNDTR > 36) {
+        return 7;
+      } else if (spidma_.rx_dma_.CNDTR > 24) {
         return 1;
-      } else {
+      } else if (spidma_.rx_dma_.CNDTR > 12) {
         return 3;
+      } else {
+        return 5;
       }
     }
     void start_continuous_read() {
@@ -112,7 +123,7 @@ class ICPZDMA : public ICPZBase<ICPZDMA> {
     uint8_t exti_num_;
     void (*start_cs_trigger_)();
     void (*stop_cs_trigger_and_wait_cs_high_)();
-    uint8_t command_mult_[6][6] = {};
-    uint8_t data_mult_[6][6] = {};
+    uint8_t command_mult_[8][6] = {};
+    uint8_t data_mult_[8][6] = {};
     uint32_t diag_ = {};
 };

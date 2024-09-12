@@ -17,6 +17,8 @@
     api.add_api_variable(prefix "2diag_nb", new const APICallback([]{ return icpz.get_diagnosis(1); }));\
     api.add_api_variable(prefix "1diag_str_nb", new const APICallback([]{ return icpz.get_diagnosis_str(0); }));\
     api.add_api_variable(prefix "2diag_str_nb", new const APICallback([]{ return icpz.get_diagnosis_str(1); }));\
+    api.add_api_variable(prefix "1ai_phases_nb", new const APICallbackFloat([]{ return icpz.get_ai_phases(0); }));\
+    api.add_api_variable(prefix "2ai_phases_nb", new const APICallbackFloat([]{ return icpz.get_ai_phases(1); }));\
     api.add_api_variable(prefix "diff", new const APIInt32(&icpz.diff_));\
     api.add_api_variable(prefix "value", new const APIUint32(&icpz.value_.word));\
     api.add_api_variable(prefix "ivalue", new const APICallbackInt32([] { return icpz.value_.ipos; }));\
@@ -58,6 +60,8 @@ class ICPZ2DMA : public EncoderBase {
       // diag2,  angle1, angle2,
       // cdiag1, angle1, angle2,
       // cdiag2, angle1, angle2,
+      // ai_phases1, angle1, angle2,
+      // ai_phases2, angle1, angle2,
 
       command_mult_[0][0][0] = ICPZ::Opcode::READ_REG; // read temperature
       command_mult_[0][0][1] = 0x4e;
@@ -88,6 +92,16 @@ class ICPZ2DMA : public EncoderBase {
       command_mult_[5][0][2] = ICPZ::CMD::SCLEAR;
       command_mult_[5][1][0] = ICPZ::Opcode::READ_POS; // read position
       command_mult_[5][2][0] = ICPZ::Opcode::READ_POS; // read position
+
+      command_mult_[6][0][0] = ICPZ::Opcode::READ_REG; // read ai_phases
+      command_mult_[6][0][1] = 0x28;
+      command_mult_[6][1][0] = ICPZ::Opcode::READ_POS; // read position
+      command_mult_[6][2][0] = ICPZ::Opcode::READ_POS; // read position
+
+      command_mult_[7][0][0] = ICPZ::Opcode::READ_REG; // read ai_phases
+      command_mult_[7][0][1] = 0x28;
+      command_mult_[7][1][0] = ICPZ::Opcode::READ_POS; // read position
+      command_mult_[7][2][0] = ICPZ::Opcode::READ_POS; // read position
     }
 
     bool init() {
@@ -168,7 +182,11 @@ class ICPZ2DMA : public EncoderBase {
           diag_[0] |= data[3] << 24 | data[2] << 16 | data[1] << 8 | data[0];
           data = &data_mult_[3][0][2];
           diag_[1] |= data[3] << 24 | data[2] << 16 | data[1] << 8 | data[0];
-        }        
+        } else if (current_buf_index == 7) {
+          // copy ai_phases data to extra buffer
+          std::memcpy(data_phases_[0], &data_mult_[6][0][3], 2);
+          std::memcpy(data_phases_[1], &data_mult_[7][0][3], 2);
+        }
       }
       return get_value();
     }
@@ -181,6 +199,10 @@ class ICPZ2DMA : public EncoderBase {
 
     float get_temperature(int index) {
       return ICPZ::get_temperature(data_temperature_[index]);
+    }
+
+    float get_ai_phases(int index) {
+      return ICPZ::get_ai_phase(data_phases_[index]);
     }
 
     std::string get_diagnosis(int index) {
@@ -205,18 +227,22 @@ class ICPZ2DMA : public EncoderBase {
     }
 
     uint32_t current_buffer_index() const {
-      if (spidma_.rx_dma_.CNDTR > 5*18) {
-        return 5;
-      } else if (spidma_.rx_dma_.CNDTR > 4*18) {
+      if (spidma_.rx_dma_.CNDTR > 7*18) {
+        return 7;
+      } else if (spidma_.rx_dma_.CNDTR > 6*18) {
         return 0;
-      } else if (spidma_.rx_dma_.CNDTR > 3*18) {
+      } else if (spidma_.rx_dma_.CNDTR > 5*18) {
         return 1;
-      } else if (spidma_.rx_dma_.CNDTR > 2*18) {
+      } else if (spidma_.rx_dma_.CNDTR > 4*18) {
         return 2;
-      } else if (spidma_.rx_dma_.CNDTR > 1*18) {
+      } else if (spidma_.rx_dma_.CNDTR > 3*18) {
         return 3;
-      } else {
+      } else if (spidma_.rx_dma_.CNDTR > 2*18) {
         return 4;
+      } else if (spidma_.rx_dma_.CNDTR > 1*18) {
+        return 5;
+      } else {
+        return 6;
       }
     }
     void start_continuous_read() {
@@ -242,9 +268,10 @@ class ICPZ2DMA : public EncoderBase {
       stop_continuous_read();
     }
 
-    uint8_t command_mult_[6][3][6] = {};
-    uint8_t data_mult_[6][3][6] = {};
+    uint8_t command_mult_[8][3][6] = {};
+    uint8_t data_mult_[8][3][6] = {};
     uint8_t data_temperature_[2][2] = {};
+    uint8_t data_phases_[2][2] = {};
     uint32_t diag_[2] = {};
     ICPZ &icpz_;
     ICPZ &icpz2_;
