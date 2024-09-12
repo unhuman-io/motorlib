@@ -159,6 +159,7 @@ class ICPZBase : public EncoderBase {
         success &= set_register(8, 2, {27, 0}); // fcs = 27
         success &= set_register(0, 7, {8 << 4}); // sys_ovr = 8
       }
+      static_cast<ConcreteICPZ *>(this)->enable_commands_impl();
        return success;
     }
     void trigger() {
@@ -723,7 +724,7 @@ class ICPZBase : public EncoderBase {
     std::string get_cmd_result() {
         uint8_t command  = get_active_command();
         std::string s = "command: " + std::to_string(command) + ", result: " + std::to_string(read_register(Addr::CMD_STAT, 1)[0]);
-        if (command == 0) {
+        if (command == 0 || command == 0xff) {
           static_cast<ConcreteICPZ*>(this)->enable_commands_impl();
         }
         return s;
