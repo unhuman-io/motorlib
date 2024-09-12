@@ -63,25 +63,11 @@ class ICPZDMA : public ICPZBase<ICPZDMA> {
       command_mult_[4][1] = 0;
       command_mult_[4][2] = 0;
     }
-    void start_auto_adj_ana() {
+    void send_command(uint8_t command) {
         disable_clear_diag();
-        ICPZBase::start_auto_adj_ana();
+        ICPZBase::send_command(command);
     }
 
-    void start_auto_adj_dig() {
-        disable_clear_diag();
-        ICPZBase::start_auto_adj_dig();
-    }
-
-    void start_auto_readj_dig() {
-        disable_clear_diag();
-        ICPZBase::start_auto_readj_dig();
-    }
-
-    void start_auto_adj_ecc() {
-        disable_clear_diag();
-        ICPZBase::start_auto_adj_ecc();
-    }
     std::string get_cmd_result() {
         std::string s = ICPZBase::get_cmd_result();
         uint8_t command  = get_active_command();

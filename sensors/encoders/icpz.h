@@ -246,7 +246,7 @@ class ICPZBase : public EncoderBase {
     }
 
     void clear_diag() {
-      set_register(bank_, Addr::COMMANDS, {SCLEAR});
+      send_command(SCLEAR);
     }
 
         // non interrupt context
@@ -366,41 +366,55 @@ class ICPZBase : public EncoderBase {
         crc_error_count_ = 0;
     }
 
-    std::string write_conf() {
-        set_register(0, Addr::COMMANDS, {CMD::CONF_WRITE_ALL});
+    std::string send_command_with_result(uint8_t command, uint32_t timeout_us) {
+        send_command(command);
         // 200 ms timeout found experimentally
-        wait_while_false_with_timeout_us(read_register(Addr::COMMANDS, 1)[0] == 0, 200000);
-        uint8_t result = read_register(Addr::COMMANDS, 1)[0];
-        if (result != 0) {
-          return "conf write timeout error (200 ms)";
+        uint32_t t_start = get_clock();
+        bool timed_out = true;
+        while (get_clock() - t_start < timeout_us) {
+          uint8_t result = get_active_command();
+          if (result == 0) {
+            timed_out = false;
+            break;
+          } else if (result == 0xff) {
+            // PZ reports 0xff when an error occurs
+            return get_cmd_result();
+          }
+        }
+        if (timed_out) {
+          return "timeout error (" + std::to_string(timeout_us/1000) + " ms)";
         }
         auto data = read_register(Addr::CMD_STAT, 1);
         if (data[0] == 0) {
-          return "conf write success";
+          return "success";
         } else {
           return "conf error: " + std::to_string(data[0]);
         }
     }
 
+    std::string write_conf() {
+        return "conf write " + send_command_with_result(CMD::CONF_WRITE_ALL, 200000);
+    }
+
     std::string write_conf_no_check() {
-        set_register(0, Addr::COMMANDS, {CMD::CONF_WRITE_ALL});
+        send_command(CMD::CONF_WRITE_ALL);
         return "ok";
     }
 
     void start_auto_adj_ana() {
-        set_register(0, Addr::COMMANDS, {CMD::AUTO_ADJ_ANA});
+        send_command(CMD::AUTO_ADJ_ANA);
     }
 
     void start_auto_adj_dig() {
-        set_register(0, Addr::COMMANDS, {CMD::AUTO_ADJ_DIG});
+        send_command(CMD::AUTO_ADJ_DIG);
     }
 
     void start_auto_readj_dig() {
-        set_register(0, Addr::COMMANDS, {CMD::AUTO_READJ_DIG});
+        send_command(CMD::AUTO_READJ_DIG);
     }
 
     void start_auto_adj_ecc() {
-        set_register(0, Addr::COMMANDS, {CMD::AUTO_ADJ_ECC});
+        send_command(CMD::AUTO_ADJ_ECC);
     }
 
     void set_ecc_correction(uint8_t on = 1) {
@@ -703,7 +717,7 @@ class ICPZBase : public EncoderBase {
         return read_register(Addr::COMMANDS, 1)[0];
     }
     std::string get_cmd_result() {
-        return "command: " + std::to_string(read_register(Addr::COMMANDS, 1)[0]) + ", result: " + std::to_string(read_register(Addr::CMD_STAT, 1)[0]);
+        return "command: " + std::to_string(get_active_command()) + ", result: " + std::to_string(read_register(Addr::CMD_STAT, 1)[0]);
     }
 
     SPIDMA &spidma_;
