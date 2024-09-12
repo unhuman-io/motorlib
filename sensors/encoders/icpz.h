@@ -198,7 +198,9 @@ class ICPZBase : public EncoderBase {
       Encoder24 enc = {};
       enc.word = read_raw_buf(buf, crc_error);
       if (!crc_error) {
-        int32_t diff = enc.pos - last_enc_.pos; // rollover summing
+        Encoder24 diffe = {};
+        diffe.pos = enc.pos - last_enc_.pos;
+        int32_t diff = diffe.ipos;
         pos_ += diff;
         last_enc_ = enc;
       }
