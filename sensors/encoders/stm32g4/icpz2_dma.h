@@ -273,8 +273,8 @@ class ICPZ2DMA : public EncoderBase {
     uint8_t data_temperature_[2][2] = {};
     uint8_t data_phases_[2][2] = {};
     uint32_t diag_[2] = {};
-    ICPZ &icpz_;
-    ICPZ &icpz2_;
+    ICPZ2 &icpz_;
+    ICPZ2 &icpz2_;
     SPIDMA &spidma_;
     int32_t pos_ = 0;
     ICPZ::Encoder24 value_ = {}, last_value_ = {}, value1_ = {}, value2_ = {}, value3_ = {};
