@@ -17,6 +17,7 @@ static uint8_t CRC_BiSS_43_30bit (uint32_t w_InputData);
     api.add_api_variable(prefix "ai_scale", new APICallbackFloat([]{ return icpz.get_ai_scale(); },\
       [](float f){ icpz.set_ai_scale(f); }));\
     api.add_api_variable(prefix "cos_off", new const APICallbackFloat([](){ return icpz.get_cos_off(); }));\
+    api.add_api_variable(prefix "sin_off", new const APICallbackFloat([](){ return icpz.get_sin_off(); }));\
     api.add_api_variable(prefix "sc_gain", new const APICallbackFloat([](){ return icpz.get_sc_gain(); }));\
     api.add_api_variable(prefix "sc_phase", new const APICallbackFloat([](){ return icpz.get_sc_phase(); }));\
     api.add_api_variable(prefix "ai_phases", new const APICallbackFloat([](){ return icpz.get_ai_phases(); }));\
@@ -275,8 +276,8 @@ class ICPZBase : public EncoderBase {
     }
 
     bool set_bank(uint8_t bank) {
-        spidma_.claim();
         if (bank != bank_) {
+          spidma_.claim();
           uint8_t data_in[3];
           uint8_t data_out[] = {Opcode::WRITE_REG, 0x40, bank};
           spidma_.readwrite(data_out, data_in, 3);
@@ -286,8 +287,8 @@ class ICPZBase : public EncoderBase {
             return false;
           }
           bank_ = bank;
+          spidma_.release();
         }
-        spidma_.release();
         return true;
     }
 
