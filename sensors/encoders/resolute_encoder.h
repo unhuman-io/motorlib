@@ -1,7 +1,7 @@
 #ifndef UNHUMAN_MOTORLIB_RESOLUTE_ENCODER_H_
 #define UNHUMAN_MOTORLIB_RESOLUTE_ENCODER_H_
 
-#include "encoder.h"
+#include "../../encoder.h"
 #include <cmath>
 
 #define RESOLUTE_SET_DEBUG_VARIABLES(prefix, api, resolute) \
@@ -44,19 +44,15 @@ class ResoluteEncoder : public EncoderBase {
         spi_dma_.start_readwrite_isr(data_out_, data_in_, length_);
     }
     bool init() { return true; }
-    int32_t read() {
-        GPIOC->BSRR = GPIO_BSRR_BS0;
-        spi_dma_.finish_readwrite_isr();
-        GPIOC->BSRR = GPIO_BSRR_BR0;
-
+    int32_t read(uint8_t *data_in) {
         uint64_t super_raw;
         // variable ack length. Find start bit. Skip a few bytes to save time
         
         for (int i=4; i<length_; i++) {
-            if (data_in_[i]) {
-                super_raw = (((uint64_t) data_in_[i]) & 0xFF) << 48 | (((uint64_t) data_in_[i+1]) & 0xFF) << 40 | (((uint64_t) data_in_[i+2]) & 0xFF) << 32  
-                    | (uint64_t) data_in_[i+3] << 24 | (uint64_t) data_in_[i+4] << 16 | (uint64_t) data_in_[i+5] << 8 | (uint64_t) data_in_[i+6];
-                leading_zeros = clz(data_in_[i]);
+            if (data_in[i]) {
+                super_raw = (((uint64_t) data_in[i]) & 0xFF) << 48 | (((uint64_t) data_in[i+1]) & 0xFF) << 40 | (((uint64_t) data_in[i+2]) & 0xFF) << 32  
+                    | (uint64_t) data_in[i+3] << 24 | (uint64_t) data_in[i+4] << 16 | (uint64_t) data_in[i+5] << 8 | (uint64_t) data_in[i+6];
+                leading_zeros = clz(data_in[i]);
                 byte_ind = i;
                 break;
             }
@@ -94,6 +90,10 @@ class ResoluteEncoder : public EncoderBase {
         diag_raw_ = diag;
         return get_value();
     }
+    int32_t read() {
+        spi_dma_.finish_readwrite_isr();
+        return read(data_in_);
+    }
     uint32_t clz(uint32_t val) {
         uint32_t zeros;
         asm("clz %[zeros], %[val]": [zeros] "=r" (zeros) : [val] "r" (val));
@@ -116,7 +116,7 @@ class ResoluteEncoder : public EncoderBase {
     uint32_t leading_zeros=0;
     uint8_t byte_ind=0;
 
- private:
+ protected:
     SPIDMA &spi_dma_;
     uint8_t length_ = 16;
     uint8_t data_out_[20] = {};
