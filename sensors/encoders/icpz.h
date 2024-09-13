@@ -304,6 +304,7 @@ class ICPZBase : public EncoderBase {
         }
         if (type_ == PZ) {
           spidma_.readwrite(data_out.data(), data_in, length+3);
+          static_cast<ConcreteICPZ*>(this)->restore_bank_impl();
           spidma_.release();
           return std::vector<uint8_t>(&data_in[3], &data_in[3+length]);
         } else {
@@ -311,6 +312,7 @@ class ICPZBase : public EncoderBase {
           data_out[0] = Opcode::GET_TRANS_INFO;
           data_out[1] = 0;
           spidma_.readwrite(data_out.data(), data_in, length+2);
+          static_cast<ConcreteICPZ*>(this)->restore_bank_impl();
           spidma_.release();
           return std::vector<uint8_t>(&data_in[2], &data_in[2+length]);
         }
@@ -336,6 +338,7 @@ class ICPZBase : public EncoderBase {
         if (!set_only) {
           std::vector<uint8_t> data_read = read_register(address, value.size());
           retval = data_read == value;
+          static_cast<ConcreteICPZ*>(this)->restore_bank_impl();
           spidma_.release();
           if (!retval) {
             for (unsigned int i=0; i<value.size(); i++) {
@@ -343,6 +346,7 @@ class ICPZBase : public EncoderBase {
             }
           }
         } else {
+          static_cast<ConcreteICPZ*>(this)->restore_bank_impl();
           spidma_.release();
         }
         return retval;
@@ -680,9 +684,12 @@ class ICPZBase : public EncoderBase {
     uint8_t i2c_bank_ = 0x24;
     uint8_t i2c_adr_ = 0x0;
     uint8_t get_i2c_data() {
+        spidma_.claim();
         set_bank(i2c_bank_);
         uint8_t data = get_i2c_data(i2c_adr_);
         i2c_adr_++;
+        static_cast<ConcreteICPZ*>(this)->restore_bank_impl();
+        spidma_.release();
         return data;
     }
 
@@ -703,6 +710,7 @@ class ICPZBase : public EncoderBase {
         uint8_t data_in[3];
         spidma_.claim();
         spidma_.readwrite(data_out, data_in, 3);
+        static_cast<ConcreteICPZ*>(this)->restore_bank_impl();
         spidma_.release();
     }
 
@@ -738,6 +746,10 @@ class ICPZBase : public EncoderBase {
     }
 
     void disable_commands_impl() {
+        // default nothing
+    }
+
+    void restore_bank_impl() {
         // default nothing
     }
 

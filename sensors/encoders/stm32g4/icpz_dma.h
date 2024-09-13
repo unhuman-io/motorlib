@@ -63,7 +63,6 @@ class ICPZDMA : public ICPZBase<ICPZDMA> {
       diag_ = 0;
     }
     void enable_commands_impl() {
-      set_bank(1); // restore bank 1 to read ai_phases 1/0x28
       command_mult_[4][0] = ICPZ::Opcode::WRITE_REG; // clear diagnosis
       command_mult_[4][1] = Addr::COMMANDS;
       command_mult_[4][2] = CMD::SCLEAR;
@@ -72,6 +71,9 @@ class ICPZDMA : public ICPZBase<ICPZDMA> {
       command_mult_[4][0] = 0;
       command_mult_[4][1] = 0;
       command_mult_[4][2] = 0;
+    }
+    void restore_bank_impl() {
+      set_bank(1); // restore bank 1 to read ai_phases 1/0x28
     }
 
     std::string read_diagnosis() {

@@ -29,7 +29,6 @@ class ICPZ2 : public ICPZBase<ICPZ2> {
   public:
     ICPZ2(SPIDMA &spidma, Disk disk = Default) : ICPZBase(spidma, disk) {}
     void enable_commands_impl() {
-      set_bank(1); // restore bank 1 to read ai_phases 1/0x28
       command_mult_[0] = ICPZ::Opcode::WRITE_REG; // clear diagnosis
       command_mult_[1] = Addr::COMMANDS;
       command_mult_[2] = CMD::SCLEAR;
@@ -38,6 +37,9 @@ class ICPZ2 : public ICPZBase<ICPZ2> {
       command_mult_[0] = 0;
       command_mult_[1] = 0;
       command_mult_[2] = 0;
+    }
+    void restore_bank_impl() {
+      set_bank(1); // restore bank 1 to read ai_phases 1/0x28
     }
     uint8_t *command_mult_;
 };
