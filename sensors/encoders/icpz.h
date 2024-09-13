@@ -373,7 +373,7 @@ class ICPZBase : public EncoderBase {
         // 200 ms timeout found experimentally
         uint32_t t_start = get_clock();
         bool timed_out = true;
-        while (get_clock() - t_start < timeout_us) {
+        while (get_clock() - t_start < US_TO_CPU(timeout_us)) {
           uint8_t result = get_active_command();
           if (result == 0) {
             timed_out = false;
