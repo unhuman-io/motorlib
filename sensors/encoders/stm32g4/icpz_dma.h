@@ -3,7 +3,7 @@
 #include "../icpz.h"
 
 #define ICPZDMA_SET_DEBUG_VARIABLES(prefix, api, icpz) \
-    ICPZ_SET_DEBUG_VARIABLES(prefix "1", api, icpz);\
+    ICPZ_SET_DEBUG_VARIABLES(prefix, api, icpz);\
 
 class ICPZDMA : public ICPZBase<ICPZDMA> {
  public:
