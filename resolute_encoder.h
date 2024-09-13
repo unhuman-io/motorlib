@@ -4,6 +4,18 @@
 #include "encoder.h"
 #include <cmath>
 
+#define RESOLUTE_SET_DEBUG_VARIABLES(prefix, api, resolute) \
+    api.add_api_variable(prefix "err", new APIUint32(&resolute.diag_err_count_));\
+    api.add_api_variable(prefix "warn", new APIUint32(&resolute.diag_warn_count_));\
+    api.add_api_variable(prefix "crc_cnt", new APIUint32(&resolute.crc_err_count_));\
+    api.add_api_variable(prefix "raw", new APIUint32(&resolute.raw_value_));\
+    api.add_api_variable(prefix "rawh", new const APICallback([](){ return u32_to_hex(resolute.raw_value_); }));\
+    api.add_api_variable(prefix "len", new APIUint8(&resolute.length_));\
+    api.add_api_variable(prefix "ind", new const APIUint8(&resolute.byte_ind));\
+    api.add_api_variable(prefix "crc_calc", new const APIUint8(&resolute.crc_calc_));\
+    api.add_api_variable(prefix "zeros", new const APIUint32(&resolute.leading_zeros));\
+    api.add_api_variable(prefix "diag", new const APIUint8(&resolute.diag_raw_.word));\
+
 static uint8_t CRC_BiSS_43_36bit(uint64_t w_InputData);
 
 class ResoluteEncoder : public EncoderBase {
