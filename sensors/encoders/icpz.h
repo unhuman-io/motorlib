@@ -357,6 +357,7 @@ class ICPZBase : public EncoderBase {
       send_command(REBOOT);
       // The datasheet doesn't specify if there is any way to check for success on this command.
       ms_delay(40);
+      static_cast<ConcreteICPZ*>(this)->enable_commands_impl();
       spidma_.release();
     }
 
@@ -387,6 +388,7 @@ class ICPZBase : public EncoderBase {
           return "timeout error (" + std::to_string(timeout_us/1000) + " ms)";
         }
         auto data = read_register(Addr::CMD_STAT, 1);
+        static_cast<ConcreteICPZ*>(this)->enable_commands_impl();
         if (data[0] == 0) {
           return "success";
         } else {
