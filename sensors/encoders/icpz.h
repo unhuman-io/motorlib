@@ -12,17 +12,24 @@
 static uint8_t CRC_BiSS_43_30bit (uint32_t w_InputData);
 
 #define ICPZ_SET_DEBUG_VARIABLES(prefix, api, icpz) \
-    api.add_api_variable(prefix "ai_phase", new const APICallbackFloat([](){ return icpz.get_ai_phase(); }));\
-    api.add_api_variable(prefix "ai_scale", new const APICallbackFloat([](){ return icpz.get_ai_scale(); }));\
+    api.add_api_variable(prefix "ai_phase", new APICallbackFloat([]{ return icpz.get_ai_phase(); },\
+      [](float f){ icpz.set_ai_phase(f); }));\
+    api.add_api_variable(prefix "ai_scale", new APICallbackFloat([]{ return icpz.get_ai_scale(); },\
+      [](float f){ icpz.set_ai_scale(f); }));\
     api.add_api_variable(prefix "cos_off", new const APICallbackFloat([](){ return icpz.get_cos_off(); }));\
+    api.add_api_variable(prefix "sin_off", new const APICallbackFloat([](){ return icpz.get_sin_off(); }));\
     api.add_api_variable(prefix "sc_gain", new const APICallbackFloat([](){ return icpz.get_sc_gain(); }));\
     api.add_api_variable(prefix "sc_phase", new const APICallbackFloat([](){ return icpz.get_sc_phase(); }));\
     api.add_api_variable(prefix "ai_phases", new const APICallbackFloat([](){ return icpz.get_ai_phases(); }));\
     api.add_api_variable(prefix "ai_scales", new const APICallbackFloat([](){ return icpz.get_ai_scales(); }));\
+    api.add_api_variable(prefix "ai_sel", new APICallbackHex<uint8_t>([](){ return icpz.get_ai_sel(); }, \
+        [](uint8_t u){ icpz.set_ai_sel(u); }));\
     api.add_api_variable(prefix "cos_offs", new const APICallbackFloat([](){ return icpz.get_cos_offs(); }));\
     api.add_api_variable(prefix "sin_offs", new const APICallbackFloat([](){ return icpz.get_sin_offs(); }));\
     api.add_api_variable(prefix "sc_gains", new const APICallbackFloat([](){ return icpz.get_sc_gains(); }));\
     api.add_api_variable(prefix "sc_phases", new const APICallbackFloat([](){ return icpz.get_sc_phases(); }));\
+    api.add_api_variable(prefix "sc_sel", new APICallbackHex<uint16_t>([](){ return icpz.get_sc_sel(); }, \
+        [](uint16_t u){ icpz.set_sc_sel(u); }));\
     api.add_api_variable(prefix "err", new APIUint32(&icpz.error_count_));\
     api.add_api_variable(prefix "warn", new APIUint32(&icpz.warn_count_));\
     api.add_api_variable(prefix "crc_cnt", new APIUint32(&icpz.crc_error_count_));\
@@ -40,8 +47,12 @@ static uint8_t CRC_BiSS_43_30bit (uint32_t w_InputData);
         [](uint8_t u){ icpz.set_ecc_correction(u); }));\
     api.add_api_variable(prefix "ran_tol", new APICallbackUint8([](){ return icpz.get_ran_tol(); }, \
         [](uint8_t u){ icpz.set_ran_tol(u); }));\
+    api.add_api_variable(prefix "ran_fld", new APICallbackUint8([](){ return icpz.get_ran_fld(); }, \
+        [](uint8_t u){ icpz.set_ran_fld(u); }));\
     api.add_api_variable(prefix "ecc_um", new APICallbackFloat([](){ return icpz.get_ecc_um(); }, \
         [](float f){ icpz.set_ecc_um(f); }));\
+    api.add_api_variable(prefix "ecc_phase_deg", new APICallbackFloat([](){ return icpz.get_ecc_phase(); }, \
+        [](float f){ icpz.set_ecc_phase(f); }));\
     api.add_api_variable(prefix "low", new APICallbackUint8([](){ return icpz.get_ac_eto(); }, \
         [](uint8_t u){ icpz.set_ac_eto(u); }));\
     api.add_api_variable(prefix "ac_count", new APICallbackUint8([](){ return icpz.get_ac_count(); }, \
@@ -63,6 +74,13 @@ static uint8_t CRC_BiSS_43_30bit (uint32_t w_InputData);
     api.add_api_variable(prefix "clear_diag", new const APICallback([](){ icpz.clear_diag(); return "ok"; }));\
     api.add_api_variable(prefix "last_error_pos", new const APIInt32(&icpz.last_error_pos_));\
     api.add_api_variable(prefix "last_warn_pos", new const APIInt32(&icpz.last_warn_pos_));\
+    api.add_api_variable(prefix "i2c_bank", new APICallbackHex<uint8_t>([](){ return icpz.i2c_bank_; }, \
+        [](uint8_t u){ icpz.i2c_bank_ = u; }));\
+    api.add_api_variable(prefix "i2c_adr", new APICallbackHex<uint8_t>([](){ return icpz.i2c_adr_; }, \
+        [](uint8_t u){ icpz.i2c_adr_ = u; }));\
+    api.add_api_variable(prefix "i2c", new APICallbackHex<uint8_t>([]{ return icpz.get_i2c_data(); }, \
+        [](uint8_t d){ icpz.set_i2c_data(d); }));\
+    api.add_api_variable(prefix "reset", new const APICallback([](){ icpz.reset(); return "ok"; }));\
 
 template<typename ConcreteICPZ>
 class ICPZBase : public EncoderBase {
@@ -78,10 +96,23 @@ class ICPZBase : public EncoderBase {
       "startup_aborted_timeout", "user_error_1", "user_error_2", "user_error_3"};
 
     enum Disk{Default, PZ03S, PZ08S, PZ16S};
-    const float r_disk_um[4] = {1, 10700, 18600, 7200};
+    struct Encoder24 {
+      union {
+        struct {
+          uint32_t pos:24;
+          uint32_t sign:1;
+        };
+        struct {
+          int32_t ipos:24;
+        };
+        uint32_t word;
+      };
+    };
+
+    static constexpr float r_disk_um[4] = {1, 10700, 18600, 7200};
     ICPZBase(SPIDMA &spidma, Disk disk = Default) 
       : spidma_(spidma), disk_(disk) {
-      command_[0] = 0xa6; // read position
+      command_[0] = Opcode::READ_POS;
     }
     union Diag {
       struct {
@@ -91,28 +122,30 @@ class ICPZBase : public EncoderBase {
       };
       uint8_t word;
     };
+    enum Opcode {READ_REG=0x81, WRITE_REG=0xCF, READ_POS=0xA6, WRITE_COMMAND=0xD9, READ_DIAG=0x9C, REQ_I2C=0x97, TRANSMIT_I2C=0xD2, GET_TRANS_INFO=0xAD};
     enum Addr {CMD_STAT=0x76, COMMANDS=0x77};
     enum CMD {REBOOT=0x10, SCLEAR=0x20, CONF_WRITE_ALL=0x41, AUTO_ADJ_ANA=0xB0, AUTO_ADJ_DIG=0xB1, AUTO_READJ_DIG=0xB2, AUTO_ADJ_ECC=0xB3};
 
     bool init() {
       bool success = true;
       logger.log_printf("icpz init start with disk: %s", disk_names[disk_]);
-      // send reboot (still not working)
-      set_register(0, 0, {3});
-      set_register(bank_, Addr::COMMANDS, {REBOOT});
-      ms_delay(40);
-      IWDG->KR = 0xAAAA;
+      
+      set_register(0, 0, {3}); // fast speed on port a, set first
+      reset();
+      IWDG->KR = 0xAAAA; // watchdog due to slow reset at init stage
 
-      //set_register(7, 9, {0});
       success &= set_register(0, 0, {3}); // fast speed on port a, set first
       success &= set_register(7, 9, {0}); // multiturn data length = 0
       success &= set_register(7, 0xA, {0}); // spi_ext = 0
       success &= set_register(7, 0, {0x13, 0x07, 0, 0x11}); // disable prc error, default: {0x13, 0x0F, 0, 0x11}, 
-      success &= set_register(7, 4, {0x0C, 0xC8, 0, 0x02}); // prc is a warning, default: {0x0C, 0xC0, 0, 0x02}, 
-      success &= set_register(0, 0xF, {4});  // 0x00 ran_fld = 0 -> never update position based on absolute track after initial, tol 4
-      success &= set_register(2, 3, {0x77}); // moderate dynamic digital calibration
-      success &= set_register(2, 0, {0x77, 0x7});  // moderate dynamic analog calibration
-      success &= set_register(0, 3, {0xEA}); // ipo_filt1 per datasheet
+      success &= set_register(7, 4, {0x0C, 0xC8, 0, 0x02}); // prc is a warning, default: {0x0C, 0xC0, 0, 0x02},
+      success &= set_ran_tol(0);  // disables position update based on absolute track after initial, tol 0
+      success &= set_ran_fld(0);
+      success &= set_ai_sel(0xDD); // fast dynamic digital calibration - useful for detecting eccentricity
+      success &= set_register(2, 0, {0x00, 0x0});  // no dynamic analog calibration
+      success &= set_ipo_filt1(0xEA); // ipo_filt1 per datasheet
+
+      success &= set_register(0xA, 0, {0x40 << 1}); // i2c address 0x40 for debug purposes
 
       if (disk_ == PZ03S) {
         success &= set_register(8, 0, {0, 1}); // fcl = 256
@@ -128,27 +161,25 @@ class ICPZBase : public EncoderBase {
         success &= set_register(8, 2, {27, 0}); // fcs = 27
         success &= set_register(0, 7, {8 << 4}); // sys_ovr = 8
       }
+      static_cast<ConcreteICPZ *>(this)->enable_commands_impl();
        return success;
     }
     void trigger() {
       spidma_.start_readwrite_isr(command_, data_, sizeof(command_));
     }
-    int32_t read() {
-      spidma_.finish_readwrite_isr();
-      uint32_t data = ((data_[1] << 16) | (data_[2] << 8) | data_[3]) << 8;
+
+    uint32_t read_raw_buf(uint8_t buf[4], bool &crc_error) {
+      uint32_t data = ((buf[1] << 16) | (buf[2] << 8) | buf[3]) << 8;
       raw_value_ = data >> 8;
-      uint32_t word = data | data_[4];
-      Diag diag = {.word = data_[4]};
+      uint32_t word = data | buf[4];
+      Diag diag = {.word = buf[4]};
       uint8_t crc6_calc = ~CRC_BiSS_43_30bit(word >> 6) & 0x3f;
       error_count_ += !diag.nErr;
       warn_count_ += !diag.nWarn;
-      uint8_t crc_error = diag.crc6 == crc6_calc ? 0 : 1;
+      crc_error = diag.crc6 == crc6_calc ? false : true;
       crc_error_count_ += crc_error;
-      if (!crc_error) {
-        int32_t diff = (data - last_data_); // rollover summing
-        pos_ += diff/256;
-        //pos_ = data/256;
-        last_data_ = data;
+      if (!diag.nErr) {
+        last_error_pos_ = raw_value_;
       }
       if (!diag.nErr) {
         if (last_diag_.nErr) {
@@ -161,6 +192,25 @@ class ICPZBase : public EncoderBase {
         }
       }
       last_diag_ = diag;
+      return raw_value_;
+    }
+
+    int32_t read_buf(uint8_t buf[4]) {
+      bool crc_error;
+      Encoder24 enc = {};
+      enc.word = read_raw_buf(buf, crc_error);
+      if (!crc_error) {
+        Encoder24 diffe = {};
+        diffe.pos = enc.pos - last_enc_.pos;
+        int32_t diff = diffe.ipos;
+        pos_ += diff;
+        last_enc_ = enc;
+      }
+      return get_value();
+    }
+    int32_t read() {
+      spidma_.finish_readwrite_isr();
+      read_buf(data_);
       return get_value();
     }
     int32_t get_value() const {
@@ -170,7 +220,7 @@ class ICPZBase : public EncoderBase {
 
     std::string read_diagnosis() {
       spidma_.claim();
-      uint8_t data_out[10] = {0x9C};
+      uint8_t data_out[10] = {Opcode::READ_DIAG};
       uint8_t data_in[10];
       spidma_.readwrite(data_out, data_in, 10);
       clear_diag();
@@ -180,7 +230,7 @@ class ICPZBase : public EncoderBase {
 
     std::string read_diagnosis_str() {
       spidma_.claim();
-      uint8_t data_out[10] = {0x9C};
+      uint8_t data_out[10] = {Opcode::READ_DIAG};
       uint8_t data_in[10];
       spidma_.readwrite(data_out, data_in, 10);
       clear_diag();
@@ -201,14 +251,14 @@ class ICPZBase : public EncoderBase {
     }
 
     void clear_diag() {
-      set_register(bank_, Addr::COMMANDS, {SCLEAR});
+      send_command(SCLEAR);
     }
 
         // non interrupt context
     std::vector<uint8_t> read_register(uint8_t address, uint8_t length) {
         spidma_.claim();
         std::vector<uint8_t> data_out(length+3, 0);
-        data_out[0] = read_register_opcode_;
+        data_out[0] = Opcode::READ_REG;
         data_out[1] = address;
         uint8_t data_in[length+3];
         
@@ -218,7 +268,7 @@ class ICPZBase : public EncoderBase {
           return std::vector<uint8_t>(&data_in[3], &data_in[3+length]);
         } else {
           spidma_.readwrite(data_out.data(), data_in, 2);
-          data_out[0] = 0xad;
+          data_out[0] = Opcode::GET_TRANS_INFO;
           data_out[1] = 0;
           spidma_.readwrite(data_out.data(), data_in, length+2);
           spidma_.release();
@@ -227,10 +277,10 @@ class ICPZBase : public EncoderBase {
     }
 
     bool set_bank(uint8_t bank) {
-        spidma_.claim();
         if (bank != bank_) {
+          spidma_.claim();
           uint8_t data_in[3];
-          uint8_t data_out[] = {write_register_opcode_, 0x40, bank};
+          uint8_t data_out[] = {Opcode::WRITE_REG, 0x40, bank};
           spidma_.readwrite(data_out, data_in, 3);
           if (read_register(0x40, 1) != std::vector<uint8_t>{bank}) {
             logger.log("ichaus bank " + std::to_string(read_register(0x40, 1)[0]) + " not " + std::to_string(bank));
@@ -238,15 +288,15 @@ class ICPZBase : public EncoderBase {
             return false;
           }
           bank_ = bank;
+          spidma_.release();
         }
-        spidma_.release();
         return true;
     }
 
     std::vector<uint8_t> read_register(uint8_t bank, uint8_t address, uint8_t length) {
         spidma_.claim();
         std::vector<uint8_t> data_out(length+3, 0);
-        data_out[0] = read_register_opcode_;
+        data_out[0] = Opcode::READ_REG;
         data_out[1] = address;
         uint8_t data_in[length+3];
         if (!set_bank(bank)) {
@@ -255,16 +305,23 @@ class ICPZBase : public EncoderBase {
         }
         if (type_ == PZ) {
           spidma_.readwrite(data_out.data(), data_in, length+3);
+          static_cast<ConcreteICPZ*>(this)->restore_bank_impl();
           spidma_.release();
           return std::vector<uint8_t>(&data_in[3], &data_in[3+length]);
         } else {
           spidma_.readwrite(data_out.data(), data_in, 2);
-          data_out[0] = 0xad;
+          data_out[0] = Opcode::GET_TRANS_INFO;
           data_out[1] = 0;
           spidma_.readwrite(data_out.data(), data_in, length+2);
+          static_cast<ConcreteICPZ*>(this)->restore_bank_impl();
           spidma_.release();
           return std::vector<uint8_t>(&data_in[2], &data_in[2+length]);
         }
+    }
+
+    // use for register addresses >= 0x40 to skip bank selection
+    bool set_register(uint8_t address, const std::vector<uint8_t> &value, bool set_only = false) {
+        return set_register(bank_, address, value, set_only);
     }
 
     // non interrupt context
@@ -276,12 +333,13 @@ class ICPZBase : public EncoderBase {
           spidma_.release();
           return false;
         }
-        std::vector<uint8_t> data_out = {write_register_opcode_, address};
+        std::vector<uint8_t> data_out = {Opcode::WRITE_REG, address};
         data_out.insert(data_out.end(), value.begin(), value.end());
         spidma_.readwrite(data_out.data(), data_in, data_out.size());
         if (!set_only) {
           std::vector<uint8_t> data_read = read_register(address, value.size());
           retval = data_read == value;
+          static_cast<ConcreteICPZ*>(this)->restore_bank_impl();
           spidma_.release();
           if (!retval) {
             for (unsigned int i=0; i<value.size(); i++) {
@@ -289,9 +347,19 @@ class ICPZBase : public EncoderBase {
             }
           }
         } else {
+          static_cast<ConcreteICPZ*>(this)->restore_bank_impl();
           spidma_.release();
         }
         return retval;
+    }
+
+    void reset() {
+      spidma_.claim();
+      send_command(REBOOT);
+      // The datasheet doesn't specify if there is any way to check for success on this command.
+      ms_delay(40);
+      static_cast<ConcreteICPZ*>(this)->enable_commands_impl();
+      spidma_.release();
     }
 
     void clear_faults() {
@@ -302,41 +370,56 @@ class ICPZBase : public EncoderBase {
         crc_error_count_ = 0;
     }
 
-    std::string write_conf() {
-        set_register(0, Addr::COMMANDS, {CMD::CONF_WRITE_ALL});
-        // 20 ms timeout found experimentally (15 seems ok 10 too short)
-        wait_while_false_with_timeout_us(read_register(Addr::COMMANDS, 1)[0] == 0, 20000);
-        uint8_t result = read_register(Addr::COMMANDS, 1)[0];
-        if (result != 0) {
-          return "conf timeout error: " + std::to_string(result);
+    std::string send_command_with_result(uint8_t command, uint32_t timeout_us) {
+        send_command(command);
+        // 200 ms timeout found experimentally
+        uint32_t t_start = get_clock();
+        bool timed_out = true;
+        while (get_clock() - t_start < US_TO_CPU(timeout_us)) {
+          uint8_t result = get_active_command();
+          if (result == 0) {
+            timed_out = false;
+            break;
+          } else if (result == 0xff) {
+            // PZ reports 0xff when an error occurs
+            return get_cmd_result();
+          }
+        }
+        if (timed_out) {
+          return "timeout error (" + std::to_string(timeout_us/1000) + " ms)";
         }
         auto data = read_register(Addr::CMD_STAT, 1);
+        static_cast<ConcreteICPZ*>(this)->enable_commands_impl();
         if (data[0] == 0) {
-          return "conf write success";
+          return "success";
         } else {
           return "conf error: " + std::to_string(data[0]);
         }
     }
 
+    std::string write_conf() {
+        return "conf write " + send_command_with_result(CMD::CONF_WRITE_ALL, 200000);
+    }
+
     std::string write_conf_no_check() {
-        set_register(0, Addr::COMMANDS, {CMD::CONF_WRITE_ALL});
+        send_command(CMD::CONF_WRITE_ALL);
         return "ok";
     }
 
     void start_auto_adj_ana() {
-        set_register(0, Addr::COMMANDS, {CMD::AUTO_ADJ_ANA});
+        send_command(CMD::AUTO_ADJ_ANA);
     }
 
     void start_auto_adj_dig() {
-        set_register(0, Addr::COMMANDS, {CMD::AUTO_ADJ_DIG});
+        send_command(CMD::AUTO_ADJ_DIG);
     }
 
     void start_auto_readj_dig() {
-        set_register(0, Addr::COMMANDS, {CMD::AUTO_READJ_DIG});
+        send_command(CMD::AUTO_READJ_DIG);
     }
 
     void start_auto_adj_ecc() {
-        set_register(0, Addr::COMMANDS, {CMD::AUTO_ADJ_ECC});
+        send_command(CMD::AUTO_ADJ_ECC);
     }
 
     void set_ecc_correction(uint8_t on = 1) {
@@ -347,10 +430,10 @@ class ICPZBase : public EncoderBase {
         return read_register(2, 0xa, 1)[0];
     }
 
-    void set_ran_tol(uint8_t val) {
+    bool set_ran_tol(uint8_t val) {
         uint8_t tmp = read_register(0, 0xF, 1)[0] & 0xF0;
         tmp |= val & 0xF;
-        set_register(0, 0xF, {tmp});
+        return set_register(0, 0xF, {tmp});
     }
 
     uint8_t get_ran_tol() {
@@ -358,11 +441,26 @@ class ICPZBase : public EncoderBase {
         return ran_reg & 0xF;
     }
 
+    bool set_ran_fld(uint8_t val) {
+        uint8_t tmp = read_register(0, 0xF, 1)[0] & 0xF;
+        tmp |= (val<<8) & 0xF;
+        return set_register(0, 0xF, {tmp});
+    }
+
+    uint8_t get_ran_fld() {
+        uint8_t ran_reg = read_register(0, 0xF, 1)[0];
+        return ran_reg >> 7;
+    }
+
     float get_ai_phase() {
         auto data = read_register(1, 0x8, 2);
-        int16_t ai_phase_raw = ((int16_t) (data[1] << 8 | data[0])) >> 6;
-        float ai_phase = (float) ai_phase_raw/512*180;
-        return ai_phase;
+        return get_ai_phase(data.data());
+    }
+
+    bool set_ai_phase(float f) {
+        int16_t ai_phase_raw = f/180*512;
+        std::vector<uint8_t> data = {(uint8_t) (ai_phase_raw << 6), (uint8_t) (ai_phase_raw >> 2)};
+        return set_register(1, 0x8, data);
     }
 
     float get_ai_scale() {
@@ -370,6 +468,12 @@ class ICPZBase : public EncoderBase {
         int16_t ai_scale_raw = ((int16_t) (data[1] << 8 | data[0])) >> 7;
         float ai_scale = (float) ai_scale_raw/1820 + 1;
         return ai_scale;
+    }
+
+    bool set_ai_scale(float f) {
+        int16_t ai_scale_raw = (f-1)*1820;
+        std::vector<uint8_t> data = {(uint8_t) (ai_scale_raw << 7), (uint8_t) (ai_scale_raw >> 1)};
+        return set_register(1, 0xa, data);
     }
 
     float get_cos_off() {
@@ -400,11 +504,15 @@ class ICPZBase : public EncoderBase {
         return phase;
     }
 
-    float get_ai_phases() {
-        auto data = read_register(1, 0x28, 2);
+    static float get_ai_phase(uint8_t data[2]) {
         int16_t ai_phase_raw = ((int16_t) (data[1] << 8 | data[0])) >> 6;
         float ai_phase = (float) ai_phase_raw/512*180;
         return ai_phase;
+    }
+
+    float get_ai_phases() {
+        auto data = read_register(1, 0x28, 2);
+        return get_ai_phase(data.data());
     }
 
     float get_ai_scales() {
@@ -412,6 +520,14 @@ class ICPZBase : public EncoderBase {
         int16_t ai_scale_raw = ((int16_t) (data[1] << 8 | data[0])) >> 7;
         float ai_scale = (float) ai_scale_raw/1820 + 1;
         return ai_scale;
+    }
+
+    uint8_t get_ai_sel() {
+        return read_register(2, 3, 1)[0];
+    }
+    
+    bool set_ai_sel(uint8_t sel) {
+        return set_register(2, 3, {sel});
     }
 
     float get_cos_offs() {
@@ -442,11 +558,19 @@ class ICPZBase : public EncoderBase {
         return phase;
     }
 
+    uint16_t get_sc_sel() {
+        return *((uint16_t *) read_register(2, 0, 2).data()) & 0xFFF;
+    }
+
+    bool set_sc_sel(uint16_t sel) {
+        return set_register(2, 0, {(uint8_t) (sel & 0xFF), (uint8_t) ((sel >> 8) & 0xFF)});
+    }
+
     uint8_t get_led_cur() {
         return (read_register(3, 0, 1)[0] & 0xE) >> 1;
     }
 
-    void set_led_cur(uint8_t led_cur) {
+    bool set_led_cur(uint8_t led_cur) {
         // 0: 40 mA
         // 1: 0  mA
         // 2: 1  mA
@@ -457,7 +581,7 @@ class ICPZBase : public EncoderBase {
         // 7: 32 mA
         uint8_t tmp = read_register(3, 0, 1)[0] & 0x11;
         tmp |= (led_cur << 1) & 0xE;
-        set_register(3, 0, {tmp});
+        return set_register(3, 0, {tmp});
     }
 
     std::string get_cal_string() {
@@ -474,37 +598,42 @@ class ICPZBase : public EncoderBase {
         return std::string(c);
     }
 
+    static float get_temperature(uint8_t buf[2]) {
+        // signed value, 16 bit
+        uint16_t temp_raw = (buf[1] << 8 | buf[0]);
+        int16_t temp_signed = (int16_t) temp_raw;
+        float temp =  (float) temp_signed/10; 
+        return temp;
+    }
+
     float get_temperature() {
           auto data = read_register(0x4e, 2);
           // signed value, 16 bit
-          uint16_t temp_raw = (data[1] << 8 | data[0]);
-          int16_t temp_signed = (int16_t) temp_raw;
-          float temp =  (float) temp_signed/10; 
-          return temp;
+          return get_temperature(data.data());
     }
 
     // set ac_eto for 10x longer timeout on calibration
-    void set_ac_eto(uint8_t on = 1) {
+    bool set_ac_eto(uint8_t on = 1) {
         auto data = read_register(0x5d, 1);
-        set_register(0, 0x5d, {(uint8_t) ((on << 7) | (data[0] & 0xF))});
+        return set_register(0, 0x5d, {(uint8_t) ((on << 7) | (data[0] & 0xF))});
     }
 
     bool get_ac_eto() {
         return read_register(0x5d, 1)[0] >> 7;
     }
 
-    void set_ac_count(uint8_t count = 8) {
+    bool set_ac_count(uint8_t count = 8) {
         auto data = read_register(0x5d, 1);
-        set_register(0, 0x5d, {(uint8_t) ((data[0] & 0x80) | (count & 0xF))});
+        return set_register(0, 0x5d, {(uint8_t) ((data[0] & 0x80) | (count & 0xF))});
     }
 
     uint8_t get_ac_count() {
         return read_register(0x5d, 1)[0];// & 0xf;
     }
 
-    void set_ac_sel(uint8_t sel) {
+    bool set_ac_sel(uint8_t sel) {
         auto data = read_register(3, 1, 1);
-        set_register(3, 1, {(uint8_t) ((data[0] & 0x04) | (sel & 0x3))});
+        return set_register(3, 1, {(uint8_t) ((data[0] & 0x04) | (sel & 0x3))});
     }
 
     uint8_t get_ac_sel() {
@@ -528,41 +657,113 @@ class ICPZBase : public EncoderBase {
         return phase;
     }
 
-    void set_ecc_um(float ecc) {
+    bool set_ecc_um(float ecc) {
         uint32_t ecc_raw = ecc/r_disk_um[disk_] / 1.407e-9;
-        set_register(2, 4, {(uint8_t) (ecc_raw & 0xff), (uint8_t) ((ecc_raw >> 8) & 0xff), 
+        return set_register(2, 4, {(uint8_t) (ecc_raw & 0xff), (uint8_t) ((ecc_raw >> 8) & 0xff), 
           (uint8_t) ((ecc_raw >> 16) & 0xff), (uint8_t) ((ecc_raw >> 24) & 0xff)});
+    }
+
+    bool set_ecc_phase(float phase_deg) {
+        int16_t phase_raw = phase_deg/360 * std::pow(2, 14);
+        return set_register(2, 8, {(uint8_t) ((phase_raw << 2) & 0xff), (uint8_t) ((phase_raw >> 6) & 0xff)});
     }
 
     uint8_t get_ipo_filt1() {
         return read_register(0, 3, 1)[0];
     }
 
-    void set_ipo_filt1(uint8_t u) {
-        set_register(0, 3, {u});
+    bool set_ipo_filt1(uint8_t u) {
+        return set_register(0, 3, {u});
     }
 
     uint8_t get_ipo_filt2() {
         return read_register(0, 4, 1)[0];
     }
 
-    void set_ipo_filt2(uint8_t u) {
-        set_register(0, 4, {u});
+    bool set_ipo_filt2(uint8_t u) {
+        return set_register(0, 4, {u});
+    }
+
+    uint8_t i2c_bank_ = 0x24;
+    uint8_t i2c_adr_ = 0x0;
+    uint8_t get_i2c_data() {
+        spidma_.claim();
+        set_bank(i2c_bank_);
+        uint8_t data = get_i2c_data(i2c_adr_);
+        i2c_adr_++;
+        static_cast<ConcreteICPZ*>(this)->restore_bank_impl();
+        spidma_.release();
+        return data;
+    }
+
+    uint8_t get_i2c_data(uint8_t address) {
+        uint8_t data_out[2] = {Opcode::REQ_I2C, address};
+        uint8_t data_in[2];
+        spidma_.claim();
+        spidma_.readwrite(data_out, data_in, 2);
+        uint8_t i2c_data;
+        wait_while_true_with_timeout_us(get_i2c_transaction_info_and_data(&i2c_data), 20000);
+        spidma_.release();
+        return i2c_data;
+    }
+
+    void set_i2c_data(uint8_t data) {
+        set_bank(i2c_bank_);
+        uint8_t data_out[3] = {Opcode::TRANSMIT_I2C, i2c_adr_, data};
+        uint8_t data_in[3];
+        spidma_.claim();
+        spidma_.readwrite(data_out, data_in, 3);
+        static_cast<ConcreteICPZ*>(this)->restore_bank_impl();
+        spidma_.release();
+    }
+
+    uint8_t get_i2c_transaction_info_and_data(uint8_t *i2c_data) {
+        uint8_t data_out[3] = {Opcode::GET_TRANS_INFO};
+        uint8_t data_in[3];
+        spidma_.readwrite(data_out, data_in, 3);
+        *i2c_data = data_in[2];
+        return data_in[1];
+    }
+    uint8_t get_active_command() {
+        return read_register(Addr::COMMANDS, 1)[0];
+    }
+    
+    void send_command(uint8_t command) {
+        static_cast<ConcreteICPZ*>(this)->disable_commands_impl();
+        uint8_t data_out[2] = {Opcode::WRITE_COMMAND, command};
+        uint8_t data_in[2];
+        spidma_.readwrite(data_out, data_in, 2);
     }
 
     std::string get_cmd_result() {
-        return "command: " + std::to_string(read_register(Addr::COMMANDS, 1)[0]) + ", result: " + std::to_string(read_register(Addr::CMD_STAT, 1)[0]);
+        uint8_t command  = get_active_command();
+        std::string s = "command: " + std::to_string(command) + ", result: " + std::to_string(read_register(Addr::CMD_STAT, 1)[0]);
+        if (command == 0 || command == 0xff) {
+          static_cast<ConcreteICPZ*>(this)->enable_commands_impl();
+        }
+        return s;
     }
+
+    void enable_commands_impl() {
+        // default nothing
+    }
+
+    void disable_commands_impl() {
+        // default nothing
+    }
+
+    void restore_bank_impl() {
+        // default nothing
+    }
+
 
     SPIDMA &spidma_;
     Disk disk_;
     uint8_t command_[5] = {};
     uint8_t data_[5] = {};
     int32_t pos_ = 0;
-    uint32_t last_data_ = 0;
+    Encoder24 last_enc_ = {};
     uint8_t bank_ = 255;
-    uint8_t read_register_opcode_ = 0x81;
-    uint8_t write_register_opcode_ = 0xcf;
     enum {PZ, MU} type_ = PZ;
 
     uint32_t error_count_ = 0;

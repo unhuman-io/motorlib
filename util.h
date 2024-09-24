@@ -67,7 +67,7 @@ inline uint32_t get_current_heap_free() {
         wait_while_false_with_timeout_us_timeout = (get_clock() - wait_while_false_with_timeout_us_t_start < timeout_us*(CPU_FREQUENCY_HZ/1000000)); \
     } while( !wait_while_false_with_timeout_us_retval && wait_while_false_with_timeout_us_timeout); \
     wait_while_false_with_timeout_us_retval; });
-#define wait_while_true_with_timeout_us(condition, timeout_us) wait_while_false_with_timeout_us(!condition, timeout_us)
+#define wait_while_true_with_timeout_us(condition, timeout_us) wait_while_false_with_timeout_us(!(condition), timeout_us)
 
 #define while_timeout_ms(condition, ms) while((condition) && ((get_clock() - t_start) < ms*CPU_FREQUENCY_HZ/1000))
 #define timed_out(ms) ((get_clock() - t_start) > ms*CPU_FREQUENCY_HZ/1000)
