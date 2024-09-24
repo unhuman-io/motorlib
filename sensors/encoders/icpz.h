@@ -138,11 +138,12 @@ class ICPZBase : public EncoderBase {
       success &= set_register(7, 9, {0}); // multiturn data length = 0
       success &= set_register(7, 0xA, {0}); // spi_ext = 0
       success &= set_register(7, 0, {0x13, 0x07, 0, 0x11}); // disable prc error, default: {0x13, 0x0F, 0, 0x11}, 
-      success &= set_register(7, 4, {0x0C, 0xC8, 0, 0x02}); // prc is a warning, default: {0x0C, 0xC0, 0, 0x02}, 
-      success &= set_register(0, 0xF, {0});  // 0x00 ran_fld = 0 -> never update position based on absolute track after initial, tol 0
-      success &= set_register(2, 3, {0xDD}); // fast dynamic digital calibration - useful for detecting eccentricity
+      success &= set_register(7, 4, {0x0C, 0xC8, 0, 0x02}); // prc is a warning, default: {0x0C, 0xC0, 0, 0x02},
+      success &= set_ran_tol(0);  // disables position update based on absolute track after initial, tol 0
+      success &= set_ran_fld(0);
+      success &= set_ai_sel(0xDD); // fast dynamic digital calibration - useful for detecting eccentricity
       success &= set_register(2, 0, {0x00, 0x0});  // no dynamic analog calibration
-      success &= set_register(0, 3, {0xEA}); // ipo_filt1 per datasheet
+      success &= set_ipo_filt1(0xEA); // ipo_filt1 per datasheet
 
       success &= set_register(0xA, 0, {0x40 << 1}); // i2c address 0x40 for debug purposes
 
@@ -429,10 +430,10 @@ class ICPZBase : public EncoderBase {
         return read_register(2, 0xa, 1)[0];
     }
 
-    void set_ran_tol(uint8_t val) {
+    bool set_ran_tol(uint8_t val) {
         uint8_t tmp = read_register(0, 0xF, 1)[0] & 0xF0;
         tmp |= val & 0xF;
-        set_register(0, 0xF, {tmp});
+        return set_register(0, 0xF, {tmp});
     }
 
     uint8_t get_ran_tol() {
@@ -440,10 +441,10 @@ class ICPZBase : public EncoderBase {
         return ran_reg & 0xF;
     }
 
-    void set_ran_fld(uint8_t val) {
+    bool set_ran_fld(uint8_t val) {
         uint8_t tmp = read_register(0, 0xF, 1)[0] & 0xF;
         tmp |= (val<<8) & 0xF;
-        set_register(0, 0xF, {tmp});
+        return set_register(0, 0xF, {tmp});
     }
 
     uint8_t get_ran_fld() {
@@ -456,10 +457,10 @@ class ICPZBase : public EncoderBase {
         return get_ai_phase(data.data());
     }
 
-    void set_ai_phase(float f) {
+    bool set_ai_phase(float f) {
         int16_t ai_phase_raw = f/180*512;
         std::vector<uint8_t> data = {(uint8_t) (ai_phase_raw << 6), (uint8_t) (ai_phase_raw >> 2)};
-        set_register(1, 0x8, data);
+        return set_register(1, 0x8, data);
     }
 
     float get_ai_scale() {
@@ -469,10 +470,10 @@ class ICPZBase : public EncoderBase {
         return ai_scale;
     }
 
-    void set_ai_scale(float f) {
+    bool set_ai_scale(float f) {
         int16_t ai_scale_raw = (f-1)*1820;
         std::vector<uint8_t> data = {(uint8_t) (ai_scale_raw << 7), (uint8_t) (ai_scale_raw >> 1)};
-        set_register(1, 0xa, data);
+        return set_register(1, 0xa, data);
     }
 
     float get_cos_off() {
@@ -525,8 +526,8 @@ class ICPZBase : public EncoderBase {
         return read_register(2, 3, 1)[0];
     }
     
-    void set_ai_sel(uint8_t sel) {
-        set_register(2, 3, {sel});
+    bool set_ai_sel(uint8_t sel) {
+        return set_register(2, 3, {sel});
     }
 
     float get_cos_offs() {
@@ -561,15 +562,15 @@ class ICPZBase : public EncoderBase {
         return *((uint16_t *) read_register(2, 0, 2).data()) & 0xFFF;
     }
 
-    void set_sc_sel(uint16_t sel) {
-        set_register(2, 0, {(uint8_t) (sel & 0xFF), (uint8_t) ((sel >> 8) & 0xFF)});
+    bool set_sc_sel(uint16_t sel) {
+        return set_register(2, 0, {(uint8_t) (sel & 0xFF), (uint8_t) ((sel >> 8) & 0xFF)});
     }
 
     uint8_t get_led_cur() {
         return (read_register(3, 0, 1)[0] & 0xE) >> 1;
     }
 
-    void set_led_cur(uint8_t led_cur) {
+    bool set_led_cur(uint8_t led_cur) {
         // 0: 40 mA
         // 1: 0  mA
         // 2: 1  mA
@@ -580,7 +581,7 @@ class ICPZBase : public EncoderBase {
         // 7: 32 mA
         uint8_t tmp = read_register(3, 0, 1)[0] & 0x11;
         tmp |= (led_cur << 1) & 0xE;
-        set_register(3, 0, {tmp});
+        return set_register(3, 0, {tmp});
     }
 
     std::string get_cal_string() {
@@ -612,27 +613,27 @@ class ICPZBase : public EncoderBase {
     }
 
     // set ac_eto for 10x longer timeout on calibration
-    void set_ac_eto(uint8_t on = 1) {
+    bool set_ac_eto(uint8_t on = 1) {
         auto data = read_register(0x5d, 1);
-        set_register(0, 0x5d, {(uint8_t) ((on << 7) | (data[0] & 0xF))});
+        return set_register(0, 0x5d, {(uint8_t) ((on << 7) | (data[0] & 0xF))});
     }
 
     bool get_ac_eto() {
         return read_register(0x5d, 1)[0] >> 7;
     }
 
-    void set_ac_count(uint8_t count = 8) {
+    bool set_ac_count(uint8_t count = 8) {
         auto data = read_register(0x5d, 1);
-        set_register(0, 0x5d, {(uint8_t) ((data[0] & 0x80) | (count & 0xF))});
+        return set_register(0, 0x5d, {(uint8_t) ((data[0] & 0x80) | (count & 0xF))});
     }
 
     uint8_t get_ac_count() {
         return read_register(0x5d, 1)[0];// & 0xf;
     }
 
-    void set_ac_sel(uint8_t sel) {
+    bool set_ac_sel(uint8_t sel) {
         auto data = read_register(3, 1, 1);
-        set_register(3, 1, {(uint8_t) ((data[0] & 0x04) | (sel & 0x3))});
+        return set_register(3, 1, {(uint8_t) ((data[0] & 0x04) | (sel & 0x3))});
     }
 
     uint8_t get_ac_sel() {
@@ -656,31 +657,31 @@ class ICPZBase : public EncoderBase {
         return phase;
     }
 
-    void set_ecc_um(float ecc) {
+    bool set_ecc_um(float ecc) {
         uint32_t ecc_raw = ecc/r_disk_um[disk_] / 1.407e-9;
-        set_register(2, 4, {(uint8_t) (ecc_raw & 0xff), (uint8_t) ((ecc_raw >> 8) & 0xff), 
+        return set_register(2, 4, {(uint8_t) (ecc_raw & 0xff), (uint8_t) ((ecc_raw >> 8) & 0xff), 
           (uint8_t) ((ecc_raw >> 16) & 0xff), (uint8_t) ((ecc_raw >> 24) & 0xff)});
     }
 
-    void set_ecc_phase(float phase_deg) {
+    bool set_ecc_phase(float phase_deg) {
         int16_t phase_raw = phase_deg/360 * std::pow(2, 14);
-        set_register(2, 8, {(uint8_t) ((phase_raw << 2) & 0xff), (uint8_t) ((phase_raw >> 6) & 0xff)});
+        return set_register(2, 8, {(uint8_t) ((phase_raw << 2) & 0xff), (uint8_t) ((phase_raw >> 6) & 0xff)});
     }
 
     uint8_t get_ipo_filt1() {
         return read_register(0, 3, 1)[0];
     }
 
-    void set_ipo_filt1(uint8_t u) {
-        set_register(0, 3, {u});
+    bool set_ipo_filt1(uint8_t u) {
+        return set_register(0, 3, {u});
     }
 
     uint8_t get_ipo_filt2() {
         return read_register(0, 4, 1)[0];
     }
 
-    void set_ipo_filt2(uint8_t u) {
-        set_register(0, 4, {u});
+    bool set_ipo_filt2(uint8_t u) {
+        return set_register(0, 4, {u});
     }
 
     uint8_t i2c_bank_ = 0x24;
