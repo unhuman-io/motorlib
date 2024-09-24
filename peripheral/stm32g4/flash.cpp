@@ -1,4 +1,6 @@
 #include "flash.h"
+#include "../../util.h"
+#include "../../logger.h"
 
 void Flash::unlock() {
     if (regs_.CR & FLASH_CR_LOCK) {
@@ -31,12 +33,14 @@ void Flash::write_dword(uint32_t address, const uint32_t* data) {
 void Flash::write_impl(uint32_t address, const void *data, uint32_t size) {
     __disable_irq();
     unlock();
+    uint32_t t_start = get_clock();
     regs_.SR = regs_.SR; // clear previous errors
     uint32_t num_pages = (size+1) / page_size_ + 1;
     for (uint32_t i = 0; i < num_pages; i++) {
         IWDG->KR = 0xAAAA;
         erase_page(address + i * page_size_);
     }
+    uint32_t t_erase = get_clock() - t_start;
 
     // round size up to nearest +8
     size = (size + 7) & ~7;
@@ -49,4 +53,7 @@ void Flash::write_impl(uint32_t address, const void *data, uint32_t size) {
     }
     regs_.CR &= ~FLASH_CR_PG;
     __enable_irq();
+    uint32_t t_write = get_clock() - t_erase - t_start;
+    logger.log_printf("flash write address: %x, %d bytes, %d pages, erase %d us, write %d us", address, size,
+        num_pages, CPU_TO_US(t_erase), CPU_TO_US(t_write));
 }

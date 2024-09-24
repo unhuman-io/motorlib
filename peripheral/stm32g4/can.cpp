@@ -1,8 +1,9 @@
 #include "can.h"
 #include <cstring>
 #include <algorithm>
+#include "st_device.h"
 
-CAN::CAN(CAN_INST inst) : 
+CAN::CAN(CAN_INST inst, ArbitrationBaudRate arb, DataBaudRate data) : 
     regs_(*reinterpret_cast<FDCAN_GlobalTypeDef *>(inst*FDCAN_SIZE + FDCAN1_BASE)), 
     ram_(*reinterpret_cast<FDCANMessageRam *>(inst*FDCAN_MSG_RAM_SIZE + SRAMCAN_BASE)) {
     // Only if not reset
@@ -10,36 +11,55 @@ CAN::CAN(CAN_INST inst) :
     // while (!(regs_.CCCR & FDCAN_CCCR_INIT));
     regs_.CCCR |= FDCAN_CCCR_CCE;
 
-    // DTSEG1 + DTSEG2 + 3 = 170/12 -> 14
-    //regs_.DBTP = 8 << FDCAN_DBTP_DTSEG1_Pos | 3 << FDCAN_DBTP_DTSEG2_Pos | 2 << FDCAN_DBTP_DSJW_Pos;
 
-    // // DTSEG1 + DTSEG2 + 3 = 170/5 -> 34
-    regs_.DBTP = 21 << FDCAN_DBTP_DTSEG1_Pos | 10 << FDCAN_DBTP_DTSEG2_Pos | 4 << FDCAN_DBTP_DSJW_Pos | FDCAN_DBTP_TDC | 0 << FDCAN_DBTP_DBRP_Pos;
-    regs_.TDCR = 9 << FDCAN_TDCR_TDCO_Pos | 5 << FDCAN_TDCR_TDCF_Pos; // normal delay 180 ns, glitch filter 150ns*170MHz = 25
-
-    // // DTSEG1 + DTSEG2 + 3 = 170/2/2 -> 42.5 
-    // Note seems to have problems when dBRP > 2
-    regs_.DBTP = 30 << FDCAN_DBTP_DTSEG1_Pos | 10 << FDCAN_DBTP_DTSEG2_Pos | 4 << FDCAN_DBTP_DSJW_Pos | FDCAN_DBTP_TDC | 1 << FDCAN_DBTP_DBRP_Pos;
-    regs_.TDCR = 9 << FDCAN_TDCR_TDCO_Pos | 5 << FDCAN_TDCR_TDCF_Pos; // normal delay 180 ns, glitch filter 150ns*170MHz = 25
-
-    regs_.DBTP = 23 << FDCAN_DBTP_DTSEG1_Pos | 8 << FDCAN_DBTP_DTSEG2_Pos | 8 << FDCAN_DBTP_DSJW_Pos | FDCAN_DBTP_TDC | 0 << FDCAN_DBTP_DBRP_Pos;
-    regs_.TDCR = 9 << FDCAN_TDCR_TDCO_Pos | 5 << FDCAN_TDCR_TDCF_Pos; // normal delay 180 ns, glitch filter 150ns*170MHz = 25
-    
-    // // DTSEG1 + DTSEG2 + 3 = 170/5/2 -> 17
-    // regs_.DBTP = 8 << FDCAN_DBTP_DTSEG1_Pos | 6 << FDCAN_DBTP_DTSEG2_Pos | 4 << FDCAN_DBTP_DSJW_Pos | FDCAN_DBTP_TDC | 4 << FDCAN_DBTP_DBRP_Pos;
-    // regs_.TDCR = 12 << FDCAN_TDCR_TDCO_Pos | 1 << FDCAN_TDCR_TDCF_Pos;
+    // NTSEG1 + NTSEG2 + 3 = 170/(prescaler+1)/baud rate
+    // (ntseg1 + 2) / (ntseg1 + ntseg2 + 3) = 0.75
+    // ntseg1 max = 255, ntseg2 max = 127, nsjw max = 127
+    if (CPU_FREQUENCY_HZ == 170000000) {
+        switch (arb) {
+            case ArbitrationBaudRate::ARB_1M:
+                // samp paint = 0.7471
+                regs_.NBTP = 120 << FDCAN_NBTP_NSJW_Pos | 125 << FDCAN_NBTP_NTSEG1_Pos | 42 << FDCAN_NBTP_NTSEG2_Pos;
+                break;
+            case ArbitrationBaudRate::ARB_2M:
+                // samp point = 0.7529
+                regs_.NBTP = 60 << FDCAN_NBTP_NSJW_Pos | 62 << FDCAN_NBTP_NTSEG1_Pos | 20 << FDCAN_NBTP_NTSEG2_Pos; 
+                break;
+            default:
+                break;
+        }
+        // dtseg1 + dtseg2 + 3 = 170/(dbrp+1)*baud rate2
+        // dtseg1 max = 31, dtseg2 max = 15, dsjw max = 15, dbrp max = 31 (beware values > 0 may not work with TDC)
+        // normal transmitter delay 180 ns, glitch filter 150ns*170MHz = 25 (TDCF)
+        // TDCO max is 127, it should be (2+DTSEG1)*(psc+1)
+        switch (data) {
+            case DataBaudRate::DATA_1M:
+                // psc = 4, nq = 34 samp point = 0.7647
+                regs_.DBTP = 24 << FDCAN_DBTP_DTSEG1_Pos | 7 << FDCAN_DBTP_DTSEG2_Pos | 15 << FDCAN_DBTP_DSJW_Pos | 4 << FDCAN_DBTP_DBRP_Pos;
+                break;
+            case DataBaudRate::DATA_2M:
+                // psc = 4, nq = 17 samp point = 0.7647
+                regs_.DBTP = 11 << FDCAN_DBTP_DTSEG1_Pos | 3 << FDCAN_DBTP_DTSEG2_Pos | 10 << FDCAN_DBTP_DSJW_Pos | 4 << FDCAN_DBTP_DBRP_Pos;
+                break;
+            case DataBaudRate::DATA_5M:
+                // psc = 0, nq = 34  samp point = 0.7647
+                regs_.DBTP = 24 << FDCAN_DBTP_DTSEG1_Pos | 7 << FDCAN_DBTP_DTSEG2_Pos | 15 << FDCAN_DBTP_DSJW_Pos | FDCAN_DBTP_TDC | 0 << FDCAN_DBTP_DBRP_Pos;
+                regs_.TDCR = 26 << FDCAN_TDCR_TDCO_Pos | 25 << FDCAN_TDCR_TDCF_Pos;
+                break;
+            case DataBaudRate::DATA_8M:
+                // psc = 0, nq = 21  samp point = 0.7619, actual bitrate 8.095
+                regs_.DBTP = 14 << FDCAN_DBTP_DTSEG1_Pos | 4 << FDCAN_DBTP_DTSEG2_Pos | 13 << FDCAN_DBTP_DSJW_Pos | FDCAN_DBTP_TDC | 0 << FDCAN_DBTP_DBRP_Pos;
+                regs_.TDCR = 16 << FDCAN_TDCR_TDCO_Pos | 25 << FDCAN_TDCR_TDCF_Pos;
+                break;
+            default:
+                break;
+        }
+    }
 
     regs_.CCCR |= FDCAN_CCCR_BRSE | FDCAN_CCCR_FDOE; // bit rate switch, fd mode
 
 
-    // NTSEG1 + NTSEG2 + 3 = 170
-    // regs_.NBTP = 42 << FDCAN_NBTP_NSJW_Pos | 125 << FDCAN_NBTP_NTSEG1_Pos | 42 << FDCAN_NBTP_NTSEG2_Pos; // 10 time quanta, 3 time quanta before sample point
-    // 2Mbps
-    regs_.NBTP = 20 << FDCAN_NBTP_NSJW_Pos | 62 << FDCAN_NBTP_NTSEG1_Pos | 20 << FDCAN_NBTP_NTSEG2_Pos; // 10 time quanta, 3 time quanta before sample point
-
-
     regs_.TSCC = 1 << FDCAN_TSCC_TSS_Pos; // start counter
-    //regs_.TDCR ?
     regs_.RXGFC = 4 << FDCAN_RXGFC_LSS_Pos | FDCAN_RXGFC_ANFS | FDCAN_RXGFC_ANFE | FDCAN_RXGFC_RRFE; // 4 acceptance filters, reject everything else
     regs_.TXBC |= FDCAN_TXBC_TFQM; // transmit fifo request queue mode
 
