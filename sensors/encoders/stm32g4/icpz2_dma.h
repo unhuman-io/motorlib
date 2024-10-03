@@ -224,6 +224,8 @@ class ICPZ2DMA : public EncoderBase {
     void clear_faults() {
       icpz_.clear_faults();
       icpz2_.clear_faults();
+      clear_diag(0);
+      clear_diag(1);
       disagreement_error_ = 0;
       total_error_count_ = 0;
       total_crc_error_count_ = 0;

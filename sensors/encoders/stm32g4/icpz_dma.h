@@ -120,6 +120,11 @@ class ICPZDMA : public ICPZBase<ICPZDMA> {
       dmamux_rx_regs_.CCR &= DMAMUX_CxCR_DMAREQ_ID_Msk;
     }
 
+    void clear_faults() {
+        clear_diag();
+        ICPZBase::clear_faults();
+    }
+
     bool inited_ = false;
     DMAMUX_Channel_TypeDef &dmamux_tx_regs_;
     DMAMUX_Channel_TypeDef &dmamux_rx_regs_;
