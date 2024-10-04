@@ -32,6 +32,14 @@ class USBCommunication : public CommunicationBase {
     bool new_rx_data() { return usb_.new_rx_data(2); }
     bool any_new_rx_data() { return usb_.new_rx_data(2) || usb_.new_rx_data(1); }
     bool tx_data_ack() { return usb_.tx_data_ack(2); }
+
+    void send_one_time_api_timeout_request(uint32_t us) {
+       APIControlPacket timeout_request = {0, TIMEOUT_REQUEST, .timeout_request = {us}};
+       usb_.send_data(1, (const uint8_t * const) &timeout_request, sizeof(timeout_request), true);
+    }
+    void cancel_one_time_api_timeout_request() {
+       usb_.cancel_transfer(1);
+    }
  private:
     USB1 &usb_;
     friend class System;
