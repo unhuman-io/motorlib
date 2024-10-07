@@ -264,6 +264,14 @@ class System {
         api.add_api_variable("board_name", new const APICallback([]() { return otp->version == 1 ? otp->name : ""; }));
         api.add_api_variable("board_rev", new const APICallback([]() { return otp->version == 1 ? otp->rev : ""; }));
         api.add_api_variable("board_num", new const APIInt32(&otp->num));
+        api.add_api_variable("long_packet", new const APICallback([]{ 
+          char long_packet[MAX_API_DATA_SIZE+1] = "This is a long packet test\n";
+          int len = std::strlen(long_packet);
+          for (int i=0; i<MAX_API_DATA_SIZE-len; i++) {
+            long_packet[i+len] = '0' + (i % 10);
+          }
+          return std::string((char *) &long_packet, sizeof(long_packet));
+        }));
         api.add_api_variable("config", new const APICallback([](){ return CONFIG; }));
         api.add_api_variable("serial", new const APICallback([](){ return get_serial_number(); }));
         api.add_api_variable("olimit_max", new APIFloat(&actuator_.main_loop_.encoder_limits_.output_hard_max));

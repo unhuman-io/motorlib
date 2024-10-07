@@ -25,17 +25,24 @@ class USBCommunication : public CommunicationBase {
     }
     bool send_string(const char * const string, uint16_t length) {
        // blocks until entire string has been sent
-       if (string[0] == 0) {
+       if (string[0] == 0 || length > MAX_API_DATA_SIZE) {
           // binary that starts with 0, need to send as long packet
           struct {
              APIControlPacket control_packet = {0, LONG_PACKET, .long_packet = {0, 1}};
              char data[MAX_API_DATA_SIZE - sizeof(APIControlPacket)];
           } long_packet;
           long_packet.control_packet.long_packet.total_length = length;
-          std::memcpy(long_packet.data, string, 
-            std::min((uint16_t) (MAX_API_DATA_SIZE - sizeof(APIControlPacket)), length));
-          usb_.send_data(1, (const uint8_t * const) &long_packet, 
-                  std::min((uint16_t) MAX_API_DATA_SIZE, (uint16_t) (length + sizeof(APIControlPacket))), true);
+          int32_t length_remaining = length;
+          const char * str = string;
+          do {
+             uint16_t transfer_size = std::min((uint16_t) (MAX_API_DATA_SIZE - sizeof(APIControlPacket)), (uint16_t) length_remaining);
+             std::memcpy(long_packet.data, str, transfer_size);
+             usb_.send_data(1, (const uint8_t * const) &long_packet, 
+                     transfer_size + sizeof(APIControlPacket), true);
+             str += transfer_size;
+             long_packet.control_packet.long_packet.packet_number++;
+             length_remaining -= transfer_size;
+          } while (length_remaining > 0);
        } else {
          usb_.send_data(1, (const uint8_t * const) string, 
                std::min((uint16_t) MAX_API_DATA_SIZE, length), true);
