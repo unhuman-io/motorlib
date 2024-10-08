@@ -70,17 +70,55 @@ class UARTCommunication : public CommunicationBase {
     return 0;
   }
 
-  bool send_string(const char* string, uint16_t length) {
-    // while(send_active());
+  bool _send_string(const char* string, uint16_t length) {
+    while(send_active());
     uint8_t packet_size;
     length = std::min(length, (uint16_t) OBOT_ASCII_MAX_SEND_LENGTH); // todo support larger packets
     uint8_t* packet = protocol_.generatePacket((const uint8_t *) string, length, (size_t) OBOT_ASCII_RESPONSE, &packet_size);
+    send_uart_packet(packet, packet_size);
+    return true;
+  }
+
+  void send_uart_packet(uint8_t* packet, uint8_t packet_size) {
     std::memcpy(&uart_.tx_buffer_[0], &packet[0], packet_size);
     Uart::BufferDescriptor desc = {};
     desc.length = packet_size;
     desc.txBuffer = uart_.tx_buffer_;
     uart_.startTransaction(desc);
+  }
+
+  bool send_string(const char* string, uint16_t length) {
+    if (string[0] == 0 || length > OBOT_ASCII_MAX_SEND_LENGTH) {
+      struct {
+        APIControlPacket control_packet = {0, LONG_PACKET, .long_packet = {0, 1}};
+        char data[OBOT_ASCII_MAX_SEND_LENGTH - sizeof(APIControlPacket)];
+      } long_packet;
+      long_packet.control_packet.long_packet.total_length = length;
+      int32_t length_remaining = length;
+      const char * str = string;
+      do {
+        uint16_t transfer_size = std::min((uint16_t) (OBOT_ASCII_MAX_SEND_LENGTH - sizeof(APIControlPacket)), (uint16_t) length_remaining);
+        std::memcpy(long_packet.data, str, transfer_size);
+        _send_string((const char *) &long_packet, transfer_size);
+        if (retval < 0) {
+          // buffer full
+          continue;
+        }
+        str += transfer_size;
+        long_packet.control_packet.long_packet.packet_number++;
+        length_remaining -= transfer_size;
+      } while (length_remaining > 0);
+    } else {
+      _send_string((const char *) &long_packet, transfer_size);
+    }
     return true;
+  }
+
+  void send_one_time_api_timeout_request(uint32_t us) {
+    APIControlPacket timeout_request = {0, TIMEOUT_REQUEST, .timeout_request = {us}};
+    uint8_t packet_size;
+    uint8_t* packet = protocol_.generatePacket((const uint8_t *) timeout_request, sizeof(timeout_request), (size_t) OBOT_ASCII_RESPONSE, &packet_size);
+    send_uart_packet(packet, packet_size);
   }
 
   bool send_string_active() const { return send_active(); }
@@ -118,11 +156,7 @@ class UARTCommunication : public CommunicationBase {
     const uint32_t buffer_size = sizeof(MotorStatus);
 #endif
     uint8_t* packet = protocol_.generatePacket(reinterpret_cast<uint8_t*>(&obot_status_), buffer_size, OBOT_STATUS, &packet_size);
-    std::memcpy(&uart_.tx_buffer_[0], &packet[0], packet_size);
-    Uart::BufferDescriptor desc = {};
-    desc.length = packet_size;
-    desc.txBuffer = uart_.tx_buffer_;
-    uart_.startTransaction(desc);
+    send_uart_packet(packet, packet_size);
     status_sent_ = true;
   }
 

@@ -300,7 +300,7 @@ uint16_t Uart::get_last_rx_index() const {
 }
 
 bool Uart::is_tx_active() const {
-  return init_struct_.txDmaChannel->CNDTR == 0;
+  return init_struct_.txDmaChannel->CNDTR != 0;
 }
 
 void Uart::rx_copy(uint8_t * const out_buf, uint8_t * rx_buf_ptr, uint16_t length) {
