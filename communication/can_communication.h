@@ -93,8 +93,12 @@ class CANCommunication : public CommunicationBase {
         do {
           uint16_t transfer_size = std::min((uint16_t) (MAX_CAN_DATA_SIZE - sizeof(APIControlPacket)), (uint16_t) length_remaining);
           std::memcpy(long_packet.data, str, transfer_size);
-          can_.write(can_id.word, (uint8_t * const) &long_packet, 
+          int retval = can_.write(can_id.word, (uint8_t * const) &long_packet, 
                   transfer_size + sizeof(APIControlPacket));
+          if (retval < 0) {
+            // buffer full
+            continue;
+          }
           str += transfer_size;
           long_packet.control_packet.long_packet.packet_number++;
           length_remaining -= transfer_size;
