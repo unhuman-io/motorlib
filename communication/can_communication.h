@@ -96,6 +96,6 @@ class CANCommunication : public CommunicationBase {
     CAN &can_;
     volatile bool send_data_trigger_ = false;
     uint16_t send_data_counter_ = 0;
-    uint16_t send_data_default_decimation_ = 1000;
+    uint16_t send_data_default_decimation_ = 10000;
     uint8_t address_ = 0;
 };
