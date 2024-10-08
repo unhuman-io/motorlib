@@ -182,8 +182,11 @@ class MainLoop {
          status_.error.motor_temperature = 1;
       }
 
-      if (status_.error.all & error_mask_.all && !(receive_data_.mode_desired == DRIVER_ENABLE || receive_data_.mode_desired == CLEAR_FAULTS)) {
+      if (status_.error.all & error_mask_.all) {
           status_.error.fault = 1;
+      }
+      
+      if (status_.error.fault && !(receive_data_.mode_desired == DRIVER_ENABLE || receive_data_.mode_desired == CLEAR_FAULTS)) {
           if (safe_mode_ != true) {
             logger.log_printf("fault detected, error: %08x", status_.error.all);
             char s[600] = "fault bits:";
