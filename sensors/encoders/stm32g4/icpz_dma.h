@@ -4,6 +4,8 @@
 
 #define ICPZDMA_SET_DEBUG_VARIABLES(prefix, api, icpz) \
     ICPZ_SET_DEBUG_VARIABLES(prefix, api, icpz);\
+    api.add_api_variable(prefix "remapped_error_count", new const APIUint32(&icpz.remapped_error_count_));\
+    api.add_api_variable(prefix "remapped_warn_count", new const APIUint32(&icpz.remapped_warn_count_));\
 
 class ICPZDMA : public ICPZBase<ICPZDMA> {
  public:
@@ -38,10 +40,16 @@ class ICPZDMA : public ICPZBase<ICPZDMA> {
       if (!spidma_.pause_.is_paused()) {
         // Can only read when transactions are not active. Must be guaranteed 
         // by timing setup.
-        uint8_t *data_buf = data_mult_[current_buffer_index()];
+        int i = current_buffer_index();
+        uint8_t *data_buf = data_mult_[i];
         read_buf(data_buf);
+        or_diag();
+        if (i == 3) {
+          // diag just read
+          parse_diag_error();
+        }
       }
-      or_diag();
+      
       return get_value();
     }
     float get_temperature() {
@@ -147,4 +155,9 @@ class ICPZDMA : public ICPZBase<ICPZDMA> {
     uint8_t command_mult_[8][6] = {};
     uint8_t data_mult_[8][6] = {};
     uint32_t diag_ = {};
+    ICPZBase::DiagBits last_diag_bits_ = {};
+    ICPZBase::DiagBits diag_bits_error_mask_ = {.word = 0xFFFFF7FF}; // no prc_sync_failed
+    ICPZBase::DiagBits diag_bits_warn_mask_ = {.prc_sync_failed = 1};
+    uint32_t remapped_error_count_ = 0;
+    uint32_t remapped_warn_count_ = 0;
 };
