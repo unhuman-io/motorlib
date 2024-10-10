@@ -120,6 +120,24 @@ class ICPZDMA : public ICPZBase<ICPZDMA> {
       dmamux_rx_regs_.CCR &= DMAMUX_CxCR_DMAREQ_ID_Msk;
     }
 
+    void parse_diag_error() {
+      uint8_t *data = &data_mult_[2][2];
+      last_diag_bits_.word = data[3] << 24 | data[2] << 16 | data[1] << 8 | data[0];
+      if (last_diag_bits_.word & diag_bits_error_mask_.word) {
+        remapped_error_count_++;
+      }
+      if (last_diag_bits_.word & diag_bits_warn_mask_.word) {
+        remapped_warn_count_++;
+      }
+    }
+
+    void clear_faults() {
+      clear_diag();
+      ICPZBase::clear_faults();
+      remapped_error_count_ = 0;
+      remapped_warn_count_ = 0;
+    }
+
     bool inited_ = false;
     DMAMUX_Channel_TypeDef &dmamux_tx_regs_;
     DMAMUX_Channel_TypeDef &dmamux_rx_regs_;

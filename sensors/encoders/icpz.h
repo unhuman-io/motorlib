@@ -363,8 +363,7 @@ class ICPZBase : public EncoderBase {
     }
 
     void clear_faults() {
-        // todo this is called by mainloop needs to be isr safe to use clear diag here
-        // clear_diag();
+        clear_diag();
         error_count_ = 0;
         warn_count_ = 0;
         crc_error_count_ = 0;
