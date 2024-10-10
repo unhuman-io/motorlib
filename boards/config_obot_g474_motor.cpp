@@ -495,6 +495,7 @@ void system_init() {
     System::api.add_api_variable("t1cmp", new APIUint32(&TIM1->CCR1));
 
     System::api.add_api_variable("flash_cal", new const APICallback([]{
+        System::set_one_time_api_timeout_us(100 * 1000);
         void * adr = &_eccmram; // End of ccmram is an empty ram space. The linker script ensures that there is enough 
                                 // space for the calibration to reside here temporarily
         Calibration *cal = (Calibration *) adr;

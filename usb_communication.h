@@ -2,6 +2,7 @@
 #define UNHUMAN_MOTORLIB_USB_COMMUNICATION_H_
 
 #include "communication.h"
+#include <cstring>
 
 class USBCommunication : public CommunicationBase {
  public:
@@ -23,8 +24,29 @@ class USBCommunication : public CommunicationBase {
        return count;
     }
     bool send_string(const char * const string, uint16_t length) {
-       usb_.send_data(1, (const uint8_t * const) string, 
-            std::min((uint16_t) MAX_API_DATA_SIZE, length), true);
+       // blocks until entire string has been sent
+       if (string[0] == 0 || length > MAX_API_DATA_SIZE) {
+          // binary that starts with 0, need to send as long packet
+          struct {
+             APIControlPacket control_packet = {0, LONG_PACKET, .long_packet = {0, 1}};
+             char data[MAX_API_DATA_SIZE - sizeof(APIControlPacket)];
+          } long_packet;
+          long_packet.control_packet.long_packet.total_length = length;
+          int32_t length_remaining = length;
+          const char * str = string;
+          do {
+             uint16_t transfer_size = std::min((uint16_t) (MAX_API_DATA_SIZE - sizeof(APIControlPacket)), (uint16_t) length_remaining);
+             std::memcpy(long_packet.data, str, transfer_size);
+             usb_.send_data(1, (const uint8_t * const) &long_packet, 
+                     transfer_size + sizeof(APIControlPacket), true);
+             str += transfer_size;
+             long_packet.control_packet.long_packet.packet_number++;
+             length_remaining -= transfer_size;
+          } while (length_remaining > 0);
+       } else {
+         usb_.send_data(1, (const uint8_t * const) string, 
+               std::min((uint16_t) MAX_API_DATA_SIZE, length), true);
+       }
        return true;
     }
     bool send_string_active() const { return usb_.tx_active(1); }
@@ -32,6 +54,14 @@ class USBCommunication : public CommunicationBase {
     bool new_rx_data() { return usb_.new_rx_data(2); }
     bool any_new_rx_data() { return usb_.new_rx_data(2) || usb_.new_rx_data(1); }
     bool tx_data_ack() { return usb_.tx_data_ack(2); }
+
+    void send_one_time_api_timeout_request(uint32_t us) {
+       APIControlPacket timeout_request = {0, TIMEOUT_REQUEST, .timeout_request = {us}};
+       usb_.send_data(1, (const uint8_t * const) &timeout_request, sizeof(timeout_request), true);
+    }
+    void cancel_one_time_api_timeout_request() {
+       usb_.cancel_transfer(1);
+    }
  private:
     USB1 &usb_;
     friend class System;
