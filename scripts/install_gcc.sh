@@ -21,9 +21,13 @@ cd $gcc_dir
 # declare -A sha=( [x86_64]=12a2815644318ebcceaf84beabb665d0924b6e79e21048452c5331a56332b309 \
 #                  [aarch64]=960ec0bce309528f603639d8228ef39e6fb9185289ff42b01aa3b4de315accef )
 
-version=13.2.rel1
-declare -A sha=( [x86_64]=6cd1bbc1d9ae57312bcd169ae283153a9572bd6a8e4eeae2fedfbc33b115fdbb \
-                 [aarch64]=8fd8b4a0a8d44ab2e195ccfbeef42223dfb3ede29d80f14dcf2183c34b8d199a )
+# version=13.2.rel1
+# declare -A sha=( [x86_64]=6cd1bbc1d9ae57312bcd169ae283153a9572bd6a8e4eeae2fedfbc33b115fdbb \
+#                  [aarch64]=8fd8b4a0a8d44ab2e195ccfbeef42223dfb3ede29d80f14dcf2183c34b8d199a )
+
+version=13.3.rel1
+declare -A sha=( [x86_64]=95c011cee430e64dd6087c75c800f04b9c49832cc1000127a92a97f9c8d83af4 \
+                 [aarch64]=c8824bffd057afce2259f7618254e840715f33523a3d4e4294f471208f976764 )
 
 
 arch=$(uname -m)
