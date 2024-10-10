@@ -4,7 +4,7 @@
 #include <tuple>
 #include "../logger.h"
 
-// iterate the template communication interaces
+// iterate the template communication interfaces
 template<class... Args>
 class MultiCommunication : public CommunicationBase {
  public:
@@ -32,6 +32,9 @@ class MultiCommunication : public CommunicationBase {
         return false;
     }
 
+    // the send and receive string will process once string at a time
+    // It should reply with send string to the communication interface that it
+    // received the last string from
     int receive_string(char* const string) {
         int i = -1;
         int retval = std::apply([&string, &i](auto&&... comms) {
