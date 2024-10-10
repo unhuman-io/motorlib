@@ -27,12 +27,13 @@
 #define COMMS_SPI   2
 #define COMMS_UART  3
 #define COMMS_CAN   4
+#define COMMS_CAN_USB 5
 
 #ifndef COMMS
   #error "COMMS should be defined"
 #endif
 
-#if (COMMS != COMMS_USB) && (COMMS != COMMS_SPI) && (COMMS != COMMS_UART) && (COMMS != COMMS_CAN)
+#if (COMMS != COMMS_USB) && (COMMS != COMMS_SPI) && (COMMS != COMMS_UART) && (COMMS != COMMS_CAN) && (COMMS != COMMS_CAN_USB)
   #error "Invalid COMMS value"
 #endif
 
@@ -70,6 +71,13 @@ using PWM = HRPWM;
     #include "../communication/can_communication.h"
     #include "../peripheral/stm32g4/can.h"
     using Communication = CANCommunication<CAN>;
+#endif
+
+#if (COMMS == COMMS_CAN_USB)
+    #include "../communication/multi_communication.h"
+    #include "../peripheral/stm32g4/can.h"
+    #include "../communication/can_communication.h"
+    using Communication = MultiCommunication<CANCommunication<CAN>, USBCommunication>;
 #endif
 
 using Driver = DRV8323S;
@@ -284,7 +292,7 @@ namespace config {
 #endif
 #endif // COMMS_UART
 
-#if COMMS == COMMS_CAN
+#if (COMMS == COMMS_CAN) || (COMMS == COMMS_CAN_USB)
     CAN can(CAN_NUM);
 #endif
 
@@ -344,6 +352,12 @@ extern "C" void PendSV_Handler(void) {
 
 #if (COMMS == COMMS_CAN)
 Communication System::communication_(config::can, param->can_id);
+#endif
+
+#if (COMMS == COMMS_CAN_USB)
+CANCommunication<CAN> can_communication(config::can, param->can_id);
+USBCommunication usb_communication(config::usb);
+Communication System::communication_(can_communication, usb_communication);
 #endif
 
 void usb_interrupt() {
