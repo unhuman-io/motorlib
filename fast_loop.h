@@ -293,7 +293,6 @@ class FastLoop {
 
     void set_phase_mode(float phase_mode) {
       phase_mode_desired_ = phase_mode == 0 ? 1 : -1;
-      logger.log_printf("phase mode desired: %f", phase_mode_desired_);
     }
 
     void set_phase_mode() {

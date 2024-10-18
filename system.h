@@ -37,6 +37,7 @@ class System {
         } else {
             logger.log_printf("param version match: %s", OBOT_HASH);
         }
+
         actuator_.start();
 
         log("finished startup");
