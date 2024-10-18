@@ -13,7 +13,7 @@ extern uint32_t t_exec_fastloop;
 extern uint32_t t_exec_mainloop;
 extern uint32_t t_period_fastloop;
 extern uint32_t t_period_mainloop;
-uint32_t rcc_csr_copy __attribute__((section (".noload")));
+extern uint32_t rcc_csr_copy;
 
 void system_maintenance();
 void main_maintenance();
@@ -38,7 +38,18 @@ class System {
         } else {
             logger.log_printf("param version match: %s", OBOT_HASH);
         }
-        logger.log_printf("rcc_csr: %08x", rcc_csr_copy);
+        {
+            std::string s;
+            if (rcc_csr_copy & RCC_CSR_LPWRRSTF) { s += "LPWR "; }
+            if (rcc_csr_copy & RCC_CSR_WWDGRSTF) { s += "WWDG "; }
+            if (rcc_csr_copy & RCC_CSR_IWDGRSTF) {s += "IWDG "; }
+            if (rcc_csr_copy & RCC_CSR_SFTRSTF) { s += "SFT "; }
+            if (rcc_csr_copy & RCC_CSR_BORRSTF) { s += "BOR "; }
+            if (rcc_csr_copy & RCC_CSR_PINRSTF) { s += "PIN "; }
+            if (rcc_csr_copy & RCC_CSR_OBLRSTF) { s += "OBL "; }
+            logger.log_printf("rcc_csr: %08x %s", rcc_csr_copy, s.c_str());
+        }
+
         actuator_.start();
 
         log("finished startup");

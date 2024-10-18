@@ -169,10 +169,10 @@ SECTIONS
     PROVIDE_HIDDEN (__fini_array_end = .);
   } >FLASH
 
-  .noload :
+  .noload (NOLOAD):
   {
     *(.noload)
-  } >RAM
+  } >CCMRAM
 
   /* used by the startup to initialize data */
   _sidata = LOADADDR(.data);

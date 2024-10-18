@@ -34,6 +34,10 @@
 .global	g_pfnVectors
 .global	Default_Handler
 
+.section .noload
+	.word rcc_csr_copy
+
+
 /* start address for the initialization values of the .data section.
 defined in linker script */
 .word	_sidata
@@ -77,8 +81,12 @@ defined in linker script */
 Reset_Handler:
 	ldr r0, =RCC_BASE
 	ldr r1, [r0, #RCC_CSR_OFFSET]
+	// if (!(r1 & 0xFE000000)) a bootloader reset, don't erase previous flags
+	tst r1, #(0xFE000000)
+	beq no_csr_copy
 	ldr r2, =rcc_csr_copy
 	str r1, [r2]
+no_csr_copy:
 	orr r1, #(1<<RCC_CSR_RMVF_POS)
 	str r1, [r0, #RCC_CSR_OFFSET]			// clear reset flags
 
