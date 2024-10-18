@@ -34,9 +34,6 @@
 .global	g_pfnVectors
 .global	Default_Handler
 
-.section .noload
-	.word rcc_csr_copy
-
 
 /* start address for the initialization values of the .data section.
 defined in linker script */
