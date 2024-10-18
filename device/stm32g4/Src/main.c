@@ -10,7 +10,6 @@ void _lseek_r() {}
 void _read_r() {}
 
 uint32_t go_to_bootloader = 0;
-uint32_t rcc_csr_copy __attribute__((section (".noload")));
 
 
 int main(void)
