@@ -114,7 +114,7 @@ SECTIONS
 
 
   /* The program code and other data goes into FLASH */
-  .text :
+  .text (_eccmram - _sccmram):
   {
     . = ALIGN(4);
     *(.text.Reset_Handler)    /* reset handler early to help if later program corrupted */
@@ -129,7 +129,7 @@ SECTIONS
 
     . = ALIGN(4);
     _etext = .;        /* define a global symbols at end of code */
-  } >FLASH
+  } AT> FLASH
 
 
   /* Constant data goes into FLASH */
