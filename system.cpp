@@ -47,3 +47,24 @@ extern "C" int _isatty (int fd)
 {
   return (1);
 }
+
+extern "C" caddr_t _sbrk (int incr) 
+{
+  static char * heap;
+         char * prev_heap;
+
+  if (heap == NULL) {
+    heap = (char *)&_end;
+  }
+  
+  prev_heap = heap;
+
+  if ((heap + incr) > (char *)(&_estack - _Min_Stack_Size)) {
+    errno = ENOMEM;
+    return (caddr_t) -1;
+  }
+  
+  heap += incr;
+
+  return (caddr_t) prev_heap;
+}
