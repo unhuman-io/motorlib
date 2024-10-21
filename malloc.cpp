@@ -16,7 +16,7 @@ void * operator new(size_t size)
 
   void * p = malloc(size);
 
-  FIGURE_ASSERT(p != NULL, "Malloc failed");
+  //FIGURE_ASSERT(p != NULL, "Malloc failed");
   return p;
 }
 

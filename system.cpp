@@ -59,8 +59,9 @@ extern "C" caddr_t _sbrk (int incr)
   
   prev_heap = heap;
 
-  if ((heap + incr) > (char *)(&_estack - _Min_Stack_Size)) {
+  if ((heap + incr) > (char *)(&_estack - (uint32_t) &_Min_Stack_Size)) {
     errno = ENOMEM;
+    logger.log("Heap overflow");
     return (caddr_t) -1;
   }
   
