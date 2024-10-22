@@ -35,13 +35,14 @@ inline uint32_t get_stack_used() {
 extern char _end;
 extern uint32_t _Min_Heap_Size;
 inline uint32_t get_heap_free() {
-    char *start = &_end + (uint32_t) &_Min_Heap_Size; 
+    char *start = &_estack - (uint32_t) &_Min_Stack_Size; 
     char *count = start;
     while(!*count--); // assume zero filled
     return (start - count);
 }
 inline uint32_t get_heap_used() {
-    return (uint32_t) &_Min_Heap_Size - get_heap_free();
+    uint32_t max_heap = (uint32_t) (&_estack - &_end) - (uint32_t) &_Min_Stack_Size;
+    return max_heap - get_heap_free();
 }
 inline uint32_t get_current_heap_used() {
     struct mallinfo info = mallinfo();
