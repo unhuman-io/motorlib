@@ -269,6 +269,14 @@ class System {
         api.add_api_variable("board_name", new const APICallback([]() { return otp->version == 1 ? otp->name : ""; }));
         api.add_api_variable("board_rev", new const APICallback([]() { return otp->version == 1 ? otp->rev : ""; }));
         api.add_api_variable("board_num", new const APIInt32(&otp->num));
+        api.add_api_variable("long_packet", new const APICallback([]{ 
+          char long_packet[MAX_API_DATA_SIZE+1] = "This is a long packet test\n";
+          int len = std::strlen(long_packet);
+          for (int i=0; i<MAX_API_DATA_SIZE-len; i++) {
+            long_packet[i+len] = '0' + (i % 10);
+          }
+          return std::string((char *) &long_packet, sizeof(long_packet));
+        }));
         api.add_api_variable("config", new const APICallback([](){ return CONFIG; }));
         api.add_api_variable("serial", new const APICallback([](){ return get_serial_number(); }));
         api.add_api_variable("olimit_max", new APIFloat(&actuator_.main_loop_.encoder_limits_.output_hard_max));
@@ -282,20 +290,27 @@ class System {
 
 
         uint32_t t_start = get_clock();
+        current_api_timeout_us_ = api_timeout_us;
         while(1) {
             TOGGLE_SCOPE_PIN(C,4);
             count_++;
-            if (communication_.send_string_active() && get_clock() - t_start > US_TO_CPU(api_timeout_us)) {
+            if (communication_.send_string_active() && get_clock() - t_start > US_TO_CPU(current_api_timeout_us_)) {
                 communication_.cancel_send_string();
+                current_api_timeout_us_ = api_timeout_us;
             }
             char *s = System::get_string();
             if (s[0] != 0) {
                 auto response = api.parse_string(s);
+                current_api_timeout_us_ = api_timeout_us;
                 communication_.send_string(response.c_str(), response.length());
                 t_start = get_clock();
             }
             main_maintenance();
         }
+    }
+    static void set_one_time_api_timeout_us(uint32_t us) {
+        communication_.send_one_time_api_timeout_request(us);
+        current_api_timeout_us_ = US_TO_CPU(us);
     }
     static void main_loop_interrupt() {
         actuator_.main_loop_.update();
@@ -325,6 +340,7 @@ class System {
     static Actuator actuator_;
     static ParameterAPI api;
     static uint32_t count_;
+    static uint32_t current_api_timeout_us_;
 };
 
 extern "C" {

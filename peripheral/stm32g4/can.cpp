@@ -121,15 +121,15 @@ int CAN::read(uint8_t fifo, uint16_t id, uint8_t* data) {
     return length;
 }
 
-void CAN::write(uint16_t id, uint8_t* data, uint8_t length) {
+int CAN::write(uint16_t id, uint8_t* data, uint8_t length) {
     if (regs_.TXFQS & FDCAN_TXFQS_TFQF) {
         // queue full
-        return;
+        return -1;
     }
     uint8_t buf_num = (regs_.TXFQS >> FDCAN_TXFQS_TFQPI_Pos) & 3; // get current fifo
     if (buf_num > 2) {
         // shouldn't occur?
-        return;
+        return -2;
     }
     TX_BUFFER* buffer = reinterpret_cast<TX_BUFFER*>(ram_.TX_BUFFER[buf_num]);
     TX_BUFFER::TXWord1 word1 = {
@@ -155,6 +155,7 @@ void CAN::write(uint16_t id, uint8_t* data, uint8_t length) {
 
     // send
     regs_.TXBAR = 1 << buf_num;
+    return 0;
 }
 
 bool CAN::add_acceptance_filter(uint16_t id, uint8_t fifo) {

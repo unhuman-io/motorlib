@@ -31,6 +31,12 @@ class CommunicationBase {
     void cancel_send_string() {
     }
 
+    void send_one_time_api_timeout_request(uint32_t us) {
+    }
+
+    void cancel_one_time_api_timeout_request() {
+    }
+
     // true if send_data call succeeded, used to increment
     // round robin data
     bool tx_data_ack() {
