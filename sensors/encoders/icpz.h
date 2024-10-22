@@ -95,6 +95,47 @@ class ICPZBase : public EncoderBase {
       "startup_in_progress", "eeprom_crc_error", "gpio0_in_error", "gpio1_in_error",
       "startup_aborted_timeout", "user_error_1", "user_error_2", "user_error_3"};
 
+    union DiagBits {
+      struct {
+        uint8_t photo_amp_sat:1;
+        uint8_t led_cur_low:1;
+        uint8_t temp_sense_not_ready:1;
+        uint8_t vddio_low:1;
+        uint8_t interpolator_error:1;
+        uint8_t bit5:1;
+        uint8_t abz_not_ready:1;
+        uint8_t uvw_not_ready:1;
+
+        uint8_t alpha_overflow:1;
+        uint8_t omega_overflow:1;
+        uint8_t digital_photo_amp_not_ss:1;
+        uint8_t prc_sync_failed:1;
+        uint8_t analog_adjust_at_boundary:1;
+        uint8_t digital_adjust_at_boundary:1;
+        uint8_t temp_limit_1:1;
+        uint8_t temp_limit_2:1;
+
+        uint8_t multi_turn_error:1;
+        uint8_t multi_turn_error_2:1;
+        uint8_t multi_turn_error_3:1;
+        uint8_t multi_turn_error_4:1;
+        uint8_t multi_turn_warning:1;
+        uint8_t multi_turn_pos_failed:1;
+        uint8_t pin_ada_stuck_0:1;
+        uint8_t pin_ada_stuck_1:1;
+        
+        uint8_t startup_in_progress:1;
+        uint8_t eeprom_crc_error:1;
+        uint8_t gpio0_in_error:1;
+        uint8_t gpio1_in_error:1;
+        uint8_t startup_aborted_timeout:1;
+        uint8_t user_error_1:1;
+        uint8_t user_error_2:1;
+        uint8_t user_error_3:1;
+      };
+      uint32_t word;
+    };
+
     enum Disk{Default, PZ03S, PZ08S, PZ16S};
     struct Encoder24 {
       union {
@@ -363,8 +404,7 @@ class ICPZBase : public EncoderBase {
     }
 
     void clear_faults() {
-        // todo this is called by mainloop needs to be isr safe to use clear diag here
-        // clear_diag();
+        clear_diag();
         error_count_ = 0;
         warn_count_ = 0;
         crc_error_count_ = 0;
