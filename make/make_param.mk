@@ -18,14 +18,14 @@ ifndef PARAM_BUILD_DIR
 PARAM_BUILD_DIR = $(BUILD_DIR)/$(dir $(PARAM_FILE))
 endif
 
-$(info PARAM_BUILD_DIR: $(PARAM_BUILD_DIR))
-$(info $(PARAM_OUT))
+$(call info_once,PARAM_BUILD_DIR: $(PARAM_BUILD_DIR))
+$(call info_once,$(PARAM_OUT))
 
 .PHONY: param .FORCE
 
 param:
 	-$(RM) $(PARAM_BUILD_DIR)
-	$(MAKE) build_param
+	$(MAKE) --no-print-directory build_param
 
 build_param: $(PARAM_OUT)
 
