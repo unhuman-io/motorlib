@@ -70,22 +70,22 @@ CPPFLAGS = $(CFLAGS)
 LIBS = -lc -lm -lnosys 
 LIBDIR = 
 LDFLAGS = $(MCU) -specs=nosys.specs -T$(LDSCRIPT) $(LIBDIR) $(LIBS) -Wl,-Map=$(BUILD_DIR)/$(TARGET).map,--cref -Wl,--gc-sections,--print-memory-usage -u _printf_float
-	
+
 GCC_VERSION := $(shell $(CC) -dumpversion)
 GCC_MAJOR_VERSION := $(word 1, $(subst ., ,$(GCC_VERSION)))
 
 ifeq ($(GCC_MAJOR_VERSION), $(filter $(GCC_MAJOR_VERSION),10 11 12 13))
-$(info gcc version $(GCC_VERSION))
+$(call info_once,gcc version $(GCC_VERSION))
 else
 $(error gcc version $(GCC_VERSION), 10 - 13 required)
 endif
 
 ifeq ($(OS),Windows_NT)
-$(info windows)
+$(call info_once,build is on windows)
 RM=powershell -Command rm -r -fo
 MKDIR=powershell -Command mkdir -fo
 else
 RM=rm -rf
 MKDIR=mkdir -p
-$(info not windows)
+$(call info_once,build is not on windows)
 endif

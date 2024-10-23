@@ -17,7 +17,7 @@ ifndef TARGET_MCU
 $(error need to define TARGET_MCU)
 endif
 
-$(info target is $(TARGET_MCU))
+$(call info_once,target is $(TARGET_MCU))
 
 ifeq "$(TARGET_MCU)" "stm32g474"
 
@@ -119,8 +119,8 @@ $(SELF_DIR)../parameter_api.cpp\
 ./$(CONFIG_FILE)
 
 ifneq ($(findstring protocol_parser.cpp, $(CPP_SOURCES)),)
-$(info protocol_parser.cpp already defined)
+$(call info_once,protocol_parser.cpp already defined)
 else
-$(info using motorlib protocol_parser.cpp)
+$(call info_once,using motorlib protocol_parser.cpp)
 CPP_SOURCES += $(SELF_DIR)../obot-protocol/protocol_parser.cpp
 endif
