@@ -80,6 +80,8 @@ static uint8_t CRC_BiSS_43_30bit (uint32_t w_InputData);
         [](uint8_t u){ icpz.i2c_adr_ = u; }));\
     api.add_api_variable(prefix "i2c", new APICallbackHex<uint8_t>([]{ return icpz.get_i2c_data(); }, \
         [](uint8_t d){ icpz.set_i2c_data(d); }));\
+    api.add_api_variable(prefix "user_error", new APICallbackUint8([]{ return icpz.get_user_error(); }, \
+        [](uint8_t u){ icpz.set_user_error(u); }));\
     api.add_api_variable(prefix "reset", new const APICallback([](){ icpz.reset(); return "ok"; }));\
 
 template<typename ConcreteICPZ>
@@ -94,6 +96,47 @@ class ICPZBase : public EncoderBase {
       "multi_turn_warning", "multi_turn_pos_failed", "pin_ada_stuck_0", "pin_ada_stuck_1",
       "startup_in_progress", "eeprom_crc_error", "gpio0_in_error", "gpio1_in_error",
       "startup_aborted_timeout", "user_error_1", "user_error_2", "user_error_3"};
+
+    union DiagBits {
+      struct {
+        uint8_t photo_amp_sat:1;
+        uint8_t led_cur_low:1;
+        uint8_t temp_sense_not_ready:1;
+        uint8_t vddio_low:1;
+        uint8_t interpolator_error:1;
+        uint8_t bit5:1;
+        uint8_t abz_not_ready:1;
+        uint8_t uvw_not_ready:1;
+
+        uint8_t alpha_overflow:1;
+        uint8_t omega_overflow:1;
+        uint8_t digital_photo_amp_not_ss:1;
+        uint8_t prc_sync_failed:1;
+        uint8_t analog_adjust_at_boundary:1;
+        uint8_t digital_adjust_at_boundary:1;
+        uint8_t temp_limit_1:1;
+        uint8_t temp_limit_2:1;
+
+        uint8_t multi_turn_error:1;
+        uint8_t multi_turn_error_2:1;
+        uint8_t multi_turn_error_3:1;
+        uint8_t multi_turn_error_4:1;
+        uint8_t multi_turn_warning:1;
+        uint8_t multi_turn_pos_failed:1;
+        uint8_t pin_ada_stuck_0:1;
+        uint8_t pin_ada_stuck_1:1;
+        
+        uint8_t startup_in_progress:1;
+        uint8_t eeprom_crc_error:1;
+        uint8_t gpio0_in_error:1;
+        uint8_t gpio1_in_error:1;
+        uint8_t startup_aborted_timeout:1;
+        uint8_t user_error_1:1;
+        uint8_t user_error_2:1;
+        uint8_t user_error_3:1;
+      };
+      uint32_t word;
+    };
 
     enum Disk{Default, PZ03S, PZ08S, PZ16S};
     struct Encoder24 {
@@ -124,7 +167,7 @@ class ICPZBase : public EncoderBase {
     };
     enum Opcode {READ_REG=0x81, WRITE_REG=0xCF, READ_POS=0xA6, WRITE_COMMAND=0xD9, READ_DIAG=0x9C, REQ_I2C=0x97, TRANSMIT_I2C=0xD2, GET_TRANS_INFO=0xAD};
     enum Addr {CMD_STAT=0x76, COMMANDS=0x77};
-    enum CMD {REBOOT=0x10, SCLEAR=0x20, CONF_WRITE_ALL=0x41, AUTO_ADJ_ANA=0xB0, AUTO_ADJ_DIG=0xB1, AUTO_READJ_DIG=0xB2, AUTO_ADJ_ECC=0xB3};
+    enum CMD {REBOOT=0x10, SCLEAR=0x20, DIAG_USER0_RESET=0x28, DIAG_USER0_SET=0x29, CONF_WRITE_ALL=0x41, AUTO_ADJ_ANA=0xB0, AUTO_ADJ_DIG=0xB1, AUTO_READJ_DIG=0xB2, AUTO_ADJ_ECC=0xB3};
 
     bool init() {
       bool success = true;
@@ -251,7 +294,7 @@ class ICPZBase : public EncoderBase {
     }
 
     void clear_diag() {
-      send_command(SCLEAR);
+      send_command(SCLEAR, false);
     }
 
         // non interrupt context
@@ -355,7 +398,7 @@ class ICPZBase : public EncoderBase {
 
     void reset() {
       spidma_.claim();
-      send_command(REBOOT);
+      send_command(REBOOT, false);
       // The datasheet doesn't specify if there is any way to check for success on this command.
       ms_delay(40);
       static_cast<ConcreteICPZ*>(this)->enable_commands_impl();
@@ -363,8 +406,7 @@ class ICPZBase : public EncoderBase {
     }
 
     void clear_faults() {
-        // todo this is called by mainloop needs to be isr safe to use clear diag here
-        // clear_diag();
+        clear_diag();
         error_count_ = 0;
         warn_count_ = 0;
         crc_error_count_ = 0;
@@ -566,6 +608,23 @@ class ICPZBase : public EncoderBase {
         return set_register(2, 0, {(uint8_t) (sel & 0xFF), (uint8_t) ((sel >> 8) & 0xFF)});
     }
 
+    void set_user_error(uint8_t error) {
+        for (int i=0; i<3; i++) {
+            if (error & (1<<i)) {
+                // does not return anything in cmd_result (found experimentally)
+                send_command(CMD::DIAG_USER0_SET + 2*i, false);
+            }
+        }
+    }
+
+    uint8_t get_user_error() {
+        uint8_t data_out[6] = {Opcode::READ_DIAG};
+        uint8_t data_in[6];
+        spidma_.readwrite(data_out, data_in, 6);
+        uint32_t diag = data_in[5] << 24 | data_in[4] << 16 | data_in[3] << 8 | data_in[2];
+        return diag >> (32-3);
+    }
+
     uint8_t get_led_cur() {
         return (read_register(3, 0, 1)[0] & 0xE) >> 1;
     }
@@ -728,8 +787,11 @@ class ICPZBase : public EncoderBase {
         return read_register(Addr::COMMANDS, 1)[0];
     }
     
-    void send_command(uint8_t command) {
-        static_cast<ConcreteICPZ*>(this)->disable_commands_impl();
+    void send_command(uint8_t command, bool disable_commands = true) {
+        if (disable_commands) {
+          static_cast<ConcreteICPZ*>(this)->disable_commands_impl();
+        }
+        last_command_ = command;
         uint8_t data_out[2] = {Opcode::WRITE_COMMAND, command};
         uint8_t data_in[2];
         spidma_.readwrite(data_out, data_in, 2);
@@ -737,7 +799,8 @@ class ICPZBase : public EncoderBase {
 
     std::string get_cmd_result() {
         uint8_t command  = get_active_command();
-        std::string s = "command: " + std::to_string(command) + ", result: " + std::to_string(read_register(Addr::CMD_STAT, 1)[0]);
+        std::string s = "last command: 0x" + byte_to_hex(last_command_) + ", current command: 0x" + 
+          byte_to_hex(command) + ", result: 0x" + byte_to_hex(read_register(Addr::CMD_STAT, 1)[0]);
         if (command == 0 || command == 0xff) {
           static_cast<ConcreteICPZ*>(this)->enable_commands_impl();
         }
@@ -774,6 +837,7 @@ class ICPZBase : public EncoderBase {
     Diag last_diag_ = {};
     int32_t last_error_pos_ = 0;
     int32_t last_warn_pos_ = 0;
+    uint8_t last_command_ = 0;
 
     friend void config_init();
     friend void config_maintenance();
