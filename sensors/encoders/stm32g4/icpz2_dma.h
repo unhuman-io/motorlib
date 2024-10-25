@@ -5,7 +5,7 @@
 #include "../../../control_fun.h"
 
 #define ICPZ2_SET_DEBUG_VARIABLES(prefix, api, icpz) \
-    ICPZ_SET_DEBUG_VARIABLES(prefix "1", api, icpz.icpz_);\
+    ICPZ_SET_DEBUG_VARIABLES(prefix, api, icpz.icpz_);\
     ICPZ_SET_DEBUG_VARIABLES(prefix "2", api, icpz.icpz2_);\
     api.add_api_variable(prefix "1enc", new const APIUint32(&icpz.value1_.word));\
     api.add_api_variable(prefix "2enc", new const APIUint32(&icpz.value2_.word));\
@@ -119,7 +119,7 @@ class ICPZ2DMA : public EncoderBase {
       }
       if (!icpz2_.init()) {
         logger.log("icpz2 init failed");
-        result = false;
+        //result = false;
       }
       result &= icpz_.set_register(7, 0, {0xFF, 0xFF, 0x00, 0xF3}); // enable all errors, report in diagnosis, except multiturn, gpio
       result &= icpz2_.set_register(7, 0, {0xFF, 0xFF, 0x00, 0xF3});
@@ -284,8 +284,10 @@ class ICPZ2DMA : public EncoderBase {
 
 
     void parse_diag_error() {
-      diag_[0] = last_diag_bits_[0].word;
-      diag_[1] = last_diag_bits_[1].word;
+
+      diag_[0] |= last_diag_bits_[0].word;
+      diag_[1] |= last_diag_bits_[1].word;
+
       for (int i=0; i<2; i++) {
         if (last_diag_bits_[i].word & diag_bits_error_mask_.word) {
           remapped_error_count_[i]++;
