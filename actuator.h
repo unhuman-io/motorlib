@@ -16,11 +16,8 @@ class Actuator {
       startup_motor_bias_ = calibration_.motor_encoder_bias;
     }
     void start() {
-      if (!startup_param_.no_driver_enable) {
-         us_delay(1000);
-         main_loop_.driver_.enable();
-         main_loop_.set_mode(CLEAR_FAULTS);
-      }
+      us_delay(1000);
+      main_loop_.driver_.enable();
 
       main_loop_.set_rollover(fast_loop_.get_rollover());
       if (!startup_param_.no_zero_current_sensors) {
@@ -45,22 +42,8 @@ class Actuator {
       fast_loop_.set_iq_des(0);
       main_loop_.set_started();
     }
-    void enable_driver() {
-         if (main_loop_.status_.fast_loop.vbus > main_loop_.vbus_min_ && 
-            main_loop_.status_.fast_loop.vbus < main_loop_.vbus_max_) {
-            main_loop_.driver_.enable();
-         }
-         main_loop_.set_mode(CLEAR_FAULTS);
-    }
     void maintenance() {
       fast_loop_.maintenance();
-      if (main_loop_.driver_disable_triggered()) {
-         ms_delay(10);
-         main_loop_.driver_.disable();
-      }
-      if (main_loop_.driver_enable_triggered()) {
-         enable_driver();
-      }
 
       MainLoopStatus status = main_loop_.get_status();
       if (main_loop_.param_.output_encoder.disagreement_tolerance > 0 &&

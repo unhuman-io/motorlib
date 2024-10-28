@@ -90,15 +90,11 @@ class MainLoop {
           no_command_ = 0;
           first_command_received_ = true;
           host_timestamp_ = receive_data.host_timestamp;
-          if (!safe_mode_ && mode_ != DRIVER_DISABLE) {
+          if (!safe_mode_) {
             command_received = true;
             receive_data_ = receive_data;
-          } else if ((receive_data.mode_desired == CLEAR_FAULTS && mode_ != DRIVER_DISABLE) ||
-                     receive_data.mode_desired == DRIVER_ENABLE) {
-              command_received = true;
-              first_command_received_ = false;
-              receive_data_ = receive_data;
           } else if (receive_data.mode_desired == BOARD_RESET ||
+                     receive_data.mode_desired == CLEAR_FAULTS ||
                      receive_data.mode_desired == CRASH ||
                      receive_data.mode_desired == SLEEP ||
                      receive_data.mode_desired == FAULT ||
@@ -163,7 +159,6 @@ class MainLoop {
         }
         status_.error.output_encoder |= output_encoder_.error();
       }
-      status_.error.driver_not_enabled |= !driver_.is_enabled();
       status_.error.driver_fault |= driver_.is_faulted();
 
       float __attribute((unused)) output_velocity = (status_.output_position - output_position_last_)/dt_;
@@ -186,7 +181,7 @@ class MainLoop {
           status_.error.fault = 1;
       }
       
-      if (status_.error.fault && !(receive_data_.mode_desired == DRIVER_ENABLE || receive_data_.mode_desired == CLEAR_FAULTS)) {
+      if (status_.error.fault) {
           if (safe_mode_ != true) {
             logger.log_printf("fault detected, error: %08x", status_.error.all);
             char s[600] = "fault bits:";
@@ -373,15 +368,13 @@ class MainLoop {
       if (!position_limits_disable_) {
         if (((status_.motor_position > encoder_limits_.motor_controlled_max && iq_des >= 0) ||
             (status_.motor_position < encoder_limits_.motor_controlled_min && iq_des <= 0)) && started_) {
-          if (receive_data_.mode_desired != DRIVER_ENABLE && receive_data_.mode_desired != CLEAR_FAULTS) {
-            if (mode_ != VELOCITY && mode_ != param_.safe_mode && mode_ != DRIVER_DISABLE && first_command_received()) {
-              set_mode(VELOCITY);
-            }
-            MotorCommand tmp_receive_data = command_current_;
-            tmp_receive_data.velocity_desired = 0;
-            iq_des = velocity_controller_.step(tmp_receive_data, status_);
-            status_.error.motor_soft_limit = 1;
+          if (mode_ != VELOCITY && mode_ != param_.safe_mode && first_command_received()) {
+            set_mode(VELOCITY);
           }
+          MotorCommand tmp_receive_data = command_current_;
+          tmp_receive_data.velocity_desired = 0;
+          iq_des = velocity_controller_.step(tmp_receive_data, status_);
+          status_.error.motor_soft_limit = 1;
         } else {
           if (status_.motor_position < encoder_limits_.motor_controlled_max &&
               status_.motor_position > encoder_limits_.motor_controlled_min) {
@@ -582,16 +575,13 @@ class MainLoop {
             velocity_controller_.init(status_);
             led_.set_color(LED::BLUE);
             break;
-          case DRIVER_ENABLE:
-            fast_loop_.open_mode();
-            driver_enable_triggered_ = true;
-            led_.set_color(LED::AZURE);
-            break;
           case DRIVER_DISABLE:
             fast_loop_.open_mode();
-            driver_disable_triggered_ = true;
             led_.set_color(LED::WHITE);
             break;
+          case DRIVER_ENABLE:
+            fast_loop_.open_mode();
+            // fall through
           case CLEAR_FAULTS:
             safe_mode_ = false;
             torque_sensor_.clear_faults();
@@ -637,11 +627,6 @@ class MainLoop {
           fast_loop_.trigger_status_log();
           led_.set_color(LED::RED);
           led_.set_rate(2);
-          if (param_.safe_mode_driver_disable && !(mode == DRIVER_ENABLE)) {
-            // todo bring back logger in isr safe way
-            // logger.log_printf("safe mode driver disable, mode: %d", mode);
-            driver_.disable();
-          }
         } else {
           led_.set_rate(1);
         }
@@ -681,21 +666,6 @@ class MainLoop {
       return command;
     }
 
-    bool driver_enable_triggered() {
-      if (driver_enable_triggered_) {
-        driver_enable_triggered_ = false;
-        return true;
-      }
-      return false;
-    }
-
-    bool driver_disable_triggered() {
-      if (driver_disable_triggered_) {
-        driver_disable_triggered_ = false;
-        return true;
-      }
-      return false;
-    }
     void lock_status_log() {
       fast_log_ready_ = false;
     }
@@ -765,8 +735,6 @@ class MainLoop {
     Driver &driver_;
     HardwareBrake brake_;
     static HardwareBrakeBase no_brake_;
-    volatile bool driver_enable_triggered_ = false;
-    volatile bool driver_disable_triggered_ = false;
     uint32_t last_energy_uJ_ = 0;
 
     DFTResponse dft_;
