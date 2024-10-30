@@ -20,3 +20,8 @@ jobs:
         ! make GCC_PATH=/gcc/bin
         ! make NAME=fail REV=MR0 NUM=25 GCC_PATH=/gcc/bin
         ! make REV=MR0 GCC_PATH=/gcc/bin
+    - name: make test
+      run: |
+        cd test
+        make test_logger
+        ./test_logger
