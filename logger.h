@@ -24,6 +24,7 @@ class Logger {
         front_atomic_.store(front_log_, std::memory_order_release);
         read_front_atomic_.store(read_front_, std::memory_order_release);
         num_elements_++;
+        num_elements_to_read_++;
     }
     // void log_once(std::string_view str) {
     //     // if (str != log_queue_.back()) {
@@ -48,7 +49,7 @@ class Logger {
                 ++read_front_next;
                 success = read_front_atomic_.compare_exchange_strong(read_front_expected, read_front_next);
             } while (!success);
-            
+            num_elements_to_read_--;
         } else {
             str = "log end";
         }
@@ -66,13 +67,20 @@ class Logger {
         log(sout);
     }
     uint32_t num_elements() const { return num_elements_; }
+    uint32_t num_elements_to_read() const { return num_elements_to_read_; }
     static std::string_view extract_string(std::string_view str) {
         std::string_view data = str.substr(str.find(") ") + 2);
         return data;
     }
 
     void reset_read_front() {
-        read_front_atomic_.store(front_atomic_.load(std::memory_order_acquire), std::memory_order_release);
+        bool success = false;
+        do {
+            CIndex front = front_atomic_.load(std::memory_order_acquire);
+            num_elements_to_read_ = num_elements_;
+            read_front_atomic_.store(front, std::memory_order_release);
+            success = (uint32_t) front == front_atomic_.load(std::memory_order_acquire);
+        } while (!success);
     }
  private:
     class CIndex {
@@ -127,10 +135,12 @@ class Logger {
             }
             ++front_log_;
             num_elements_--;
+            num_elements_to_read_--;
         }
     }
 
     uint32_t num_elements_ = 0;
+    uint32_t num_elements_to_read_ = 0;
     CIndex front_log_;
     CIndex read_front_;
     CIndex back_;
