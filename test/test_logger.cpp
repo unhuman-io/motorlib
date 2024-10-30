@@ -80,5 +80,15 @@ int main() {
     }
     check_num_elements(0);
 
+    // reread log
+    logger.reset_read_front();
+    std::cout << logger.get_log() << std::endl;
+    std::cout << "num_elements: " << logger.num_elements_to_read() << ", num: " << num << std::endl;
+    assert(logger.num_elements_to_read() == num);
+    for (int i=0; i<num; i++) {
+        check_str(std::to_string(i+val_start+1));
+    }
+
+
     return 0;
 }

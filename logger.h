@@ -132,10 +132,10 @@ class Logger {
             while (log_queue_[front_log_] != '\0');
             if (read_front_ == front_log_) {
                 ++read_front_;
+                num_elements_to_read_--;
             }
             ++front_log_;
             num_elements_--;
-            num_elements_to_read_--;
         }
     }
 
