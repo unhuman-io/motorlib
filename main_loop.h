@@ -189,14 +189,9 @@ class MainLoop {
       if (status_.error.fault && !(receive_data_.mode_desired == DRIVER_ENABLE || receive_data_.mode_desired == CLEAR_FAULTS)) {
           if (safe_mode_ != true) {
             logger.log_printf("fault detected, error: %08x", status_.error.all);
-            char s[600] = "fault bits:";
-            for (int i=0; i<32; i++) {
-              if ((status_.error.all >> i) & 0x1) {
-                std::strcat(s, " "); 
-                std::strcat(s, error_bit_strings[i]);
-              }
-            }
-            logger.log(s);
+            char c[600] = "fault bits: ";
+            get_fault_str(c, sizeof(c));
+            logger.log(c);
           }
           safe_mode_ = true;
           set_mode(param_.safe_mode);
@@ -679,6 +674,15 @@ class MainLoop {
           break;
       }
       return command;
+    }
+
+    void get_fault_str(char *s, size_t len) const {
+      for (int i=0; i<32; i++) {
+        if ((status_.error.all >> i) & 0x1) {
+          std::strncat(s, " ", len-1);
+          std::strncat(s, error_bit_strings[i], len-1);
+        }
+      }
     }
 
     bool driver_enable_triggered() {

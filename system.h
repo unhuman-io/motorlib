@@ -278,6 +278,12 @@ class System {
         api.add_api_variable("msoftlimit_max", new APIFloat(&actuator_.main_loop_.encoder_limits_.motor_controlled_max));
         api.add_api_variable("msoftlimit_min", new APIFloat(&actuator_.main_loop_.encoder_limits_.motor_controlled_min));
         api.add_api_variable("is_sbank", new const APICallbackUint8([](){ return (*((uint8_t *) 0x1fff7802) & 0x40) == 0; }));
+        api.add_api_variable("fault", new const APICallbackHex<uint32_t>([](){ return actuator_.main_loop_.status_.error.all; }));
+        api.add_api_variable("fault_str", new const APICallback([](){
+            char c[600];
+            actuator_.main_loop_.get_fault_str(c, 600);
+            return std::string(c);
+        }));
         api.add_api_variable("reset", new const APICallbackUint8([](){ NVIC_SystemReset(); return 0; }));
 
 
