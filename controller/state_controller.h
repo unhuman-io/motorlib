@@ -54,6 +54,17 @@ class StateController : public Controller {
         API_ADD_FILTER(state_position_desired_filter, SecondOrderLowPassFilter, position_desired_filter_);
     }
     void set_rollover(float rollover) { /* doesn't support rollover */ }
+    bool validate_command(const MotorCommand &command) const {
+        const StateControllerCommand &c = command.state;
+        if (std::isfinite(c.position_desired) && std::isfinite(c.velocity_desired) && 
+            std::isfinite(c.torque_desired) && std::isfinite(c.torque_dot_desired) && 
+            std::isfinite(c.current_desired) &&
+            std::isfinite(c.kp) && std::isfinite(c.kd) && std::isfinite(c.kt) && 
+            std::isfinite(c.ks)) {
+            return true;
+        }
+        return false;
+    }
  private:
     float position_error_, velocity_error_;
     float position_last_ = 0;

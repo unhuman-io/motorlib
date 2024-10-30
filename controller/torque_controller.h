@@ -28,6 +28,13 @@ class TorqueController : public Controller {
         API_ADD_FILTER(t_output_filter, FirstOrderLowPassFilter, controller_.output_filter_);
         api.add_api_variable("tmax", new APIFloat(&controller_.command_max_));
     }
+    bool validate_command(const MotorCommand &command) const {
+        if (std::isfinite(command.torque_desired) &&
+            std::isfinite(command.current_desired)) {
+            return true;
+        }
+        return false;
+    }
  private:
     PIDController controller_;
 
