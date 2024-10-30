@@ -4,3 +4,6 @@ test_control_fun: test_control_fun.cpp ../control_fun.h ../control_fun.cpp
 
 test_logger: test_logger.cpp ../logger.h
 	g++ test_logger.cpp -o test_logger
+
+test_error_mask: test_error_mask.cpp ../motor_messages/motor_messages.h
+	g++ test_error_mask.cpp -o test_error_mask
