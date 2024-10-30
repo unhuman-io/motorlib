@@ -24,8 +24,7 @@ class JointPositionController : public Controller {
     }
     void set_rollover(float rollover) { velocity_controller_.set_rollover(rollover); }
     bool validate_command(const MotorCommand &command) const {
-        if (std::isfinite(command.position_desired) &&
-            std::isfinite(command.current_desired)) {
+        if (std::isfinite(command.position_desired)) {
             return true;
         }
         return false;

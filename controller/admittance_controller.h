@@ -23,8 +23,7 @@ class AdmittanceController : public Controller {
         velocity_controller_.set_param(param.velocity);
     }
     bool validate_command(const MotorCommand &command) const {
-        if (std::isfinite(command.torque_desired) &&
-            std::isfinite(command.current_desired)) {
+        if (std::isfinite(command.torque_desired)) {
             return true;
         }
         return false;

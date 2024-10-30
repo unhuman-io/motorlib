@@ -58,8 +58,9 @@ class StateController : public Controller {
         const StateControllerCommand &c = command.state;
         if (std::isfinite(c.position_desired) && std::isfinite(c.velocity_desired) && 
             std::isfinite(c.torque_desired) && std::isfinite(c.torque_dot_desired) && 
+            std::isfinite(c.current_desired) &&
             std::isfinite(c.kp) && std::isfinite(c.kd) && std::isfinite(c.kt) && 
-            std::isfinite(c.ks) && std::isfinite(param_.ff_tau) && std::isfinite(param_.command_max)) {
+            std::isfinite(c.ks)) {
             return true;
         }
         return false;
