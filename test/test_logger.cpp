@@ -21,8 +21,8 @@ uint64_t get_clock() {
 }
 
 void check_num_elements(int expected) {
-    if (logger.num_elements() != expected) {
-        std::cout << "expected " << expected << " elements, got " << logger.num_elements() << std::endl;
+    if (logger.num_elements_to_read() != expected) {
+        std::cout << "expected " << expected << " elements, got " << logger.num_elements_to_read() << std::endl;
         exit(1);
     }
 }
@@ -64,15 +64,15 @@ int main() {
 
     for (int i=0; i<500; i++) {
         logger.log(std::to_string(i));
-        std::cout << "num_elements: " << logger.num_elements() << std::endl;
+        std::cout << "num_elements: " << logger.num_elements_to_read() << std::endl;
     }
     std::string int1 = logger.get_log();
     uint32_t val_start;
     std::string_view data = logger.extract_string(int1);
     std::from_chars(data.data(), data.data() + data.size(), val_start);
     std::cout << "int1: " << int1 << std::endl;
-    std::cout << "num_elements: " << logger.num_elements() << std::endl;
-    uint32_t num = logger.num_elements();
+    std::cout << "num_elements: " << logger.num_elements_to_read() << std::endl;
+    uint32_t num = logger.num_elements_to_read();
     for (int i=0; i<num; i++) {
         //std::string int2 = logger.get_log();
         //std::cout << "int2: " << int2 << std::endl;
