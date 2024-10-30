@@ -278,6 +278,11 @@ class System {
         api.add_api_variable("msoftlimit_max", new APIFloat(&actuator_.main_loop_.encoder_limits_.motor_controlled_max));
         api.add_api_variable("msoftlimit_min", new APIFloat(&actuator_.main_loop_.encoder_limits_.motor_controlled_min));
         api.add_api_variable("is_sbank", new const APICallbackUint8([](){ return (*((uint8_t *) 0x1fff7802) & 0x40) == 0; }));
+        api.add_api_variable("invalid_command_leak_rate_s", new APICallbackFloat([]{
+            return actuator_.main_loop_.invalid_command_fault_.get_leak_period_s(actuator_.main_loop_.dt_); },
+            [](float f){ actuator_.main_loop_.invalid_command_fault_.set_leak_period(f, actuator_.main_loop_.dt_); }));
+        api.add_api_variable("invalid_command_limit", new APIUint32(&actuator_.main_loop_.invalid_command_limit_));
+        api.add_api_variable("invalid_command_count", new APIUint32(&actuator_.main_loop_.invalid_command_fault_.count_));
         api.add_api_variable("fault", new const APICallbackHex<uint32_t>([](){ return actuator_.main_loop_.status_.error.all; }));
         api.add_api_variable("fault_str", new const APICallback([](){
             char c[600];

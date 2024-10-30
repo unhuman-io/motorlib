@@ -84,28 +84,32 @@ class MainLoop {
       bool command_received = false;
       if (started_) {
         if (count_received) {
-#ifdef GPIO_OUT
-          GPIO_OUT = receive_data.misc.gpio;
-#endif  // GPIO_OUT
-          no_command_ = 0;
-          first_command_received_ = true;
-          host_timestamp_ = receive_data.host_timestamp;
-          if (!safe_mode_ && mode_ != DRIVER_DISABLE) {
-            command_received = true;
-            receive_data_ = receive_data;
-          } else if ((receive_data.mode_desired == CLEAR_FAULTS && mode_ != DRIVER_DISABLE) ||
-                     receive_data.mode_desired == DRIVER_ENABLE) {
+          if (validate_receive_data(receive_data)) {
+  #ifdef GPIO_OUT
+            GPIO_OUT = receive_data.misc.gpio;
+  #endif  // GPIO_OUT
+            no_command_ = 0;
+            first_command_received_ = true;
+            host_timestamp_ = receive_data.host_timestamp;
+            if (!safe_mode_ && mode_ != DRIVER_DISABLE) {
               command_received = true;
-              first_command_received_ = false;
               receive_data_ = receive_data;
-          } else if (receive_data.mode_desired == BOARD_RESET ||
-                     receive_data.mode_desired == CRASH ||
-                     receive_data.mode_desired == SLEEP ||
-                     receive_data.mode_desired == FAULT ||
-                     receive_data.mode_desired == DRIVER_DISABLE) {
-              set_mode(static_cast<MainControlMode>(receive_data.mode_desired));
+            } else if ((receive_data.mode_desired == CLEAR_FAULTS && mode_ != DRIVER_DISABLE) ||
+                      receive_data.mode_desired == DRIVER_ENABLE) {
+                command_received = true;
+                first_command_received_ = false;
+                receive_data_ = receive_data;
+            } else if (receive_data.mode_desired == BOARD_RESET ||
+                      receive_data.mode_desired == CRASH ||
+                      receive_data.mode_desired == SLEEP ||
+                      receive_data.mode_desired == FAULT ||
+                      receive_data.mode_desired == DRIVER_DISABLE) {
+                set_mode(static_cast<MainControlMode>(receive_data.mode_desired));
+            }
+          } else { // !validate_receive_data
+            invalid_command_fault_.add();
           }
-        } else {
+        } else { // !count_received
           no_command_++;
           if (no_command_ > 16000)
             no_command_ = 16000;
@@ -180,6 +184,11 @@ class MainLoop {
 
       if (status_.motor_temperature_estimate > motor_temperature_limit_) {
          status_.error.motor_temperature = 1;
+      }
+
+      invalid_command_fault_.update();
+      if (invalid_command_limit_ > 0 && invalid_command_fault_.get_count() >= invalid_command_limit_) {
+        status_.error.invalid_command = 1;
       }
 
       if (status_.error.all & error_mask_.all) {
@@ -421,6 +430,8 @@ class MainLoop {
       joint_position_controller_.set_param(param_.joint_position_controller_param);
       admittance_controller_.set_param(param_.admittance_controller_param);
       torque_sensor_.set_param(calibration_.torque_sensor);
+      invalid_command_fault_.set_leak_period(param_.invalid_command_fault_leak_period_s, dt_);
+      invalid_command_limit_ = param_.invalid_command_limit;
       position_limits_disable_ = param_.position_limits_disable;
       position_limits_disable_last_ = position_limits_disable_;
       if (param_.encoder_limits.motor_hard_max == param_.encoder_limits.motor_hard_min) {
@@ -592,6 +603,7 @@ class MainLoop {
             torque_sensor_.clear_faults();
             fast_loop_.clear_faults();
             output_encoder_.clear_faults();
+            invalid_command_fault_.reset();
             status_.error.all = 0;
             led_.set_color(LED::AZURE);
             break;
@@ -645,6 +657,13 @@ class MainLoop {
       last_safe_mode_ = safe_mode_;
       status_.mode = mode;
       //receive_data_.mode_desired = mode; // todo: what is this for?
+    }
+
+    bool validate_receive_data(const ReceiveData &receive_data) {
+      if (receive_data.mode_desired > TUNING && receive_data.mode_desired < DRIVER_ENABLE ) {
+        return false;
+      }
+      return true;
     }
 
     MotorCommand set_tuning_command(ReceiveData &receive_data, bool update_parameters) {
@@ -772,6 +791,8 @@ class MainLoop {
     volatile bool driver_enable_triggered_ = false;
     volatile bool driver_disable_triggered_ = false;
     uint32_t last_energy_uJ_ = 0;
+    LeakyBucket invalid_command_fault_;
+    uint32_t invalid_command_limit_;
 
     DFTResponse dft_;
 

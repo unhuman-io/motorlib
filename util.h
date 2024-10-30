@@ -102,6 +102,68 @@ class FrequencyLimiter {
     uint32_t t_diff_, last_time_;
 };
 
+// LeakyBucket is used to provide bleed off of accumulated faults
+// at rate of leak period. Not thread safe.
+class LeakyBucket {
+ public:
+    LeakyBucket(uint32_t leak_period = 0) {
+        set_leak_period(leak_period);
+        reset();
+    }
+
+    // if leak_period == 0, no leak
+    void set_leak_period(uint32_t leak_period) {
+        leak_period_ = leak_period;
+    }
+
+    void set_leak_period(float leak_period_s, float dt) {
+        float leak_period = leak_period_s/dt;
+        if (leak_period > UINT32_MAX) {
+            leak_period_ = UINT32_MAX;
+        } else {
+            leak_period_ = leak_period;
+        }
+    }
+
+    void update() {
+        if (leak_period_ > 0 && count_ > 0) {
+            leak_count_++;
+            if (leak_count_ > leak_period_) {
+                count_--;
+                leak_count_ = 0;
+            }
+        }
+    }
+
+    uint32_t get_count() const {
+        return count_;
+    }
+
+    uint32_t get_leak_period() const {
+        return leak_period_;
+    }
+
+    float get_leak_period_s(float dt) const {
+        return leak_period_*dt;
+    }
+
+    void reset() {
+        count_ = 0;
+        leak_count_ = 0;
+    }
+
+    void add() {
+        count_++;
+    }
+
+ private:
+    uint32_t count_;
+    uint32_t leak_count_;
+    uint32_t leak_period_;
+
+    friend class System;
+};
+
 template <typename T, unsigned B>
 inline T signextend(const T x)
 {
