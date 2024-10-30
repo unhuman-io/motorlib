@@ -23,6 +23,13 @@ class JointPositionController : public Controller {
         param_ = param;
     }
     void set_rollover(float rollover) { velocity_controller_.set_rollover(rollover); }
+    bool validate_command(const MotorCommand &command) const {
+        if (std::isfinite(command.position_desired) &&
+            std::isfinite(command.current_desired)) {
+            return true;
+        }
+        return false;
+    }
  private:
     VelocityController velocity_controller_;
     JointPositionControllerParam param_ = {};

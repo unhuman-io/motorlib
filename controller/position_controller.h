@@ -40,6 +40,14 @@ class PositionController : public Controller {
     bool tracking_fault() const {
         return tracking_fault_;
     }
+    bool validate_command(const MotorCommand &command) const {
+        if (std::isfinite(command.position_desired) &&
+            std::isfinite(command.velocity_desired) &&
+            std::isfinite(command.current_desired)) {
+            return true;
+        }
+        return false;
+    }
  private:
     PIDController controller_;
     float velocity_limit_ = INFINITY;

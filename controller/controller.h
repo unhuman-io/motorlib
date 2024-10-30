@@ -8,6 +8,9 @@ class Controller {
  public:
     Controller(float dt) : dt_(dt) {}
     float step(const MotorCommand &command, const MainLoopStatus &status) { return 0; }
+    bool validate_command(const MotorCommand &command) const {
+      return false;
+    }
  protected:
     float dt_;
 };

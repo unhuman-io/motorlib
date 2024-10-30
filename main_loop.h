@@ -599,12 +599,12 @@ class MainLoop {
             led_.set_color(LED::WHITE);
             break;
           case CLEAR_FAULTS:
-            safe_mode_ = false;
             torque_sensor_.clear_faults();
             fast_loop_.clear_faults();
             output_encoder_.clear_faults();
             invalid_command_fault_.reset();
             status_.error.all = 0;
+            safe_mode_ = false;
             led_.set_color(LED::AZURE);
             break;
           case STEPPER_VELOCITY:
@@ -662,6 +662,101 @@ class MainLoop {
     bool validate_receive_data(const ReceiveData &receive_data) {
       if (receive_data.mode_desired > TUNING && receive_data.mode_desired < DRIVER_ENABLE ) {
         return false;
+      }
+      if (receive_data.mode_desired <= TUNING) {
+        switch (receive_data.mode_desired) {
+          case OPEN:
+          case DAMPED:
+            return true;
+            break;
+          case CURRENT:
+            return std::isfinite(receive_data.current_desired);
+            break;
+          case POSITION:
+            return position_controller_.validate_command(receive_data);
+            break;
+          case TORQUE:
+            return torque_controller_.validate_command(receive_data);
+            break;
+          case IMPEDANCE:
+            return impedance_controller_.validate_command(receive_data);
+            break;
+          case VELOCITY:
+            return velocity_controller_.validate_command(receive_data);
+            break;
+          case STATE:
+            return state_controller_.validate_command(receive_data);
+            break;          
+          case CURRENT_TUNING:
+            if (receive_data.current_tuning.mode <= TuningMode::CHIRP &&
+                std::isfinite(receive_data.current_tuning.amplitude) &&
+                std::isfinite(receive_data.current_tuning.frequency) &&
+                std::isfinite(receive_data.current_tuning.bias)) {
+              return true;
+            }
+            return false;
+            break;
+          case POSITION_TUNING:
+            if (receive_data.position_tuning.mode <= TuningMode::CHIRP &&
+                std::isfinite(receive_data.position_tuning.amplitude) &&
+                std::isfinite(receive_data.position_tuning.frequency) &&
+                std::isfinite(receive_data.position_tuning.bias)) {
+              return true;
+            }
+            return false;
+            break;
+          case VOLTAGE:
+            return std::isfinite(receive_data.voltage.voltage_desired);
+            break;
+          case PHASE_LOCK:
+            return std::isfinite(receive_data.current_desired);
+            break;
+          case STEPPER_TUNING:
+            if (receive_data.stepper_tuning.mode <= TuningMode::CHIRP &&
+                std::isfinite(receive_data.stepper_tuning.amplitude) &&
+                std::isfinite(receive_data.stepper_tuning.frequency) &&
+                std::isfinite(receive_data.stepper_tuning.bias)) {
+              return true;
+            }
+            return false;
+            break;
+          case STEPPER_VELOCITY:
+            return std::isfinite(receive_data.stepper_velocity.current) &&
+                   std::isfinite(receive_data.stepper_velocity.voltage) &&
+                   std::isfinite(receive_data.stepper_velocity.velocity);
+            break;
+          case HARDWARE_BRAKE:
+            return true;
+            break;
+          case JOINT_POSITION:
+            return joint_position_controller_.validate_command(receive_data);
+            break;
+          case FIND_LIMITS:
+            return std::isfinite(receive_data.position_desired) &&
+                   std::isfinite(receive_data.velocity_desired) &&
+                   std::isfinite(receive_data.current_desired);
+            break;
+          case ADMITTANCE:
+            return admittance_controller_.validate_command(receive_data);
+            break;
+          case TUNING:
+            switch (receive_data.tuning_command.mode) {
+              case POSITION:
+              case VELOCITY:
+              case TORQUE:
+                return std::isfinite(receive_data.tuning_command.amplitude) &&
+                       std::isfinite(receive_data.tuning_command.frequency) &&
+                       std::isfinite(receive_data.tuning_command.bias);
+                break;
+              default:
+                return false;
+                break;
+            }
+            break;
+          default:
+            return false;
+            break;
+        }
       }
       return true;
     }
