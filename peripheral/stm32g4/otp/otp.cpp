@@ -9,7 +9,7 @@ static_assert(NAME == "motor_molex" ?
     NAME == "motor" ?
     REV == "R0" || REV == "R1" || REV == "R3" || REV == "R4" :
     NAME == "trace" ?
-    REV == "R0" :
+    REV == "R0" || REV == "R1" :
     false);
 
 
