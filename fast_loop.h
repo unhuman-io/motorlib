@@ -253,7 +253,8 @@ class FastLoop {
       iq_filter_.set_frequency(param_.output_filter_hz.iq);
       motor_velocity_filter_.set_frequency(param_.output_filter_hz.motor_velocity);
       motor_position_filter_.set_frequency(param_.output_filter_hz.motor_position);
-      float v_bus_filter_frequency_hz = param_.v_bus_filter_frequency_hz ? frequency_hz_/10 : param_.v_bus_filter_frequency_hz;
+      float v_bus_filter_frequency_hz = param_.v_bus_filter_frequency_hz == 0 ?
+        frequency_hz_/10.0 : param_.v_bus_filter_frequency_hz;
       v_bus_filter_.set_frequency(v_bus_filter_frequency_hz);
       current_direction_ = param_.current_direction;
     }
