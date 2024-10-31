@@ -25,3 +25,5 @@ jobs:
         cd test
         make test_error_mask
         ./test_error_mask
+        make test_logger
+        ./test_logger

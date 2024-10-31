@@ -108,6 +108,8 @@ class System {
         api.add_api_variable("torque", new const APIFloat(&actuator_.main_loop_.status_.torque));
         api.add_api_variable("t_i_correction", new const APIFloat(&actuator_.main_loop_.param_.torque_correction));
         api.add_api_variable("log", new APICallback(get_log, log));
+        api.add_api_variable("log_reset", new const APICallback([]{ logger.reset_read_front(); return "ok"; }));
+        api.add_api_variable("log_num", new const APICallbackUint32([]{ return logger.num_elements(); }));
         api.add_api_variable("messages_version", new APICallback([](){ return MOTOR_MESSAGES_VERSION; }, [](std::string s) {} ));
         api.add_api_variable("index_pos", new APICallback([](){ return std::to_string(actuator_.fast_loop_.encoder_.get_index_pos()); }, [](std::string s) {}));
         api.add_api_variable("index_received", new APICallbackUint32([](){return actuator_.fast_loop_.encoder_.index_received();}, [](uint32_t u) {}));
