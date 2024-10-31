@@ -242,6 +242,7 @@ class System {
                 actuator_.fast_loop_.foc_->pi_id_.set_param(param);
         }));
         api.add_api_variable("id_des", new APIFloat(&actuator_.fast_loop_.foc_command_.desired.i_d));
+        API_ADD_FILTER(, FirstOrderLowPassFilter, actuator_.fast_loop_.motor_position_filter_);
         api.add_api_variable("trigger_fast_log", new const APICallback([](){ actuator_.fast_loop_.trigger_status_log(); return "triggered"; }));
         api.add_api_variable("ilimit", new APICallbackFloat([](){ return actuator_.fast_loop_.foc_->get_iq_limit(); },
             [](float f){ actuator_.fast_loop_.foc_->set_iq_limit(f); }));
