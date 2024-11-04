@@ -10,7 +10,7 @@
 class LED {
  public:
     LED(uint16_t *const red_reg, uint16_t *const green_reg, uint16_t *const blue_reg, uint16_t update_frequency_hz = 10000, float brightness=1.0)
-        : red_reg_(red_reg), green_reg_(green_reg), blue_reg_(blue_reg), update_frequency_hz_(update_frequency_hz) {
+        : red_reg_((uint32_t *) red_reg), green_reg_((uint32_t *) green_reg), blue_reg_((uint32_t *) blue_reg), update_frequency_hz_(update_frequency_hz) {
             brightness_ = brightness;
             set_rate(1);
         }
@@ -42,9 +42,9 @@ class LED {
  private:
     uint16_t i = 0;
     float brightness_;
-    uint16_t *const red_reg_;
-    uint16_t *const green_reg_;
-    uint16_t *const blue_reg_;
+    uint32_t *const red_reg_;
+    uint32_t *const green_reg_;
+    uint32_t *const blue_reg_;
     float intensity_color_[WHITE+1][3] = {{1,0,0}, {1,.5,0}, {1,1,0}, {0.5,1,0}, {0,1,0}, {0,1,.5}, {0,1,1}, {0,.5,1}, {0,0,1}, {.5,0,1}, {1,0,1}, {1,0,.5}, {1,1,1}};
     float intensity_red_ = 1;
     float intensity_green_ = 1;
