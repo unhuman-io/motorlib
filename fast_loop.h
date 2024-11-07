@@ -21,7 +21,9 @@ class FastLoop {
       volatile uint32_t *const v_bus_dr) 
       : motor_encoder_index_electrical_offset_pos_(calibration.motor_encoder_index_electrical_offset_pos), pwm_(pwm), encoder_(encoder), i_a_dr_(i_a_dr), i_b_dr_(i_b_dr), i_c_dr_(i_c_dr), v_bus_dr_(v_bus_dr),
         motor_correction_table_(param.motor_encoder.table), cogging_correction_table_(param.cogging.table),
-        iq_filter_(1.0/frequency_hz), motor_velocity_filter_(1.0/frequency_hz), motor_position_filter_(1.0/frequency_hz), param_(param) {
+        iq_filter_(1.0/frequency_hz), motor_velocity_filter_(1.0/frequency_hz), motor_position_filter_(1.0/frequency_hz),
+        v_bus_filter_(1.0/frequency_hz),
+        param_(param) {
        frequency_hz_ = frequency_hz;
        float dt = 1.0f/frequency_hz;
        foc_ = new FOC(dt);
@@ -56,6 +58,9 @@ class FastLoop {
       foc_command_.measured.i_a = param_.adc1_gain*(adc1-2048) - ia_bias_;
       foc_command_.measured.i_b = param_.adc2_gain*(adc2-2048) - ib_bias_;
       foc_command_.measured.i_c = param_.adc3_gain*(adc3-2048) - ic_bias_;
+      v_bus_raw_ = *v_bus_dr_*param_.vbus_gain;
+      v_bus_ = v_bus_filter_.update(v_bus_raw_);
+      pwm_.set_vbus(fmaxf(7, v_bus_));
       
       // get encoder value, may wait a little
       motor_enc = encoder_.read();
@@ -170,9 +175,6 @@ class FastLoop {
       }
 
       motor_electrical_zero_dir_pos_ = motor_electrical_zero_pos_ + current_direction_*(param_.motor_encoder.cpr/(uint8_t) param_.foc_param.num_poles/2);
-
-      v_bus_ = *v_bus_dr_*param_.vbus_gain;
-      pwm_.set_vbus(fmaxf(7, v_bus_));
     }
     void set_id_des(float id) { foc_command_.desired.i_d = id; }
     void set_iq_des(float iq) { if (mode_ == CURRENT_MODE || mode_ == STEPPER_TUNING_MODE) iq_des = iq; }
@@ -251,6 +253,9 @@ class FastLoop {
       iq_filter_.set_frequency(param_.output_filter_hz.iq);
       motor_velocity_filter_.set_frequency(param_.output_filter_hz.motor_velocity);
       motor_position_filter_.set_frequency(param_.output_filter_hz.motor_position);
+      float v_bus_filter_frequency_hz = param_.v_bus_filter_frequency_hz == 0 ?
+        frequency_hz_/10.0 : param_.v_bus_filter_frequency_hz;
+      v_bus_filter_.set_frequency(v_bus_filter_frequency_hz);
       current_direction_ = param_.current_direction;
     }
     const FastLoopStatus &get_status() const {
@@ -380,6 +385,7 @@ class FastLoop {
     int32_t frequency_hz_ = 100000;
     float alpha_zero_ = 0.0002;
     float v_bus_ = 12;
+    float v_bus_raw_ = 12;
     mcu_time timestamp_;
    MotorEncoder &encoder_;
    float reserved_ = 0;
@@ -412,6 +418,7 @@ class FastLoop {
    FirstOrderLowPassFilter iq_filter_;
    FirstOrderLowPassFilter motor_velocity_filter_;
    FirstOrderLowPassFilter motor_position_filter_;
+   FirstOrderLowPassFilter v_bus_filter_;
    
    FastLoopParam param_; // reallocate tables in ram
    CStack<FastLoopStatus,100> status_;

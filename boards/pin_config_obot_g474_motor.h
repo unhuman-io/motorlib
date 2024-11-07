@@ -153,7 +153,7 @@ void pin_config_obot_g474_motor(const BoardRev &board_rev) {
             | 7 << ADC_JSQR_JSQ4_Pos; // internal temperature, vrefint, A1, A2
     
         ADC1->CFGR = ADC_CFGR_JQDIS | ADC_CFGR_OVRMOD | 1 << ADC_CFGR_EXTEN_Pos | 21 << ADC_CFGR_EXTSEL_Pos; // trigger 21 -> hrtim trig1
-        ADC1->CFGR2 =  ADC_CFGR2_JOVSE | ADC_CFGR2_ROVSE | (8 << ADC_CFGR2_OVSS_Pos) | (7 << ADC_CFGR2_OVSR_Pos); // 256x oversample
+        ADC1->CFGR2 =  ADC_CFGR2_JOVSE | (8 << ADC_CFGR2_OVSS_Pos) | (7 << ADC_CFGR2_OVSR_Pos); // 256x oversample on injected
         ADC1->SMPR1 = 6 << ADC_SMPR1_SMP6_Pos | // 247.5 cycles A1, 5.8us
                       6 << ADC_SMPR1_SMP7_Pos;  // 247.5 cycles A2, 5.8us
         ADC1->SMPR2 = 2 << ADC_SMPR2_SMP13_Pos | // 12.5 cycles vbus, 294 ns, 200 ns min for opamp1
@@ -200,7 +200,7 @@ void pin_config_obot_g474_motor(const BoardRev &board_rev) {
         NVIC_EnableIRQ(ADC5_IRQn);
 
         // OPAMP
-        GPIO_SETL(A, 3, GPIO_MODE::ANALOG, GPIO_SPEED::LOW, 0);
+        GPIO_SETL(A, 3, GPIO_MODE::ANALOG, GPIO_SPEED::LOW, 0); // V_BUS -> adc1 in13
         OPAMP1->CSR = 1 << OPAMP_CSR_VPSEL_Pos | 3 << OPAMP_CSR_VMSEL_Pos | OPAMP_CSR_HIGHSPEEDEN | OPAMP_CSR_OPAMPINTEN | OPAMP_CSR_OPAMPxEN; // internal follower on pa3/vinp1
         GPIO_SETH(B, 11, GPIO_MODE::ANALOG, GPIO_SPEED::LOW, 0);
         GPIO_SETH(B, 12, GPIO_MODE::ANALOG, GPIO_SPEED::LOW, 0);

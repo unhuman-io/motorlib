@@ -92,6 +92,7 @@ typedef struct {
         float iq;
     } output_filter_hz;
     uint8_t current_direction;                      // 0 or 1 to switch direction
+    float v_bus_filter_frequency_hz;                // 0 to select pwm_frequency/10, otherwise frequency in Hz
 } FastLoopParam;
 
 typedef struct {
