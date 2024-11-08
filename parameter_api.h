@@ -122,8 +122,8 @@ typedef APICallbackUint<int8_t> APICallbackInt8;
 template<class T>
 class APICallbackHex : public APIVariable {
  public:
-   APICallbackHex(std::function<T()> getfun , std::function<void(T)> setfun) : getfun_(getfun), setfun_(setfun) {}
-   APICallbackHex(std::function<T()> getfun) : getfun_(getfun) {}
+   APICallbackHex(T (*const getfun)(), void (*const setfun)(T)) : getfun_(getfun), setfun_(setfun) {}
+   APICallbackHex(T (*const getfun)()) : getfun_(getfun) {}
    void set(std::string s) { setfun_(std::stoul(s, nullptr, 16)); }
    std::string get() const {
       T value = getfun_();
@@ -132,8 +132,8 @@ class APICallbackHex : public APIVariable {
       return bytes_to_hex(bytes);
    }
  private:
-   std::function<T()> getfun_;
-   std::function<void(T)> setfun_;
+   T (*const getfun_)();
+   void (*const setfun_)(T) = nullptr;
 };
 
 // allows for setting variables through text commands
