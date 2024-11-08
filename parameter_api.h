@@ -91,25 +91,25 @@ class APICallback : public APIVariable {
 
 class APICallbackFloat : public APIVariable {
  public:
-   APICallbackFloat(float (*getfun)(), void (*setfun)(float)) : getfun_(getfun), setfun_(setfun) {}
-   APICallbackFloat(float (*getfun)()) : getfun_(getfun) {}
+   APICallbackFloat(float (*const getfun)(), void (*const setfun)(float)) : getfun_(getfun), setfun_(setfun) {}
+   APICallbackFloat(float (*const getfun)()) : getfun_(getfun) {}
    void set(std::string s) { setfun_(stof(s)); }
    std::string get() const { return std::to_string(getfun_()); };
  private:
-   float (*getfun_)();
-   void (*setfun_)(float);
+   float (*const getfun_)();
+   void (*const setfun_)(float) = nullptr;
 };
 
 template<class T>
 class APICallbackUint : public APIVariable {
  public:
-   APICallbackUint(std::function<T()> getfun , std::function<void(T)> setfun) : getfun_(getfun), setfun_(setfun) {}
-   APICallbackUint(std::function<T()> getfun) : getfun_(getfun) {}
+   APICallbackUint(T (*const getfun)(), void (*const setfun)(T)) : getfun_(getfun), setfun_(setfun) {}
+   APICallbackUint(T (*const getfun)()) : getfun_(getfun) {}
    void set(std::string s) { setfun_(std::stoi(s)); }
    std::string get() const { return std::to_string(getfun_()); }
  private:
-   std::function<T()> getfun_;
-   std::function<void(T)> setfun_;
+   T (*const getfun_)();
+   void (*const setfun_)(T) = nullptr;
 };
 
 typedef APICallbackUint<uint32_t> APICallbackUint32;

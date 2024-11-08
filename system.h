@@ -112,8 +112,8 @@ class System {
         api.add_api_variable("log_reset", new const APICallback([]{ logger.reset_read_front(); return "ok"; }));
         api.add_api_variable("log_num", new const APICallbackUint32([]{ return logger.num_elements(); }));
         api.add_api_variable("messages_version", new APICallback([](){ return MOTOR_MESSAGES_VERSION; }, [](std::string s) {} ));
-        api.add_api_variable("index_pos", new APICallback([](){ return std::to_string(actuator_.fast_loop_.encoder_.get_index_pos()); }, [](std::string s) {}));
-        api.add_api_variable("index_received", new APICallbackUint32([](){return actuator_.fast_loop_.encoder_.index_received();}, [](uint32_t u) {}));
+        api.add_api_variable("index_pos", new const APICallbackInt32([]{ return actuator_.fast_loop_.encoder_.get_index_pos(); }));
+        api.add_api_variable("index_received", new const APICallbackUint8([]()->uint8_t{return actuator_.fast_loop_.encoder_.index_received();}));
         api.add_api_variable("index_offset_measured", new const APIFloat(&actuator_.fast_loop_.motor_index_electrical_offset_measured_));
         api.add_api_variable("electrical_zero_pos", new APIInt32(&actuator_.fast_loop_.motor_electrical_zero_pos_));
         api.add_api_variable("mcpr", new const APIUint32(&param->fast_loop_param.motor_encoder.cpr));
@@ -280,7 +280,7 @@ class System {
         api.add_api_variable("mlimit_min", new APIFloat(&actuator_.main_loop_.encoder_limits_.motor_hard_min));
         api.add_api_variable("msoftlimit_max", new APIFloat(&actuator_.main_loop_.encoder_limits_.motor_controlled_max));
         api.add_api_variable("msoftlimit_min", new APIFloat(&actuator_.main_loop_.encoder_limits_.motor_controlled_min));
-        api.add_api_variable("is_sbank", new const APICallbackUint8([](){ return (*((uint8_t *) 0x1fff7802) & 0x40) == 0; }));
+        api.add_api_variable("is_sbank", new const APICallbackUint8([]()->uint8_t{ return (*((uint8_t *) 0x1fff7802) & 0x40) == 0; }));
         api.add_api_variable("invalid_command_leak_rate_s", new APICallbackFloat([]{
             return actuator_.main_loop_.invalid_command_fault_.get_leak_period_s(actuator_.main_loop_.dt_); },
             [](float f){ actuator_.main_loop_.invalid_command_fault_.set_leak_period(f, actuator_.main_loop_.dt_); }));
@@ -292,7 +292,7 @@ class System {
             actuator_.main_loop_.get_fault_str(c, 600);
             return std::string(c);
         }));
-        api.add_api_variable("reset", new const APICallbackUint8([](){ NVIC_SystemReset(); return 0; }));
+        api.add_api_variable("reset", new const APICallbackUint8([]()->uint8_t{ NVIC_SystemReset(); return 0; }));
 
 
         uint32_t t_start = get_clock();

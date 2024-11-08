@@ -405,7 +405,7 @@ void system_init() {
     }
 
 
-    config::drv.set_debug_variables(System::api);
+    DRV8323S_SET_DEBUG_API(System::api, config::drv);
 
     System::api.add_api_variable("3v3", new APIFloat(&v3v3));
     System::api.add_api_variable("Tmicro", new APICallbackFloat([]{ return config::temp_sensor.get_value(); },
@@ -425,7 +425,7 @@ void system_init() {
     System::api.add_api_variable("IC", new const APIUint32(&ADC5->JDR1));
     System::api.add_api_variable("usb_err", new APIUint32(&config::usb.error_count_));
     System::api.add_api_variable("usb_reset_count", new APIUint32(&config::usb.reset_count_));
-    System::api.add_api_variable("hsi48_trim", new const APICallbackInt8([](){ return (int8_t) ((CRS->CR & CRS_CR_TRIM) >> CRS_CR_TRIM_Pos) - 64; }));
+    System::api.add_api_variable("hsi48_trim", new const APICallbackInt8([](){ return (int8_t) (((CRS->CR & CRS_CR_TRIM) >> CRS_CR_TRIM_Pos) - 64); }));
     System::api.add_api_variable("shutdown", new const APICallback([](){
         // requires power cycle to return 
         setup_sleep();
