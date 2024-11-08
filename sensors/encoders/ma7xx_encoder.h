@@ -15,7 +15,7 @@
     api.add_api_variable(prefix "et", new APICallbackUint8([]{ return ma7xx.get_et(); }, \
         [](uint8_t u){ ma7xx.set_et(u); }));\
     api.add_api_variable(prefix "mgt", new APICallbackHex<uint16_t>([]{ return ma7xx.get_magnetic_field_strength(); }, \
-        [](uint8_t u){ ma7xx.set_mgt(u); }));\
+        [](uint16_t u){ ma7xx.set_mgt(u); }));\
     api.add_api_variable(prefix "raw", new const APIUint16(&ma7xx.data_));\
 
 // Note MA7XX encoder expects cpol 1, cpha 1, max 25 mbit
@@ -113,46 +113,46 @@ class MA7XXEncoderBase : public SPIEncoder {
         return retval;
     }
 
-    void set_bct(uint32_t value) {
+    void set_bct(uint8_t value) {
         set_register(0x2, value);
     }
 
-    uint32_t get_bct() {
+    uint8_t get_bct() {
         return read_register(0x2);
     }
 
-    void set_et(uint32_t value) {
+    void set_et(uint8_t value) {
         set_register(0x3, value);
     }
 
-    uint32_t get_et() {
+    uint8_t get_et() {
         return read_register(0x3);
     }
 
-    uint32_t get_filt() {
+    uint8_t get_filt() {
         return static_cast<T*>(this)->get_filt_impl();
     }
 
-    uint32_t get_filt_impl() {
+    uint8_t get_filt_impl() {
         return read_register(0xE);
     }
 
-    void set_filt(uint32_t value) {
+    void set_filt(uint8_t value) {
         return static_cast<T*>(this)->set_filt_impl(value);
     }
 
-    void set_filt_impl(uint32_t value) {
+    void set_filt_impl(uint8_t value) {
         set_register(0xE, value);
     }
 
-    void set_mgt(uint32_t value) {
+    void set_mgt(uint8_t value) {
         set_register(0x6, value);
     }
 
-    uint32_t get_magnetic_field_strength() {
+    uint16_t get_magnetic_field_strength() {
         spi_pause_.pause();
         reinit();
-        uint32_t retval = static_cast<T*>(this)->get_magnetic_field_strength_impl();
+        uint16_t retval = static_cast<T*>(this)->get_magnetic_field_strength_impl();
         spi_pause_.unpause();
         return retval;
     }
@@ -164,7 +164,7 @@ class MA7XXEncoderBase : public SPIEncoder {
     // min mT is 40 which is step 2 in MGT. I combine the two readings like this
     // (mght << 0 | (uint16_t) mglt << 8), so the minimum recommended value is about
     // 0x202 or 514.
-    uint32_t get_magnetic_field_strength_impl() {
+    uint16_t get_magnetic_field_strength_impl() {
         uint8_t original_mgt = read_register(0x6);
         uint8_t mght = 0, mglt = 0;
         for (uint8_t i=0; i<8; i++) {
