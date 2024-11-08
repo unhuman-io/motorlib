@@ -98,9 +98,8 @@ void system_init() {
     }
 
     System::api.add_api_variable("3v3", new APIFloat(&v3v3));
-    std::function<float()> get_t = std::bind(&TempSensor::get_value, &config::temp_sensor);
-    std::function<void(float)> set_t = std::bind(&TempSensor::set_value, &config::temp_sensor, std::placeholders::_1);
-    System::api.add_api_variable("T", new APICallbackFloat(get_t, set_t));
+    System::api.add_api_variable("Tmicro", new APICallbackFloat([]{ return config::temp_sensor.get_value(); },
+        [](float f){ config::temp_sensor.set_value(f); }));
     System::api.add_api_variable("Tboard", new const APICallbackFloat([](){ return config::board_temperature.get_temperature(); }));
     System::api.add_api_variable("index_mod", new APIInt32(&index_mod));
     System::api.add_api_variable("drv_reset", new const APICallback([](){ return config::driver.reset(); }));
@@ -112,7 +111,7 @@ void system_init() {
         SCB->SCR |= SCB_SCR_SLEEPDEEP_Msk;
         PWR->CR1 |= 0b100 << PWR_CR1_LPMS_Pos;
         __WFI();
-        return "";
+        return std::string();
     }));
     System::api.add_api_variable("deadtime", new APICallbackUint16([](){ 
         return config::motor_pwm.deadtime_ns_; }, [](uint16_t u) {config::motor_pwm.set_deadtime(u); }));

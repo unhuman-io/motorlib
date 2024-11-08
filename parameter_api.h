@@ -80,13 +80,13 @@ class APIHex : public APIInt<T> {
 
 class APICallback : public APIVariable {
  public:
-  APICallback(std::function<std::string()> getfun, std::function<void(std::string)> setfun) : getfun_(getfun), setfun_(setfun) {}
-  APICallback(std::function<std::string()> getfun) : getfun_(getfun) {}
+  APICallback(std::string (*const getfun)(), void (*const setfun)(std::string)) : getfun_(getfun), setfun_(setfun) {}
+  APICallback(std::string (*const getfun)()) : getfun_(getfun) {}
   void set(std::string s) { setfun_(s); }
   std::string get() const {return getfun_(); }
  private:
-  std::function<std::string()> getfun_;
-  std::function<void(std::string)> setfun_;
+  std::string (*const getfun_)();
+  void (*const setfun_)(std::string) = nullptr;
 };
 
 class APICallbackFloat : public APIVariable {

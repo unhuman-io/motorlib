@@ -432,7 +432,7 @@ void system_init() {
         SCB->SCR |= SCB_SCR_SLEEPDEEP_Msk;
         PWR->CR1 |= 0b100 << PWR_CR1_LPMS_Pos;
         __WFI();
-        return "";
+        return std::string();
     }));
     System::api.add_api_variable("deadtime", new APICallbackUint16([](){ 
         return config::motor_pwm.deadtime_ns_; }, [](uint16_t u) {config::motor_pwm.set_deadtime(u); }));
@@ -455,7 +455,7 @@ void system_init() {
             cal->motor_encoder_index_electrical_offset_pos = config::fast_loop.motor_index_electrical_offset_measured_;
         }
         config::flash.write((uint32_t) calibration, (uint32_t*) cal, sizeof(Calibration));
-        return "ok";
+        return std::string("ok");
     }));
 
     for (auto regs : std::vector<ADC_TypeDef*>{ADC1, ADC2, ADC3, ADC4, ADC5}) {
