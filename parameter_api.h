@@ -9,9 +9,12 @@
 #include "autocomplete.h"
 
 #define API_ADD_FILTER(name, type, location) \
-    std::function<void(float)> set_filt_##name = std::bind(&type::set_frequency, &location, std::placeholders::_1); \
-    std::function<float(void)> get_filt_##name = std::bind(&type::get_frequency, &location); \
-    api.add_api_variable(#name, new APICallbackFloat(get_filt_##name, set_filt_##name))
+    api.add_api_variable(#name, new APICallbackFloat([]{ return location.get_frequency(); },\
+        [](float f){ location.set_frequency(f); }));
+
+#define API_ADD_FILTER_WITH_API(api, name, location) \
+    api.add_api_variable(#name, new APICallbackFloat([]{ return location.get_frequency(); },\
+        [](float f){ location.set_frequency(f); }));
 
 
 class APIVariable {
@@ -88,13 +91,13 @@ class APICallback : public APIVariable {
 
 class APICallbackFloat : public APIVariable {
  public:
-   APICallbackFloat(std::function<float()> getfun , std::function<void(float)> setfun) : getfun_(getfun), setfun_(setfun) {}
-   APICallbackFloat(std::function<float()> getfun) : getfun_(getfun) {}
+   APICallbackFloat(float (*getfun)(), void (*setfun)(float)) : getfun_(getfun), setfun_(setfun) {}
+   APICallbackFloat(float (*getfun)()) : getfun_(getfun) {}
    void set(std::string s) { setfun_(stof(s)); }
    std::string get() const { return std::to_string(getfun_()); };
  private:
-   std::function<float()> getfun_;
-   std::function<void(float)> setfun_;
+   float (*getfun_)();
+   void (*setfun_)(float);
 };
 
 template<class T>

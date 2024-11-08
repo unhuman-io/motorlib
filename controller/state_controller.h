@@ -5,6 +5,15 @@
 #include "../control_fun.h"
 #include "../parameter_api.h"
 
+#define STATE_CONTROLLER_DEBUG_VARIABLES(api, sc) \
+    api.add_api_variable("state_command_max", new APIFloat(&sc.param_.command_max));\
+    api.add_api_variable("state_ff_tau", new APIFloat(&sc.param_.ff_tau));\
+    API_ADD_FILTER_WITH_API(api, state_output_filter, sc.output_filter_);\
+    API_ADD_FILTER_WITH_API(api, state_velocity_error_filter, sc.velocity_error_filter_);\
+    API_ADD_FILTER_WITH_API(api, state_torque_error_filter, sc.torque_error_filter_);\
+    API_ADD_FILTER_WITH_API(api, state_torque_dot_error_filter, sc.torque_dot_error_filter_);\
+    API_ADD_FILTER_WITH_API(api, state_position_desired_filter, sc.position_desired_filter_);\
+
 class StateController : public Controller {
  public:
     StateController(float dt) : Controller(dt), velocity_error_filter_(dt), torque_error_filter_(dt), 
@@ -44,15 +53,7 @@ class StateController : public Controller {
         position_desired_filter_.set_frequency(param.position_desired_filter_frequency_hz);
         param_ = param;
     }
-    void set_debug_variables(ParameterAPI &api) {
-        api.add_api_variable("state_command_max", new APIFloat(&param_.command_max));
-        api.add_api_variable("state_ff_tau", new APIFloat(&param_.ff_tau));
-        API_ADD_FILTER(state_output_filter, FirstOrderLowPassFilter, output_filter_);
-        API_ADD_FILTER(state_velocity_error_filter, FirstOrderLowPassFilter, velocity_error_filter_);
-        API_ADD_FILTER(state_torque_error_filter, FirstOrderLowPassFilter, torque_error_filter_);
-        API_ADD_FILTER(state_torque_dot_error_filter, FirstOrderLowPassFilter, torque_dot_error_filter_);
-        API_ADD_FILTER(state_position_desired_filter, SecondOrderLowPassFilter, position_desired_filter_);
-    }
+
     void set_rollover(float rollover) { /* doesn't support rollover */ }
     bool validate_command(const MotorCommand &command) const {
         const StateControllerCommand &c = command.state;

@@ -93,16 +93,17 @@ class System {
             [](float f){ if (f == 0) { actuator_.fast_loop_.foc_->pi_id_.ki_sum_ = 0; } actuator_.fast_loop_.foc_->pi_id_.ki_ = f; }));
         api.add_api_variable("idki_limit", new APIFloat(&actuator_.fast_loop_.foc_->pi_id_.ki_limit_));
         api.add_api_variable("idmax", new APIFloat(&actuator_.fast_loop_.foc_->pi_id_.command_max_));
-        api.add_api_variable("idiq", new APICallbackFloat([](){return 0;}, 
-            [](float f){actuator_.fast_loop_.foc_->pi_id_.kp_ = actuator_.fast_loop_.foc_->pi_iq_.kp_;
+        api.add_api_variable("idiq", new const APICallback([]{
+                actuator_.fast_loop_.foc_->pi_id_.kp_ = actuator_.fast_loop_.foc_->pi_iq_.kp_;
                 actuator_.fast_loop_.foc_->pi_id_.ki_ = actuator_.fast_loop_.foc_->pi_iq_.ki_;
                 actuator_.fast_loop_.foc_->pi_id_.kp2_ = actuator_.fast_loop_.foc_->pi_iq_.kp2_;
                 actuator_.fast_loop_.foc_->pi_id_.ki2_ = actuator_.fast_loop_.foc_->pi_iq_.ki2_;
                 actuator_.fast_loop_.foc_->pi_id_.ki_limit_ = actuator_.fast_loop_.foc_->pi_iq_.ki_limit_;
                 actuator_.fast_loop_.foc_->pi_id_.command_max_ = actuator_.fast_loop_.foc_->pi_iq_.command_max_;
-                actuator_.fast_loop_.foc_->set_id_limit(actuator_.fast_loop_.foc_->get_iq_limit()); }));
-        actuator_.main_loop_.torque_controller_.set_debug_variables(api);
-        actuator_.main_loop_.state_controller_.set_debug_variables(api);
+                actuator_.fast_loop_.foc_->set_id_limit(actuator_.fast_loop_.foc_->get_iq_limit());
+                return "ok"; }));
+        TORQUE_CONTROLLER_DEBUG_VARIABLES(api, actuator_.main_loop_.torque_controller_);
+        STATE_CONTROLLER_DEBUG_VARIABLES(api, actuator_.main_loop_.state_controller_);
         api.add_api_variable("tgain", new APIFloat(&actuator_.main_loop_.torque_sensor_.gain_));
         api.add_api_variable("tbias", new APIFloat(&actuator_.main_loop_.torque_sensor_bias_));
         api.add_api_variable("torque", new const APIFloat(&actuator_.main_loop_.status_.torque));
@@ -165,10 +166,10 @@ class System {
                 actuator_.main_loop_.unlock_status_log();
             }
             return out; }));
-        api.add_api_variable("beep", new APICallbackFloat([](){ return 0; }, [](float f){ actuator_.fast_loop_.beep_on(f); }));
+        api.add_api_variable("beep", new const APICallbackFloat([](){ return 0.0; }, [](float f){ actuator_.fast_loop_.beep_on(f); }));
         api.add_api_variable("beep_frequency", new APIFloat(&actuator_.fast_loop_.param_.beep_frequency));
         api.add_api_variable("beep_amplitude", new APIFloat(&actuator_.fast_loop_.param_.beep_amplitude));
-        api.add_api_variable("zero_current_sensors", new APICallbackFloat([](){ return 0; }, [](float f){ actuator_.fast_loop_.zero_current_sensors_on(f); }));
+        api.add_api_variable("zero_current_sensors", new APICallbackFloat([](){ return 0.0; }, [](float f){ actuator_.fast_loop_.zero_current_sensors_on(f); }));
         api.add_api_variable("disable_safe_mode", new const APICallback([](){ actuator_.main_loop_.error_mask_.all = ERROR_MASK_NONE; return "ok"; }));
         api.add_api_variable("error_mask", new APICallback([](){ return u32_to_hex(actuator_.main_loop_.error_mask_.all); },
                 [](std::string s){ try {

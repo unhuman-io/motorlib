@@ -408,16 +408,15 @@ void system_init() {
     config::drv.set_debug_variables(System::api);
 
     System::api.add_api_variable("3v3", new APIFloat(&v3v3));
-    std::function<float()> get_t = std::bind(&TempSensor::get_value, &config::temp_sensor);
-    std::function<void(float)> set_t = std::bind(&TempSensor::set_value, &config::temp_sensor, std::placeholders::_1);
-    System::api.add_api_variable("Tmicro", new APICallbackFloat(get_t, set_t));
+    System::api.add_api_variable("Tmicro", new APICallbackFloat([]{ return config::temp_sensor.get_value(); },
+        [](float f){ config::temp_sensor.set_value(f); }));
     System::api.add_api_variable("index_mod", new APIInt32(&index_mod));
     System::api.add_api_variable("pwm_mult", new APICallbackUint8([](){return config::motor_pwm.get_frequency_multiplier();}, [](uint8_t mult){ config::motor_pwm.set_frequency_multiplier(mult);}));
     System::api.add_api_variable("drv_err", new const APICallbackUint32([](){ return config::drv.get_drv_status(); }));
     System::api.add_api_variable("drv_reset", new const APICallback([](){ return config::drv.drv_reset(); }));
-    System::api.add_api_variable("A1", new const APICallbackFloat([](){ return A1_DR; }));
-    System::api.add_api_variable("A2", new const APICallbackFloat([](){ return A2_DR; }));
-    System::api.add_api_variable("A3", new const APICallbackFloat([](){ return A3_DR; }));
+    System::api.add_api_variable("A1", new const APICallbackUint32([](){ return A1_DR; }));
+    System::api.add_api_variable("A2", new const APICallbackUint32([](){ return A2_DR; }));
+    System::api.add_api_variable("A3", new const APICallbackUint32([](){ return A3_DR; }));
     System::api.add_api_variable("IA0", new const APIUint32(&ADC3->DR));
     System::api.add_api_variable("IB0", new const APIUint32(&ADC4->DR));
     System::api.add_api_variable("IC0", new const APIUint32(&ADC5->DR));
