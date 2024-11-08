@@ -34,18 +34,26 @@ class ICPZ2 : public ICPZBase<ICPZ2> {
   public:
     ICPZ2(SPIDMA &spidma, Disk disk = Default) : ICPZBase(spidma, disk) {}
     void enable_commands_impl() {
-      command_mult_[0] = ICPZ::Opcode::WRITE_REG; // clear diagnosis
-      command_mult_[1] = Addr::COMMANDS;
-      command_mult_[2] = CMD::SCLEAR;
+      commands_enabled_ = true;
+    }
+    void enable_clear_diag() {
+      if (commands_enabled_) {
+        command_mult_[1] = CMD::SCLEAR;
+        command_mult_[0] = ICPZ::Opcode::WRITE_COMMAND; // clear diagnosis
+      }
     }
     void disable_commands_impl() {
+      commands_enabled_ = false;
+      disable_clear_diag();
+    }
+    void disable_clear_diag() {
       command_mult_[0] = 0;
       command_mult_[1] = 0;
-      command_mult_[2] = 0;
     }
     void restore_bank_impl() {
       set_bank(1); // restore bank 1 to read ai_phases 1/0x28
     }
+    bool commands_enabled_ = false;
     uint8_t *command_mult_;
 };
 
@@ -89,15 +97,11 @@ class ICPZ2DMA : public EncoderBase {
       command_mult_[3][1][0] = ICPZ::Opcode::READ_POS; // read position
       command_mult_[3][2][0] = ICPZ::Opcode::READ_POS; // read position
       
-      command_mult_[4][0][0] = ICPZ::Opcode::WRITE_REG; // clear diagnosis
-      command_mult_[4][0][1] = ICPZ::Addr::COMMANDS;
-      command_mult_[4][0][2] = ICPZ::CMD::SCLEAR;
+      // command [4][0] is optional clear diagnosis
       command_mult_[4][1][0] = ICPZ::Opcode::READ_POS; // read position
       command_mult_[4][2][0] = ICPZ::Opcode::READ_POS; // read position
       
-      command_mult_[5][0][0] = ICPZ::Opcode::WRITE_REG; // clear diagnosis
-      command_mult_[5][0][1] = ICPZ::Addr::COMMANDS;
-      command_mult_[5][0][2] = ICPZ::CMD::SCLEAR;
+      // command [5][0] is optional clear diagnosis
       command_mult_[5][1][0] = ICPZ::Opcode::READ_POS; // read position
       command_mult_[5][2][0] = ICPZ::Opcode::READ_POS; // read position
 
@@ -235,6 +239,10 @@ class ICPZ2DMA : public EncoderBase {
       disagreement_error_ = 0;
       total_error_count_ = 0;
       total_crc_error_count_ = 0;
+      remapped_error_count_[0] = 0;
+      remapped_error_count_[1] = 0;
+      remapped_warn_count_[0] = 0;
+      remapped_warn_count_[1] = 0;
     }
 
     uint32_t current_buffer_index() const {
@@ -283,6 +291,16 @@ class ICPZ2DMA : public EncoderBase {
     void parse_diag_error() {
       diag_[0] |= last_diag_bits_[0].word;
       diag_[1] |= last_diag_bits_[1].word;
+      if (last_diag_bits_[0].word) {
+        icpz_.enable_clear_diag();
+      } else {
+        icpz_.disable_clear_diag();
+      }
+      if (last_diag_bits_[1].word) {
+        icpz2_.enable_clear_diag();
+      } else {
+        icpz2_.disable_clear_diag();
+      }
       for (int i=0; i<2; i++) {
         if (last_diag_bits_[i].word & diag_bits_error_mask_.word) {
           remapped_error_count_[i]++;

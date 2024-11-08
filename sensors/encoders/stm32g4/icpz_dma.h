@@ -70,15 +70,23 @@ class ICPZDMA : public ICPZBase<ICPZDMA> {
     void clear_diag() {
       diag_ = 0;
     }
+
     void enable_commands_impl() {
-      command_mult_[4][0] = ICPZ::Opcode::WRITE_REG; // clear diagnosis
-      command_mult_[4][1] = Addr::COMMANDS;
-      command_mult_[4][2] = CMD::SCLEAR;
+      commands_enabled_ = true;
+    }
+    void enable_clear_diag() {
+      if (commands_enabled_) {
+        command_mult_[4][1] = CMD::SCLEAR;
+        command_mult_[4][0] = ICPZ::Opcode::WRITE_COMMAND; // clear diagnosis
+      }
     }
     void disable_commands_impl() {
+      commands_enabled_ = false;
+      disable_clear_diag();
+    }
+    void disable_clear_diag() {
       command_mult_[4][0] = 0;
       command_mult_[4][1] = 0;
-      command_mult_[4][2] = 0;
     }
     void restore_bank_impl() {
       set_bank(1); // restore bank 1 to read ai_phases 1/0x28
@@ -132,6 +140,11 @@ class ICPZDMA : public ICPZBase<ICPZDMA> {
     void parse_diag_error() {
       uint8_t *data = &data_mult_[2][2];
       last_diag_bits_.word = data[3] << 24 | data[2] << 16 | data[1] << 8 | data[0];
+      if (last_diag_bits_.word) {
+        enable_clear_diag();
+      } else {
+        disable_clear_diag();
+      }
       if (last_diag_bits_.word & diag_bits_error_mask_.word) {
         remapped_error_count_++;
       }
@@ -148,6 +161,7 @@ class ICPZDMA : public ICPZBase<ICPZDMA> {
     }
 
     bool inited_ = false;
+    bool commands_enabled_ = false;
     DMAMUX_Channel_TypeDef &dmamux_tx_regs_;
     DMAMUX_Channel_TypeDef &dmamux_rx_regs_;
     uint8_t exti_num_;
