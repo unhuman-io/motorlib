@@ -405,19 +405,18 @@ void system_init() {
     }
 
 
-    config::drv.set_debug_variables(System::api);
+    DRV8323S_SET_DEBUG_API(System::api, config::drv);
 
     System::api.add_api_variable("3v3", new APIFloat(&v3v3));
-    std::function<float()> get_t = std::bind(&TempSensor::get_value, &config::temp_sensor);
-    std::function<void(float)> set_t = std::bind(&TempSensor::set_value, &config::temp_sensor, std::placeholders::_1);
-    System::api.add_api_variable("Tmicro", new APICallbackFloat(get_t, set_t));
+    System::api.add_api_variable("Tmicro", new APICallbackFloat([]{ return config::temp_sensor.get_value(); },
+        [](float f){ config::temp_sensor.set_value(f); }));
     System::api.add_api_variable("index_mod", new APIInt32(&index_mod));
     System::api.add_api_variable("pwm_mult", new APICallbackUint8([](){return config::motor_pwm.get_frequency_multiplier();}, [](uint8_t mult){ config::motor_pwm.set_frequency_multiplier(mult);}));
     System::api.add_api_variable("drv_err", new const APICallbackUint32([](){ return config::drv.get_drv_status(); }));
     System::api.add_api_variable("drv_reset", new const APICallback([](){ return config::drv.drv_reset(); }));
-    System::api.add_api_variable("A1", new const APICallbackFloat([](){ return A1_DR; }));
-    System::api.add_api_variable("A2", new const APICallbackFloat([](){ return A2_DR; }));
-    System::api.add_api_variable("A3", new const APICallbackFloat([](){ return A3_DR; }));
+    System::api.add_api_variable("A1", new const APICallbackUint32([](){ return A1_DR; }));
+    System::api.add_api_variable("A2", new const APICallbackUint32([](){ return A2_DR; }));
+    System::api.add_api_variable("A3", new const APICallbackUint32([](){ return A3_DR; }));
     System::api.add_api_variable("IA0", new const APIUint32(&ADC3->DR));
     System::api.add_api_variable("IB0", new const APIUint32(&ADC4->DR));
     System::api.add_api_variable("IC0", new const APIUint32(&ADC5->DR));
@@ -426,14 +425,14 @@ void system_init() {
     System::api.add_api_variable("IC", new const APIUint32(&ADC5->JDR1));
     System::api.add_api_variable("usb_err", new APIUint32(&config::usb.error_count_));
     System::api.add_api_variable("usb_reset_count", new APIUint32(&config::usb.reset_count_));
-    System::api.add_api_variable("hsi48_trim", new const APICallbackInt8([](){ return (int8_t) ((CRS->CR & CRS_CR_TRIM) >> CRS_CR_TRIM_Pos) - 64; }));
+    System::api.add_api_variable("hsi48_trim", new const APICallbackInt8([](){ return (int8_t) (((CRS->CR & CRS_CR_TRIM) >> CRS_CR_TRIM_Pos) - 64); }));
     System::api.add_api_variable("shutdown", new const APICallback([](){
         // requires power cycle to return 
         setup_sleep();
         SCB->SCR |= SCB_SCR_SLEEPDEEP_Msk;
         PWR->CR1 |= 0b100 << PWR_CR1_LPMS_Pos;
         __WFI();
-        return "";
+        return std::string();
     }));
     System::api.add_api_variable("deadtime", new APICallbackUint16([](){ 
         return config::motor_pwm.deadtime_ns_; }, [](uint16_t u) {config::motor_pwm.set_deadtime(u); }));
@@ -456,7 +455,7 @@ void system_init() {
             cal->motor_encoder_index_electrical_offset_pos = config::fast_loop.motor_index_electrical_offset_measured_;
         }
         config::flash.write((uint32_t) calibration, (uint32_t*) cal, sizeof(Calibration));
-        return "ok";
+        return std::string("ok");
     }));
 
     for (auto regs : std::vector<ADC_TypeDef*>{ADC1, ADC2, ADC3, ADC4, ADC5}) {
