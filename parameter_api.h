@@ -9,9 +9,12 @@
 #include "autocomplete.h"
 
 #define API_ADD_FILTER(name, type, location) \
-    std::function<void(float)> set_filt_##name = std::bind(&type::set_frequency, &location, std::placeholders::_1); \
-    std::function<float(void)> get_filt_##name = std::bind(&type::get_frequency, &location); \
-    api.add_api_variable(#name, new APICallbackFloat(get_filt_##name, set_filt_##name))
+    api.add_api_variable(#name, new APICallbackFloat([]{ return location.get_frequency(); },\
+        [](float f){ location.set_frequency(f); }));
+
+#define API_ADD_FILTER_WITH_API(api, name, location) \
+    api.add_api_variable(#name, new APICallbackFloat([]{ return location.get_frequency(); },\
+        [](float f){ location.set_frequency(f); }));
 
 
 class APIVariable {
@@ -77,36 +80,36 @@ class APIHex : public APIInt<T> {
 
 class APICallback : public APIVariable {
  public:
-  APICallback(std::function<std::string()> getfun, std::function<void(std::string)> setfun) : getfun_(getfun), setfun_(setfun) {}
-  APICallback(std::function<std::string()> getfun) : getfun_(getfun) {}
+  APICallback(std::string (*const getfun)(), void (*const setfun)(std::string)) : getfun_(getfun), setfun_(setfun) {}
+  APICallback(std::string (*const getfun)()) : getfun_(getfun) {}
   void set(std::string s) { setfun_(s); }
   std::string get() const {return getfun_(); }
  private:
-  std::function<std::string()> getfun_;
-  std::function<void(std::string)> setfun_;
+  std::string (*const getfun_)();
+  void (*const setfun_)(std::string) = nullptr;
 };
 
 class APICallbackFloat : public APIVariable {
  public:
-   APICallbackFloat(std::function<float()> getfun , std::function<void(float)> setfun) : getfun_(getfun), setfun_(setfun) {}
-   APICallbackFloat(std::function<float()> getfun) : getfun_(getfun) {}
+   APICallbackFloat(float (*const getfun)(), void (*const setfun)(float)) : getfun_(getfun), setfun_(setfun) {}
+   APICallbackFloat(float (*const getfun)()) : getfun_(getfun) {}
    void set(std::string s) { setfun_(stof(s)); }
    std::string get() const { return std::to_string(getfun_()); };
  private:
-   std::function<float()> getfun_;
-   std::function<void(float)> setfun_;
+   float (*const getfun_)();
+   void (*const setfun_)(float) = nullptr;
 };
 
 template<class T>
 class APICallbackUint : public APIVariable {
  public:
-   APICallbackUint(std::function<T()> getfun , std::function<void(T)> setfun) : getfun_(getfun), setfun_(setfun) {}
-   APICallbackUint(std::function<T()> getfun) : getfun_(getfun) {}
+   APICallbackUint(T (*const getfun)(), void (*const setfun)(T)) : getfun_(getfun), setfun_(setfun) {}
+   APICallbackUint(T (*const getfun)()) : getfun_(getfun) {}
    void set(std::string s) { setfun_(std::stoi(s)); }
    std::string get() const { return std::to_string(getfun_()); }
  private:
-   std::function<T()> getfun_;
-   std::function<void(T)> setfun_;
+   T (*const getfun_)();
+   void (*const setfun_)(T) = nullptr;
 };
 
 typedef APICallbackUint<uint32_t> APICallbackUint32;
@@ -119,8 +122,8 @@ typedef APICallbackUint<int8_t> APICallbackInt8;
 template<class T>
 class APICallbackHex : public APIVariable {
  public:
-   APICallbackHex(std::function<T()> getfun , std::function<void(T)> setfun) : getfun_(getfun), setfun_(setfun) {}
-   APICallbackHex(std::function<T()> getfun) : getfun_(getfun) {}
+   APICallbackHex(T (*const getfun)(), void (*const setfun)(T)) : getfun_(getfun), setfun_(setfun) {}
+   APICallbackHex(T (*const getfun)()) : getfun_(getfun) {}
    void set(std::string s) { setfun_(std::stoul(s, nullptr, 16)); }
    std::string get() const {
       T value = getfun_();
@@ -129,8 +132,8 @@ class APICallbackHex : public APIVariable {
       return bytes_to_hex(bytes);
    }
  private:
-   std::function<T()> getfun_;
-   std::function<void(T)> setfun_;
+   T (*const getfun_)();
+   void (*const setfun_)(T) = nullptr;
 };
 
 // allows for setting variables through text commands

@@ -2,8 +2,8 @@
 .DEFAULT_GOAL = clean_build
 
 clean_build::
-	$(MAKE) clean
-	$(MAKE) all
+	$(MAKE) --no-print-directory clean
+	$(MAKE) --no-print-directory all
 
 ifneq "$(OS)" "Windows_NT"
 BUILD_TGZ = $(BUILD_DIR)/$(TARGET).tgz

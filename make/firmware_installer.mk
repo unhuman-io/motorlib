@@ -31,7 +31,8 @@ $(BUILD_DIR)/%.tgz: $(BUILD_DIR)/%.bin $(PARAM_OUT) $(CALIBRATION_OUT) | $(BUILD
 	chmod +x $(BUILD_DIR)/$(TARGET)/load_$(TARGET)_param.sh
 	echo "#!/bin/bash -e\n$(DFU_START_LINE)\n$(dfu_calibration)\n$(dfu_leave)" > $(BUILD_DIR)/$(TARGET)/load_$(TARGET)_calibration.sh
 	chmod +x $(BUILD_DIR)/$(TARGET)/load_$(TARGET)_calibration.sh
-	tar czvf $@ -C $(BUILD_DIR) $(TARGET)
+	@echo "  TAR    " $@
+	tar czf $@ -C $(BUILD_DIR) $(TARGET)
 
 load: $(BUILD_TGZ)
 	$(BUILD_DIR)/$(TARGET)/load_$(TARGET).sh

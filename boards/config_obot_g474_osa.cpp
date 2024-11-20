@@ -91,15 +91,14 @@ void system_init() {
     config::torque_sensor.init();
 
     System::api.add_api_variable("vref", new APIFloat(&v_ref));
-    std::function<float()> get_t = std::bind(&TempSensor::get_value, &config::temp_sensor);
-    std::function<void(float)> set_t = std::bind(&TempSensor::set_value, &config::temp_sensor, std::placeholders::_1);
-    System::api.add_api_variable("Tmicro", new APICallbackFloat(get_t, set_t));
+    System::api.add_api_variable("Tmicro", new APICallbackFloat([]{ return config::temp_sensor.get_value(); },
+        [](float f){ config::temp_sensor.set_value(f); }));
     System::api.add_api_variable("Tdrv", new const APIFloat(&t_i2c));
-    System::api.add_api_variable("drv_err", new const APICallbackUint32([](){return is_mps_driver_faulted();}));
+    System::api.add_api_variable("drv_err", new const APICallbackUint8([]()->uint8_t{return is_mps_driver_faulted();}));
     System::api.add_api_variable("drv_enable", new APICallbackUint8(mps_driver_enable_status, mps_driver_enable));
-    System::api.add_api_variable("vam", new const APICallbackFloat([]() { return (33.0+2.0)/2.0 * 3.0/4096 * V_A_DR; }));
-    System::api.add_api_variable("vbm", new const APICallbackFloat([]() { return (33.0+2.0)/2.0 * 3.0/4096 * V_B_DR; }));
-    System::api.add_api_variable("vcm", new const APICallbackFloat([]() { return (33.0+2.0)/2.0 * 3.0/4096 * V_C_DR; }));
+    System::api.add_api_variable("vam", new const APICallbackFloat([]()->float{ return (33.0+2.0)/2.0 * 3.0/4096 * V_A_DR; }));
+    System::api.add_api_variable("vbm", new const APICallbackFloat([]()->float{ return (33.0+2.0)/2.0 * 3.0/4096 * V_B_DR; }));
+    System::api.add_api_variable("vcm", new const APICallbackFloat([]()->float{ return (33.0+2.0)/2.0 * 3.0/4096 * V_C_DR; }));
     System::api.add_api_variable("usb_err", new APIUint32(&config::usb.error_count_));
     System::api.add_api_variable("usb_reset_count", new APIUint32(&config::usb.reset_count_));
     System::api.add_api_variable("shutdown", new const APICallback([](){
@@ -108,7 +107,7 @@ void system_init() {
         SCB->SCR |= SCB_SCR_SLEEPDEEP_Msk;
         PWR->CR1 |= 0b100 << PWR_CR1_LPMS_Pos;
         __WFI();
-        return "";
+        return std::string();
     }));
     System::api.add_api_variable("deadtime", new APICallbackUint16([](){ 
         return config::motor_pwm.deadtime_ns_; }, [](uint16_t u) {config::motor_pwm.set_deadtime(u); }));

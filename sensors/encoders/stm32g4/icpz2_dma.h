@@ -5,7 +5,7 @@
 #include "../../../control_fun.h"
 
 #define ICPZ2_SET_DEBUG_VARIABLES(prefix, api, icpz) \
-    ICPZ_SET_DEBUG_VARIABLES(prefix "1", api, icpz.icpz_);\
+    ICPZ_SET_DEBUG_VARIABLES(prefix, api, icpz.icpz_);\
     ICPZ_SET_DEBUG_VARIABLES(prefix "2", api, icpz.icpz2_);\
     api.add_api_variable(prefix "1enc", new const APIUint32(&icpz.value1_.word));\
     api.add_api_variable(prefix "2enc", new const APIUint32(&icpz.value2_.word));\
@@ -23,24 +23,37 @@
     api.add_api_variable(prefix "value", new const APIUint32(&icpz.value_.word));\
     api.add_api_variable(prefix "ivalue", new const APICallbackInt32([] { return icpz.value_.ipos; }));\
     api.add_api_variable(prefix "use_encoder", new APIUint8(&icpz.use_encoder_));\
+    api.add_api_variable(prefix "1remapped_error_count", new const APIUint32(&icpz.remapped_error_count_[0]));\
+    api.add_api_variable(prefix "2remapped_error_count", new const APIUint32(&icpz.remapped_error_count_[1]));\
+    api.add_api_variable(prefix "1remapped_warn_count", new const APIUint32(&icpz.remapped_warn_count_[0]));\
+    api.add_api_variable(prefix "2remapped_warn_count", new const APIUint32(&icpz.remapped_warn_count_[1]));\
+
 
 
 class ICPZ2 : public ICPZBase<ICPZ2> {
   public:
     ICPZ2(SPIDMA &spidma, Disk disk = Default) : ICPZBase(spidma, disk) {}
     void enable_commands_impl() {
-      command_mult_[0] = ICPZ::Opcode::WRITE_REG; // clear diagnosis
-      command_mult_[1] = Addr::COMMANDS;
-      command_mult_[2] = CMD::SCLEAR;
+      commands_enabled_ = true;
+    }
+    void enable_clear_diag() {
+      if (commands_enabled_) {
+        command_mult_[1] = CMD::SCLEAR;
+        command_mult_[0] = ICPZ::Opcode::WRITE_COMMAND; // clear diagnosis
+      }
     }
     void disable_commands_impl() {
+      commands_enabled_ = false;
+      disable_clear_diag();
+    }
+    void disable_clear_diag() {
       command_mult_[0] = 0;
       command_mult_[1] = 0;
-      command_mult_[2] = 0;
     }
     void restore_bank_impl() {
       set_bank(1); // restore bank 1 to read ai_phases 1/0x28
     }
+    bool commands_enabled_ = false;
     uint8_t *command_mult_;
 };
 
@@ -84,15 +97,11 @@ class ICPZ2DMA : public EncoderBase {
       command_mult_[3][1][0] = ICPZ::Opcode::READ_POS; // read position
       command_mult_[3][2][0] = ICPZ::Opcode::READ_POS; // read position
       
-      command_mult_[4][0][0] = ICPZ::Opcode::WRITE_REG; // clear diagnosis
-      command_mult_[4][0][1] = ICPZ::Addr::COMMANDS;
-      command_mult_[4][0][2] = ICPZ::CMD::SCLEAR;
+      // command [4][0] is optional clear diagnosis
       command_mult_[4][1][0] = ICPZ::Opcode::READ_POS; // read position
       command_mult_[4][2][0] = ICPZ::Opcode::READ_POS; // read position
       
-      command_mult_[5][0][0] = ICPZ::Opcode::WRITE_REG; // clear diagnosis
-      command_mult_[5][0][1] = ICPZ::Addr::COMMANDS;
-      command_mult_[5][0][2] = ICPZ::CMD::SCLEAR;
+      // command [5][0] is optional clear diagnosis
       command_mult_[5][1][0] = ICPZ::Opcode::READ_POS; // read position
       command_mult_[5][2][0] = ICPZ::Opcode::READ_POS; // read position
 
@@ -115,7 +124,7 @@ class ICPZ2DMA : public EncoderBase {
       }
       if (!icpz2_.init()) {
         logger.log("icpz2 init failed");
-        result = false;
+        //result = false;
       }
       result &= icpz_.set_register(7, 0, {0xFF, 0xFF, 0x00, 0xF3}); // enable all errors, report in diagnosis, except multiturn, gpio
       result &= icpz2_.set_register(7, 0, {0xFF, 0xFF, 0x00, 0xF3});
@@ -182,9 +191,10 @@ class ICPZ2DMA : public EncoderBase {
         } else if (current_buf_index == 3) {
           // copy diag data to extra buffer
           uint8_t *data = &data_mult_[2][0][2];
-          diag_[0] |= data[3] << 24 | data[2] << 16 | data[1] << 8 | data[0];
+          last_diag_bits_[0].word = data[3] << 24 | data[2] << 16 | data[1] << 8 | data[0];
           data = &data_mult_[3][0][2];
-          diag_[1] |= data[3] << 24 | data[2] << 16 | data[1] << 8 | data[0];
+          last_diag_bits_[1].word = data[3] << 24 | data[2] << 16 | data[1] << 8 | data[0];
+          parse_diag_error();
         } else if (current_buf_index == 7) {
           // copy ai_phases data to extra buffer
           std::memcpy(data_phases_[0], &data_mult_[6][0][3], 2);
@@ -224,9 +234,15 @@ class ICPZ2DMA : public EncoderBase {
     void clear_faults() {
       icpz_.clear_faults();
       icpz2_.clear_faults();
+      clear_diag(0);
+      clear_diag(1);
       disagreement_error_ = 0;
       total_error_count_ = 0;
       total_crc_error_count_ = 0;
+      remapped_error_count_[0] = 0;
+      remapped_error_count_[1] = 0;
+      remapped_warn_count_[0] = 0;
+      remapped_warn_count_[1] = 0;
     }
 
     uint32_t current_buffer_index() const {
@@ -271,6 +287,30 @@ class ICPZ2DMA : public EncoderBase {
       stop_continuous_read();
     }
 
+
+    void parse_diag_error() {
+      diag_[0] |= last_diag_bits_[0].word;
+      diag_[1] |= last_diag_bits_[1].word;
+      if (last_diag_bits_[0].word) {
+        icpz_.enable_clear_diag();
+      } else {
+        icpz_.disable_clear_diag();
+      }
+      if (last_diag_bits_[1].word) {
+        icpz2_.enable_clear_diag();
+      } else {
+        icpz2_.disable_clear_diag();
+      }
+      for (int i=0; i<2; i++) {
+        if (last_diag_bits_[i].word & diag_bits_error_mask_.word) {
+          remapped_error_count_[i]++;
+        }
+        if (last_diag_bits_[i].word & diag_bits_warn_mask_.word) {
+          remapped_warn_count_[i]++;
+        }
+      }
+    }
+
     uint8_t command_mult_[8][3][6] = {};
     uint8_t data_mult_[8][3][6] = {};
     uint8_t data_temperature_[2][2] = {};
@@ -286,6 +326,11 @@ class ICPZ2DMA : public EncoderBase {
     int32_t disagreement_tolerance_ = .1/2/M_PI*pow(2,24);
     uint32_t total_error_count_ = 0;
     uint32_t total_crc_error_count_ = 0;
+    ICPZ::DiagBits last_diag_bits_[2] = {};
+    ICPZ::DiagBits diag_bits_error_mask_ = {.word = 0xFFFFF7FF}; // no prc_sync_failed
+    ICPZ::DiagBits diag_bits_warn_mask_ = {.prc_sync_failed = 1};
+    uint32_t remapped_error_count_[2] = {};
+    uint32_t remapped_warn_count_[2] = {};
 
     bool inited_ = false;
     DMAMUX_Channel_TypeDef &dmamux_tx_regs_;

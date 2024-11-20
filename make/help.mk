@@ -16,4 +16,4 @@ endef
 
 export help_text
 help:
-	$(info $(help_text))
+	$(call info_once,$(help_text))

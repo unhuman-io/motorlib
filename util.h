@@ -11,10 +11,10 @@
 extern volatile uint32_t * const cpu_clock;
 extern volatile uint32_t uptime;
 
-static inline volatile uint32_t get_clock() { return *cpu_clock; }
+static inline uint32_t get_clock() { return *cpu_clock; }
 static inline uint8_t get_cpi_count() { return DWT->CPICNT; }
 static inline uint8_t get_lsu_count() { return DWT->LSUCNT; }
-static inline volatile uint32_t get_uptime() { return uptime; }
+static inline uint32_t get_uptime() { return uptime; }
 
 void ms_delay(uint16_t ms);
 void us_delay(uint16_t us);
@@ -35,13 +35,14 @@ inline uint32_t get_stack_used() {
 extern char _end;
 extern uint32_t _Min_Heap_Size;
 inline uint32_t get_heap_free() {
-    char *start = &_end + (uint32_t) &_Min_Heap_Size; 
+    char *start = &_estack - (uint32_t) &_Min_Stack_Size; 
     char *count = start;
     while(!*count--); // assume zero filled
     return (start - count);
 }
 inline uint32_t get_heap_used() {
-    return (uint32_t) &_Min_Heap_Size - get_heap_free();
+    uint32_t max_heap = (uint32_t) (&_estack - &_end) - (uint32_t) &_Min_Stack_Size;
+    return max_heap - get_heap_free();
 }
 inline uint32_t get_current_heap_used() {
     struct mallinfo info = mallinfo();
@@ -99,6 +100,68 @@ class FrequencyLimiter {
     }
  private:
     uint32_t t_diff_, last_time_;
+};
+
+// LeakyBucket is used to provide bleed off of accumulated faults
+// at rate of leak period. Not thread safe.
+class LeakyBucket {
+ public:
+    LeakyBucket(uint32_t leak_period = 0) {
+        set_leak_period(leak_period);
+        reset();
+    }
+
+    // if leak_period == 0, no leak
+    void set_leak_period(uint32_t leak_period) {
+        leak_period_ = leak_period;
+    }
+
+    void set_leak_period(float leak_period_s, float dt) {
+        float leak_period = leak_period_s/dt;
+        if (leak_period > UINT32_MAX) {
+            leak_period_ = UINT32_MAX;
+        } else {
+            leak_period_ = leak_period;
+        }
+    }
+
+    void update() {
+        if (leak_period_ > 0 && count_ > 0) {
+            leak_count_++;
+            if (leak_count_ > leak_period_) {
+                count_--;
+                leak_count_ = 0;
+            }
+        }
+    }
+
+    uint32_t get_count() const {
+        return count_;
+    }
+
+    uint32_t get_leak_period() const {
+        return leak_period_;
+    }
+
+    float get_leak_period_s(float dt) const {
+        return leak_period_*dt;
+    }
+
+    void reset() {
+        count_ = 0;
+        leak_count_ = 0;
+    }
+
+    void add() {
+        count_++;
+    }
+
+ private:
+    uint32_t count_;
+    uint32_t leak_count_;
+    uint32_t leak_period_;
+
+    friend class System;
 };
 
 template <typename T, unsigned B>

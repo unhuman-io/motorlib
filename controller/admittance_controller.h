@@ -22,6 +22,12 @@ class AdmittanceController : public Controller {
         torque_controller_.set_param(param.torque);
         velocity_controller_.set_param(param.velocity);
     }
+    bool validate_command(const MotorCommand &command) const {
+        if (std::isfinite(command.torque_desired)) {
+            return true;
+        }
+        return false;
+    }
  private:
     VelocityController velocity_controller_;
     PIDController torque_controller_;
