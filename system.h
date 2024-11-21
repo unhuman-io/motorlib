@@ -281,7 +281,7 @@ class System {
           return std::string((char *) &long_packet, sizeof(long_packet));
         }));
         api.add_api_variable("really_long_packet", new const APICallback([]{
-          char long_packet[MAX_API_LONG_DATA_SIZE+1];
+          char long_packet[MAX_API_LONG_DATA_SIZE];
           for (int i=0; i<MAX_API_LONG_DATA_SIZE; i++) {
             long_packet[i] = '0' + (i % 10);
           }
