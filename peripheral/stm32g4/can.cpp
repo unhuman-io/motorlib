@@ -18,12 +18,12 @@ CAN::CAN(CAN_INST inst, ArbitrationBaudRate arb, DataBaudRate data) :
     if (CPU_FREQUENCY_HZ == 170000000) {
         switch (arb) {
             case ArbitrationBaudRate::ARB_1M:
-                // samp paint = 0.7471
+                // samp paint = 0.753
                 regs_.NBTP = 120 << FDCAN_NBTP_NSJW_Pos | 125 << FDCAN_NBTP_NTSEG1_Pos | 42 << FDCAN_NBTP_NTSEG2_Pos;
                 break;
             case ArbitrationBaudRate::ARB_2M:
-                // samp point = 0.7529
-                regs_.NBTP = 60 << FDCAN_NBTP_NSJW_Pos | 62 << FDCAN_NBTP_NTSEG1_Pos | 20 << FDCAN_NBTP_NTSEG2_Pos; 
+                // samp point = 0.753
+                regs_.NBTP = 60 << FDCAN_NBTP_NSJW_Pos | 61 << FDCAN_NBTP_NTSEG1_Pos | 19 << FDCAN_NBTP_NTSEG2_Pos; 
                 break;
             default:
                 break;
@@ -34,36 +34,36 @@ CAN::CAN(CAN_INST inst, ArbitrationBaudRate arb, DataBaudRate data) :
         // TDCO max is 127, it should be (2+DTSEG1)*(psc+1)
         switch (data) {
             case DataBaudRate::DATA_1M:
-                // psc = 4, nq = 34 samp point = 0.7647
-                regs_.DBTP = 24 << FDCAN_DBTP_DTSEG1_Pos | 7 << FDCAN_DBTP_DTSEG2_Pos | 15 << FDCAN_DBTP_DSJW_Pos | 4 << FDCAN_DBTP_DBRP_Pos;
+                // psc = 4, nq = 34 samp point = 0.765
+                regs_.DBTP = 23 << FDCAN_DBTP_DTSEG1_Pos | 8 << FDCAN_DBTP_DTSEG2_Pos | 15 << FDCAN_DBTP_DSJW_Pos | 4 << FDCAN_DBTP_DBRP_Pos;
                 break;
             case DataBaudRate::DATA_2M:
-                // psc = 4, nq = 17 samp point = 0.7647
-                regs_.DBTP = 11 << FDCAN_DBTP_DTSEG1_Pos | 3 << FDCAN_DBTP_DTSEG2_Pos | 10 << FDCAN_DBTP_DSJW_Pos | 4 << FDCAN_DBTP_DBRP_Pos;
+                // psc = 4, nq = 17 samp point = 0.765
+                regs_.DBTP = 10 << FDCAN_DBTP_DTSEG1_Pos | 4 << FDCAN_DBTP_DTSEG2_Pos | 10 << FDCAN_DBTP_DSJW_Pos | 4 << FDCAN_DBTP_DBRP_Pos;
                 break;
             case DataBaudRate::DATA_5M:
                 // psc = 0, nq = 34  samp point = 0.7647
-                regs_.DBTP = 24 << FDCAN_DBTP_DTSEG1_Pos | 7 << FDCAN_DBTP_DTSEG2_Pos | 15 << FDCAN_DBTP_DSJW_Pos | FDCAN_DBTP_TDC | 0 << FDCAN_DBTP_DBRP_Pos;
+                regs_.DBTP = 23 << FDCAN_DBTP_DTSEG1_Pos | 8 << FDCAN_DBTP_DTSEG2_Pos | 15 << FDCAN_DBTP_DSJW_Pos | FDCAN_DBTP_TDC | 0 << FDCAN_DBTP_DBRP_Pos;
                 regs_.TDCR = 26 << FDCAN_TDCR_TDCO_Pos | 25 << FDCAN_TDCR_TDCF_Pos;
                 break;
             case DataBaudRate::DATA_8M:
                 // psc = 0, nq = 21  samp point = 0.7619, actual bitrate 8.095
-                regs_.DBTP = 14 << FDCAN_DBTP_DTSEG1_Pos | 4 << FDCAN_DBTP_DTSEG2_Pos | 13 << FDCAN_DBTP_DSJW_Pos | FDCAN_DBTP_TDC | 0 << FDCAN_DBTP_DBRP_Pos;
+                regs_.DBTP = 13 << FDCAN_DBTP_DTSEG1_Pos | 5 << FDCAN_DBTP_DTSEG2_Pos | 13 << FDCAN_DBTP_DSJW_Pos | FDCAN_DBTP_TDC | 0 << FDCAN_DBTP_DBRP_Pos;
                 regs_.TDCR = 16 << FDCAN_TDCR_TDCO_Pos | 25 << FDCAN_TDCR_TDCF_Pos;
                 break;
             case DataBaudRate::DATA_10M:
                 // psc = 0, nq = 11  samp point = 0.765, bitrate exact
-                regs_.DBTP = 11 << FDCAN_DBTP_DTSEG1_Pos | 3 << FDCAN_DBTP_DTSEG2_Pos | 10 << FDCAN_DBTP_DSJW_Pos | FDCAN_DBTP_TDC | 0 << FDCAN_DBTP_DBRP_Pos;
+                regs_.DBTP = 10 << FDCAN_DBTP_DTSEG1_Pos | 4 << FDCAN_DBTP_DTSEG2_Pos | 10 << FDCAN_DBTP_DSJW_Pos | FDCAN_DBTP_TDC | 0 << FDCAN_DBTP_DBRP_Pos;
                 regs_.TDCR = 10 << FDCAN_TDCR_TDCO_Pos | 25 << FDCAN_TDCR_TDCF_Pos;
                 break;
             case DataBaudRate::DATA_12M:
                 // psc = 0, nq = 14  samp point = 0.786, actual bitrate 12.14
-                regs_.DBTP = 9 << FDCAN_DBTP_DTSEG1_Pos | 2 << FDCAN_DBTP_DTSEG2_Pos | 8 << FDCAN_DBTP_DSJW_Pos | FDCAN_DBTP_TDC | 0 << FDCAN_DBTP_DBRP_Pos;
+                regs_.DBTP = 8 << FDCAN_DBTP_DTSEG1_Pos | 3 << FDCAN_DBTP_DTSEG2_Pos | 8 << FDCAN_DBTP_DSJW_Pos | FDCAN_DBTP_TDC | 0 << FDCAN_DBTP_DBRP_Pos;
                 regs_.TDCR = 11 << FDCAN_TDCR_TDCO_Pos | 25 << FDCAN_TDCR_TDCF_Pos;
                 break;
             case DataBaudRate::DATA_15M:
                 // psc = 0, nq = 11  samp point = 0.727, actual bitrate 15.45
-                regs_.DBTP = 6 << FDCAN_DBTP_DTSEG1_Pos | 2 << FDCAN_DBTP_DTSEG2_Pos | 9 << FDCAN_DBTP_DSJW_Pos | FDCAN_DBTP_TDC | 0 << FDCAN_DBTP_DBRP_Pos;
+                regs_.DBTP = 5 << FDCAN_DBTP_DTSEG1_Pos | 3 << FDCAN_DBTP_DTSEG2_Pos | 9 << FDCAN_DBTP_DSJW_Pos | FDCAN_DBTP_TDC | 0 << FDCAN_DBTP_DBRP_Pos;
                 regs_.TDCR = 5 << FDCAN_TDCR_TDCO_Pos | 25 << FDCAN_TDCR_TDCF_Pos;
                 break;
             default:
