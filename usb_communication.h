@@ -27,10 +27,12 @@ class USBCommunication : public CommunicationBase {
        // blocks until entire string has been sent
        if (string[0] == 0 || length > MAX_API_DATA_SIZE) {
           // binary that starts with 0, need to send as long packet
-          struct {
+          struct LongPacket{
              APIControlPacket control_packet = {0, LONG_PACKET, .long_packet = {0, 1}};
              char data[MAX_API_DATA_SIZE - sizeof(APIControlPacket)];
-          } long_packet;
+          };
+          LongPacket *long_packet_ptr = new LongPacket(); // prevent large allocation on stack
+          LongPacket &long_packet = *long_packet_ptr;
           long_packet.control_packet.long_packet.total_length = length;
           int32_t length_remaining = length;
           const char * str = string;
@@ -43,6 +45,7 @@ class USBCommunication : public CommunicationBase {
              long_packet.control_packet.long_packet.packet_number++;
              length_remaining -= transfer_size;
           } while (length_remaining > 0);
+         delete long_packet_ptr;
        } else {
          usb_.send_data(1, (const uint8_t * const) string, 
                std::min((uint16_t) MAX_API_DATA_SIZE, length), true);
