@@ -293,7 +293,11 @@ namespace config {
 #endif // COMMS_UART
 
 #if (COMMS == COMMS_CAN) || (COMMS == COMMS_CAN_USB)
+#ifdef CAN_ARB_DATA_RATE
+    CAN can(CAN_NUM, CAN_ARB_DATA_RATE);
+#else
     CAN can(CAN_NUM);
+#endif
 #endif
 
 #if COMMS == COMMS_SPI
