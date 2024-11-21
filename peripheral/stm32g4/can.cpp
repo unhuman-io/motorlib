@@ -121,15 +121,14 @@ int CAN::read(uint8_t fifo, uint16_t id, uint8_t* data) {
     return length;
 }
 
-int CAN::write(uint16_t id, uint8_t* data, uint8_t length) {
-    if (regs_.TXFQS & FDCAN_TXFQS_TFQF) {
-        // queue full
-        return -1;
-    }
-    uint8_t buf_num = (regs_.TXFQS >> FDCAN_TXFQS_TFQPI_Pos) & 3; // get current fifo
+
+int CAN::write(uint16_t id, uint8_t* data, uint8_t length, uint8_t buf_num) {
     if (buf_num > 2) {
-        // shouldn't occur?
         return -2;
+    }
+    if (regs_.TXBRP & (1 << buf_num)) {
+        // buffer is busy
+        return -3;
     }
     TX_BUFFER* buffer = reinterpret_cast<TX_BUFFER*>(ram_.TX_BUFFER[buf_num]);
     TX_BUFFER::TXWord1 word1 = {
