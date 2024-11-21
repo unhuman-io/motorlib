@@ -72,6 +72,20 @@ class MultiCommunication : public CommunicationBase {
         }, comms_);
     }
 
+    void send_one_time_api_timeout_request(uint32_t us) {
+        int i = 0;
+        int active_str_comms = active_str_comms_;
+        std::apply([us, &i, &active_str_comms](auto&&... comms) {
+            ((active_str_comms == i++ ? comms.send_one_time_api_timeout_request(us), 1 : 0) || ...);
+        }, comms_);
+    }
+
+    void cancel_one_time_api_timeout_request() {
+        std::apply([](auto&&... comms) {
+            (comms.cancel_one_time_api_timeout_request(), ...);
+        }, comms_);
+    }
+
     bool tx_data_ack() {
         std::apply([](auto&&... comms) {
             return (comms.tx_data_ack() || ...);

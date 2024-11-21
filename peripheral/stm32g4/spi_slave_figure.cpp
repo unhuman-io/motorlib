@@ -256,7 +256,7 @@ uint16_t SpiSlaveFigure::get_last_rx_index() const {
 }
 
 bool SpiSlaveFigure::is_tx_active() const {
-  return init_struct_.txDmaChannel->CNDTR == 0;
+  return init_struct_.txDmaChannel->CNDTR != 0;
 }
 
 void SpiSlaveFigure::rx_copy(uint8_t * const out_buf, uint8_t * rx_buf_ptr, uint16_t length) {
