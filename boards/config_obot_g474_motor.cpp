@@ -527,7 +527,10 @@ void system_init() {
         config::flash.write((uint32_t) calibration, (uint32_t*) cal, sizeof(Calibration));
         return std::string("ok");
     }));
-
+#if (COMMS == COMMS_CAN) || (COMMS == COMMS_CAN_USB)
+    System::api.add_api_variable("can_send_decimation", new APICallbackUint16([](){ return can_communication.get_send_decimation(); },
+        [](uint16_t decimation){ can_communication.set_send_decimation(decimation); }));
+#endif
     for (auto regs : std::vector<ADC_TypeDef*>{ADC1, ADC2, ADC3, ADC4, ADC5}) {
         regs->CR = ADC_CR_ADVREGEN;
         ns_delay(20000);

@@ -92,6 +92,14 @@ class CANCommunication : public CommunicationBase {
       return true;
     }
 
+    void set_send_decimation(uint16_t decimation) {
+      send_data_default_decimation_ = decimation;
+    }
+
+    uint16_t get_send_decimation() const {
+      return send_data_default_decimation_;
+    }
+
  private:
     CAN &can_;
     volatile bool send_data_trigger_ = false;
