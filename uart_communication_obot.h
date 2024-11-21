@@ -100,16 +100,12 @@ class UARTCommunication : public CommunicationBase {
         uint16_t transfer_size = std::min((uint16_t) (OBOT_ASCII_MAX_SEND_LENGTH - sizeof(APIControlPacket)), (uint16_t) length_remaining);
         std::memcpy(long_packet.data, str, transfer_size);
         _send_string((const char *) &long_packet, transfer_size);
-        if (retval < 0) {
-          // buffer full
-          continue;
-        }
         str += transfer_size;
         long_packet.control_packet.long_packet.packet_number++;
         length_remaining -= transfer_size;
       } while (length_remaining > 0);
     } else {
-      _send_string((const char *) &long_packet, transfer_size);
+      _send_string(string, length);
     }
     return true;
   }
@@ -117,7 +113,7 @@ class UARTCommunication : public CommunicationBase {
   void send_one_time_api_timeout_request(uint32_t us) {
     APIControlPacket timeout_request = {0, TIMEOUT_REQUEST, .timeout_request = {us}};
     uint8_t packet_size;
-    uint8_t* packet = protocol_.generatePacket((const uint8_t *) timeout_request, sizeof(timeout_request), (size_t) OBOT_ASCII_RESPONSE, &packet_size);
+    uint8_t* packet = protocol_.generatePacket((const uint8_t *) &timeout_request, sizeof(timeout_request), (size_t) OBOT_ASCII_RESPONSE, &packet_size);
     send_uart_packet(packet, packet_size);
   }
 
