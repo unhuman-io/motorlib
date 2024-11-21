@@ -114,6 +114,14 @@ class CANCommunication : public CommunicationBase {
       return true;
     }
 
+    void set_send_decimation(uint16_t decimation) {
+      send_data_default_decimation_ = decimation;
+    }
+
+    uint16_t get_send_decimation() const {
+      return send_data_default_decimation_;
+    }
+
     void send_one_time_api_timeout_request(uint32_t us) {
        APIControlPacket timeout_request = {0, TIMEOUT_REQUEST, .timeout_request = {us}};
        CANID can_id = {.address = address_, .message_id = OBOT_ASCII_RESPONSE};

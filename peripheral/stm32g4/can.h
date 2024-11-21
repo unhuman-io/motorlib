@@ -9,7 +9,7 @@ class CAN {
     enum CAN_INST {CAN1, CAN2, CAN3};
     enum ArbitrationBaudRate {ARB_1M, ARB_2M};
     enum DataBaudRate {DATA_1M, DATA_2M, DATA_5M, DATA_8M, DATA_10M, DATA_12M, DATA_15M};
-    CAN(CAN_INST inst, ArbitrationBaudRate arb = ARB_2M, DataBaudRate data = DATA_5M);
+    CAN(CAN_INST inst, ArbitrationBaudRate arb = ARB_2M, DataBaudRate data = DATA_10M);
     int read(uint8_t fifo, uint16_t id, uint8_t* data);
     int write(uint16_t id, uint8_t* data, uint8_t length);
     bool add_acceptance_filter(uint16_t id, uint8_t fifo);
