@@ -280,6 +280,13 @@ class System {
           }
           return std::string((char *) &long_packet, sizeof(long_packet));
         }));
+        api.add_api_variable("really_long_packet", new const APICallback([]{
+          char long_packet[MAX_API_LONG_DATA_SIZE+1];
+          for (int i=0; i<MAX_API_LONG_DATA_SIZE; i++) {
+            long_packet[i] = '0' + (i % 10);
+          }
+          return std::string((char *) &long_packet, sizeof(long_packet));
+        }))
         api.add_api_variable("config", new const APICallback([]()->std::string{ return CONFIG; }));
         api.add_api_variable("serial", new const APICallback([](){ return std::string(get_serial_number()); }));
         api.add_api_variable("olimit_max", new APIFloat(&actuator_.main_loop_.encoder_limits_.output_hard_max));
