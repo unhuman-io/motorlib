@@ -48,7 +48,7 @@ class CANCommunication : public CommunicationBase {
           if (recv_len >= 0) {
             //logger.log("recv enum");
             can_id.message_id = OBOT_ENUM;
-            can_.write(can_id.word, nullptr, 0);
+            can_.write(can_id.word, nullptr, 0, 2);
           }
         } else if (recv_len > 0) {
           send_data_trigger_ = true;
@@ -94,7 +94,7 @@ class CANCommunication : public CommunicationBase {
           uint16_t transfer_size = std::min((uint16_t) (MAX_CAN_DATA_SIZE - sizeof(APIControlPacket)), (uint16_t) length_remaining);
           std::memcpy(long_packet.data, str, transfer_size);
           int retval = can_.write(can_id.word, (uint8_t * const) &long_packet, 
-                  transfer_size + sizeof(APIControlPacket));
+                  transfer_size + sizeof(APIControlPacket), 1);
           if (retval < 0) {
             // buffer full
             continue;
@@ -109,7 +109,7 @@ class CANCommunication : public CommunicationBase {
         if (length > 1) {
           buf[length++] = 0;
         }
-        can_.write(can_id.word, (uint8_t*) buf, length);
+        can_.write(can_id.word, (uint8_t*) buf, length, 1);
       }
       return true;
     }
