@@ -9,11 +9,15 @@ class SPIPause {
  public:
     void pause() {
         lock_++;
-        stop_callback_();
+        if (lock_ == 1) {
+            stop_callback_();
+        }
     }
     void unpause() {
         lock_--;
-        start_callback_();
+        if (lock_ == 0) {
+            start_callback_();
+        }
     }
     bool is_paused() {
         return lock_ > 0;

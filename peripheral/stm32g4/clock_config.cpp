@@ -1,7 +1,10 @@
 #include "stm32g474xx.h"
 #include "../../util.h"
+#include "../../logger.h"
+#include <string>
 
 volatile uint32_t * const cpu_clock = &DWT->CYCCNT;
+uint32_t rcc_csr_copy __attribute__((section (".noload")));
 
 static_assert((uint32_t) CPU_FREQUENCY_HZ % 2000000 == 0, "CPU_FREQUENCY_HZ must be a multiple of 2000000");
 
@@ -61,4 +64,15 @@ extern "C" void SystemClock_Config(void)
   CRS->CFGR = 2 << CRS_CFGR_SYNCSRC_Pos | 34 << CRS_CFGR_FELIM_Pos |
     (48000000/1000 - 1) << CRS_CFGR_RELOAD_Pos; // DIV1, source usb sof (2), polarity rising, 34 felim was specificed by cubemx, reload (48000000/1000 - 1)
   CRS->CR |= CRS_CR_AUTOTRIMEN | CRS_CR_CEN;
+
+  // log reset flags
+  std::string s;
+  if (rcc_csr_copy & RCC_CSR_LPWRRSTF) { s += "LPWR "; }
+  if (rcc_csr_copy & RCC_CSR_WWDGRSTF) { s += "WWDG "; }
+  if (rcc_csr_copy & RCC_CSR_IWDGRSTF) {s += "IWDG "; }
+  if (rcc_csr_copy & RCC_CSR_SFTRSTF) { s += "SFT "; }
+  if (rcc_csr_copy & RCC_CSR_BORRSTF) { s += "BOR "; }
+  if (rcc_csr_copy & RCC_CSR_PINRSTF) { s += "PIN "; }
+  if (rcc_csr_copy & RCC_CSR_OBLRSTF) { s += "OBL "; }
+  logger.log_printf("rcc_csr: %08x %s", rcc_csr_copy, s.c_str());
 }

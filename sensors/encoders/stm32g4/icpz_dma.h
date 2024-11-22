@@ -2,6 +2,11 @@
 
 #include "../icpz.h"
 
+#define ICPZDMA_SET_DEBUG_VARIABLES(prefix, api, icpz) \
+    ICPZ_SET_DEBUG_VARIABLES(prefix, api, icpz);\
+    api.add_api_variable(prefix "remapped_error_count", new const APIUint32(&icpz.remapped_error_count_));\
+    api.add_api_variable(prefix "remapped_warn_count", new const APIUint32(&icpz.remapped_warn_count_));\
+
 class ICPZDMA : public ICPZBase<ICPZDMA> {
  public:
     ICPZDMA(SPIDMA &spidma, DMAMUX_Channel_TypeDef &tx_dmamux, DMAMUX_Channel_TypeDef &rx_dmamux, uint8_t exti_num,
@@ -11,15 +16,16 @@ class ICPZDMA : public ICPZBase<ICPZDMA> {
       spidma_.pause_.start_callback_ = [this]{start_continuous_read();};
       spidma_.pause_.stop_callback_ = [this]{stop_continuous_read();};
 
-      command_mult_[1][0] = 0xa6; // read position
-      command_mult_[3][0] = 0xa6;
-      command_mult_[5][0] = 0xa6;
-      command_mult_[0][0] = 0x81; // read temperature
+      command_mult_[1][0] = ICPZ::Opcode::READ_POS; // read position
+      command_mult_[3][0] = ICPZ::Opcode::READ_POS;
+      command_mult_[5][0] = ICPZ::Opcode::READ_POS;
+      command_mult_[7][0] = ICPZ::Opcode::READ_POS;
+      command_mult_[0][0] = ICPZ::Opcode::READ_REG; // read temperature
       command_mult_[0][1] = 0x4e;
-      command_mult_[2][0] = 0x9c; // read diagnosis
-      command_mult_[4][0] = 0xcf; // clear diagnosis
-      command_mult_[4][1] = Addr::COMMANDS;
-      command_mult_[4][2] = CMD::SCLEAR;
+      command_mult_[2][0] = ICPZ::Opcode::READ_DIAG; // read diagnosis
+      enable_commands_impl();
+      command_mult_[6][0] = ICPZ::Opcode::READ_REG; // read ai_phases
+      command_mult_[6][1] = 0x28;
     }
 
     bool init() {
@@ -34,39 +40,28 @@ class ICPZDMA : public ICPZBase<ICPZDMA> {
       if (!spidma_.pause_.is_paused()) {
         // Can only read when transactions are not active. Must be guaranteed 
         // by timing setup.
-        uint8_t *data_buf = data_mult_[current_buffer_index()];
-        uint32_t data = ((data_buf[1] << 16) | (data_buf[2] << 8) | data_buf[3]) << 8;
-        raw_value_ = data >> 8;
-        uint32_t word = data | data_buf[4];
-        Diag diag = {.word = data_buf[4]};
-        uint8_t crc6_calc = ~CRC_BiSS_43_30bit(word >> 6) & 0x3f;
-        error_count_ += !diag.nErr;
-        warn_count_ += !diag.nWarn;
-
-        uint8_t crc_error = diag.crc6 == crc6_calc ? 0 : 1;
-        crc_error_count_ += crc_error;
-        if (!crc_error) {
-          int32_t diff = (data - last_data_); // rollover summing
-          pos_ += diff/256;
-          last_data_ = data;
-        }
-        if (!diag.nErr) {
-          last_error_pos_ = pos_;
-        }
-        if (!diag.nWarn) {
-          last_warn_pos_ = pos_;
+        int i = current_buffer_index();
+        uint8_t *data_buf = data_mult_[i];
+        read_buf(data_buf);
+        or_diag();
+        if (i == 3) {
+          // diag just read
+          parse_diag_error();
         }
       }
-      or_diag();
+      
       return get_value();
     }
     float get_temperature() {
       uint8_t *data = &data_mult_[0][3];
       // signed value, 16 bit
-      uint16_t temp_raw = (data[1] << 8 | data[0]);
-      int16_t temp_signed = (int16_t) temp_raw;
-      float temp =  (float) temp_signed/10; 
-      return temp;
+      return ICPZ::get_temperature(data);
+    }
+
+    float get_ai_phases() {
+      uint8_t *data = &data_mult_[6][3];
+      // signed value, 16 bit
+      return ICPZ::get_ai_phase(data);
     }
     void or_diag() {
       uint8_t *data = &data_mult_[2][2];
@@ -75,19 +70,47 @@ class ICPZDMA : public ICPZBase<ICPZDMA> {
     void clear_diag() {
       diag_ = 0;
     }
+
+    void enable_commands_impl() {
+      commands_enabled_ = true;
+    }
+    void enable_clear_diag() {
+      if (commands_enabled_) {
+        command_mult_[4][1] = CMD::SCLEAR;
+        command_mult_[4][0] = ICPZ::Opcode::WRITE_COMMAND; // clear diagnosis
+      }
+    }
+    void disable_commands_impl() {
+      commands_enabled_ = false;
+      disable_clear_diag();
+    }
+    void disable_clear_diag() {
+      command_mult_[4][0] = 0;
+      command_mult_[4][1] = 0;
+    }
+    void restore_bank_impl() {
+      set_bank(1); // restore bank 1 to read ai_phases 1/0x28
+    }
+
     std::string read_diagnosis() {
-      return bytes_to_hex((uint8_t*) &diag_, 4);
+      std::string s = bytes_to_hex((uint8_t*) &diag_, 4);
+      clear_diag();
+      return s;
     }
     std::string read_diagnosis_str() {
-      return diagnosis_to_str(diag_);
+      std::string s = diagnosis_to_str(diag_);
+      clear_diag();
+      return s;
     }
     uint32_t current_buffer_index() const {
-      if (spidma_.rx_dma_.CNDTR > 24) {
-        return 5;
-      } else if (spidma_.rx_dma_.CNDTR > 12) {
+      if (spidma_.rx_dma_.CNDTR > 36) {
+        return 7;
+      } else if (spidma_.rx_dma_.CNDTR > 24) {
         return 1;
-      } else {
+      } else if (spidma_.rx_dma_.CNDTR > 12) {
         return 3;
+      } else {
+        return 5;
       }
     }
     void start_continuous_read() {
@@ -113,13 +136,43 @@ class ICPZDMA : public ICPZBase<ICPZDMA> {
       dmamux_rx_regs_.CCR &= DMAMUX_CxCR_DMAREQ_ID_Msk;
     }
 
+
+    void parse_diag_error() {
+      uint8_t *data = &data_mult_[2][2];
+      last_diag_bits_.word = data[3] << 24 | data[2] << 16 | data[1] << 8 | data[0];
+      if (last_diag_bits_.word) {
+        enable_clear_diag();
+      } else {
+        disable_clear_diag();
+      }
+      if (last_diag_bits_.word & diag_bits_error_mask_.word) {
+        remapped_error_count_++;
+      }
+      if (last_diag_bits_.word & diag_bits_warn_mask_.word) {
+        remapped_warn_count_++;
+      }
+    }
+
+    void clear_faults() {
+      clear_diag();
+      ICPZBase::clear_faults();
+      remapped_error_count_ = 0;
+      remapped_warn_count_ = 0;
+    }
+
     bool inited_ = false;
+    bool commands_enabled_ = false;
     DMAMUX_Channel_TypeDef &dmamux_tx_regs_;
     DMAMUX_Channel_TypeDef &dmamux_rx_regs_;
     uint8_t exti_num_;
     void (*start_cs_trigger_)();
     void (*stop_cs_trigger_and_wait_cs_high_)();
-    uint8_t command_mult_[6][6] = {};
-    uint8_t data_mult_[6][6] = {};
+    uint8_t command_mult_[8][6] = {};
+    uint8_t data_mult_[8][6] = {};
     uint32_t diag_ = {};
+    ICPZBase::DiagBits last_diag_bits_ = {};
+    ICPZBase::DiagBits diag_bits_error_mask_ = {.word = 0xFFFFF7FF}; // no prc_sync_failed
+    ICPZBase::DiagBits diag_bits_warn_mask_ = {.prc_sync_failed = 1};
+    uint32_t remapped_error_count_ = 0;
+    uint32_t remapped_warn_count_ = 0;
 };

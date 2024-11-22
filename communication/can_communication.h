@@ -48,7 +48,7 @@ class CANCommunication : public CommunicationBase {
           if (recv_len >= 0) {
             //logger.log("recv enum");
             can_id.message_id = OBOT_ENUM;
-            can_.write(can_id.word, nullptr, 0);
+            can_.write(can_id.word, nullptr, 0, 2);
           }
         } else if (recv_len > 0) {
           send_data_trigger_ = true;
@@ -82,20 +82,56 @@ class CANCommunication : public CommunicationBase {
 
     bool send_string(const char* string, uint16_t length) {
       CANID can_id = {.address = address_, .message_id = OBOT_ASCII_RESPONSE};
-      length = std::min(length, (uint16_t) 63);
-      char buf[64];
-      std::memcpy(buf, string, length);
-      if (length > 1) {
-        buf[length++] = 0;
+      if (string[0] == 0 || length > MAX_CAN_DATA_SIZE) {
+        struct {
+          APIControlPacket control_packet = {0, LONG_PACKET, .long_packet = {0, 1}};
+          char data[MAX_CAN_DATA_SIZE - sizeof(APIControlPacket)];
+        } long_packet;
+        long_packet.control_packet.long_packet.total_length = length;
+        int32_t length_remaining = length;
+        const char * str = string;
+        do {
+          uint16_t transfer_size = std::min((uint16_t) (MAX_CAN_DATA_SIZE - sizeof(APIControlPacket)), (uint16_t) length_remaining);
+          std::memcpy(long_packet.data, str, transfer_size);
+          int retval = can_.write(can_id.word, (uint8_t * const) &long_packet, 
+                  transfer_size + sizeof(APIControlPacket), 1);
+          if (retval < 0) {
+            // buffer full
+            continue;
+          }
+          str += transfer_size;
+          long_packet.control_packet.long_packet.packet_number++;
+          length_remaining -= transfer_size;
+        } while (length_remaining > 0);
+      } else {
+        char buf[64];
+        std::memcpy(buf, string, length);
+        if (length > 1) {
+          buf[length++] = 0;
+        }
+        can_.write(can_id.word, (uint8_t*) buf, length, 1);
       }
-      can_.write(can_id.word, (uint8_t*) buf, length);
       return true;
+    }
+
+    void set_send_decimation(uint16_t decimation) {
+      send_data_default_decimation_ = decimation;
+    }
+
+    uint16_t get_send_decimation() const {
+      return send_data_default_decimation_;
+    }
+
+    void send_one_time_api_timeout_request(uint32_t us) {
+       APIControlPacket timeout_request = {0, TIMEOUT_REQUEST, .timeout_request = {us}};
+       CANID can_id = {.address = address_, .message_id = OBOT_ASCII_RESPONSE};
+       can_.write(can_id.word, (uint8_t * const) &timeout_request, sizeof(timeout_request));
     }
 
  private:
     CAN &can_;
     volatile bool send_data_trigger_ = false;
     uint16_t send_data_counter_ = 0;
-    uint16_t send_data_default_decimation_ = 1000;
+    uint16_t send_data_default_decimation_ = 10000;
     uint8_t address_ = 0;
 };

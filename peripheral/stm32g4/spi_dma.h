@@ -81,7 +81,8 @@ class SPIDMA : public SPIDMABase<SPIDMA> {
         tx_dma_.CMAR = (uint32_t) data_out;
         rx_dma_.CMAR = (uint32_t) data_in;      
         rx_dma_.CCR = DMA_CCR_EN | DMA_CCR_MINC;
-        tx_dma_.CCR = DMA_CCR_EN | DMA_CCR_MINC | DMA_CCR_DIR; // DIR = 1 > read from memory
+        // Not generally controlling DMA priority. Setting 1 here above default 0 addresses one specific issue.
+        tx_dma_.CCR = DMA_CCR_EN | DMA_CCR_MINC | DMA_CCR_DIR | 1 << DMA_CCR_PL_Pos;; // DIR = 1 > read from memory
         time_start_ = get_clock();
     }
 
@@ -96,7 +97,8 @@ class SPIDMA : public SPIDMABase<SPIDMA> {
         tx_dma_.CMAR = (uint32_t) data_out;
         rx_dma_.CMAR = (uint32_t) tmp_rx_;        
         rx_dma_.CCR = DMA_CCR_EN;
-        tx_dma_.CCR = DMA_CCR_EN | DMA_CCR_MINC | DMA_CCR_DIR; // DIR = 1 > read from memory
+        // Not generally controlling DMA priority. Setting 1 here above default 0 addresses one specific issue.
+        tx_dma_.CCR = DMA_CCR_EN | DMA_CCR_MINC | DMA_CCR_DIR | 1 << DMA_CCR_PL_Pos; // DIR = 1 > read from memory
         time_start_ = get_clock();
     }
 

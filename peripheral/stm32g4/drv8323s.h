@@ -13,6 +13,17 @@ extern uint16_t drv_regs_error;
 static const char* drv8323_status1_bits[11] = {"vds_lc", "vds_hc", "vds_lb", "vds_hb", "vds_la", "vds_ha", "otsd", "uvlo", "gdf", "vds_ocp", "fault"};
 static const char* drv8323_status2_bits[11] = {"vgs_lc", "vgs_hc", "vgs_lb", "vgs_hb", "vgs_la", "vgs_ha", "cpuv", "otw", "sc_oc", "sb_oc", "sa_oc"};
 
+
+#define DRV8323S_SET_DEBUG_API(api, drv) \
+    api.add_api_variable("drv_idrivep_hs", new APICallbackUint8([](){ return drv.get_idrivep_hs(); },\
+        [](uint8_t val){ drv.set_idrivep_hs(val); }));\
+    api.add_api_variable("drv_idrivep_ls", new APICallbackUint8([](){ return drv.get_idrivep_ls(); },\
+        [](uint8_t val){ drv.set_idrivep_ls(val); }));\
+    api.add_api_variable("drv_tdrive", new APICallbackUint8([](){ return drv.get_tdrive(); },\
+        [](uint8_t val){ drv.set_tdrive(val); }));\
+    api.add_api_variable("drv_csa_reg", new APICallbackHex<uint16_t>([](){ return drv.get_csa_reg(); },\
+        [](uint16_t val){ drv.set_csa_reg(val); }));\
+        
 class DRV8323S : public DriverBase {
  public:
     DRV8323S(SPI_TypeDef &regs, SPIPause &spi_pause)
@@ -133,17 +144,6 @@ class DRV8323S : public DriverBase {
             drv_spi_end();
 
             return value;
-    }
-
-    void set_debug_variables(ParameterAPI &api) {
-        api.add_api_variable("drv_idrivep_hs", new APICallbackUint8([this](){ return this->get_idrivep_hs(); },
-            [this](uint8_t val){ this->set_idrivep_hs(val); }));
-        api.add_api_variable("drv_idrivep_ls", new APICallbackUint8([this](){ return this->get_idrivep_ls(); },
-            [this](uint8_t val){ this->set_idrivep_ls(val); }));
-        api.add_api_variable("drv_tdrive", new APICallbackUint8([this](){ return this->get_tdrive(); },
-            [this](uint8_t val){ this->set_tdrive(val); }));
-        api.add_api_variable("drv_csa_reg", new APICallbackHex<uint16_t>([this](){ return this->get_csa_reg(); },
-            [this](uint16_t val){ this->set_csa_reg(val); }));
     }
 
     uint16_t get_csa_reg() {

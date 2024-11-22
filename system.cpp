@@ -26,6 +26,7 @@ __attribute__ ((init_priority(LOGGER_INIT_PRIORITY))) Logger logger;
 RoundRobinLogger round_robin_logger;
 uint32_t System::count_ = 0;
 ParameterAPI System::api = {};
+uint32_t System::current_api_timeout_us_ = 0;
 
 // send printf and other stdout/err to the logger
 extern "C" void _write(int fd, const char *buf, size_t count) {
@@ -46,4 +47,26 @@ extern "C" int _fstat (int fd, struct stat * st)
 extern "C" int _isatty (int fd) 
 {
   return (1);
+}
+
+extern "C" caddr_t _sbrk (int incr) 
+{
+  static char * heap;
+         char * prev_heap;
+
+  if (heap == NULL) {
+    heap = (char *)&_end;
+  }
+  
+  prev_heap = heap;
+
+  if ((heap + incr) > (char *)(&_estack - (uint32_t) &_Min_Stack_Size)) {
+    errno = ENOMEM;
+    logger.log("Heap overflow");
+    return (caddr_t) -1;
+  }
+  
+  heap += incr;
+
+  return (caddr_t) prev_heap;
 }

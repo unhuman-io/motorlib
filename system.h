@@ -37,6 +37,7 @@ class System {
         } else {
             logger.log_printf("param version match: %s", OBOT_HASH);
         }
+
         actuator_.start();
 
         log("finished startup");
@@ -92,24 +93,27 @@ class System {
             [](float f){ if (f == 0) { actuator_.fast_loop_.foc_->pi_id_.ki_sum_ = 0; } actuator_.fast_loop_.foc_->pi_id_.ki_ = f; }));
         api.add_api_variable("idki_limit", new APIFloat(&actuator_.fast_loop_.foc_->pi_id_.ki_limit_));
         api.add_api_variable("idmax", new APIFloat(&actuator_.fast_loop_.foc_->pi_id_.command_max_));
-        api.add_api_variable("idiq", new APICallbackFloat([](){return 0;}, 
-            [](float f){actuator_.fast_loop_.foc_->pi_id_.kp_ = actuator_.fast_loop_.foc_->pi_iq_.kp_;
+        api.add_api_variable("idiq", new const APICallback([]{
+                actuator_.fast_loop_.foc_->pi_id_.kp_ = actuator_.fast_loop_.foc_->pi_iq_.kp_;
                 actuator_.fast_loop_.foc_->pi_id_.ki_ = actuator_.fast_loop_.foc_->pi_iq_.ki_;
                 actuator_.fast_loop_.foc_->pi_id_.kp2_ = actuator_.fast_loop_.foc_->pi_iq_.kp2_;
                 actuator_.fast_loop_.foc_->pi_id_.ki2_ = actuator_.fast_loop_.foc_->pi_iq_.ki2_;
                 actuator_.fast_loop_.foc_->pi_id_.ki_limit_ = actuator_.fast_loop_.foc_->pi_iq_.ki_limit_;
                 actuator_.fast_loop_.foc_->pi_id_.command_max_ = actuator_.fast_loop_.foc_->pi_iq_.command_max_;
-                actuator_.fast_loop_.foc_->set_id_limit(actuator_.fast_loop_.foc_->get_iq_limit()); }));
-        actuator_.main_loop_.torque_controller_.set_debug_variables(api);
-        actuator_.main_loop_.state_controller_.set_debug_variables(api);
+                actuator_.fast_loop_.foc_->set_id_limit(actuator_.fast_loop_.foc_->get_iq_limit());
+                return std::string("ok"); }));
+        TORQUE_CONTROLLER_DEBUG_VARIABLES(api, actuator_.main_loop_.torque_controller_);
+        STATE_CONTROLLER_DEBUG_VARIABLES(api, actuator_.main_loop_.state_controller_);
         api.add_api_variable("tgain", new APIFloat(&actuator_.main_loop_.torque_sensor_.gain_));
         api.add_api_variable("tbias", new APIFloat(&actuator_.main_loop_.torque_sensor_bias_));
         api.add_api_variable("torque", new const APIFloat(&actuator_.main_loop_.status_.torque));
         api.add_api_variable("t_i_correction", new const APIFloat(&actuator_.main_loop_.param_.torque_correction));
         api.add_api_variable("log", new APICallback(get_log, log));
-        api.add_api_variable("messages_version", new APICallback([](){ return MOTOR_MESSAGES_VERSION; }, [](std::string s) {} ));
-        api.add_api_variable("index_pos", new APICallback([](){ return std::to_string(actuator_.fast_loop_.encoder_.get_index_pos()); }, [](std::string s) {}));
-        api.add_api_variable("index_received", new APICallbackUint32([](){return actuator_.fast_loop_.encoder_.index_received();}, [](uint32_t u) {}));
+        api.add_api_variable("log_reset", new const APICallback([]()->std::string{ logger.reset_read_front(); return "ok"; }));
+        api.add_api_variable("log_num", new const APICallbackUint32([]{ return logger.num_elements(); }));
+        api.add_api_variable("messages_version", new const APICallback([]()->std::string{ return MOTOR_MESSAGES_VERSION; }));
+        api.add_api_variable("index_pos", new const APICallbackInt32([]{ return actuator_.fast_loop_.encoder_.get_index_pos(); }));
+        api.add_api_variable("index_received", new const APICallbackUint8([]()->uint8_t{return actuator_.fast_loop_.encoder_.index_received();}));
         api.add_api_variable("index_offset_measured", new const APIFloat(&actuator_.fast_loop_.motor_index_electrical_offset_measured_));
         api.add_api_variable("electrical_zero_pos", new APIInt32(&actuator_.fast_loop_.motor_electrical_zero_pos_));
         api.add_api_variable("mcpr", new const APIUint32(&param->fast_loop_param.motor_encoder.cpr));
@@ -121,6 +125,10 @@ class System {
         api.add_api_variable("heap_used", new const APICallbackUint32(get_heap_used));
         api.add_api_variable("heap_current_free", new const APICallbackUint32(get_current_heap_free));
         api.add_api_variable("heap_current_used", new const APICallbackUint32(get_current_heap_used));
+        api.add_api_variable("malloc", new APICallbackUint32([](){ return (uint32_t) get_heap_free() + get_heap_used(); }, 
+            [](uint32_t u) {
+                try { char* volatile c = new char[u]; delete c; }
+                catch(...) { logger.log_printf("couldn't allocate %d", u); } }));
         api.add_api_variable("vbus_min", new APIFloat(&actuator_.main_loop_.vbus_min_));
         api.add_api_variable("vbus_max", new APIFloat(&actuator_.main_loop_.vbus_max_));
         api.add_api_variable("ia_bias", new APIFloat(&actuator_.fast_loop_.ia_bias_));
@@ -158,11 +166,11 @@ class System {
                 actuator_.main_loop_.unlock_status_log();
             }
             return out; }));
-        api.add_api_variable("beep", new APICallbackFloat([](){ return 0; }, [](float f){ actuator_.fast_loop_.beep_on(f); }));
+        api.add_api_variable("beep", new const APICallbackFloat([](){ return 0.0; }, [](float f){ actuator_.fast_loop_.beep_on(f); }));
         api.add_api_variable("beep_frequency", new APIFloat(&actuator_.fast_loop_.param_.beep_frequency));
         api.add_api_variable("beep_amplitude", new APIFloat(&actuator_.fast_loop_.param_.beep_amplitude));
-        api.add_api_variable("zero_current_sensors", new APICallbackFloat([](){ return 0; }, [](float f){ actuator_.fast_loop_.zero_current_sensors_on(f); }));
-        api.add_api_variable("disable_safe_mode", new const APICallback([](){ actuator_.main_loop_.error_mask_.all = ERROR_MASK_NONE; return "ok"; }));
+        api.add_api_variable("zero_current_sensors", new APICallbackFloat([](){ return 0.0; }, [](float f){ actuator_.fast_loop_.zero_current_sensors_on(f); }));
+        api.add_api_variable("disable_safe_mode", new const APICallback([]()->std::string{ actuator_.main_loop_.error_mask_.all = ERROR_MASK_NONE; return "ok"; }));
         api.add_api_variable("error_mask", new APICallback([](){ return u32_to_hex(actuator_.main_loop_.error_mask_.all); },
                 [](std::string s){ try {
                         actuator_.main_loop_.error_mask_.all = std::stoul(s, nullptr, 16) & ERROR_MASK_ALL;}
@@ -182,7 +190,7 @@ class System {
         API_ADD_FILTER(output_motor_position_filter, FirstOrderLowPassFilter, actuator_.fast_loop_.motor_position_filter_);
         api.add_api_variable("startup_phase_lock_current", new const APIFloat(&param->startup_param.phase_lock_current));
         api.add_api_variable("startup_mbias", new APIFloat(&actuator_.startup_motor_bias_));
-        api.add_api_variable("set_startup_bias", new const APICallback([](){ actuator_.set_bias(); return "ok"; }));
+        api.add_api_variable("set_startup_bias", new const APICallback([]()->std::string{ actuator_.set_bias(); return "ok"; }));
         api.add_api_variable("odir", new APIFloat(&actuator_.main_loop_.output_encoder_dir_));
         api.add_api_variable("tdir", new APIFloat(&actuator_.main_loop_.torque_sensor_dir_));
         api.add_api_variable("mdir", new APIFloat(&actuator_.fast_loop_.motor_encoder_dir_));
@@ -235,7 +243,7 @@ class System {
                 actuator_.fast_loop_.foc_->pi_id_.set_param(param);
         }));
         api.add_api_variable("id_des", new APIFloat(&actuator_.fast_loop_.foc_command_.desired.i_d));
-        api.add_api_variable("trigger_fast_log", new const APICallback([](){ actuator_.fast_loop_.trigger_status_log(); return "triggered"; }));
+        api.add_api_variable("trigger_fast_log", new const APICallback([]()->std::string{ actuator_.fast_loop_.trigger_status_log(); return "triggered"; }));
         api.add_api_variable("ilimit", new APICallbackFloat([](){ return actuator_.fast_loop_.foc_->get_iq_limit(); },
             [](float f){ actuator_.fast_loop_.foc_->set_iq_limit(f); }));
         api.add_api_variable("idlimit", new APICallbackFloat([](){ return actuator_.fast_loop_.foc_->get_id_limit(); },
@@ -244,13 +252,13 @@ class System {
         api.add_api_variable("timestamp", new const APICallbackUint32(get_clock));
         api.add_api_variable("mrollover", new const APICallbackFloat([](){ return actuator_.fast_loop_.get_rollover(); }));
         api.add_api_variable("gear_ratio", new const APIFloat(&param->startup_param.gear_ratio));
-        api.add_api_variable("version", new const APICallback([](){ return OBOT_VERSION; }));
-        api.add_api_variable("obot_hash", new const APICallback([](){ return OBOT_HASH; }));
-        api.add_api_variable("motorlib_hash", new const APICallback([](){ return MOTORLIB_HASH; }));
-        api.add_api_variable("name", new const APICallback([](){ return param->name; }));
+        api.add_api_variable("version", new const APICallback([]()->std::string{ return OBOT_VERSION; }));
+        api.add_api_variable("obot_hash", new const APICallback([]()->std::string{ return OBOT_HASH; }));
+        api.add_api_variable("motorlib_hash", new const APICallback([]()->std::string{ return MOTORLIB_HASH; }));
+        api.add_api_variable("name", new const APICallback([]()->std::string{ return param->name; }));
         uint32_t api_timeout_us = 10000;
         api.add_api_variable("api_timeout", new APIUint32(&api_timeout_us));
-        api.add_api_variable("notes", new const APICallback([](){ return NOTES; }));
+        api.add_api_variable("notes", new const APICallback([]()->std::string{ return NOTES; }));
         api.add_api_variable("tuning_desired", new const APIFloat(&actuator_.main_loop_.tuning_trajectory_generator_.trajectory_value_.value ));
         api.add_api_variable("dft_frequency", new const APIFloat(&actuator_.main_loop_.dft_.desired_.frequency_last_));
         api.add_api_variable("dft_desired_magnitude", new const APIFloat(&actuator_.main_loop_.dft_.desired_.magnitude_last_));
@@ -261,36 +269,69 @@ class System {
         api.add_api_variable("gpioc", new APICallbackHex<uint32_t>([](){ return GPIOC->IDR; }, [](uint32_t u){ GPIOC->ODR = u; }));
         api.add_api_variable("gpiod", new APICallbackHex<uint32_t>([](){ return GPIOD->IDR; }, [](uint32_t u){ GPIOD->ODR = u; }));
         api.add_api_variable("gpioe", new APICallbackHex<uint32_t>([](){ return GPIOE->IDR; }, [](uint32_t u){ GPIOE->ODR = u; }));
-        api.add_api_variable("board_name", new const APICallback([]() { return otp->version == 1 ? otp->name : ""; }));
-        api.add_api_variable("board_rev", new const APICallback([]() { return otp->version == 1 ? otp->rev : ""; }));
+        api.add_api_variable("board_name", new const APICallback([]()->std::string{ return otp->version == 1 ? otp->name : ""; }));
+        api.add_api_variable("board_rev", new const APICallback([]()->std::string{ return otp->version == 1 ? otp->rev : ""; }));
         api.add_api_variable("board_num", new const APIInt32(&otp->num));
-        api.add_api_variable("config", new const APICallback([](){ return CONFIG; }));
-        api.add_api_variable("serial", new const APICallback([](){ return get_serial_number(); }));
+        api.add_api_variable("long_packet", new const APICallback([]{ 
+          char long_packet[MAX_API_DATA_SIZE+1] = "This is a long packet test\n";
+          int len = std::strlen(long_packet);
+          for (int i=0; i<MAX_API_DATA_SIZE-len; i++) {
+            long_packet[i+len] = '0' + (i % 10);
+          }
+          return std::string((char *) &long_packet, sizeof(long_packet));
+        }));
+        api.add_api_variable("really_long_packet", new const APICallback([]{
+          char long_packet[MAX_API_LONG_DATA_SIZE];
+          for (int i=0; i<MAX_API_LONG_DATA_SIZE; i++) {
+            long_packet[i] = '0' + (i % 10);
+          }
+          return std::string((char *) &long_packet, sizeof(long_packet));
+        }));
+        api.add_api_variable("config", new const APICallback([]()->std::string{ return CONFIG; }));
+        api.add_api_variable("serial", new const APICallback([](){ return std::string(get_serial_number()); }));
         api.add_api_variable("olimit_max", new APIFloat(&actuator_.main_loop_.encoder_limits_.output_hard_max));
         api.add_api_variable("olimit_min", new APIFloat(&actuator_.main_loop_.encoder_limits_.output_hard_min));
         api.add_api_variable("mlimit_max", new APIFloat(&actuator_.main_loop_.encoder_limits_.motor_hard_max));
         api.add_api_variable("mlimit_min", new APIFloat(&actuator_.main_loop_.encoder_limits_.motor_hard_min));
         api.add_api_variable("msoftlimit_max", new APIFloat(&actuator_.main_loop_.encoder_limits_.motor_controlled_max));
         api.add_api_variable("msoftlimit_min", new APIFloat(&actuator_.main_loop_.encoder_limits_.motor_controlled_min));
-        api.add_api_variable("is_sbank", new const APICallbackUint8([](){ return (*((uint8_t *) 0x1fff7802) & 0x40) == 0; }));
-        api.add_api_variable("reset", new const APICallbackUint8([](){ NVIC_SystemReset(); return 0; }));
+        api.add_api_variable("is_sbank", new const APICallbackUint8([]()->uint8_t{ return (*((uint8_t *) 0x1fff7802) & 0x40) == 0; }));
+        api.add_api_variable("invalid_command_leak_rate_s", new APICallbackFloat([]{
+            return actuator_.main_loop_.invalid_command_fault_.get_leak_period_s(actuator_.main_loop_.dt_); },
+            [](float f){ actuator_.main_loop_.invalid_command_fault_.set_leak_period(f, actuator_.main_loop_.dt_); }));
+        api.add_api_variable("invalid_command_limit", new APIUint32(&actuator_.main_loop_.invalid_command_limit_));
+        api.add_api_variable("invalid_command_count", new APIUint32(&actuator_.main_loop_.invalid_command_fault_.count_));
+        api.add_api_variable("fault", new const APICallbackHex<uint32_t>([](){ return actuator_.main_loop_.status_.error.all; }));
+        api.add_api_variable("fault_str", new const APICallback([](){
+            char c[600];
+            actuator_.main_loop_.get_fault_str(c, 600);
+            return std::string(c);
+        }));
+        api.add_api_variable("reset", new const APICallbackUint8([]()->uint8_t{ NVIC_SystemReset(); return 0; }));
 
 
         uint32_t t_start = get_clock();
+        current_api_timeout_us_ = api_timeout_us;
         while(1) {
             TOGGLE_SCOPE_PIN(C,4);
             count_++;
-            if (communication_.send_string_active() && get_clock() - t_start > US_TO_CPU(api_timeout_us)) {
+            if (communication_.send_string_active() && get_clock() - t_start > US_TO_CPU(current_api_timeout_us_)) {
                 communication_.cancel_send_string();
+                current_api_timeout_us_ = api_timeout_us;
             }
             char *s = System::get_string();
             if (s[0] != 0) {
                 auto response = api.parse_string(s);
+                current_api_timeout_us_ = api_timeout_us;
                 communication_.send_string(response.c_str(), response.length());
                 t_start = get_clock();
             }
             main_maintenance();
         }
+    }
+    static void set_one_time_api_timeout_us(uint32_t us) {
+        communication_.send_one_time_api_timeout_request(us);
+        current_api_timeout_us_ = US_TO_CPU(us);
     }
     static void main_loop_interrupt() {
         actuator_.main_loop_.update();
@@ -320,6 +361,7 @@ class System {
     static Actuator actuator_;
     static ParameterAPI api;
     static uint32_t count_;
+    static uint32_t current_api_timeout_us_;
 };
 
 extern "C" {

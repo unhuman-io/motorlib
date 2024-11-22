@@ -27,13 +27,12 @@
 #define COMMS_SPI   2
 #define COMMS_UART  3
 #define COMMS_CAN   4
-#define COMMS_CAN_USB 5
 
 #ifndef COMMS
   #error "COMMS should be defined"
 #endif
 
-#if (COMMS != COMMS_USB) && (COMMS != COMMS_SPI) && (COMMS != COMMS_UART) && (COMMS != COMMS_CAN) && (COMMS != COMMS_CAN_USB)
+#if (COMMS != COMMS_USB) && (COMMS != COMMS_SPI) && (COMMS != COMMS_UART) && (COMMS != COMMS_CAN)
   #error "Invalid COMMS value"
 #endif
 
@@ -73,13 +72,6 @@ using PWM = HRPWM;
     using Communication = CANCommunication<CAN>;
 #endif
 
-#if (COMMS == COMMS_CAN_USB)
-    #include "../communication/multi_communication.h"
-    #include "../peripheral/stm32g4/can.h"
-    #include "../communication/can_communication.h"
-    using Communication = MultiCommunication<CANCommunication<CAN>, USBCommunication>;
-#endif
-
 using Driver = DRV8323S;
 uint16_t drv_regs_error = 0;
 
@@ -117,7 +109,7 @@ uint16_t drv_regs_error = 0;
 #include "../main_loop.h"
 #include "../actuator.h"
 #include "../system.h"
-#include "pin_config_obot_g474_motor.h"
+#include "pin_config_obot_g474_trace.h"
 #include "../peripheral/stm32g4/temp_sensor.h"
 #include "../temperature_sensor.h"
 #include "../peripheral/stm32g4/i2c_dma.h"
@@ -129,12 +121,12 @@ uint16_t drv_regs_error = 0;
 #include "../messages.h"
 
 extern "C" void SystemClock_Config();
-void pin_config_obot_g474_motor(const BoardRev&);
+void pin_config_obot_g474_trace(const BoardRev&);
 
 extern "C" void board_init() {
     const BoardRev board_rev = get_board_rev();
     SystemClock_Config();
-    pin_config_obot_g474_motor(board_rev);
+    pin_config_obot_g474_trace(board_rev);
 #ifdef SCOPE_DEBUG
     GPIO_SETL(C, 0, GPIO_MODE::OUTPUT, GPIO_SPEED::HIGH, 0); // main loop scope
     GPIO_SETL(C, 1, GPIO_MODE::OUTPUT, GPIO_SPEED::HIGH, 0); // fast loop scope
@@ -292,12 +284,8 @@ namespace config {
 #endif
 #endif // COMMS_UART
 
-#if (COMMS == COMMS_CAN) || (COMMS == COMMS_CAN_USB)
-#ifdef CAN_ARB_DATA_RATE
-    CAN can(CAN_NUM, CAN_ARB_DATA_RATE);
-#else
+#if COMMS == COMMS_CAN
     CAN can(CAN_NUM);
-#endif
 #endif
 
 #if COMMS == COMMS_SPI
@@ -312,7 +300,7 @@ namespace config {
     LED led = {const_cast<uint16_t*>(reinterpret_cast<volatile uint16_t *>(get_board_pins(board_rev).led_tim_r)), 
                const_cast<uint16_t*>(reinterpret_cast<volatile uint16_t *>(get_board_pins(board_rev).led_tim_g)),
                const_cast<uint16_t*>(reinterpret_cast<volatile uint16_t *>(get_board_pins(board_rev).led_tim_b))};
-    volatile uint32_t &V5V_DR = *get_board_pins(board_rev).v5v_dr;
+    volatile uint32_t &V5V_DR = V_BUS_DR;
 #ifndef POSITION_CONTROLLER_OVERRIDE
     PositionController position_controller = {(float) (1.0/main_loop_frequency)};
 #endif
@@ -356,12 +344,6 @@ extern "C" void PendSV_Handler(void) {
 
 #if (COMMS == COMMS_CAN)
 Communication System::communication_(config::can, param->can_id);
-#endif
-
-#if (COMMS == COMMS_CAN_USB)
-CANCommunication<CAN> can_communication(config::can, param->can_id);
-USBCommunication usb_communication(config::usb);
-Communication System::communication_(can_communication, usb_communication);
 #endif
 
 void usb_interrupt() {
@@ -421,25 +403,13 @@ void system_init() {
         System::log("torque sensor init failure");
         init_failure |= 1;
     }
-    if (config::board_rev.has_bmi270) {
-        config::imu.init();
-    }
+
 
     DRV8323S_SET_DEBUG_API(System::api, config::drv);
 
     System::api.add_api_variable("3v3", new APIFloat(&v3v3));
     System::api.add_api_variable("Tmicro", new APICallbackFloat([]{ return config::temp_sensor.get_value(); },
         [](float f){ config::temp_sensor.set_value(f); }));
-    if (config::board_rev.has_max31875) {
-        System::api.add_api_variable("Tboard", new const APICallbackFloat([](){ return config::board_temperature_max31875.get_temperature(); }));
-    } else if (config::board_rev.has_max31889) {
-        System::api.add_api_variable("Tboard", new const APICallbackFloat([](){ return config::board_temperature_max31889.get_temperature(); }));
-    }
-    
-    if (config::board_rev.has_bridge_thermistors) {
-        System::api.add_api_variable("Tbridge", new const APICallbackFloat([](){ return config::temp_bridge.read(); }));
-        System::api.add_api_variable("Tbridge2", new const APICallbackFloat([](){ return config::temp_bridge2.read(); }));
-    }
     System::api.add_api_variable("index_mod", new APIInt32(&index_mod));
     System::api.add_api_variable("pwm_mult", new APICallbackUint8([](){return config::motor_pwm.get_frequency_multiplier();}, [](uint8_t mult){ config::motor_pwm.set_frequency_multiplier(mult);}));
     System::api.add_api_variable("drv_err", new const APICallbackUint32([](){ return config::drv.get_drv_status(); }));
@@ -467,46 +437,6 @@ void system_init() {
     System::api.add_api_variable("deadtime", new APICallbackUint16([](){ 
         return config::motor_pwm.deadtime_ns_; }, [](uint16_t u) {config::motor_pwm.set_deadtime(u); }));
 
-    if (config::board_rev.has_bmi270) {
-        System::api.add_api_variable("imu_read", new const APICallback([]()->std::string{ config::imu.read(); return "ok"; }));
-        System::api.add_api_variable("ax", new const APICallbackFloat([]()->float{ return config::imu.data_.acc_x*8./pow(2,15); }));
-        System::api.add_api_variable("ay", new const APICallbackFloat([]()->float{ return config::imu.data_.acc_y*8./pow(2,15); }));
-        System::api.add_api_variable("az", new const APICallbackFloat([]()->float{ return config::imu.data_.acc_z*8./pow(2,15); }));
-        System::api.add_api_variable("gx", new const APICallbackFloat([]()->float{ return config::imu.data_.gyr_x*2000.*M_PI/180/pow(2,15); }));
-        System::api.add_api_variable("gy", new const APICallbackFloat([]()->float{ return config::imu.data_.gyr_y*2000.*M_PI/180/pow(2,15); }));
-        System::api.add_api_variable("gz", new const APICallbackFloat([]()->float{ return config::imu.data_.gyr_z*2000.*M_PI/180/pow(2,15); }));
-    }
-
-    if (config::board_rev.has_5V_sense) {
-        System::api.add_api_variable("5V", new const APIFloat(&v5v));
-    }
-    if (config::board_rev.has_I5V_sense) {
-        System::api.add_api_variable("i5V", new const APIFloat(&i5v));
-    }
-    if (config::board_rev.has_I48V_sense) {
-        System::api.add_api_variable("i48V", new const APIFloat(&i48v));
-    }
-
-    if (config::board_rev.has_bmi270) {
-        config::mb85rc64.init();
-        config::mb85rc64.read_block(0, &total_uptime_start);
-        logger.log_printf("total_uptime_start: %u", total_uptime_start);
-        {
-            std::string s = "startup at " + std::to_string(total_uptime_start) + "\n";
-            config::mb85rc64.write_log((uint8_t*) s.c_str(), s.size());
-        }
-        System::api.add_api_variable("total_uptime", new const APIUint32(&total_uptime));
-        System::api.add_api_variable("fram_log", new APICallback([](){
-            config::i2c1.init(1000);
-            std::string s = config::mb85rc64.get_log();
-            config::i2c1.init(400);
-            return s;
-        }, [](std::string s){
-            config::i2c1.init(1000);
-            config::mb85rc64.write_log((uint8_t *) s.c_str(), s.size());
-            config::i2c1.init(400);
-        }));
-    }
 
     System::api.add_api_variable("mcmp", new APIUint32(&HRTIM1->sMasterRegs.MCMP1R));
     System::api.add_api_variable("t1cmp", new APIUint32(&TIM1->CCR1));
@@ -528,10 +458,7 @@ void system_init() {
         config::flash.write((uint32_t) calibration, (uint32_t*) cal, sizeof(Calibration));
         return std::string("ok");
     }));
-#if (COMMS == COMMS_CAN) || (COMMS == COMMS_CAN_USB)
-    System::api.add_api_variable("can_send_decimation", new APICallbackUint16([](){ return can_communication.get_send_decimation(); },
-        [](uint16_t decimation){ can_communication.set_send_decimation(decimation); }));
-#endif
+
     for (auto regs : std::vector<ADC_TypeDef*>{ADC1, ADC2, ADC3, ADC4, ADC5}) {
         regs->CR = ADC_CR_ADVREGEN;
         ns_delay(20000);
@@ -600,11 +527,8 @@ void system_maintenance() {
     if (config::drv.is_enabled() && !(config::main_loop.mode_ == DAMPED)) {
         config::fast_loop.zero_current_sensors(I_A0_DR, I_B0_DR, I_C0_DR);
     }   
-    
-    float bus_current = config::main_loop.status_.power/config::main_loop.status_.fast_loop.vbus;
-    if (!config::board_rev.has_I48V_sense) {
-        round_robin_logger.log_data(BUS_CURRENT_INDEX, bus_current);
-    }
+
+
     round_robin_logger.log_data(MOTOR_POWER_INDEX, config::main_loop.status_.fast_loop.power);
     if (!(GPIOC->IDR & 1<<14)) {
         driver_fault = true;
@@ -612,18 +536,6 @@ void system_maintenance() {
         driver_fault = false;
     }
 
-    if (config::board_rev.has_5V_sense) {
-        v5v = (float) config::V5V_DR/4096*v3v3*2;
-        round_robin_logger.log_data(VOLTAGE_5V_INDEX, v5v);
-    }
-    if (config::board_rev.has_I5V_sense) {
-        i5v = (float) I5V/4096*v3v3;
-        round_robin_logger.log_data(CURRENT_5V_INDEX, i5v);
-    }
-    if (config::board_rev.has_I48V_sense) {
-        i48v = -((float) I_BUS_DR-2048)/4096*v3v3/20/.0005;
-        round_robin_logger.log_data(BUS_CURRENT_INDEX, i48v);
-    }
     round_robin_logger.log_data(BUS_VOLTAGE_INDEX, config::main_loop.status_.fast_loop.vbus);
     round_robin_logger.log_data(USB_ERROR_COUNT_INDEX, config::usb.error_count_);
     config::main_loop.status_.error.driver_fault |= driver_fault;    // maybe latch driver fault until reset
@@ -646,45 +558,12 @@ void main_maintenance() {
         }
 
         float Tboard = 0;
-        if (config::board_rev.has_max31875) {
-            Tboard = board_temperature_filter.update(config::board_temperature_max31875.read());
-        } else if (config::board_rev.has_max31889) {
-            Tboard = board_temperature_filter.update(config::board_temperature_max31889.read());
-        }
+
         round_robin_logger.log_data(BOARD_TEMPERATURE_INDEX, Tboard);
         if (Tboard > 120 || Tboard < -40) {
             config::main_loop.status_.error.board_temperature = 1;
         }
 
-        if (config::board_rev.has_bridge_thermistors) {
-            float Tmosfet = mosfet_temperature_filter.update(config::temp_bridge.read());
-            round_robin_logger.log_data(MOSFET_TEMPERATURE_INDEX, Tmosfet);
-            if (Tmosfet > 125 || Tmosfet < -40) {
-                config::main_loop.status_.error.board_temperature = 1;
-            }
-            float Tmosfet2 = mosfet_temperature_filter.update(config::temp_bridge2.read());
-            round_robin_logger.log_data(MOSFET2_TEMPERATURE_INDEX, Tmosfet2);
-            config::temp_bridge2.read();
-            if (Tmosfet2 > 125 || Tmosfet2 < -40) {
-                config::main_loop.status_.error.board_temperature = 1;
-            }
-        }
-        if (config::board_rev.has_mb85rc64) {
-            static bool last_fault = false;
-            config::i2c1.init(1000);
-            total_uptime = total_uptime_start + get_uptime();
-            config::mb85rc64.write_block(0, total_uptime);
-            config::mb85rc64.next_block();
-
-            if (config::main_loop.status_.error.fault && !last_fault) {
-                char s[100];
-                std::sprintf(s, "fault detected, error: %08lx\n", config::main_loop.status_.error.all);
-                config::mb85rc64.write_log((uint8_t *) s, std::strlen(s));
-            }
-            last_fault = config::main_loop.status_.error.fault;
-
-            config::i2c1.init(400);
-        }
     }
 }
 

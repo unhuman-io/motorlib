@@ -17,11 +17,14 @@ class Logger {
         char header[50];
         snprintf(header, sizeof(header), "(%lu %lu) ", get_uptime(), get_clock());
         front_log_.set_value(front_atomic_.load(std::memory_order_acquire));
+        read_front_.set_value(read_front_atomic_.load(std::memory_order_acquire));
         log_raw(header);
         log_raw(str);
         log_raw('\0');
         front_atomic_.store(front_log_, std::memory_order_release);
+        read_front_atomic_.store(read_front_, std::memory_order_release);
         num_elements_++;
+        num_elements_to_read_++;
     }
     // void log_once(std::string_view str) {
     //     // if (str != log_queue_.back()) {
@@ -37,24 +40,23 @@ class Logger {
             bool success = false;
             do {
                 str = "";
-                CIndex front_next = front_atomic_.load(std::memory_order_acquire);
-                uint32_t front_expected = front_next;
+                CIndex read_front_next = read_front_atomic_.load(std::memory_order_acquire);
+                uint32_t read_front_expected = read_front_next;
                 do {
-                    str += log_queue_[front_next];
-                    ++front_next;
-                } while (log_queue_[front_next] != '\0');
-                ++front_next;
-                num_elements_--;
-                success = front_atomic_.compare_exchange_strong(front_expected, front_next);
+                    str += log_queue_[read_front_next];
+                    ++read_front_next;
+                } while (log_queue_[read_front_next] != '\0');
+                ++read_front_next;
+                success = read_front_atomic_.compare_exchange_strong(read_front_expected, read_front_next);
             } while (!success);
-            
+            num_elements_to_read_--;
         } else {
             str = "log end";
         }
         return str;
     }
     bool empty() const {
-        return front_atomic_.load(std::memory_order_acquire) == back_;
+        return read_front_atomic_.load(std::memory_order_acquire) == back_;
     }
     void log_printf(const char *s, ...) {
         va_list args;
@@ -65,9 +67,20 @@ class Logger {
         log(sout);
     }
     uint32_t num_elements() const { return num_elements_; }
+    uint32_t num_elements_to_read() const { return num_elements_to_read_; }
     static std::string_view extract_string(std::string_view str) {
         std::string_view data = str.substr(str.find(") ") + 2);
         return data;
+    }
+
+    void reset_read_front() {
+        bool success = false;
+        do {
+            CIndex front = front_atomic_.load(std::memory_order_acquire);
+            num_elements_to_read_ = num_elements_;
+            read_front_atomic_.store(front, std::memory_order_release);
+            success = (uint32_t) front == front_atomic_.load(std::memory_order_acquire);
+        } while (!success);
     }
  private:
     class CIndex {
@@ -110,16 +123,28 @@ class Logger {
     void move_front() {
         if (back_ == front_log_) {
             // find next front
-            while (log_queue_[++front_log_] != '\0');
+            do {
+                if (read_front_ == front_log_) {
+                    ++read_front_;
+                }
+                ++front_log_;
+            }
+            while (log_queue_[front_log_] != '\0');
+            if (read_front_ == front_log_) {
+                ++read_front_;
+                num_elements_to_read_--;
+            }
             ++front_log_;
             num_elements_--;
         }
     }
 
     uint32_t num_elements_ = 0;
+    uint32_t num_elements_to_read_ = 0;
     CIndex front_log_;
+    CIndex read_front_;
     CIndex back_;
-    std::atomic<uint32_t> front_atomic_{0};
+    std::atomic<uint32_t> front_atomic_{0}, read_front_atomic_{0};
     char log_queue_[LOGGING_MAX_SIZE] = {};
 };
 

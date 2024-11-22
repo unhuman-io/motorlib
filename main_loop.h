@@ -84,28 +84,32 @@ class MainLoop {
       bool command_received = false;
       if (started_) {
         if (count_received) {
-#ifdef GPIO_OUT
-          GPIO_OUT = receive_data.misc.gpio;
-#endif  // GPIO_OUT
-          no_command_ = 0;
-          first_command_received_ = true;
-          host_timestamp_ = receive_data.host_timestamp;
-          if (!safe_mode_ && mode_ != DRIVER_DISABLE) {
-            command_received = true;
-            receive_data_ = receive_data;
-          } else if ((receive_data.mode_desired == CLEAR_FAULTS && mode_ != DRIVER_DISABLE) ||
-                     receive_data.mode_desired == DRIVER_ENABLE) {
+          if (validate_receive_data(receive_data)) {
+  #ifdef GPIO_OUT
+            GPIO_OUT = receive_data.misc.gpio;
+  #endif  // GPIO_OUT
+            no_command_ = 0;
+            first_command_received_ = true;
+            host_timestamp_ = receive_data.host_timestamp;
+            if (!safe_mode_ && mode_ != DRIVER_DISABLE) {
               command_received = true;
-              first_command_received_ = false;
               receive_data_ = receive_data;
-          } else if (receive_data.mode_desired == BOARD_RESET ||
-                     receive_data.mode_desired == CRASH ||
-                     receive_data.mode_desired == SLEEP ||
-                     receive_data.mode_desired == FAULT ||
-                     receive_data.mode_desired == DRIVER_DISABLE) {
-              set_mode(static_cast<MainControlMode>(receive_data.mode_desired));
+            } else if ((receive_data.mode_desired == CLEAR_FAULTS && mode_ != DRIVER_DISABLE) ||
+                      receive_data.mode_desired == DRIVER_ENABLE) {
+                command_received = true;
+                first_command_received_ = false;
+                receive_data_ = receive_data;
+            } else if (receive_data.mode_desired == BOARD_RESET ||
+                      receive_data.mode_desired == CRASH ||
+                      receive_data.mode_desired == SLEEP ||
+                      receive_data.mode_desired == FAULT ||
+                      receive_data.mode_desired == DRIVER_DISABLE) {
+                set_mode(static_cast<MainControlMode>(receive_data.mode_desired));
+            }
+          } else { // !validate_receive_data
+            invalid_command_fault_.add();
           }
-        } else {
+        } else { // !count_received
           no_command_++;
           if (no_command_ > 16000)
             no_command_ = 16000;
@@ -182,18 +186,21 @@ class MainLoop {
          status_.error.motor_temperature = 1;
       }
 
-      if (status_.error.all & error_mask_.all && !(receive_data_.mode_desired == DRIVER_ENABLE || receive_data_.mode_desired == CLEAR_FAULTS)) {
+      invalid_command_fault_.update();
+      if (invalid_command_limit_ > 0 && invalid_command_fault_.get_count() >= invalid_command_limit_) {
+        status_.error.invalid_command = 1;
+      }
+
+      if (status_.error.all & error_mask_.all) {
           status_.error.fault = 1;
+      }
+      
+      if (status_.error.fault && !(receive_data_.mode_desired == DRIVER_ENABLE || receive_data_.mode_desired == CLEAR_FAULTS)) {
           if (safe_mode_ != true) {
             logger.log_printf("fault detected, error: %08x", status_.error.all);
-            char s[600] = "fault bits:";
-            for (int i=0; i<32; i++) {
-              if ((status_.error.all >> i) & 0x1) {
-                std::strcat(s, " "); 
-                std::strcat(s, error_bit_strings[i]);
-              }
-            }
-            logger.log(s);
+            char c[600] = "fault bits: ";
+            get_fault_str(c, sizeof(c));
+            logger.log(c);
           }
           safe_mode_ = true;
           set_mode(param_.safe_mode);
@@ -423,6 +430,8 @@ class MainLoop {
       joint_position_controller_.set_param(param_.joint_position_controller_param);
       admittance_controller_.set_param(param_.admittance_controller_param);
       torque_sensor_.set_param(calibration_.torque_sensor);
+      invalid_command_fault_.set_leak_period(param_.invalid_command_fault_leak_period_s, dt_);
+      invalid_command_limit_ = param_.invalid_command_limit;
       position_limits_disable_ = param_.position_limits_disable;
       position_limits_disable_last_ = position_limits_disable_;
       if (param_.encoder_limits.motor_hard_max == param_.encoder_limits.motor_hard_min) {
@@ -590,11 +599,12 @@ class MainLoop {
             led_.set_color(LED::WHITE);
             break;
           case CLEAR_FAULTS:
-            safe_mode_ = false;
             torque_sensor_.clear_faults();
             fast_loop_.clear_faults();
             output_encoder_.clear_faults();
+            invalid_command_fault_.reset();
             status_.error.all = 0;
+            safe_mode_ = false;
             led_.set_color(LED::AZURE);
             break;
           case STEPPER_VELOCITY:
@@ -649,6 +659,102 @@ class MainLoop {
       //receive_data_.mode_desired = mode; // todo: what is this for?
     }
 
+    bool validate_receive_data(const ReceiveData &receive_data) {
+      if (receive_data.mode_desired > TUNING && receive_data.mode_desired < DRIVER_ENABLE ) {
+        return false;
+      }
+      if (receive_data.mode_desired <= TUNING) {
+        switch (receive_data.mode_desired) {
+          case OPEN:
+          case DAMPED:
+            return true;
+            break;
+          case CURRENT:
+            return std::isfinite(receive_data.current_desired);
+            break;
+          case POSITION:
+            return position_controller_.validate_command(receive_data);
+            break;
+          case TORQUE:
+            return torque_controller_.validate_command(receive_data);
+            break;
+          case IMPEDANCE:
+            return impedance_controller_.validate_command(receive_data);
+            break;
+          case VELOCITY:
+            return velocity_controller_.validate_command(receive_data);
+            break;
+          case STATE:
+            return state_controller_.validate_command(receive_data);
+            break;          
+          case CURRENT_TUNING:
+            if (receive_data.current_tuning.mode <= TuningMode::CHIRP &&
+                std::isfinite(receive_data.current_tuning.amplitude) &&
+                std::isfinite(receive_data.current_tuning.frequency) &&
+                std::isfinite(receive_data.current_tuning.bias)) {
+              return true;
+            }
+            return false;
+            break;
+          case POSITION_TUNING:
+            if (receive_data.position_tuning.mode <= TuningMode::CHIRP &&
+                std::isfinite(receive_data.position_tuning.amplitude) &&
+                std::isfinite(receive_data.position_tuning.frequency) &&
+                std::isfinite(receive_data.position_tuning.bias)) {
+              return true;
+            }
+            return false;
+            break;
+          case VOLTAGE:
+            return std::isfinite(receive_data.voltage.voltage_desired);
+            break;
+          case PHASE_LOCK:
+            return std::isfinite(receive_data.current_desired);
+            break;
+          case STEPPER_TUNING:
+            return receive_data.stepper_tuning.mode <= TuningMode::CHIRP &&
+                receive_data.stepper_tuning.stepper_mode <= StepperMode::STEPPER_VOLTAGE &&
+                std::isfinite(receive_data.stepper_tuning.amplitude) &&
+                std::isfinite(receive_data.stepper_tuning.frequency) &&
+                std::isfinite(receive_data.stepper_tuning.bias);
+            break;
+          case STEPPER_VELOCITY:
+            return receive_data.stepper_velocity.stepper_mode <= StepperMode::STEPPER_VOLTAGE &&
+                std::isfinite(receive_data.stepper_velocity.current) &&
+                std::isfinite(receive_data.stepper_velocity.voltage) &&
+                std::isfinite(receive_data.stepper_velocity.velocity);
+            break;
+          case HARDWARE_BRAKE:
+            return true;
+            break;
+          case JOINT_POSITION:
+            return joint_position_controller_.validate_command(receive_data);
+            break;
+          case FIND_LIMITS:
+            return std::isfinite(receive_data.position_desired) &&
+                   std::isfinite(receive_data.velocity_desired) &&
+                   std::isfinite(receive_data.current_desired);
+            break;
+          case ADMITTANCE:
+            return admittance_controller_.validate_command(receive_data);
+            break;
+          case TUNING:
+            return (receive_data.tuning_command.mode == POSITION ||
+                    receive_data.tuning_command.mode == VELOCITY ||
+                    receive_data.tuning_command.mode == TORQUE) &&
+                    receive_data.tuning_command.tuning_mode <= TuningMode::CHIRP &&
+                    std::isfinite(receive_data.tuning_command.amplitude) &&
+                    std::isfinite(receive_data.tuning_command.frequency) &&
+                    std::isfinite(receive_data.tuning_command.bias);
+            break;
+          default:
+            return false;
+            break;
+        }
+      }
+      return true;
+    }
+
     MotorCommand set_tuning_command(ReceiveData &receive_data, bool update_parameters) {
       MotorCommand command = {};
       if (update_parameters) {
@@ -676,6 +782,15 @@ class MainLoop {
           break;
       }
       return command;
+    }
+
+    void get_fault_str(char *s, size_t len) const {
+      for (int i=0; i<32; i++) {
+        if ((status_.error.all >> i) & 0x1) {
+          std::strncat(s, " ", len-1);
+          std::strncat(s, error_bit_strings[i], len-1);
+        }
+      }
     }
 
     bool driver_enable_triggered() {
@@ -765,6 +880,8 @@ class MainLoop {
     volatile bool driver_enable_triggered_ = false;
     volatile bool driver_disable_triggered_ = false;
     uint32_t last_energy_uJ_ = 0;
+    LeakyBucket invalid_command_fault_;
+    uint32_t invalid_command_limit_;
 
     DFTResponse dft_;
 

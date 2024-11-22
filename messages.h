@@ -198,6 +198,8 @@ typedef struct {
     // MotorError error_mask;              // can set to ERROR_MASK_ALL or ERROR_MASK_NONE or others
     uint8_t safe_mode_driver_disable;   // driver is disabled in safe mode
     uint8_t no_latch_driver_fault;      // 1 allows for the driver_fault to be reset by software
+    float invalid_command_fault_leak_period_s;    // leak period in seconds for invalid command fault
+    uint32_t invalid_command_limit;     // number of invalid commands before fault
 
     struct {
         float output_velocity[11];
