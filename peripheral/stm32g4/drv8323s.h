@@ -32,17 +32,16 @@ class DRV8323S : public DriverBase {
 
     void drv_spi_start() {
         spi_pause_.pause();
-        GPIO_SETL(A, 4, 2, 3, 5); // pin A4 NSS
-        regs_.CR1 = 0; // clear SPE
-        regs_.CR2 = (15 << SPI_CR2_DS_Pos) | SPI_CR2_FRF;   // 16 bit TI mode
+        GPIOA->BSRR = GPIO_BSRR_BR4; // CS low
+        ns_delay(50); // Tsu_nSCS
+        regs_.CR1 &= ~SPI_CR1_SPE; // clear SPE
+        regs_.CR2 = (15 << SPI_CR2_DS_Pos) | SPI_CR2_FRXTH;   // 16 bit
         // ORDER DEPENDANCE SPE set last
-        regs_.CR1 = SPI_CR1_MSTR | (7 << SPI_CR1_BR_Pos) | SPI_CR1_SPE;    // baud = clock/256
+        regs_.CR1 = SPI_CR1_MSTR | (7 << SPI_CR1_BR_Pos) | SPI_CR1_CPHA | SPI_CR1_SSI | SPI_CR1_SSM | SPI_CR1_SPE;    // baud = clock/256, mode 1, TI
     }
 
     void drv_spi_end() {
-        SPI1->CR1 = 0; // clear SPE
-        // SPI1 CS-> gpio
-        GPIO_SETL(A, 4, 1, 0, 0);
+        ns_delay(50); // TH_nSCS
         GPIOA->BSRR = GPIO_ODR_OD4;
 
         // SPI needs reinit
@@ -68,6 +67,14 @@ class DRV8323S : public DriverBase {
         logger.log(buf);
         GPIOC->BSRR = GPIO_BSRR_BR13; // drv disable
         DriverBase::disable();
+    }
+
+    void set_cs_low() {
+        ns_delay(50);
+        GPIOA->BSRR = GPIO_BSRR_BS4; // CS high
+        ns_delay(400);
+        GPIOA->BSRR = GPIO_BSRR_BR4; // CS low
+        ns_delay(50);
     }
 
     void enable() {
@@ -107,6 +114,7 @@ class DRV8323S : public DriverBase {
     uint16_t write_reg(uint16_t reg_out) {
         uint32_t timeout = get_clock() + US_TO_CPU(100000U); // Timeout 100ms
         uint16_t reg_in = 0;
+        set_cs_low();
         regs_.DR = reg_out;
         while((!(regs_.SR & SPI_SR_RXNE)) && (get_clock() < timeout)); // Busy wait with timeout
 
@@ -126,6 +134,7 @@ class DRV8323S : public DriverBase {
         uint32_t timeout = get_clock() + US_TO_CPU(100000U); // Timeout 100ms
         uint16_t out_value = 1<<15 | address<<11;
         uint16_t value = 0;
+        set_cs_low();
         regs_.DR = out_value;
         while((!(regs_.SR & SPI_SR_RXNE)) && (get_clock() < timeout)); // Busy wait with timeout
 
