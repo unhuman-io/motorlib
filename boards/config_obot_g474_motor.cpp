@@ -443,7 +443,9 @@ void system_init() {
     System::api.add_api_variable("index_mod", new APIInt32(&index_mod));
     System::api.add_api_variable("pwm_mult", new APICallbackUint8([](){return config::motor_pwm.get_frequency_multiplier();}, [](uint8_t mult){ config::motor_pwm.set_frequency_multiplier(mult);}));
     System::api.add_api_variable("drv_err", new const APICallbackUint32([](){ return config::drv.get_drv_status(); }));
-    System::api.add_api_variable("drv_reset", new const APICallback([](){ return config::drv.drv_reset(); }));
+    System::api.add_api_variable("drv_reset", new const APICallback([](){
+        System::set_one_time_api_timeout_us(30 * 1000);
+        return config::drv.drv_reset(); }));
     System::api.add_api_variable("A1", new const APICallbackUint32([](){ return A1_DR; }));
     System::api.add_api_variable("A2", new const APICallbackUint32([](){ return A2_DR; }));
     System::api.add_api_variable("A3", new const APICallbackUint32([](){ return A3_DR; }));
