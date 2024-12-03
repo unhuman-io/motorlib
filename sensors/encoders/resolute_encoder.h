@@ -1,8 +1,20 @@
 #ifndef UNHUMAN_MOTORLIB_RESOLUTE_ENCODER_H_
 #define UNHUMAN_MOTORLIB_RESOLUTE_ENCODER_H_
 
-#include "encoder.h"
+#include "../../encoder.h"
 #include <cmath>
+
+#define RESOLUTE_SET_DEBUG_VARIABLES(prefix, api, resolute) \
+    api.add_api_variable(prefix "err", new APIUint32(&resolute.diag_err_count_));\
+    api.add_api_variable(prefix "warn", new APIUint32(&resolute.diag_warn_count_));\
+    api.add_api_variable(prefix "crc_cnt", new APIUint32(&resolute.crc_err_count_));\
+    api.add_api_variable(prefix "raw", new APIUint32(&resolute.raw_value_));\
+    api.add_api_variable(prefix "rawh", new const APICallback([](){ return u32_to_hex(resolute.raw_value_); }));\
+    api.add_api_variable(prefix "len", new APIUint8(&resolute.length_));\
+    api.add_api_variable(prefix "ind", new const APIUint8(&resolute.byte_ind));\
+    api.add_api_variable(prefix "crc_calc", new const APIUint8(&resolute.crc_calc_));\
+    api.add_api_variable(prefix "zeros", new const APIUint32(&resolute.leading_zeros));\
+    api.add_api_variable(prefix "diag", new const APIUint8(&resolute.diag_raw_.word));\
 
 static uint8_t CRC_BiSS_43_36bit(uint64_t w_InputData);
 
@@ -32,44 +44,35 @@ class ResoluteEncoder : public EncoderBase {
         spi_dma_.start_readwrite_isr(data_out_, data_in_, length_);
     }
     bool init() { return true; }
-    int32_t read() {
-        GPIOC->BSRR = GPIO_BSRR_BS0;
-        spi_dma_.finish_readwrite_isr();
-        GPIOC->BSRR = GPIO_BSRR_BR0;
-
+    int32_t read(uint8_t *data_in) {
         uint64_t super_raw;
-        //uint32_t leading_zeros;
         // variable ack length. Find start bit. Skip a few bytes to save time
         
         for (int i=4; i<length_; i++) {
-            if (data_in_[i]) {
-                super_raw = (((uint64_t) data_in_[i]) & 0xFF) << 48 | (((uint64_t) data_in_[i+1]) & 0xFF) << 40 | (((uint64_t) data_in_[i+2]) & 0xFF) << 32  
-                    | (uint64_t) data_in_[i+3] << 24 | (uint64_t) data_in_[i+4] << 16 | (uint64_t) data_in_[i+5] << 8 | (uint64_t) data_in_[i+6];
-                leading_zeros = clz(data_in_[i]);
+            if (data_in[i]) {
+                super_raw = (((uint64_t) data_in[i]) & 0xFF) << 48 | (((uint64_t) data_in[i+1]) & 0xFF) << 40 | (((uint64_t) data_in[i+2]) & 0xFF) << 32  
+                    | (uint64_t) data_in[i+3] << 24 | (uint64_t) data_in[i+4] << 16 | (uint64_t) data_in[i+5] << 8 | (uint64_t) data_in[i+6];
+                leading_zeros = clz(data_in[i]);
                 byte_ind = i;
                 break;
             }
         }
-        // leading zeros example start bit in bit 2 (0000 010X)
-        // leading zeros => 24+5=29
-        // right shift 9 = 32-29-2+16
+        // super_raw is 64 bits with >=8 bits of leading zeros
+        // e.g. 00 02 FF FF FF FF 3F 00
+        //          s| position  |e|crc
+        // above clz returns 30. right shift to data is 16 = 48 - 2 - 30
         raw_value_ = super_raw >> (48 - 2 - leading_zeros);
-        raw_value2_ = data_in_[6] << 24 | data_in_[7] << 16 | data_in_[8] << 8 | data_in_[9];
-        raw_value3_ = data_in_[10] << 24 | data_in_[11] << 16 | data_in_[12] << 8 | data_in_[13];
-        raw_value4_ = data_in_[14] << 24 | data_in_[15] << 16 | data_in_[16] << 8 | data_in_[17];
         Diag diag;
         diag.word = (super_raw >> (40 - 2 - leading_zeros)) & 0xFF;
         diag_.err = diag.err;
         diag_.warn = diag.warn;
-        uint64_t crc_val_raw = (super_raw >> 6) & 0x3FFFFFFFF;
+        uint64_t crc_val_raw = (super_raw >> (46 - 2 -leading_zeros)) & 0x3FFFFFFFF;
         crc_calc_ = ~CRC_BiSS_43_36bit(crc_val_raw) & 0x3F; // crc of data plus 2 status bits
-        diag_.crc6 = 1; // todo, get crc working
-        // diag_.crc6 = crc_calc_ == diag.crc6;
-        // if (!diag_.crc6) {
-        //     crc_error_raw_latch_ = raw_value_;
-        //     crc_err_count_++;
-        // } else {
-        {
+        diag_.crc6 = 1;
+        diag_.crc6 = crc_calc_ == diag.crc6;
+        if (!diag_.crc6) {
+            crc_err_count_++;
+        } else {
             if (!diag_.err) {
                 diag_err_count_++;
             }
@@ -86,6 +89,10 @@ class ResoluteEncoder : public EncoderBase {
 
         diag_raw_ = diag;
         return get_value();
+    }
+    int32_t read() {
+        spi_dma_.finish_readwrite_isr();
+        return read(data_in_);
     }
     uint32_t clz(uint32_t val) {
         uint32_t zeros;
@@ -106,14 +113,10 @@ class ResoluteEncoder : public EncoderBase {
     uint32_t diag_err_count_ = 0;
     uint32_t diag_warn_count_ = 0;
     uint32_t raw_value_ = 0;
-    uint32_t raw_value2_ = 0;
-        uint32_t raw_value3_ = 0;
-        uint32_t raw_value4_ = 0;
-    uint32_t crc_error_raw_latch_ = 0;
     uint32_t leading_zeros=0;
     uint8_t byte_ind=0;
 
- private:
+ protected:
     SPIDMA &spi_dma_;
     uint8_t length_ = 16;
     uint8_t data_out_[20] = {};

@@ -4,6 +4,13 @@
 #include "logger.h"
 #include "parameter_api.h"
 
+#define MAX11158_SET_DEBUG_VARIABLES(prefix, api, max) \
+    api.add_api_variable(prefix "raw", new const APIUint32(&max.raw_value_)); \
+    api.add_api_variable(prefix "max_int", new const APIInt32(&max.signed_value_)); \
+    api.add_api_variable(prefix "max_timeout_error", new const APIUint32(&max.timeout_error_)); \
+    api.add_api_variable(prefix "max_read_error", new const APIUint32(&max.read_error_)); \
+
+// 3 Wire mode using MOSI set high
 class MAX11158 : public TorqueSensorBase {
  public:
     MAX11158(SPIDMA &spi_dma, uint8_t decimation=0) :
@@ -53,14 +60,6 @@ class MAX11158 : public TorqueSensorBase {
         timeout_error_ = 0;
         stale_value_count_ = 0;
         read_error_ = 0;
-    }
-
-    void set_debug_variables(ParameterAPI &api) {
-        api.add_api_variable("max_raw", new const APIUint32(&raw_value_));
-        api.add_api_variable("max_int", new const APIInt32(&signed_value_));
-        api.add_api_variable("max_timeout_error", new const APIUint32(&timeout_error_));
-        api.add_api_variable("max_read_error", new const APIUint32(&read_error_));
-        api.add_api_variable("max_read_error", new const APIUint32(&read_error_));
     }
 
     uint8_t count_ = 0;

@@ -72,7 +72,7 @@ void pin_config_obot_g474_trace(const BoardRev &board_rev) {
         MASK_SET(GPIOA->PUPDR, GPIO_PUPDR_PUPD1, GPIO_PULL::DOWN);
         MASK_SET(GPIOA->PUPDR, GPIO_PUPDR_PUPD2, GPIO_PULL::DOWN);
         //GPIO_SETL(A, 0, 1, 3, 0);   // SPI1 CS on QEPA pin
-        GPIO_SETL(A, 4, GPIO_MODE::ALT_FUN, GPIO_SPEED::VERY_HIGH, 5);   // SPI1 CS drv8323s
+        GPIO_SETL(A, 4, GPIO_MODE::OUTPUT,  GPIO_SPEED::VERY_HIGH, 0);   // SPI1 CS drv8323s
         GPIO_SETL(A, 5, GPIO_MODE::ALT_FUN, GPIO_SPEED::VERY_HIGH, 5);   // SPI1 CLK drv8323s
         GPIO_SETL(A, 6, GPIO_MODE::ALT_FUN, GPIO_SPEED::VERY_HIGH, 5);   // SPI1 HIDO (host in device out) drv8323s
         GPIO_SETL(A, 7, GPIO_MODE::ALT_FUN, GPIO_SPEED::VERY_HIGH, 5);   // SPI1 HODI drv8323s
