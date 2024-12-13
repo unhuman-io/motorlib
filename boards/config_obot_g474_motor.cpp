@@ -603,7 +603,7 @@ MedianFilter<> mosfet2_temperature_filter;
 
 void config_maintenance();
 void system_maintenance() {
-    WWDG->CFR = 0x7F;
+    WWDG->CR = 0x7F;
     static bool driver_fault = false;
     if (config::drv.is_enabled() && !(config::main_loop.mode_ == DAMPED)) {
         config::fast_loop.zero_current_sensors(I_A0_DR, I_B0_DR, I_C0_DR);

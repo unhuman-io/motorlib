@@ -115,11 +115,14 @@ void ADC5_IRQHandler(void)
 __attribute__((naked)) void WWDG_IRQHandler(void)
 {
   uint32_t address;
-  asm("ldr r0, [sp, 0x18]\n"
+  asm("push {lr}\n"
+      "sub sp, sp, 0x20\n"
+      "ldr r0, [sp, 0x38]\n"
       "str r0, %0" : "=m"(address) :: "r0");
   log_watchdog(address);
-  while(1);
   WWDG->SR = 0;
+  asm("add sp, sp, 0x20\n"
+      "pop {pc}\n");
 }
 
 void HRTIM1_Master_IRQHandler(void)
