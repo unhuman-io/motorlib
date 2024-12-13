@@ -7,6 +7,7 @@
 #include "../peripheral/stm32g4/uart.h"
 #include "../peripheral/protocol.h"
 #include "../peripheral/stm32g4/flash.h"
+#include "../peripheral/stm32g4/rtc.h"
 
 #ifdef SCOPE_DEBUG
 #define SET_SCOPE_PIN(X,x) GPIO##X->BSRR = 1 << x
