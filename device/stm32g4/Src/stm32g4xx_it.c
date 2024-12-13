@@ -112,6 +112,16 @@ void ADC5_IRQHandler(void)
   CLEAR_SCOPE_PIN(C,1);
 }
 
+__attribute__((naked)) void WWDG_IRQHandler(void)
+{
+  uint32_t address;
+  asm("ldr r0, [sp, 0x18]\n"
+      "str r0, %0" : "=m"(address) :: "r0");
+  log_watchdog(address);
+  while(1);
+  WWDG->SR = 0;
+}
+
 void HRTIM1_Master_IRQHandler(void)
 {
   asm("":::"memory");

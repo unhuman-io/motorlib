@@ -22,6 +22,17 @@ void system_loop_interrupt() {
     System::system_loop();
 }
 
+void log_watchdog(uint32_t address) {
+    logger.log_printf("Watchdog EWI at %x", address);
+    // const char hexval[16] = {'0', '1', '2', '3', '4', '5', '6', '7', '8', '9', 'a', 'b', 'c', 'd', 'e', 'f'};
+    // char c[9] = {
+    //   hexval[(address >> 28) & 0xF], hexval[(address >> 24) & 0xF],
+    //   hexval[(address >> 20) & 0xF], hexval[(address >> 16) & 0xF],
+    //   hexval[(address >> 12) & 0xF], hexval[(address >> 8) & 0xF],
+    //   hexval[(address >> 4) & 0xF], hexval[address & 0xF], 0};
+    // logger.log(c);
+}
+
 Logger::CIndex log_index __attribute__((section(".noload")));
 char log_queue[LOGGING_MAX_SIZE] __attribute__((section(".noload")));
 __attribute__ ((init_priority(LOGGER_INIT_PRIORITY))) Logger logger(log_index, log_queue);

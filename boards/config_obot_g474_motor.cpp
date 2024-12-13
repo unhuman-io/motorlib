@@ -588,6 +588,10 @@ void system_init() {
     config::usb.connect();
 
     HRTIM1->sMasterRegs.MCR |= HRTIM_MCR_MCEN + HRTIM_MCR_TACEN + HRTIM_MCR_TDCEN + HRTIM_MCR_TECEN + HRTIM_MCR_TFCEN; // start high res timer, also triggers TIM1
+
+#ifndef NO_WATCHDOG
+    WWDG->CR = WWDG_CR_WDGA | 0x7F;
+#endif
 }
 
 FrequencyLimiter temp_rate = {10};
@@ -599,6 +603,7 @@ MedianFilter<> mosfet2_temperature_filter;
 
 void config_maintenance();
 void system_maintenance() {
+    WWDG->CFR = 0x7F;
     static bool driver_fault = false;
     if (config::drv.is_enabled() && !(config::main_loop.mode_ == DAMPED)) {
         config::fast_loop.zero_current_sensors(I_A0_DR, I_B0_DR, I_C0_DR);
