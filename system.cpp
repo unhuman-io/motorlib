@@ -22,7 +22,9 @@ void system_loop_interrupt() {
     System::system_loop();
 }
 
-__attribute__ ((init_priority(LOGGER_INIT_PRIORITY))) Logger logger;
+Logger::CIndex log_index __attribute__((section(".noload")));
+char log_queue[LOGGING_MAX_SIZE] __attribute__((section(".noload")));
+__attribute__ ((init_priority(LOGGER_INIT_PRIORITY))) Logger logger(log_index, log_queue);
 RoundRobinLogger round_robin_logger;
 uint32_t System::count_ = 0;
 ParameterAPI System::api = {};

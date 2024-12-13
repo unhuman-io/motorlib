@@ -114,6 +114,7 @@ class System {
         api.add_api_variable("torque", new const APIFloat(&actuator_.main_loop_.status_.torque));
         api.add_api_variable("t_i_correction", new const APIFloat(&actuator_.main_loop_.param_.torque_correction));
         api.add_api_variable("log", new APICallback(get_log, log));
+        api.add_api_variable("old_log", new const APICallback([]{ return logger.get_old_log(); }));
         api.add_api_variable("log_reset", new const APICallback([]()->std::string{ logger.reset_read_front(); return "ok"; }));
         api.add_api_variable("log_num", new const APICallbackUint32([]{ return logger.num_elements(); }));
         api.add_api_variable("messages_version", new const APICallback([]()->std::string{ return MOTOR_MESSAGES_VERSION; }));
