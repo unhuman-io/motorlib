@@ -13,6 +13,37 @@
 #define LOGGING_MAX_SIZE 4096
 class Logger {
  public:
+    class CIndex {
+     public:
+        CIndex() = default;
+        CIndex(uint32_t value) : value_(value) {
+            wrap();
+        }
+        void inc() { value_++; wrap(); }
+        CIndex& operator++() { inc(); return *this; }
+        void set_value(uint32_t value) {
+            value_ = value;
+        }
+        bool operator==(const CIndex& other) const {
+            return value_ == other.value_;
+        }
+        bool wrapped() const { return wrapped_; }
+        operator uint32_t() const { return value_; }
+        void wrap() {
+            wrapped_ = value_ >= LOGGING_MAX_SIZE;
+            value_ %= LOGGING_MAX_SIZE;
+        }
+     private:
+        uint32_t value_ = 0;
+        bool wrapped_ = false;
+    };
+
+    Logger(CIndex &back, char *log_queue) : back_(back), log_queue_(log_queue) {
+        back_.wrap();
+        front_atomic_.store(back_, std::memory_order_release);
+        read_front_atomic_.store(back_, std::memory_order_release);
+        log("**** Logger initialized ****");
+    }
     void log(std::string_view str) {
         char header[50];
         snprintf(header, sizeof(header), "(%lu %lu) ", get_uptime(), get_clock());
@@ -55,6 +86,31 @@ class Logger {
         }
         return str;
     }
+    std::string get_old_log() {
+        std::string str;
+        str.reserve(MAX_API_LONG_DATA_SIZE);
+        CIndex front = back_;
+        char c, last_c = '\0';
+        for (int i = 0; i < MAX_API_LONG_DATA_SIZE-1; i++) {
+            c = log_queue_[front];
+            if (c == '\0') {
+                if (last_c != '\0') {
+                    str += '\n';
+                } else {
+                    str += '.';
+                }
+            } else {
+                if (c < 32 || c > 126) {
+                    str += '.';
+                } else {
+                    str += c;
+                }
+            }
+            last_c = c;
+            ++front;
+        }
+        return str;
+    }
     bool empty() const {
         return read_front_atomic_.load(std::memory_order_acquire) == back_;
     }
@@ -83,30 +139,7 @@ class Logger {
         } while (!success);
     }
  private:
-    class CIndex {
-     public:
-        CIndex() = default;
-        CIndex(uint32_t value) : value_(value) {
-            wrap();
-        }
-        void inc() { value_++; wrap(); }
-        CIndex& operator++() { inc(); return *this; }
-        void set_value(uint32_t value) {
-            value_ = value;
-        }
-        bool operator==(const CIndex& other) const {
-            return value_ == other.value_;
-        }
-        bool wrapped() const { return wrapped_; }
-        operator uint32_t() const { return value_; }
-        void wrap() {
-            wrapped_ = value_ >= LOGGING_MAX_SIZE;
-            value_ %= LOGGING_MAX_SIZE;
-        }
-     private:
-        uint32_t value_ = 0;
-        bool wrapped_ = false;
-    };
+
 
     void log_raw(char c) {
         log_queue_[back_] = c;
@@ -143,9 +176,9 @@ class Logger {
     uint32_t num_elements_to_read_ = 0;
     CIndex front_log_;
     CIndex read_front_;
-    CIndex back_;
-    std::atomic<uint32_t> front_atomic_{0}, read_front_atomic_{0};
-    char log_queue_[LOGGING_MAX_SIZE] = {};
+    CIndex &back_;
+    std::atomic<uint32_t> front_atomic_, read_front_atomic_;
+    char *log_queue_;
 };
 
 extern Logger logger;

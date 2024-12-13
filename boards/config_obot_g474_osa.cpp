@@ -3,6 +3,7 @@
 #include "../peripheral/stm32g4/hrpwm.h"
 #include "../util.h"
 #include "../driver.h"
+#include "../peripheral/stm32g4/rtc.h"
 
 const Param * const param = (const Param * const) 0x8060000;
 const Calibration * const calibration = (const Calibration * const) 0x8070000;

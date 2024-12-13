@@ -7,7 +7,9 @@ uint64_t get_clock();
 #include <iostream>
 #include <charconv>
 
-Logger logger;
+Logger::CIndex log_index;
+char log_queue[LOGGING_MAX_SIZE] = {};
+Logger logger(log_index, log_queue);
 
 uint64_t uptime = 0;
 uint64_t clock1 = 0;
@@ -47,6 +49,8 @@ void check_log_end() {
 }
 
 int main() {
+    check_num_elements(1); // constructor stores one element
+    logger.get_log();
     check_num_elements(0);
 
     logger.log("hello");
