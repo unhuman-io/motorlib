@@ -379,8 +379,11 @@ class TrajectoryGenerator {
                     low_pass_filter_.set_frequency(frequency_);
                     low_pass_filter_.set_dt(dt);
                     float raw = amplitude_ * (2 * (float) rand() * (1.0 / RAND_MAX) - 1);
+                    float raw_scaled = raw * random_scale_;
+                    
                     float value_last = trajectory_value_.value;
-                    trajectory_value_.value = low_pass_filter_.update(raw);
+                    float new_value = low_pass_filter_.update(raw_scaled);
+                    trajectory_value_.value = fsat(new_value, amplitude_);
                     trajectory_value_.value_dot = (trajectory_value_.value - value_last) / dt;
                 }
                 break;
@@ -392,6 +395,7 @@ class TrajectoryGenerator {
     float get_frequency() const { return frequency_; }
  private:
     TuningMode mode_ = TuningMode::SINE;
+    float random_scale_ = 1;
     float frequency_, amplitude_;
     TrajectoryValue trajectory_value_;
     KahanSum phi_, chirp_frequency_;
