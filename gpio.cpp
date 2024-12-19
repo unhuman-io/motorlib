@@ -18,7 +18,11 @@ uint8_t GPIO::get_value() const {
 }
 
 void GPIO::set_value(uint8_t value) {
-    regs_.ODR |= value << pin_;
+    if (value) {
+        set();
+    } else {
+        clear();
+    }
 }
 
 // TODO
