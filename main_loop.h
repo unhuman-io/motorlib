@@ -299,12 +299,7 @@ class MainLoop {
             fast_loop_.set_tuning_amplitude(command_current_.current_tuning.amplitude);
             fast_loop_.set_tuning_frequency(command_current_.current_tuning.frequency);
             fast_loop_.set_tuning_bias(command_current_.current_tuning.bias);
-            fast_loop_.set_tuning_square(command_current_.current_tuning.mode == TuningMode::SQUARE);
-            if (command_current_.current_tuning.mode == TuningMode::CHIRP) { // flag for chirp mode
-              fast_loop_.set_tuning_chirp(true, command_current_.current_tuning.frequency);
-            } else {
-              fast_loop_.set_tuning_chirp(false, 0);
-            }
+            fast_loop_.set_tuning_mode(static_cast<TuningMode>(command_current_.current_tuning.mode));
           }
           // every cycle
           if (fast_log_ready_) {
