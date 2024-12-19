@@ -89,7 +89,7 @@ class KahanSum {
 
 class FirstOrderLowPassFilter {
 public:
-    FirstOrderLowPassFilter(float dt, float frequency_hz=0) {
+    FirstOrderLowPassFilter(float dt=1, float frequency_hz=0) {
         dt_ = dt;
         set_frequency(frequency_hz);
     }
@@ -112,6 +112,11 @@ public:
     }
     float get_frequency() const {
         return alpha_/(2*M_PI*dt_*(1-alpha_));
+    }
+    void set_dt(float dt) {
+        float frequency = get_frequency();
+        dt_ = dt;
+        set_frequency(frequency);
     }
 private:
     float value_ = 0, last_value_ = 0;
@@ -322,7 +327,10 @@ class TrajectoryGenerator {
     struct TrajectoryValue {
         float value, value_dot;
     };
-    void set_frequency(float frequency) { frequency_ = frequency; }
+    void set_frequency(float frequency) {
+        frequency_ = frequency;
+        low_pass_filter_.set_frequency(frequency);
+    }
     void set_amplitude(float amplitude) { amplitude_ = amplitude; }
     void set_mode(TuningMode mode) {
         if (mode <= TuningMode::CHIRP) {
@@ -367,6 +375,15 @@ class TrajectoryGenerator {
                     trajectory_value_.value_dot = -4 * amplitude_ * frequency_;
                 }
                 break;
+            case TuningMode::RANDOM: {
+                    low_pass_filter_.set_frequency(frequency_);
+                    low_pass_filter_.set_dt(dt);
+                    float raw = amplitude_ * (2 * (float) rand() * (1.0 / RAND_MAX) - 1);
+                    float value_last = trajectory_value_.value;
+                    trajectory_value_.value = low_pass_filter_.update(raw);
+                    trajectory_value_.value_dot = (trajectory_value_.value - value_last) / dt;
+                }
+                break;
         }
         return trajectory_value_;
     }
@@ -379,6 +396,7 @@ class TrajectoryGenerator {
     TrajectoryValue trajectory_value_;
     KahanSum phi_, chirp_frequency_;
     float chirp_rate_;
+    FirstOrderLowPassFilter low_pass_filter_;
     friend class System;
 };
 
