@@ -304,8 +304,9 @@ class MainLoop {
           // every cycle
           if (fast_log_ready_) {
             if (current_tuning_rate_limiter_.ready()) {
-              if (status_stack_.top().fast_loop.foc_command.desired.i_q < 0 &&
-                  status_.fast_loop.foc_command.desired.i_q > 0) {
+              float trigger_point = fast_loop_.get_tuning_bias();
+              if (status_stack_.top().fast_loop.foc_command.desired.i_q < trigger_point &&
+                  status_.fast_loop.foc_command.desired.i_q >= trigger_point) {
                 fast_loop_.trigger_status_log();
                 current_tuning_rate_limiter_.run();
               }

@@ -173,6 +173,7 @@ class FastLoop {
     void set_tuning_mode(TuningMode mode) { tuning_trajectory_generator_.set_mode(mode); }
     float get_tuning_frequency() const { return tuning_trajectory_generator_.get_frequency(); }
     void set_tuning_bias(float bias) { tuning_bias_ = bias; }
+    float get_tuning_bias() const { return tuning_bias_; }
     void set_stepper_position(float position) { stepper_position_ = position; }
     void set_stepper_velocity(float velocity) { stepper_velocity_ = velocity; }
     void set_reserved(float reserved) { reserved_ = reserved; }
