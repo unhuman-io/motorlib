@@ -73,7 +73,7 @@ class BISSBitBang {
         err |= transfer_one(true, cds_in, value); // W
         err |= transfer_one(true, cds_in, value); // S
         for (int i=0; i<8; i++) {
-            err |= transfer_one(data >> (7-i), cds_in, value);
+            err |= transfer_one((data >> (7-i)) & 1, cds_in, value);
         }
         crc = ~biss_crc4(data);
         for (int i=0; i<4; i++) {
