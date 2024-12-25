@@ -1,6 +1,6 @@
 #!/bin/bash -e
 
-tagname=13.3
+tagname=14.2
 
 docker build . -t leemagnusson/arm-gcc:$tagname
 docker tag leemagnusson/arm-gcc:$tagname leemagnusson/arm-gcc:latest
