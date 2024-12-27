@@ -1,3 +1,4 @@
 gcc/
 package/
 peripheral/stm32g4/otp/otp.bin
+bootloader/stm32g4/build/

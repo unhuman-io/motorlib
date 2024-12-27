@@ -125,10 +125,6 @@ LoopCopyDataInit:
   adds r4, r0, r3
   cmp r4, r1
   bcc CopyDataInit
-
-  /* CCM RAM init */
-  movs r1, #0
-  b LoopCopyDataInit1
   
 /* Zero fill the bss segment. */
   ldr r2, =_sbss
@@ -144,7 +140,7 @@ LoopFillZerobss:
   bcc FillZerobss
 
 /* Call the clock system intitialization function.*/
-    bl  SystemInit
+  //  bl  SystemInit
 /* Call static constructors */
     bl __libc_init_array
 /* Call the application's entry point.*/
