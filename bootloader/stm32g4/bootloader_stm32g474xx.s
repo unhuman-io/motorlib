@@ -49,63 +49,56 @@ defined in linker script */
 	.weak	Reset_Handler
 	.type	Reset_Handler, %function
 Reset_Handler:
+  	// start watchdog IWDG->KR = 0xCCCC;
+#ifndef NO_WATCHDOG
+	ldr	r0, =((1<<12) | (1<<11)) // debug pauses watchdogs
+	ldr	r1, =0xE0042008
+	str   r0, [r1]		// IWDG stop on debug
+	ldr	r0, =0xCCCC
+	ldr	r1, =IWDG_KR
+	str	r0, [r1]		// start watchdog
+	ldr	r0, =0x5555		// access IWDG_PR key
+	str	r0, [r1]
+	// wait for IWDR_SR PVU to be 0
+pvu_zero_wait:
+	ldr	r0, [r1, #12]
+	cmp	r0, #1
+	beq	pvu_zero_wait
+	
+	ldr	r0, =0
+	str	r0, [r1, #4]	// Set PR to 0 (default but bootloader sets to 6)
+#endif
+
 	ldr r0, =RCC_BASE
 	ldr r1, [r0, #RCC_CSR_OFFSET]
 	// if (!(r1 & 0xFE000000)) a bootloader reset, don't erase previous flags
 	tst r1, #(0xFE000000)
-	beq no_csr_copy
+	//beq no_csr_copy
 	ldr r2, =rcc_csr_copy
 	str r1, [r2]
-no_csr_copy:
+
 	orr r1, #(1<<RCC_CSR_RMVF_POS)
 	str r1, [r0, #RCC_CSR_OFFSET]			// clear reset flags
 
 	tst r1, #((1<<RCC_CSR_IWDGRSTF_POS) | (1<<RCC_CSR_WWDGRSTF_POS))		// watchdog reset
-	bne Reboot_Loader
+	bne run_bootloader
 	tst r1, #(1<<RCC_CSR_SFTRSTF_POS)		// software reset
-	beq Original_Reset_Handler
+	beq run_app
 	ldr r0, =go_to_bootloader
 	ldr r1, [r0]
 	ldr r2, =0xB007
 	cmp r1, r2
 	mov r1, #0
 	str r1, [r0]
-	bne Original_Reset_Handler
+	beq run_bootloader
 
-Reboot_Loader:
-    ldr     r0, =RCC_APB2SMENR 
-    ldr     r1, =#(1<<RCC_SYSCFGEN_POS) 
-    str     r1, [r0]
-	nop		/* found experimentally that this is needed */
-    ldr     r0, =#SYSCFG_MEMRMP /* SYSCFG_MEMRMP */
-    ldr     r1, =0x00000001 /* MAP ROM AT ZERO */
-    str     r1, [r0]
-    ldr     r0, =0x8001000 /* ROM BASE */
-    ldr     SP,[r0]     /* SP @ +0 */
-    ldr     r0,[r0, #4]     /* PC @ +4 */
+run_app:
+    ldr     r0, =0x8002000 /* APP BASE */
+    ldr     sp, [r0]     /* SP @ +0 */
+    ldr     r0, [r0, #4]     /* PC @ +4 */
     bx      r0
 
-Original_Reset_Handler:
-  // start watchdog IWDG->KR = 0xCCCC;
-#ifndef NO_WATCHDOG
-  ldr	r0, =((1<<12) | (1<<11)) // debug pauses watchdogs
-  ldr	r1, =0xE0042008
-  str   r0, [r1]		// IWDG stop on debug
-  ldr	r0, =0xCCCC
-  ldr	r1, =IWDG_KR
-  str	r0, [r1]		// start watchdog
-  ldr	r0, =0x5555		// access IWDG_PR key
-  str	r0, [r1]
-  // wait for IWDR_SR PVU to be 0
-pvu_zero_wait:
-  ldr	r0, [r1, #12]
-  cmp	r0, #1
-  beq	pvu_zero_wait
-  
-  ldr	r0, =0
-  str	r0, [r1, #4]	// Set PR to 0 (default but bootloader sets to 6)
-#endif
-
+run_bootloader:
   ldr   r0, =_estack
   mov   sp, r0          /* set stack pointer */
 
