@@ -122,7 +122,8 @@ int main() {
     SystemClock_Config();
     RCC->AHB2ENR |= RCC_AHB2ENR_GPIOAEN | RCC_AHB2ENR_GPIOBEN;
     RCC->APB1ENR1 |= RCC_APB1ENR1_FDCANEN;
-    GPIO_SETH(B, 8, GPIO_MODE::OUTPUT, GPIO_SPEED::MEDIUM, 0);
+    GPIO_SETH(B, 8, GPIO_MODE::OUTPUT, GPIO_SPEED::MEDIUM, 0); // led b
+    GPIO_SETL(B, 6, GPIO_MODE::OUTPUT, GPIO_SPEED::MEDIUM, 0); // led r
     GPIO_SETH(A, 8, GPIO_MODE::ALT_FUN, GPIO_SPEED::VERY_HIGH, 11); // can3 rx
     GPIO_SETL(B, 4, GPIO_MODE::ALT_FUN, GPIO_SPEED::VERY_HIGH, 11); // can3 tx
 
@@ -138,9 +139,41 @@ int main() {
             GPIOB->BSRR = GPIO_BSRR_BS8;
         } else if (loop_count % 500000 == 0) {
             GPIOB->BSRR = GPIO_BSRR_BR8;
+            GPIOB->BSRR = GPIO_BSRR_BR6;
         }
-        ReceiveData data;
-        can_communication.receive_data(&data);
+        enum {READ=0, WRITE=1};
+        union {
+            ReceiveData receive_data;
+            struct {
+                uint8_t command;
+                uint8_t length;
+                uint32_t address;
+                uint8_t data[56];
+            };
+        } data;
+        int retval = can_communication.receive_data(&data.receive_data);
+        if (retval > 0) {
+            GPIOB->BSRR = GPIO_BSRR_BS6;
+            // if (data.command == READ) {
+            //     if (data.length > 56) {
+            //         data.length = 56;
+            //     }
+            //     for (int i = 0; i < data.length; i++) {
+            //         data.data[i] = *(uint8_t *)data.address;
+            //         data.address++;
+            //     }
+            //     can_communication.send_data(&data.receive_data);
+            // } // else if (data.command == WRITE) {
+            //     if (data.length > 56) {
+            //         data.length = 56;
+            //     }
+            //     for (int i = 0; i < data.length; i++) {
+            //         *(uint8_t *)data.address = data.data[i];
+            //         data.address++;
+            //     }
+            //     can_communication.send_data(&data.receive_data);
+            // }
+        }
         char s[65];
         can_communication.receive_string(s);
         if (s[0] != 0) {

@@ -29,12 +29,6 @@ C_INCLUDES +=  \
 -I$(SELF_DIR)../peripheral \
 -I$(SELF_DIR)../ \
 
-# ensure flash commands stay in allocated section
-$(BUILD_DIR)/flash.o: $(SELF_DIR)../peripheral/stm32g4/flash.cpp | $(BUILD_DIR)
-	@echo "  CXX NO LTO" $<
-	$(CXX) -c $(filter-out $(LTO), $(CPPFLAGS)) -std=c++17 -Wa,-a,-ad,-alms=$(BUILD_DIR)/lto.lst $< -o $@
-
-
 $(BUILD_DIR)/%.o: %.cpp | $(BUILD_DIR) 
 	@echo "  CXX    " $<
 	$(CXX) -c $(CPPFLAGS) -std=c++17 -Wa,-a,-ad,-alms=$(BUILD_DIR)/lto.lst $< -o $@
