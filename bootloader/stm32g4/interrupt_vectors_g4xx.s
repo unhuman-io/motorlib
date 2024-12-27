@@ -1,12 +1,9 @@
+  .syntax unified
+	.cpu cortex-m4
+	.thumb
 
-/**
- * @brief  This is the code that gets called when the processor receives an
- *         unexpected interrupt.  This simply enters an infinite loop, preserving
- *         the system state for examination by a debugger.
- *
- * @param  None
- * @retval : None
-*/
+.global	g_pfnVectors
+
     .section	.text.Default_Handler,"ax",%progbits
 Default_Handler:
 Infinite_Loop:
@@ -187,7 +184,7 @@ g_pfnVectors:
 	.thumb_set PendSV_Handler,Default_Handler
 
 	.weak	SysTick_Handler
-	.thumb_set SysTick_Handler,Default_Handler*/
+	.thumb_set SysTick_Handler,Default_Handler
 
 	.weak	WWDG_IRQHandler
 	.thumb_set WWDG_IRQHandler,Infinite_Loop5

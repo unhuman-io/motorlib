@@ -14,6 +14,12 @@ FLASH (rx)      : ORIGIN = 0x8000000, LENGTH = 4K
 
 SECTIONS
 {
+    .isr_vector :
+  {
+    . = ALIGN(4);
+    KEEP(*(.isr_vector)) /* Startup code */
+    . = ALIGN(4);
+  } >FLASH
   /* The program code and other data goes into FLASH */
   .text :
   {

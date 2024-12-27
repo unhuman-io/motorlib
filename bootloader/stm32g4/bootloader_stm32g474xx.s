@@ -80,7 +80,7 @@ Reboot_Loader:
     ldr     r0, =#SYSCFG_MEMRMP /* SYSCFG_MEMRMP */
     ldr     r1, =0x00000001 /* MAP ROM AT ZERO */
     str     r1, [r0]
-    ldr     r0, =0x1FFF0000 /* ROM BASE */
+    ldr     r0, =0x8001000 /* ROM BASE */
     ldr     SP,[r0]     /* SP @ +0 */
     ldr     r0,[r0, #4]     /* PC @ +4 */
     bx      r0
@@ -140,7 +140,7 @@ LoopFillZerobss:
   bcc FillZerobss
 
 /* Call the clock system intitialization function.*/
-  //  bl  SystemInit
+//    bl  SystemInit
 /* Call static constructors */
     bl __libc_init_array
 /* Call the application's entry point.*/
