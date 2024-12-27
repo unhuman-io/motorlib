@@ -27,6 +27,7 @@ C_INCLUDES +=  \
 -I$(SELF_DIR)../device/stm32g4/Include \
 -I$(SELF_DIR)../CMSIS/Include \
 -I$(SELF_DIR)../peripheral \
+-I$(SELF_DIR)../ \
 
 # ensure flash commands stay in allocated section
 $(BUILD_DIR)/flash.o: $(SELF_DIR)../peripheral/stm32g4/flash.cpp | $(BUILD_DIR)

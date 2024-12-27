@@ -9,7 +9,7 @@ _Min_Stack_Size = 0x2000;
 MEMORY
 {
 RAM (xrw)      : ORIGIN = 0x20000000, LENGTH = 96K
-FLASH (rx)      : ORIGIN = 0x8000000, LENGTH = 4K
+FLASH (rx)      : ORIGIN = 0x8000000, LENGTH = 8K
 }
 
 SECTIONS

@@ -3,6 +3,7 @@
 #include <stm32g4/pin_config.h>
 #include <stm32g4/flash.h>
 #include <stm32g4/can.h>
+#include <communication/can_communication.h>
 
 uint32_t go_to_bootloader = 0;
 
@@ -16,6 +17,41 @@ void _getpid() {}
 void _isatty() {}
 void _kill() {}
 }
+
+#define         DEVICE_ID1          (UID_BASE) //(0x1FFF7A10)
+#define         DEVICE_ID2          (UID_BASE + 4) 
+#define         DEVICE_ID3          (UID_BASE + 8)
+
+char to_hex[] = "0123456789abcdef";
+
+char * get_serial_number() {
+    static char serial_number[13];
+    uint32_t deviceserial0, deviceserial1, deviceserial2;
+
+    deviceserial0 = *(uint32_t *)DEVICE_ID1;
+    deviceserial1 = *(uint32_t *)DEVICE_ID2;
+    deviceserial2 = *(uint32_t *)DEVICE_ID3;
+
+    deviceserial0 += deviceserial2;
+
+    //std::sprintf(serial_number,"%lX%X",deviceserial0, (uint16_t) (deviceserial1>>16));
+  
+
+    serial_number[0] = to_hex[(deviceserial0 >> 28) & 0xf];
+    serial_number[1] = to_hex[(deviceserial0 >> 24) & 0xf];
+    serial_number[2] = to_hex[(deviceserial0 >> 20) & 0xf];
+    serial_number[3] = to_hex[(deviceserial0 >> 16) & 0xf];
+    serial_number[4] = to_hex[(deviceserial0 >> 12) & 0xf];
+    serial_number[5] = to_hex[(deviceserial0 >> 8) & 0xf];
+    serial_number[6] = to_hex[(deviceserial0 >> 4) & 0xf];
+    serial_number[7] = to_hex[(deviceserial0 >> 0) & 0xf];
+    serial_number[8] = to_hex[(deviceserial1 >> 28) & 0xf];
+    serial_number[9] = to_hex[(deviceserial1 >> 24) & 0xf];
+    serial_number[10] = to_hex[(deviceserial1 >> 20) & 0xf];
+    serial_number[11] = to_hex[(deviceserial1 >> 16) & 0xf];
+    return serial_number;
+}
+
 
 volatile uint32_t * const cpu_clock = &DWT->CYCCNT;
 uint32_t rcc_csr_copy __attribute__((section (".noload")));
@@ -80,6 +116,8 @@ extern "C" void SystemClock_Config(void)
   CRS->CR |= CRS_CR_AUTOTRIMEN | CRS_CR_CEN;
 }
 
+uint8_t can_id = 1;
+
 int main() {
     SystemClock_Config();
     RCC->AHB2ENR |= RCC_AHB2ENR_GPIOAEN | RCC_AHB2ENR_GPIOBEN;
@@ -90,19 +128,34 @@ int main() {
 
     Flash flash(*FLASH);
     CAN can(CAN::CAN3, CAN::ARB_2M, CAN::DATA_5M);
+    CANCommunication can_communication(can, can_id);
 
+    int loop_count = 0;
     while(1) {
         IWDG->KR = 0xAAAA;
-
-        for (int i = 0; i < 10000000; i++) {
-            __asm__("nop");
+        loop_count++;
+        if (loop_count % 1000000 == 0) {
+            GPIOB->BSRR = GPIO_BSRR_BS8;
+        } else if (loop_count % 500000 == 0) {
+            GPIOB->BSRR = GPIO_BSRR_BR8;
         }
-        GPIOB->BSRR = GPIO_BSRR_BS8;
-        for (int i = 0; i < 10000000; i++) {
-            __asm__("nop");
+        ReceiveData data;
+        can_communication.receive_data(&data);
+        char s[65];
+        can_communication.receive_string(s);
+        if (s[0] != 0) {
+            if (strcmp(s, "name") == 0) {
+                can_communication.send_string("bootloader", 10);
+            } else if (strcmp(s, "serial") == 0) {
+                can_communication.send_string(get_serial_number(), 12);
+            } else if (strcmp(s, "messages_version") == 0) {
+                can_communication.send_string(MOTOR_MESSAGES_VERSION, 3);
+            } else if (strcmp(s, "version") == 0) {
+                can_communication.send_string("1.0", 3);
+            } else if (strcmp(s, "go_to_bootloader") == 0) {
+                go_to_bootloader = 1;
+            }
         }
-        GPIOB->BSRR = GPIO_BSRR_BR8;
-        can.write(0x123, 0, 0);
 
     }
     return 0;

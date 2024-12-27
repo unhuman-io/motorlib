@@ -2,6 +2,7 @@
 
 #include "../communication.h"
 #include <cstring>
+#include <algorithm>
 
 template <class CAN>
 class CANCommunication : public CommunicationBase {
