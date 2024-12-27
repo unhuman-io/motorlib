@@ -9,9 +9,16 @@ include ../../make/configure_gcc.mk
 
 LDSCRIPT = STM32G474RETx_FLASH.ld
 
-OBJECTS = build/bootloader_main.o \
-build/bootloader_stm32g474xx.o \
-build/interrupt_vectors_g4xx.o \
+SOURCES = bootloader_main.cpp \
+bootloader_stm32g474xx.s \
+interrupt_vectors_g4xx.s \
+flash.cpp \
+can.cpp \
+
+OBJECTS = $(addprefix $(BUILD_DIR)/, \
+	$(addsuffix .o, $(basename $(SOURCES))))
+
+VPATH = $(SELF_DIR)../peripheral/stm32g4
 
 override C_DEFS +=  \
 -DSTM32G474xx
@@ -20,6 +27,12 @@ C_INCLUDES +=  \
 -I$(SELF_DIR)../device/stm32g4/Include \
 -I$(SELF_DIR)../CMSIS/Include \
 -I$(SELF_DIR)../peripheral \
+
+# ensure flash commands stay in allocated section
+$(BUILD_DIR)/flash.o: $(SELF_DIR)../peripheral/stm32g4/flash.cpp | $(BUILD_DIR)
+	@echo "  CXX NO LTO" $<
+	$(CXX) -c $(filter-out $(LTO), $(CPPFLAGS)) -std=c++17 -Wa,-a,-ad,-alms=$(BUILD_DIR)/lto.lst $< -o $@
+
 
 $(BUILD_DIR)/%.o: %.cpp | $(BUILD_DIR) 
 	@echo "  CXX    " $<
