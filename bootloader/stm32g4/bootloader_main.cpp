@@ -151,28 +151,34 @@ int main() {
                 uint8_t data[56];
             };
         } data;
+        union {
+            SendData send_data;
+            struct {
+                uint8_t command;
+                uint8_t length;
+                uint8_t data[62];
+            };
+        } send_data;
         int retval = can_communication.receive_data(&data.receive_data);
         if (retval > 0) {
             GPIOB->BSRR = GPIO_BSRR_BS6;
-            // if (data.command == READ) {
-            //     if (data.length > 56) {
-            //         data.length = 56;
-            //     }
-            //     for (int i = 0; i < data.length; i++) {
-            //         data.data[i] = *(uint8_t *)data.address;
-            //         data.address++;
-            //     }
-            //     can_communication.send_data(&data.receive_data);
-            // } // else if (data.command == WRITE) {
-            //     if (data.length > 56) {
-            //         data.length = 56;
-            //     }
-            //     for (int i = 0; i < data.length; i++) {
-            //         *(uint8_t *)data.address = data.data[i];
-            //         data.address++;
-            //     }
-            //     can_communication.send_data(&data.receive_data);
-            // }
+            if (data.command == READ) {
+                if (data.length > 62) {
+                    data.length = 62;
+                }
+                for (int i = 0; i < data.length; i++) {
+                    send_data.data[i] = *(uint8_t *)data.address;
+                    data.address++;
+                }
+                can_communication.send_data(send_data.send_data);
+            } else if (data.command == WRITE) {
+                if (data.length > 56) {
+                    data.length = 56;
+                }
+                for (int i = 0; i < data.length; i++) {
+                    flash.write(data.address, data.data, data.length);
+                }
+            }
         }
         char s[65];
         can_communication.receive_string(s);

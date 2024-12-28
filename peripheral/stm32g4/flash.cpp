@@ -11,6 +11,9 @@ void Flash::unlock() {
 
 void Flash::erase_page(uint32_t address) {
     uint32_t page = (address - 0x8000000) / page_size_;
+    if (is_erased(page)) {
+        return;
+    }
     if (is_sbank()) {
         regs_.CR = FLASH_CR_PER | page << FLASH_CR_PNB_Pos | 0 << FLASH_CR_BKER_Pos;
     } else {
@@ -19,6 +22,7 @@ void Flash::erase_page(uint32_t address) {
     regs_.CR |= FLASH_CR_STRT;
     while (regs_.SR & FLASH_SR_BSY);
     regs_.CR &= ~FLASH_CR_PER;
+    set_erased(page);
 }
 
 void Flash::write_dword(uint32_t address, const uint32_t* data) {
@@ -30,16 +34,23 @@ void Flash::write_dword(uint32_t address, const uint32_t* data) {
     }
 }
 
-void Flash::write_impl(uint32_t address, const void *data, uint32_t size) {
+void Flash::write_impl(uint32_t address, const void *data, uint32_t size, EraseType erase) {
     __disable_irq();
     unlock();
     uint32_t t_start = get_clock();
     regs_.SR = regs_.SR; // clear previous errors
-    uint32_t num_pages = (size+1) / page_size_ + 1;
-    for (uint32_t i = 0; i < num_pages; i++) {
-        IWDG->KR = 0xAAAA;
-        erase_page(address + i * page_size_);
+    if (erase != NO_ERASE) {
+        if (erase == ALWAYS_ERASE) {
+            clear_erased_status();
+        }
+        asm("bkpt 1");
+        uint32_t num_pages = (size+1) / page_size_ + 1;
+        for (uint32_t i = 0; i < num_pages; i++) {
+            IWDG->KR = 0xAAAA;
+            erase_page(address + i * page_size_);
+        }
     }
+
     uint32_t t_erase = get_clock() - t_start;
 
     // round size up to nearest +8
@@ -54,6 +65,6 @@ void Flash::write_impl(uint32_t address, const void *data, uint32_t size) {
     regs_.CR &= ~FLASH_CR_PG;
     __enable_irq();
     uint32_t t_write = get_clock() - t_erase - t_start;
-    logger.log_printf("flash write address: %x, %d bytes, %d pages, erase %d us, write %d us", address, size,
-        num_pages, CPU_TO_US(t_erase), CPU_TO_US(t_write));
+    // logger.log_printf("flash write address: %x, %d bytes, %d pages, erase %d us, write %d us", address, size,
+    //     num_pages, CPU_TO_US(t_erase), CPU_TO_US(t_write));
 }
