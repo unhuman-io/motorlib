@@ -684,7 +684,7 @@ class MainLoop {
             return state_controller_.validate_command(receive_data);
             break;          
           case CURRENT_TUNING:
-            if (receive_data.current_tuning.mode <= TuningMode::CHIRP &&
+            if (receive_data.current_tuning.mode <= TuningMode::RANDOM &&
                 std::isfinite(receive_data.current_tuning.amplitude) &&
                 std::isfinite(receive_data.current_tuning.frequency) &&
                 std::isfinite(receive_data.current_tuning.bias)) {
@@ -693,7 +693,7 @@ class MainLoop {
             return false;
             break;
           case POSITION_TUNING:
-            if (receive_data.position_tuning.mode <= TuningMode::CHIRP &&
+            if (receive_data.position_tuning.mode <= TuningMode::RANDOM &&
                 std::isfinite(receive_data.position_tuning.amplitude) &&
                 std::isfinite(receive_data.position_tuning.frequency) &&
                 std::isfinite(receive_data.position_tuning.bias)) {
@@ -738,7 +738,7 @@ class MainLoop {
             return (receive_data.tuning_command.mode == POSITION ||
                     receive_data.tuning_command.mode == VELOCITY ||
                     receive_data.tuning_command.mode == TORQUE) &&
-                    receive_data.tuning_command.tuning_mode <= TuningMode::CHIRP &&
+                    receive_data.tuning_command.tuning_mode <= TuningMode::RANDOM &&
                     std::isfinite(receive_data.tuning_command.amplitude) &&
                     std::isfinite(receive_data.tuning_command.frequency) &&
                     std::isfinite(receive_data.tuning_command.bias);
