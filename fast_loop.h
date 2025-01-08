@@ -73,6 +73,9 @@ class FastLoop {
       if (mode_ == CURRENT_TUNING_MODE) {
         TrajectoryGenerator::TrajectoryValue t = tuning_trajectory_generator_.step(dt_);
         iq_des = t.value + tuning_bias_;
+      } else if (mode_ == VOLTAGE_TUNING_MODE) {
+        TrajectoryGenerator::TrajectoryValue t = tuning_trajectory_generator_.step(dt_);
+        set_vq_des(t.value + tuning_bias_);
       }
 
       if (beep_) {
@@ -203,6 +206,10 @@ class FastLoop {
       foc_->voltage_mode();
       mode_ = VOLTAGE_MODE;
     }
+    void voltage_tuning_mode() {
+      voltage_mode();
+      mode_ = VOLTAGE_TUNING_MODE;
+    }
     void stepper_mode(StepperMode mode) {
       switch (mode) {
         case STEPPER_CURRENT:
@@ -332,7 +339,8 @@ class FastLoop {
 
     FOC *foc_;
     PWM &pwm_;
-    enum {OPEN_MODE, BRAKE_MODE, CURRENT_MODE, PHASE_LOCK_MODE, VOLTAGE_MODE, CURRENT_TUNING_MODE, STEPPER_TUNING_MODE} mode_ = CURRENT_MODE;
+    enum {OPEN_MODE, BRAKE_MODE, CURRENT_MODE, PHASE_LOCK_MODE, VOLTAGE_MODE, CURRENT_TUNING_MODE, VOLTAGE_TUNING_MODE,
+          STEPPER_TUNING_MODE} mode_ = CURRENT_MODE;
 
     float motor_encoder_dir_;
     int32_t motor_enc;

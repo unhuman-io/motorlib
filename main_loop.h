@@ -319,8 +319,26 @@ class MainLoop {
           dft_.step(status_.fast_loop.foc_command.desired.i_q, status_.fast_loop.foc_status.measured.i_q, 
             fast_loop_.get_tuning_frequency(), status_.fast_loop.timestamp);
           break;
+        case TUNING:
+          // should be in other modes
+          break;
         case VOLTAGE:
-          vq_des = command_current_.voltage.voltage_desired;
+          if (command_current_.mode_desired == TUNING) {
+            if (fast_log_ready_) {
+              if (current_tuning_rate_limiter_.ready()) {
+                float trigger_point = fast_loop_.get_tuning_bias();
+                if (status_stack_.top().fast_loop.foc_command.desired.v_q < trigger_point &&
+                    status_.fast_loop.foc_command.desired.v_q >= trigger_point) {
+                  fast_loop_.trigger_status_log();
+                  current_tuning_rate_limiter_.run();
+                }
+              }
+            }
+            dft_.step(status_.fast_loop.foc_command.desired.v_q, status_.fast_loop.foc_status.measured.i_q, 
+              fast_loop_.get_tuning_frequency(), status_.fast_loop.timestamp);
+          } else {
+            vq_des = command_current_.voltage.voltage_desired;
+          }
           break;
         case PHASE_LOCK:
           fast_loop_.set_id_des(command_current_.current_desired);
@@ -583,6 +601,11 @@ class MainLoop {
               set_mode(CURRENT_TUNING);
               mode = CURRENT_TUNING;
             }
+            if (receive_data_.tuning_command.mode == VOLTAGE) {
+              set_mode(VOLTAGE);
+              fast_loop_.voltage_tuning_mode();
+              mode = VOLTAGE;
+            }
             break;
           case FIND_LIMITS:
             fast_loop_.current_mode();
@@ -769,6 +792,14 @@ class MainLoop {
         command.current_tuning.bias = receive_data.tuning_command.bias;
         command.current_tuning.mode = receive_data.tuning_command.tuning_mode;
         command.mode_desired = CURRENT_TUNING;
+      } else if (receive_data.tuning_command.mode == VOLTAGE) {
+        command = receive_data;
+        if (update_parameters) {
+          fast_loop_.set_tuning_amplitude(command.tuning_command.amplitude);
+          fast_loop_.set_tuning_frequency(command.tuning_command.frequency);
+          fast_loop_.set_tuning_bias(command.tuning_command.bias);
+          fast_loop_.set_tuning_mode(static_cast<TuningMode>(command.tuning_command.tuning_mode));
+        }
       } else {
         if (update_parameters) {
           tuning_trajectory_generator_.set_amplitude(receive_data.tuning_command.amplitude);
