@@ -208,20 +208,24 @@ class MainLoop {
 
       if (receive_data_.mode_desired == TUNING) {
           command_current_ = set_tuning_command(receive_data_, count_received);
-          float desired = *tuning_trajectory_generator_.value();
-          float measured = 0;
-          switch (command_current_.mode_desired) {
-            case POSITION:
-              measured = status_.motor_position;
-              break;
-            case VELOCITY:
-              measured = status_.motor_velocity_filtered;
-              break;
-            case TORQUE:
-              measured = status_.torque;
-              break;
+          if (command_current_.mode_desired == POSITION ||
+              command_current_.mode_desired == VELOCITY ||
+              command_current_.mode_desired == TORQUE) {
+            float desired = *tuning_trajectory_generator_.value();
+            float measured = 0;
+            switch (command_current_.mode_desired) {
+              case POSITION:
+                measured = status_.motor_position;
+                break;
+              case VELOCITY:
+                measured = status_.motor_velocity_filtered;
+                break;
+              case TORQUE:
+                measured = status_.torque;
+                break;
+            }
+            dft_.step(desired, measured, tuning_trajectory_generator_.get_frequency(), timestamp_);
           }
-          dft_.step(desired, measured, tuning_trajectory_generator_.get_frequency(), timestamp_);
       } else {
           command_current_ = receive_data_;
       }
@@ -575,6 +579,10 @@ class MainLoop {
               set_mode(static_cast<MainControlMode>(receive_data_.tuning_command.mode));
               mode = static_cast<MainControlMode>(receive_data_.tuning_command.mode);
             }
+            if (receive_data_.tuning_command.mode == CURRENT) {
+              set_mode(CURRENT_TUNING);
+              mode = CURRENT_TUNING;
+            }
             break;
           case FIND_LIMITS:
             fast_loop_.current_mode();
@@ -735,7 +743,9 @@ class MainLoop {
             return admittance_controller_.validate_command(receive_data);
             break;
           case TUNING:
-            return (receive_data.tuning_command.mode == POSITION ||
+            return (receive_data.tuning_command.mode == CURRENT ||
+                    receive_data.tuning_command.mode == VOLTAGE ||
+                    receive_data.tuning_command.mode == POSITION ||
                     receive_data.tuning_command.mode == VELOCITY ||
                     receive_data.tuning_command.mode == TORQUE) &&
                     receive_data.tuning_command.tuning_mode <= TuningMode::RANDOM &&
@@ -753,29 +763,37 @@ class MainLoop {
 
     MotorCommand set_tuning_command(ReceiveData &receive_data, bool update_parameters) {
       MotorCommand command = {};
-      if (update_parameters) {
-        tuning_trajectory_generator_.set_amplitude(receive_data.tuning_command.amplitude);
-        tuning_trajectory_generator_.set_frequency(receive_data.tuning_command.frequency);
-        tuning_trajectory_generator_.set_mode(static_cast<TuningMode>(receive_data.tuning_command.tuning_mode));
-      }
-      TrajectoryGenerator::TrajectoryValue traj = tuning_trajectory_generator_.step(dt_);
-      switch (receive_data.tuning_command.mode) {
-        case POSITION:
-          command.position_desired = traj.value + receive_data.tuning_command.bias;
-          command.velocity_desired = traj.value_dot;
-          command.mode_desired = POSITION;
-          break;
-        case VELOCITY:
-          command.velocity_desired = traj.value + receive_data.tuning_command.bias;
-          command.mode_desired = VELOCITY;
-          break;
-        case TORQUE:
-          command.torque_desired = traj.value + receive_data.tuning_command.bias;
-          command.torque_dot_desired = traj.value_dot;
-          command.mode_desired = TORQUE;
-          break;
-        default:
-          break;
+      if (receive_data.tuning_command.mode == CURRENT) {
+        command.current_tuning.amplitude = receive_data.tuning_command.amplitude;
+        command.current_tuning.frequency = receive_data.tuning_command.frequency;
+        command.current_tuning.bias = receive_data.tuning_command.bias;
+        command.current_tuning.mode = receive_data.tuning_command.tuning_mode;
+        command.mode_desired = CURRENT_TUNING;
+      } else {
+        if (update_parameters) {
+          tuning_trajectory_generator_.set_amplitude(receive_data.tuning_command.amplitude);
+          tuning_trajectory_generator_.set_frequency(receive_data.tuning_command.frequency);
+          tuning_trajectory_generator_.set_mode(static_cast<TuningMode>(receive_data.tuning_command.tuning_mode));
+        }
+        TrajectoryGenerator::TrajectoryValue traj = tuning_trajectory_generator_.step(dt_);
+        switch (receive_data.tuning_command.mode) {
+          case POSITION:
+            command.position_desired = traj.value + receive_data.tuning_command.bias;
+            command.velocity_desired = traj.value_dot;
+            command.mode_desired = POSITION;
+            break;
+          case VELOCITY:
+            command.velocity_desired = traj.value + receive_data.tuning_command.bias;
+            command.mode_desired = VELOCITY;
+            break;
+          case TORQUE:
+            command.torque_desired = traj.value + receive_data.tuning_command.bias;
+            command.torque_dot_desired = traj.value_dot;
+            command.mode_desired = TORQUE;
+            break;
+          default:
+            break;
+        }
       }
       return command;
     }
