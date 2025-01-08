@@ -318,6 +318,7 @@ class MainLoop {
           }
           dft_.step(status_.fast_loop.foc_command.desired.i_q, status_.fast_loop.foc_status.measured.i_q, 
             fast_loop_.get_tuning_frequency(), status_.fast_loop.timestamp);
+          *reserved0_ = status_.fast_loop.foc_command.desired.i_q;
           break;
         case TUNING:
           // should be in other modes
@@ -336,6 +337,7 @@ class MainLoop {
             }
             dft_.step(status_.fast_loop.foc_command.desired.v_q, status_.fast_loop.foc_status.measured.i_q, 
               fast_loop_.get_tuning_frequency(), status_.fast_loop.timestamp);
+            *reserved0_ = status_.fast_loop.foc_command.desired.v_q;
           } else {
             vq_des = command_current_.voltage.voltage_desired;
           }
