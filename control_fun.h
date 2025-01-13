@@ -116,6 +116,9 @@ public:
     void set_dt(float dt) {
         float frequency = get_frequency();
         dt_ = dt;
+        if (!std::isfinite(frequency)) {
+            frequency = 0;
+        }
         set_frequency(frequency);
     }
 private:
@@ -333,7 +336,7 @@ class TrajectoryGenerator {
     }
     void set_amplitude(float amplitude) { amplitude_ = amplitude; }
     void set_mode(TuningMode mode) {
-        if (mode <= TuningMode::CHIRP) {
+        if (mode <= TuningMode::RANDOM) {
             mode_ = mode;
             if (mode == TuningMode::CHIRP) {
                 chirp_rate_ = frequency_;
@@ -376,7 +379,6 @@ class TrajectoryGenerator {
                 }
                 break;
             case TuningMode::RANDOM: {
-                    low_pass_filter_.set_frequency(frequency_);
                     low_pass_filter_.set_dt(dt);
                     float raw = amplitude_ * (2 * (float) rand() * (1.0 / RAND_MAX) - 1);
                     float raw_scaled = raw * random_scale_;

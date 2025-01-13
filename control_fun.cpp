@@ -190,15 +190,16 @@ float PIDDeadbandController::step(float desired, float velocity_desired, float d
 
 void DFT::step(float value, float frequency_hz, mcu_time time) {
     float t_seconds = (time - time_start_)*(1.0/CPU_FREQUENCY_HZ);
-    real_ += value * std::cos(-2*M_PI*frequency_hz*t_seconds)/num_points_;
-    imag_ += value * std::sin(-2*M_PI*frequency_hz*t_seconds)/num_points_;
+    Sincos sc = sincos1(-2*M_PI*frequency_hz*t_seconds);
+    real_ += value * sc.cos/num_points_;
+    imag_ += value * sc.sin/num_points_;
     frequency_ += frequency_hz/num_points_;
     count_++;
     if (count_ > num_points_) {
         count_ = 1;
         frequency_last_ = frequency_;
-        magnitude_last_ = std::sqrt(real_ * real_ + imag_ * imag_) * 2;
-        phase_last_ = std::atan2(imag_, real_);
+        magnitude_last_ = std::sqrtf(real_ * real_ + imag_ * imag_) * 2;
+        phase_last_ = std::atan2f(imag_, real_);
         real_last_ = real_;
         imag_last_ = imag_;
         time_start_ = time;
