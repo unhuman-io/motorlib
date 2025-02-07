@@ -13,6 +13,12 @@ inline float fabsf2(float f) {
     return f >= 0 ? f : -f;
 }
 
+inline float sqrtf(float f) {
+    float r;
+    asm("vsqrt.f32 %[dst], %[src]" : [dst] "=t" (r) : [src] "t" (f));
+    return r;
+}
+
 class Hysteresis {
  public:
     float step(float);
