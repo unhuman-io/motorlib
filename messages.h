@@ -50,6 +50,7 @@ typedef struct {
                             // for linear encoders set to poles per mm * 2 * pi
     float id_rate_limit;    // A/s rate limit on the current d
     float iq_rate_limit;    // A/s rate limit on the current q
+    float voltage_limit;    // V output voltage limit
 } FOCParam;
 
 #define COGGING_TABLE_SIZE 128  // must be multiple of 2
