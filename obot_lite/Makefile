@@ -4,6 +4,8 @@ BUILD_DIR = build
 CC = arm-none-eabi-gcc
 AS = $(CC) -x assembler-with-cpp
 SZ = arm-none-eabi-size
+OPT = -Og -fsingle-precision-constant -O3
+LTO = -flto=auto
 .EXTRA_PREREQS += $(filter-out %.d, $(MAKEFILE_LIST))
 
 
@@ -13,8 +15,8 @@ SRCS = main.o startup_stm32g474xx.o
 OBJS = $(addprefix $(BUILD_DIR)/, $(SRCS))
 
 
-CFLAGS += -mcpu=cortex-m4 -mfloat-abi=hard -mfpu=fpv4-sp-d16 -DSTM32G474xx
-LDFLAGS += -TSTM32G474RETx_FLASH.ld -mcpu=cortex-m4 -mfloat-abi=hard -mfpu=fpv4-sp-d16 -Wl,--gc-sections  -u _printf_float
+CFLAGS += -mcpu=cortex-m4 -mfloat-abi=hard -mfpu=fpv4-sp-d16 -DSTM32G474xx $(OPT) -Wall -fdata-sections -ffunction-sections $(LTO)
+LDFLAGS += -TSTM32G474RETx_FLASH.ld -mcpu=cortex-m4 -mfloat-abi=hard -mfpu=fpv4-sp-d16 -Wl,--gc-sections,--print-memory-usage $(LTO)
 
 $(BUILD_DIR)/$(TARGET).elf: $(OBJS) | $(BUILD_DIR)
 	@echo "  LD    " $<
