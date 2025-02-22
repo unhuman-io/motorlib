@@ -43,8 +43,8 @@ typedef struct {
 } PIDParam;
 
 typedef struct {
-    PI2Param pi_d;           // PIParam for d axis current - often make the same as pi_q
-    PI2Param pi_q;           // PIParam for q axis current
+    PIParam pi_d;           // PIParam for d axis current - often make the same as pi_q
+    PIParam pi_q;           // PIParam for q axis current
     float current_filter_frequency_hz;  // First order filter on current measurements
     float num_poles;        // number of motor pole pairs - i.e. number of motor magnets/2
                             // for linear encoders set to poles per mm * 2 * pi
