@@ -70,6 +70,7 @@ class FastLoop {
       // cogging compensation, interpolate in the table
       float iq_ff = param_.cogging.gain * cogging_correction_table_.table_interp(motor_x);
 
+#ifndef NO_TUNING
       if (mode_ == CURRENT_TUNING_MODE) {
         TrajectoryGenerator::TrajectoryValue t = tuning_trajectory_generator_.step(dt_);
         iq_des = t.value + tuning_bias_;
@@ -90,18 +91,21 @@ class FastLoop {
           iq_ff += param_.beep_amplitude*fsignf(sincos.sin);
         }
       }
+#endif // NO_TUNING
 
       // update FOC
       foc_command_.measured.motor_encoder = phase_mode_*(motor_enc_wrap_ - motor_electrical_zero_dir_pos_)*(2*(float) M_PI  * inv_motor_encoder_cpr_);
       foc_command_.desired.i_q = iq_des_gain_ * (iq_des + iq_ff);
 
+#ifndef NO_TUNING
       if (mode_ == STEPPER_TUNING_MODE) {
         foc_command_.measured.motor_encoder = stepper_position_;
         motor_position_filtered_ = stepper_position_;
         stepper_position_ += stepper_velocity_ * dt_;
         stepper_position_ = wrap1(stepper_position_, 2*M_PI);
       }
-      
+#endif // NO_TUNING
+
       FOCStatus *foc_status = foc_->step(foc_command_);
 
       // output pwm
@@ -110,14 +114,16 @@ class FastLoop {
       dt_ = (timestamp_ - last_timestamp_)*(float) (1.0f/CPU_FREQUENCY_HZ);
       last_timestamp_ = timestamp_;
 
+#ifndef NO_TUNING
       if (zero_current_sensors_) {
         if ((int32_t) (get_clock()-zero_current_sensors_end_) > 0) {
           zero_current_sensors_ = false;
         } else {
           zero_current_sensors();
         }
-
       }
+#endif // NO_TUNING
+
       store_status();
 #ifdef END_TRIGGER_MOTOR_ENCODER
       encoder_.trigger();
