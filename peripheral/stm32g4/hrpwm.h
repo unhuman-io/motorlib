@@ -9,19 +9,20 @@
 
 class HRPWM : public PWMBase {
  public:
-    enum PWMPolarity {ON_VALLEY_VOLTAGE, ON_PEAK_VOLTAGE, ON_VALLEY_VOLTAGE_INV, ON_PEAK_VOLTAGE_INV};
+    enum PWMPolarity {ON_VALLEY, ON_PEAK};
     HRPWM(HRTIM_TypeDef &regs, volatile uint32_t &pwm_a, volatile uint32_t &pwm_b, volatile uint32_t &pwm_c) : 
-      regs_(regs), pwm_a_(pwm_a), pwm_b_(pwm_b), pwm_c_(pwm_c) {}
+      regs_(regs), pwm_a_(pwm_a), pwm_b_(pwm_b), pwm_c_(pwm_c), pwm_polarity_(ON_PEAK) {}
     HRPWM(uint32_t frequency_hz, HRTIM_TypeDef &regs, uint8_t ch_a, uint8_t ch_b, uint8_t ch_c, 
       bool pwm3_mode = false, uint16_t deadtime_ns = 50, uint16_t min_off_ns = 0, uint16_t min_on_ns = 0,
-      uint16_t current_sample_delay_ns = 0, PWMPolarity = ON_PEAK_VOLTAGE_INV) : 
+      uint16_t current_sample_delay_ns = 0, PWMPolarity pwm_polarity = ON_PEAK) : 
          regs_(regs),
          pwm_a_(regs.sTimerxRegs[ch_a].CMP1xR), 
          pwm_b_(regs.sTimerxRegs[ch_b].CMP1xR), 
          pwm_c_(regs.sTimerxRegs[ch_c].CMP1xR), 
          ch_a_(ch_a), ch_b_(ch_b), ch_c_(ch_c),
          pwm3_mode_(pwm3_mode),
-         deadtime_ns_(deadtime_ns) {
+         deadtime_ns_(deadtime_ns),
+         pwm_polarity_(pwm_polarity) {
       base_frequency_hz_ = frequency_hz;
       min_off_ns_ = min_off_ns;
       min_on_ns_ = min_on_ns;
@@ -90,6 +91,7 @@ class HRPWM : public PWMBase {
    float pwm_max_;
    int prescaler_ = 32;
    float count_per_ns_;
+   const PWMPolarity pwm_polarity_;
 };
 
 class HRPWM3 : public HRPWM {
