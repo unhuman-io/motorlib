@@ -10,7 +10,7 @@ using namespace obot;
 
 typedef MotorCommand ReceiveData;
 #ifndef CUSTOM_SENDDATA
-typedef MotorStatus SendData;
+typedef MotorStatusRegular SendData;
 #endif
 typedef MotorMode MainControlMode;
 typedef uint32_t mcu_time;  // a timestamp in cpu cycles

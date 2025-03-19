@@ -23,6 +23,15 @@ class APIVariable {
    virtual void set(std::string) = 0;
 };
 
+class APIStringView : public APIVariable {
+ public:
+   APIStringView(const std::string_view s) : value_(s) {}
+   void set(std::string s) {}
+   std::string get() const { return std::string(value_); }
+ private:
+   std::string_view value_;
+};
+
 template<class T>
 class APIVariable2 : public APIVariable {
  public:
