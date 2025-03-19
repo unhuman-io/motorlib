@@ -116,7 +116,7 @@ class System {
         api.add_api_variable("old_log", new const APICallback([]{ return logger.get_old_log(); }));
         api.add_api_variable("log_reset", new const APICallback([]()->std::string{ logger.reset_read_front(); return "ok"; }));
         api.add_api_variable("log_num", new const APICallbackUint32([]{ return logger.num_elements(); }));
-        api.add_api_variable("messages_version", new const APICallback([]()->std::string{ return MOTOR_MESSAGES_VERSION; }));
+        api.add_api_variable("messages_version", new const APIStringView(MOTOR_MESSAGES_VERSION));
         api.add_api_variable("index_pos", new const APICallbackInt32([]{ return actuator_.fast_loop_.encoder_.get_index_pos(); }));
         api.add_api_variable("index_received", new const APICallbackUint8([]()->uint8_t{return actuator_.fast_loop_.encoder_.index_received();}));
         api.add_api_variable("index_offset_measured", new const APIFloat(&actuator_.fast_loop_.motor_index_electrical_offset_measured_));
@@ -246,13 +246,13 @@ class System {
         api.add_api_variable("timestamp", new const APICallbackUint32(get_clock));
         api.add_api_variable("mrollover", new const APICallbackFloat([](){ return actuator_.fast_loop_.get_rollover(); }));
         api.add_api_variable("gear_ratio", new const APIFloat(&param->startup_param.gear_ratio));
-        api.add_api_variable("version", new const APICallback([]()->std::string{ return OBOT_VERSION; }));
-        api.add_api_variable("obot_hash", new const APICallback([]()->std::string{ return OBOT_HASH; }));
-        api.add_api_variable("motorlib_hash", new const APICallback([]()->std::string{ return MOTORLIB_HASH; }));
-        api.add_api_variable("name", new const APICallback([]()->std::string{ return param->name; }));
+        api.add_api_variable("version", new const APIStringView(OBOT_VERSION));
+        api.add_api_variable("obot_hash", new const APIStringView(OBOT_HASH));
+        api.add_api_variable("motorlib_hash", new const APIStringView(MOTORLIB_HASH));
+        api.add_api_variable("name", new const APIStringView(param->name));
         uint32_t api_timeout_us = 10000;
         api.add_api_variable("api_timeout", new APIUint32(&api_timeout_us));
-        api.add_api_variable("notes", new const APICallback([]()->std::string{ return NOTES; }));
+        api.add_api_variable("notes", new const APIStringView(NOTES));
         api.add_api_variable("tuning_desired", new const APIFloat(&actuator_.main_loop_.tuning_trajectory_generator_.trajectory_value_.value ));
         api.add_api_variable("dft_frequency", new const APIFloat(&actuator_.main_loop_.dft_.desired_.frequency_last_));
         api.add_api_variable("dft_desired_magnitude", new const APIFloat(&actuator_.main_loop_.dft_.desired_.magnitude_last_));
@@ -281,8 +281,8 @@ class System {
           }
           return std::string((char *) &long_packet, sizeof(long_packet));
         }));
-        api.add_api_variable("config", new const APICallback([]()->std::string{ return CONFIG; }));
-        api.add_api_variable("serial", new const APICallback([](){ return std::string(get_serial_number()); }));
+        api.add_api_variable("config", new const APIStringView(CONFIG));
+        api.add_api_variable("serial", new const APIStringView(get_serial_number()));
         api.add_api_variable("olimit_max", new APIFloat(&actuator_.main_loop_.encoder_limits_.output_hard_max));
         api.add_api_variable("olimit_min", new APIFloat(&actuator_.main_loop_.encoder_limits_.output_hard_min));
         api.add_api_variable("mlimit_max", new APIFloat(&actuator_.main_loop_.encoder_limits_.motor_hard_max));
