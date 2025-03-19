@@ -98,6 +98,7 @@ class System {
             [](float f){ if (f == 0) { actuator_.fast_loop_.foc_->pi_id_.ki_sum_ = 0; } actuator_.fast_loop_.foc_->pi_id_.ki_ = f; }));
         api.add_api_variable("idki_limit", new APIFloat(&actuator_.fast_loop_.foc_->pi_id_.ki_limit_));
         api.add_api_variable("idmax", new APIFloat(&actuator_.fast_loop_.foc_->pi_id_.command_max_));
+        api.add_api_variable("icmax", new APIFloat(&actuator_.fast_loop_.foc_->param_.voltage_limit));
         api.add_api_variable("idiq", new const APICallback([]{
                 actuator_.fast_loop_.foc_->pi_id_.kp_ = actuator_.fast_loop_.foc_->pi_iq_.kp_;
                 actuator_.fast_loop_.foc_->pi_id_.ki_ = actuator_.fast_loop_.foc_->pi_iq_.ki_;
