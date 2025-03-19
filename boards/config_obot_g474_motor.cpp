@@ -469,7 +469,8 @@ void system_init() {
     }));
     System::api.add_api_variable("deadtime", new APICallbackUint16([](){ 
         return config::motor_pwm.deadtime_ns_; }, [](uint16_t u) {config::motor_pwm.set_deadtime(u); }));
-
+    System::api.add_api_variable("idelay", new APICallbackUint16([](){ 
+        return config::motor_pwm.get_current_sample_delay(); }, [](uint16_t u) {config::motor_pwm.set_current_sample_delay(u); }));
     if (config::board_rev.has_bmi270) {
         System::api.add_api_variable("imu_read", new const APICallback([]()->std::string{ config::imu.read(); return "ok"; }));
         System::api.add_api_variable("ax", new const APICallbackFloat([]()->float{ return config::imu.data_.acc_x*8./pow(2,15); }));
