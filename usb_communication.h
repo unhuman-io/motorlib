@@ -14,7 +14,7 @@ class USBCommunication : public CommunicationBase {
 #ifdef USE_MOTOR_STATUS_LITE
     const uint16_t buffer_size = sizeof(MotorStatusLite);
 #else
-    const uint16_t buffer_size = sizeof(MotorStatus);
+    const uint16_t buffer_size = sizeof(MotorStatusRegular);
 #endif
        usb_.send_data(2, reinterpret_cast<const uint8_t *>(&data), buffer_size, false);
     }
