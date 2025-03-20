@@ -666,11 +666,13 @@ void main_maintenance() {
             if (Tmosfet > 125 || Tmosfet < -40) {
                 config::main_loop.status_.error.board_temperature = 1;
             }
-            float Tmosfet2 = mosfet_temperature_filter.update(config::temp_bridge2.read());
-            round_robin_logger.log_data(MOSFET2_TEMPERATURE_INDEX, Tmosfet2);
-            config::temp_bridge2.read();
-            if (Tmosfet2 > 125 || Tmosfet2 < -40) {
-                config::main_loop.status_.error.board_temperature = 1;
+            if (config::board_rev.has_bridge_thermistors >= 2) {
+                float Tmosfet2 = mosfet_temperature_filter.update(config::temp_bridge2.read());
+                round_robin_logger.log_data(MOSFET2_TEMPERATURE_INDEX, Tmosfet2);
+                config::temp_bridge2.read();
+                if (Tmosfet2 > 125 || Tmosfet2 < -40) {
+                    config::main_loop.status_.error.board_temperature = 1;
+                }
             }
         }
         if (config::board_rev.has_mb85rc64) {
