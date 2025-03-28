@@ -628,7 +628,7 @@ void system_maintenance() {
         i48v = -((float) I_BUS_DR-2048)/4096*v3v3/20/.0005;
         round_robin_logger.log_data(BUS_CURRENT_INDEX, i48v);
     }
-    round_robin_logger.log_data(BUS_VOLTAGE_INDEX, config::main_loop.status_.fast_loop.vbus);
+    round_robin_logger.log_data(BUS_VOLTAGE_RR_INDEX, config::main_loop.status_.fast_loop.vbus);
     round_robin_logger.log_data(USB_ERROR_COUNT_INDEX, config::usb.error_count_);
     config::main_loop.status_.error.driver_fault |= driver_fault;    // maybe latch driver fault until reset
     index_mod = config::motor_encoder.index_error(param->fast_loop_param.motor_encoder.cpr);
@@ -642,7 +642,7 @@ void main_maintenance() {
         ADC1->CR |= ADC_CR_JADSTART;
         while(ADC1->CR & ADC_CR_JADSTART);
         T = microcontroller_temperature_filter.update(config::temp_sensor.read());
-        round_robin_logger.log_data(MICROCONTROLLER_TEMPERATURE_INDEX, T);
+        round_robin_logger.log_data(TEMPERATURE_RR_INDEX, MICROCONTROLLER_TEMPERATURE_RR_SUBINDEX, T);
         v3v3 =  *((uint16_t *) (0x1FFF75AA)) * 3.0 * ADC1->GCOMP / 4096.0 / ADC1->JDR2;
         round_robin_logger.log_data(VOLTAGE_3V3_INDEX, v3v3);
         if (T > 100) {
@@ -662,13 +662,13 @@ void main_maintenance() {
 
         if (config::board_rev.has_bridge_thermistors) {
             float Tmosfet = mosfet_temperature_filter.update(config::temp_bridge.read());
-            round_robin_logger.log_data(MOSFET_TEMPERATURE_INDEX, Tmosfet);
+            round_robin_logger.log_data(TEMPERATURE_RR_INDEX, MOSFET_TEMPERATURE_SUBINDEX, Tmosfet);
             if (Tmosfet > 125 || Tmosfet < -40) {
                 config::main_loop.status_.error.board_temperature = 1;
             }
             if (config::board_rev.has_bridge_thermistors >= 2) {
                 float Tmosfet2 = mosfet_temperature_filter.update(config::temp_bridge2.read());
-                round_robin_logger.log_data(MOSFET2_TEMPERATURE_INDEX, Tmosfet2);
+                round_robin_logger.log_data(TEMPERATURE_RR_INDEX, MOSFET2_TEMPERATURE_RR_SUBINDEX, Tmosfet2);
                 config::temp_bridge2.read();
                 if (Tmosfet2 > 125 || Tmosfet2 < -40) {
                     config::main_loop.status_.error.board_temperature = 1;
