@@ -171,6 +171,36 @@ class System {
                 actuator_.main_loop_.unlock_status_log();
             }
             return out; }));
+        api.add_api_variable("main_log", new const APICallback([](){
+            std::string out;
+            for(int i=0; i<MAIN_LOG_LENGTH; i++) {
+                MainLoopStatus &status = actuator_.main_loop_.status_log_.next();
+                MainLog log = {};
+                log.fast_loop.timestamp = status.fast_loop.timestamp;
+                log.fast_loop.measured_motor_position = status.fast_loop.foc_command.measured.motor_encoder;
+                log.fast_loop.command_iq = status.fast_loop.foc_status.command.i_q;
+                log.fast_loop.measured_iq = status.fast_loop.foc_status.measured.i_q;
+                log.fast_loop.measured_ia = status.fast_loop.foc_command.measured.i_a;
+                log.fast_loop.measured_ib = status.fast_loop.foc_command.measured.i_b;
+                log.fast_loop.measured_ic = status.fast_loop.foc_command.measured.i_c;
+                log.fast_loop.command_va = status.fast_loop.foc_status.command.v_a;
+                log.fast_loop.command_vb = status.fast_loop.foc_status.command.v_b;
+                log.fast_loop.command_vc = status.fast_loop.foc_status.command.v_c;
+                log.torque = status.torque;
+                log.output_position = status.output_position;
+                log.output_velocity_filtered = status.output_velocity_filtered;
+                log.motor_position = status.motor_position;
+                log.motor_velocity_filtered = status.motor_velocity_filtered;
+                log.motor_temperature_estimate = status.motor_temperature_estimate;
+                log.mode = status.mode;
+                log.error.all = status.error.all;
+                log.power = status.power;
+                std::string s((char *) &log, sizeof(log));
+                actuator_.main_loop_.status_log_.finish();
+                out += s;
+                
+            }
+            return out; }));
         api.add_api_variable("beep", new const APICallbackFloat([](){ return 0.0; }, [](float f){ actuator_.fast_loop_.beep_on(f); }));
         api.add_api_variable("beep_frequency", new APIFloat(&actuator_.fast_loop_.param_.beep_frequency));
         api.add_api_variable("beep_amplitude", new APIFloat(&actuator_.fast_loop_.param_.beep_amplitude));
@@ -238,6 +268,7 @@ class System {
         }));
         api.add_api_variable("id_des", new APIFloat(&actuator_.fast_loop_.foc_command_.desired.i_d));
         api.add_api_variable("trigger_fast_log", new const APICallback([]()->std::string{ actuator_.fast_loop_.trigger_status_log(); return "triggered"; }));
+        api.add_api_variable("trigger_main_log", new const APICallback([]()->std::string{ actuator_.main_loop_.trigger_status_log(); return "triggered"; }));
         api.add_api_variable("ilimit", new APICallbackFloat([](){ return actuator_.fast_loop_.foc_->get_iq_limit(); },
             [](float f){ actuator_.fast_loop_.foc_->set_iq_limit(f); }));
         api.add_api_variable("idlimit", new APICallbackFloat([](){ return actuator_.fast_loop_.foc_->get_id_limit(); },

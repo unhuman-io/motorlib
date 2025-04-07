@@ -671,6 +671,7 @@ class MainLoop {
         }
         if (safe_mode_) {
           fast_loop_.trigger_status_log();
+          trigger_status_log();
           led_.set_color(LED::RED);
           led_.set_rate(2);
           if (param_.safe_mode_driver_disable && !(mode == DRIVER_ENABLE)) {
@@ -862,6 +863,10 @@ class MainLoop {
       fast_log_ready_ = true;
     }
 
+    void trigger_status_log() {
+      status_log_.copy(status_stack_);
+    }
+
     // use to set the command from another low priority source than communication, 
     // such as from the System or Actuator classes
     void set_command(const MotorCommand &command) {
@@ -919,7 +924,8 @@ class MainLoop {
     float *reserved0_ = &status_.fast_loop.vbus;
     PChipTable<OUTPUT_ENCODER_TABLE_LENGTH> output_encoder_correction_table_;
     PChipTable<TORQUE_TABLE_LENGTH> torque_correction_table_;
-    CStack<MainLoopStatus,2> status_stack_;
+    CStack<MainLoopStatus,MAIN_LOG_LENGTH> status_stack_;
+    CStack<MainLoopStatus,MAIN_LOG_LENGTH> status_log_;
     bool first_command_received_ = false;
     Driver &driver_;
     HardwareBrake brake_;
