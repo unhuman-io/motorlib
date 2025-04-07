@@ -175,7 +175,7 @@ class System {
             std::string out;
             for(int i=0; i<50; i++) {
                 MainLoopStatus &status = actuator_.main_loop_.status_log_.next();
-                MainLog log;
+                MainLog log = {};
                 log.fast_loop.timestamp = status.fast_loop.timestamp;
                 log.fast_loop.measured_motor_position = status.fast_loop.foc_command.measured.motor_encoder;
                 log.fast_loop.command_iq = status.fast_loop.foc_status.command.i_q;
@@ -268,6 +268,7 @@ class System {
         }));
         api.add_api_variable("id_des", new APIFloat(&actuator_.fast_loop_.foc_command_.desired.i_d));
         api.add_api_variable("trigger_fast_log", new const APICallback([]()->std::string{ actuator_.fast_loop_.trigger_status_log(); return "triggered"; }));
+        api.add_api_variable("trigger_main_log", new const APICallback([]()->std::string{ actuator_.main_loop_.trigger_status_log(); return "triggered"; }));
         api.add_api_variable("ilimit", new APICallbackFloat([](){ return actuator_.fast_loop_.foc_->get_iq_limit(); },
             [](float f){ actuator_.fast_loop_.foc_->set_iq_limit(f); }));
         api.add_api_variable("idlimit", new APICallbackFloat([](){ return actuator_.fast_loop_.foc_->get_id_limit(); },
