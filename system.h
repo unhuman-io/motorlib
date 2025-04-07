@@ -171,6 +171,25 @@ class System {
                 actuator_.main_loop_.unlock_status_log();
             }
             return out; }));
+        api.add_api_variable("main_log", new const APICallback([](){
+            static uint8_t main_state = 0;
+            actuator_.main_loop_.lock_main_status_log();
+            std::string out;
+            const uint8_t data_points_per_packet =  MAX_API_LONG_DATA_SIZE / sizeof(MainLoopStatus);
+            const uint8_t num_packets = (50 + data_points_per_packet - 1) / data_points_per_packet;
+            for(int i=0; i<num_packets; i++) {
+                MainLoopStatus &status = actuator_.main_loop_.status_log_.next();
+                std::string s((char *) &status, sizeof(status));
+                actuator_.main_loop_.status_log_.finish();
+                out += s;
+                
+            }
+            main_state++;
+            if (main_state > num_packets) {
+                main_state = 0;
+                actuator_.main_loop_.unlock_main_status_log();
+            }
+            return out; }));
         api.add_api_variable("beep", new const APICallbackFloat([](){ return 0.0; }, [](float f){ actuator_.fast_loop_.beep_on(f); }));
         api.add_api_variable("beep_frequency", new APIFloat(&actuator_.fast_loop_.param_.beep_frequency));
         api.add_api_variable("beep_amplitude", new APIFloat(&actuator_.fast_loop_.param_.beep_amplitude));

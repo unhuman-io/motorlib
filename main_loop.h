@@ -863,6 +863,11 @@ class MainLoop {
       fast_log_ready_ = true;
     }
 
+    void lock_main_status_log() {
+    }
+    void unlock_main_status_log() {
+    }
+    
     void trigger_status_log() {
       status_log_.copy(status_stack_);
     }
