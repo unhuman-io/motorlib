@@ -172,22 +172,33 @@ class System {
             }
             return out; }));
         api.add_api_variable("main_log", new const APICallback([](){
-            static uint8_t main_state = 0;
-            actuator_.main_loop_.lock_main_status_log();
             std::string out;
-            const uint8_t data_points_per_packet =  MAX_API_LONG_DATA_SIZE / sizeof(MainLoopStatus);
-            const uint8_t num_packets = (50 + data_points_per_packet - 1) / data_points_per_packet;
-            for(int i=0; i<num_packets; i++) {
+            for(int i=0; i<50; i++) {
                 MainLoopStatus &status = actuator_.main_loop_.status_log_.next();
-                std::string s((char *) &status, sizeof(status));
+                MainLog log;
+                log.fast_loop.timestamp = status.fast_loop.timestamp;
+                log.fast_loop.measured_motor_position = status.fast_loop.foc_command.measured.motor_encoder;
+                log.fast_loop.command_iq = status.fast_loop.foc_status.command.i_q;
+                log.fast_loop.measured_iq = status.fast_loop.foc_status.measured.i_q;
+                log.fast_loop.measured_ia = status.fast_loop.foc_command.measured.i_a;
+                log.fast_loop.measured_ib = status.fast_loop.foc_command.measured.i_b;
+                log.fast_loop.measured_ic = status.fast_loop.foc_command.measured.i_c;
+                log.fast_loop.command_va = status.fast_loop.foc_status.command.v_a;
+                log.fast_loop.command_vb = status.fast_loop.foc_status.command.v_b;
+                log.fast_loop.command_vc = status.fast_loop.foc_status.command.v_c;
+                log.torque = status.torque;
+                log.output_position = status.output_position;
+                log.output_velocity_filtered = status.output_velocity_filtered;
+                log.motor_position = status.motor_position;
+                log.motor_velocity_filtered = status.motor_velocity_filtered;
+                log.motor_temperature_estimate = status.motor_temperature_estimate;
+                log.mode = status.mode;
+                log.error.all = status.error.all;
+                log.power = status.power;
+                std::string s((char *) &log, sizeof(log));
                 actuator_.main_loop_.status_log_.finish();
                 out += s;
                 
-            }
-            main_state++;
-            if (main_state > num_packets) {
-                main_state = 0;
-                actuator_.main_loop_.unlock_main_status_log();
             }
             return out; }));
         api.add_api_variable("beep", new const APICallbackFloat([](){ return 0.0; }, [](float f){ actuator_.fast_loop_.beep_on(f); }));
