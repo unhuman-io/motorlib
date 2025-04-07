@@ -173,7 +173,7 @@ class System {
             return out; }));
         api.add_api_variable("main_log", new const APICallback([](){
             std::string out;
-            for(int i=0; i<50; i++) {
+            for(int i=0; i<MAIN_LOG_LENGTH; i++) {
                 MainLoopStatus &status = actuator_.main_loop_.status_log_.next();
                 MainLog log = {};
                 log.fast_loop.timestamp = status.fast_loop.timestamp;

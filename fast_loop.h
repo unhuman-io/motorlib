@@ -402,8 +402,8 @@ class FastLoop {
    FirstOrderLowPassFilter motor_position_filter_;
    
    FastLoopParam param_; // reallocate tables in ram
-   CStack<FastLoopStatus,100> status_;
-   CStack<FastLoopStatus,100> status_log_; // 24*4*100*2 = 19200 bytes
+   CStack<FastLoopStatus,FAST_LOG_LENGTH> status_;
+   CStack<FastLoopStatus,FAST_LOG_LENGTH> status_log_; // 24*4*100*2 = 19200 bytes
 
    friend class System;
    friend void system_init();

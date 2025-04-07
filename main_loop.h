@@ -924,8 +924,8 @@ class MainLoop {
     float *reserved0_ = &status_.fast_loop.vbus;
     PChipTable<OUTPUT_ENCODER_TABLE_LENGTH> output_encoder_correction_table_;
     PChipTable<TORQUE_TABLE_LENGTH> torque_correction_table_;
-    CStack<MainLoopStatus,50> status_stack_;
-    CStack<MainLoopStatus,50> status_log_;
+    CStack<MainLoopStatus,MAIN_LOG_LENGTH> status_stack_;
+    CStack<MainLoopStatus,MAIN_LOG_LENGTH> status_log_;
     bool first_command_received_ = false;
     Driver &driver_;
     HardwareBrake brake_;
