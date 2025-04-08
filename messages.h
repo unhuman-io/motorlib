@@ -271,6 +271,7 @@ typedef struct{
 typedef struct {
     struct { float i_d, i_q, v_q; } desired;         // desired current in A, i_d typically 0, i_q creates torque, v_q in V is a feedforward
     struct { float i_a, i_b, i_c, motor_encoder; } measured;    // sensor currents in A, motor_encoder in mechanical rad referenced to electrical zero
+    uint32_t motor_encoder_flags;               // format TBD
 } FOCCommand;
 
 typedef struct {
@@ -298,8 +299,10 @@ typedef struct {
     float motor_mechanical_position;    // counts referenced to index
     FOCCommand foc_command;
     float power;                        // estimated power in W
-    uint32_t energy_uJ;                  // rolling over sum of micro Joules (rollover at 4000J/1.1 Wh)
+    uint32_t energy_uJ;                 // rolling over sum of micro Joules (rollover at 4000J/1.1 Wh)
     float vbus;                         // bus voltage V
+    float ibus;                         // bus current A
+    uint32_t mode;                      // TBD format
 } FastLoopStatus; // 22*4 bytes
 
 typedef struct {
