@@ -1,5 +1,6 @@
 #include "parameter_api.h"
 #include "logger.h"
+#include <charconv>
 //#include <regex>
 //#include <sstream>
 
@@ -12,7 +13,8 @@ static std::string trim(std::string_view s)
 
 void ParameterAPI::add_api_variable(std::string_view name, APIVariable *var) {
     if (is_rom((void *) name.data())) {
-        variable_map_[name] = var;
+        variable_vector_.emplace_back(var);
+        variable_name_vector_.emplace_back(name);
         auto_complete_.add_match_string(name);
     } else {
         logger.log_printf("API variable %s not in ROM, not adding, location: %p", std::string(name), name.data());
@@ -21,7 +23,8 @@ void ParameterAPI::add_api_variable(std::string_view name, APIVariable *var) {
 
 void ParameterAPI::add_api_variable(std::string_view name, const APIVariable *var) {
     if (is_rom((void *) name.data())) {
-        const_variable_map_[name] = var;
+        const_variable_vector_.push_back(var);
+        const_name_vector_.push_back(name);
         auto_complete_.add_match_string(name);
     } else {
         logger.log_printf("API variable %s not in ROM, not adding, location: %p", std::string(name), name.data());
@@ -29,21 +32,55 @@ void ParameterAPI::add_api_variable(std::string_view name, const APIVariable *va
 }
 
 bool ParameterAPI::set_api_variable(std::string_view name, std::string value) {
-    if (variable_map_.count(name))  {
-        variable_map_[name]->set(value);
+    uint16_t index = lookup_index_by_string(name);
+    if (index < variable_vector_.size()) {
+        variable_vector_[index]->set(value);
+        return true;
+    }
+    return false;
+}
+
+bool ParameterAPI::set_api_variable(uint16_t index, std::string value) {
+    if (index < variable_vector_.size()) {
+        variable_vector_[index]->set(value);
         return true;
     }
     return false;
 }
 
 std::string ParameterAPI::get_api_variable(std::string_view name) {
+    uint16_t index = lookup_index_by_string(name);
+    return get_api_variable(index);
+}
+
+std::string ParameterAPI::get_api_variable(uint16_t index) {
     std::string out;
-    if (variable_map_.count(name)) {
-        out = variable_map_[name]->get();
-    } else if (const_variable_map_.count(name)) {
-        out = const_variable_map_[name]->get();
+    if (index < variable_vector_.size()) {
+        out = variable_vector_[index]->get();
+    } else if (index < const_variable_vector_.size() + variable_vector_.size()) {
+        out = const_variable_vector_[index-variable_vector_.size()]->get();
     }
     return out;
+}
+
+uint16_t ParameterAPI::lookup_index_by_string(std::string_view name) const {
+    if (std::all_of(name.begin(), name.end(), ::isdigit)) {
+        uint16_t index;
+        std::from_chars_result result = std::from_chars(name.data(), name.data() + name.size(), index);
+        logger.log_printf("from_chars result: %d, ec: %d", index, result.ec);
+        if (result.ec == std::errc()) {
+            return index;
+        }
+    }
+    auto it = std::find(variable_name_vector_.begin(), variable_name_vector_.end(), name);
+    if (it != variable_name_vector_.end()) {
+        return std::distance(variable_name_vector_.begin(), it);
+    }
+    it = std::find(const_name_vector_.begin(), const_name_vector_.end(), name);
+    if (it != const_name_vector_.end()) {
+        return std::distance(const_name_vector_.begin(), it) + variable_vector_.size();
+    }
+    return variable_vector_.size() + const_variable_vector_.size();
 }
 
 std::string ParameterAPI::parse_string(std::string_view s) {
@@ -51,7 +88,7 @@ std::string ParameterAPI::parse_string(std::string_view s) {
 
     try {
         bool autocomplete = false;
-        if (s.size() == 1) {
+        if (s.size() == 1 && !isdigit(s[0])) {
             autocomplete = true;
             out = auto_complete_.autocomplete(s[0]);
             if (out == "\n") {
@@ -67,6 +104,13 @@ std::string ParameterAPI::parse_string(std::string_view s) {
             auto value = trim(s.substr(equal_pos+1));
             if (variable == "api_name") {
                 out = get_api_variable_name(std::stoi(value));
+            } else if (variable == "api_index") {
+                uint16_t index = lookup_index_by_string(value);
+                if (index < get_api_length()) {
+                    out = std::to_string(index);
+                } else {
+                    out = value + " index lookup error";
+                }
             } else {
                 if (set_api_variable(variable, value)) {
                     out = variable + " set " + value;
@@ -89,34 +133,14 @@ std::string ParameterAPI::parse_string(std::string_view s) {
     }
 }
 
-std::string ParameterAPI::get_all_api_variables() const {
-    std::string s;
-    s = std::to_string(variable_map_.size() + const_variable_map_.size()) + " variables:\n";
-    for(auto const& m : variable_map_) {
-        s += std::string(m.first) + "\n";
-    }
-    for(auto const& m : const_variable_map_) {
-        s += std::string(m.first) + "\n";
-    }
-    return s;
-}
-
 uint16_t ParameterAPI::get_api_length() const {
-    return variable_map_.size() + const_variable_map_.size();
+    return variable_vector_.size() + const_variable_vector_.size();
 }
 
-std::string ParameterAPI::get_api_variable_name(uint16_t index) const {
+std::string_view ParameterAPI::get_api_variable_name(uint16_t index) const {
     std::string retval = "";
     if (index < get_api_length()) {
-        if (index >= variable_map_.size()) {
-            auto it = const_variable_map_.begin();
-            std::advance(it, index - variable_map_.size());
-            retval = it->first;
-        } else {
-            auto it = variable_map_.begin();
-            std::advance(it, index);
-            retval = it->first;
-        }
+        retval = variable_name_vector_[index];
     }
     return retval;
 }

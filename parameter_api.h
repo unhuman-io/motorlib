@@ -148,18 +148,28 @@ class APICallbackHex : public APIVariable {
 // allows for setting variables through text commands
 class ParameterAPI {
  public:
+    ParameterAPI() {
+        variable_vector_.reserve(200);
+        const_variable_vector_.reserve(200);
+        variable_name_vector_.reserve(200);
+        const_name_vector_.reserve(200);
+    }
     // type is used by scanf to parse the string
     void add_api_variable(const std::string_view name, APIVariable *variable);
     void add_api_variable(const std::string_view name, const APIVariable *variable);
     bool set_api_variable(const std::string_view name, std::string value);
+    bool set_api_variable(const uint16_t index, std::string value);
     std::string get_api_variable(std::string_view name);
+    std::string get_api_variable(uint16_t index);
     std::string parse_string(std::string_view);
-    std::string get_all_api_variables() const;
     uint16_t get_api_length() const;
-    std::string get_api_variable_name(uint16_t index) const;
+    std::string_view get_api_variable_name(uint16_t index) const;
+    uint16_t lookup_index_by_string(std::string_view name) const;
  private:
-    std::map<std::string_view, APIVariable *> variable_map_;
-    std::map<std::string_view, const APIVariable *> const_variable_map_;
+    std::vector<APIVariable *> variable_vector_;
+    std::vector<const APIVariable *> const_variable_vector_;
+    std::vector<std::string_view> variable_name_vector_;
+    std::vector<std::string_view> const_name_vector_;
     AutoComplete auto_complete_;
 };
 
