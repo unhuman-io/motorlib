@@ -145,6 +145,22 @@ class APICallbackHex : public APIVariable {
    void (*const setfun_)(T) = nullptr;
 };
 
+class APIGroup : public APIVariable {
+ public:
+    APIGroup(void (*const getfun)()) : getfun_(getfun) {}
+    virtual void set(std::string s) {}
+    virtual std::string get() const {
+      if (!expanded_) {
+        *const_cast<bool*>(&expanded_) = true;
+        getfun_();
+        return "expanded";
+      }
+      return "already expanded"; }
+ private:
+    void (*const getfun_)();
+    bool expanded_ = false;
+};
+
 // allows for setting variables through text commands
 class ParameterAPI {
  public:
@@ -157,6 +173,7 @@ class ParameterAPI {
     std::string get_all_api_variables() const;
     uint16_t get_api_length() const;
     std::string get_api_variable_name(uint16_t index) const;
+    void add_api_group(const std::string_view name, APIGroup *group);
  private:
     std::map<std::string_view, APIVariable *> variable_map_;
     std::map<std::string_view, const APIVariable *> const_variable_map_;
