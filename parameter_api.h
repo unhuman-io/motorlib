@@ -7,14 +7,15 @@
 #include "util.h"
 #include <algorithm>
 #include "autocomplete.h"
+#include "logger.h"
 
 #define API_ADD_FILTER(name, type, location) \
-    api.add_api_variable(#name, new APICallbackFloat([]{ return location.get_frequency(); },\
-        [](float f){ location.set_frequency(f); }));
+    api.add_api_variable<APICallbackFloat>(#name, []{ return location.get_frequency(); },\
+        [](float f){ location.set_frequency(f); });
 
 #define API_ADD_FILTER_WITH_API(api, name, location) \
-    api.add_api_variable(#name, new APICallbackFloat([]{ return location.get_frequency(); },\
-        [](float f){ location.set_frequency(f); }));
+    api.add_api_variable<APICallbackFloat>(#name, []{ return location.get_frequency(); },\
+        [](float f){ location.set_frequency(f); });
 
 
 class APIVariable {
@@ -155,7 +156,12 @@ class ParameterAPI {
     template<typename APIVar, typename... Ts>
     void add_api_variable(const std::string_view name, Ts&&... args) {
         Allocator<APIVar> alloc;
-        add_api_variable(name, new (const_cast<std::remove_const_t<APIVar>*>(alloc.allocate(1))) APIVar(std::forward<Ts>(args)...));
+        try {
+            add_api_variable(name, new (const_cast<std::remove_const_t<APIVar>*>(alloc.allocate(1))) APIVar(std::forward<Ts>(args)...));
+        } catch (std::bad_alloc& e) {
+            logger.log_printf("Error adding variable %s (%d): %s", std::string(name).c_str(), variable_map_.size(), e.what());
+        }
+        
     }
     
     bool set_api_variable(const std::string_view name, std::string value);
@@ -164,16 +170,32 @@ class ParameterAPI {
     std::string get_all_api_variables() const;
     uint16_t get_api_length() const;
     std::string get_api_variable_name(uint16_t index) const;
+    uint32_t memory_used() const {
+      return AllocatorBase::index_ * sizeof(uint32_t);
+    }
+
+#define API_SIZE 1580
+    class AllocatorBase {
+      public:
+        static uint32_t index_;
+        static uint32_t mem_[API_SIZE];
+    };
     template<typename T>
-    class Allocator {
+    class Allocator : public AllocatorBase {
       public:
         using value_type = T;
     
         T* allocate(std::size_t n) {
-            return static_cast<T*>(::operator new(n * sizeof(T)));
+            uint32_t new_index_ = index_ + (n * sizeof(T) + sizeof(uint32_t) - 1) / sizeof(uint32_t);
+            if (new_index_ > API_SIZE) {
+                throw std::bad_alloc();
+            }
+            T* ptr = reinterpret_cast<T*>(&mem_[index_]);
+            index_ = new_index_;
+            return ptr;
         }
         void deallocate(T* p, std::size_t) {
-            ::operator delete(p);
+            // never deallocates
         }
     };
  private:
