@@ -91,28 +91,27 @@ void system_init() {
     }
     config::torque_sensor.init();
 
-    System::api.add_api_variable("vref", new APIFloat(&v_ref));
-    System::api.add_api_variable("Tmicro", new APICallbackFloat([]{ return config::temp_sensor.get_value(); },
-        [](float f){ config::temp_sensor.set_value(f); }));
-    System::api.add_api_variable("Tdrv", new const APIFloat(&t_i2c));
-    System::api.add_api_variable("drv_err", new const APICallbackUint8([]()->uint8_t{return is_mps_driver_faulted();}));
-    System::api.add_api_variable("drv_enable", new APICallbackUint8(mps_driver_enable_status, mps_driver_enable));
-    System::api.add_api_variable("vam", new const APICallbackFloat([]()->float{ return (33.0+2.0)/2.0 * 3.0/4096 * V_A_DR; }));
-    System::api.add_api_variable("vbm", new const APICallbackFloat([]()->float{ return (33.0+2.0)/2.0 * 3.0/4096 * V_B_DR; }));
-    System::api.add_api_variable("vcm", new const APICallbackFloat([]()->float{ return (33.0+2.0)/2.0 * 3.0/4096 * V_C_DR; }));
-    System::api.add_api_variable("usb_err", new APIUint32(&config::usb.error_count_));
-    System::api.add_api_variable("usb_reset_count", new APIUint32(&config::usb.reset_count_));
-    System::api.add_api_variable("shutdown", new const APICallback([](){
+    System::api.add_api_variable<APIFloat>("vref", &v_ref);
+    System::api.add_api_variable<APICallbackFloat>("Tmicro", []{ return config::temp_sensor.get_value(); },
+        [](float f){ config::temp_sensor.set_value(f); });
+    System::api.add_api_variable<const APIFloat>("Tdrv", &t_i2c);
+    System::api.add_api_variable<const APICallbackUint8>("drv_err", []()->uint8_t{return is_mps_driver_faulted();});
+    System::api.add_api_variable<APICallbackUint8>("drv_enable", mps_driver_enable_status, mps_driver_enable);
+    System::api.add_api_variable<const APICallbackFloat>("vam", []()->float{ return (33.0+2.0)/2.0 * 3.0/4096 * V_A_DR; });
+    System::api.add_api_variable<const APICallbackFloat>("vbm", []()->float{ return (33.0+2.0)/2.0 * 3.0/4096 * V_B_DR; });
+    System::api.add_api_variable<const APICallbackFloat>("vcm", []()->float{ return (33.0+2.0)/2.0 * 3.0/4096 * V_C_DR; });
+    System::api.add_api_variable<APIUint32>("usb_err", &config::usb.error_count_);
+    System::api.add_api_variable<APIUint32>("usb_reset_count", &config::usb.reset_count_);
+    System::api.add_api_variable<const APICallback>("shutdown", [](){
         // requires power cycle to return 
         setup_sleep();
         SCB->SCR |= SCB_SCR_SLEEPDEEP_Msk;
         PWR->CR1 |= 0b100 << PWR_CR1_LPMS_Pos;
         __WFI();
         return std::string();
-    }));
-    System::api.add_api_variable("deadtime", new APICallbackUint16([](){ 
-        return config::motor_pwm.deadtime_ns_; }, [](uint16_t u) {config::motor_pwm.set_deadtime(u); }));
-
+    });
+    System::api.add_api_variable<APICallbackUint16>("deadtime", [](){ 
+        return config::motor_pwm.deadtime_ns_; }, [](uint16_t u) {config::motor_pwm.set_deadtime(u); });
     for (auto regs : std::vector<ADC_TypeDef*>{ADC1, ADC2, ADC3, ADC4, ADC5}) {
         regs->CR = ADC_CR_ADVREGEN;
         ns_delay(20000);
@@ -180,3 +179,4 @@ void system_maintenance() {
 void main_maintenance() {}
 
 #include "../../motorlib/system.cpp"
+

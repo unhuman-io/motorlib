@@ -12,77 +12,77 @@
 static uint8_t CRC_BiSS_43_30bit (uint32_t w_InputData);
 
 #define ICPZ_SET_DEBUG_VARIABLES(prefix, api, icpz) \
-    api.add_api_variable(prefix "ai_phase", new APICallbackFloat([]{ return icpz.get_ai_phase(); },\
-      [](float f){ icpz.set_ai_phase(f); }));\
-    api.add_api_variable(prefix "ai_scale", new APICallbackFloat([]{ return icpz.get_ai_scale(); },\
-      [](float f){ icpz.set_ai_scale(f); }));\
-    api.add_api_variable(prefix "cos_off", new const APICallbackFloat([](){ return icpz.get_cos_off(); }));\
-    api.add_api_variable(prefix "sin_off", new const APICallbackFloat([](){ return icpz.get_sin_off(); }));\
-    api.add_api_variable(prefix "sc_gain", new const APICallbackFloat([](){ return icpz.get_sc_gain(); }));\
-    api.add_api_variable(prefix "sc_phase", new const APICallbackFloat([](){ return icpz.get_sc_phase(); }));\
-    api.add_api_variable(prefix "ai_phases", new const APICallbackFloat([](){ return icpz.get_ai_phases(); }));\
-    api.add_api_variable(prefix "ai_scales", new const APICallbackFloat([](){ return icpz.get_ai_scales(); }));\
-    api.add_api_variable(prefix "ai_sel", new APICallbackHex<uint8_t>([](){ return icpz.get_ai_sel(); }, \
-        [](uint8_t u){ icpz.set_ai_sel(u); }));\
-    api.add_api_variable(prefix "cos_offs", new const APICallbackFloat([](){ return icpz.get_cos_offs(); }));\
-    api.add_api_variable(prefix "sin_offs", new const APICallbackFloat([](){ return icpz.get_sin_offs(); }));\
-    api.add_api_variable(prefix "sc_gains", new const APICallbackFloat([](){ return icpz.get_sc_gains(); }));\
-    api.add_api_variable(prefix "sc_phases", new const APICallbackFloat([](){ return icpz.get_sc_phases(); }));\
-    api.add_api_variable(prefix "sc_sel", new APICallbackHex<uint16_t>([](){ return icpz.get_sc_sel(); }, \
-        [](uint16_t u){ icpz.set_sc_sel(u); }));\
-    api.add_api_variable(prefix "err", new APIUint32(&icpz.error_count_));\
-    api.add_api_variable(prefix "warn", new APIUint32(&icpz.warn_count_));\
-    api.add_api_variable(prefix "crc_cnt", new APIUint32(&icpz.crc_error_count_));\
-    api.add_api_variable(prefix "raw", new APIUint32(&icpz.raw_value_));\
-    api.add_api_variable(prefix "rawh", new const APICallback([](){ return u32_to_hex(icpz.raw_value_); }));\
-    api.add_api_variable(prefix "value", new const APIInt32(&icpz.pos_));\
-    api.add_api_variable(prefix "diag", new const APICallback([](){ return icpz.read_diagnosis(); }));\
-    api.add_api_variable(prefix "conf_write", new const APICallback([](){ System::set_one_time_api_timeout_us(20000); return icpz.write_conf(); }));\
-    api.add_api_variable(prefix "conf_write_no_check", new const APICallback([](){ return icpz.write_conf_no_check(); }));\
-    api.add_api_variable(prefix "auto_ana", new const APICallback([](){ icpz.start_auto_adj_ana(); return std::string("ok"); }));\
-    api.add_api_variable(prefix "auto_dig", new const APICallback([](){ icpz.start_auto_adj_dig(); return std::string("ok"); }));\
-    api.add_api_variable(prefix "readj_dig", new const APICallback([](){ icpz.start_auto_readj_dig(); return std::string("ok"); }));\
-    api.add_api_variable(prefix "auto_ecc", new const APICallback([](){ icpz.start_auto_adj_ecc(); return std::string("ok"); }));\
-    api.add_api_variable(prefix "ecc_correction", new APICallbackUint8([]()->uint8_t{ return icpz.get_ecc_correction(); }, \
-        [](uint8_t u){ icpz.set_ecc_correction(u); }));\
-    api.add_api_variable(prefix "ran_tol", new APICallbackUint8([](){ return icpz.get_ran_tol(); }, \
-        [](uint8_t u){ icpz.set_ran_tol(u); }));\
-    api.add_api_variable(prefix "ran_fld", new APICallbackUint8([](){ return icpz.get_ran_fld(); }, \
-        [](uint8_t u){ icpz.set_ran_fld(u); }));\
-    api.add_api_variable(prefix "ecc_um", new APICallbackFloat([](){ return icpz.get_ecc_um(); }, \
-        [](float f){ icpz.set_ecc_um(f); }));\
-    api.add_api_variable(prefix "ecc_phase_deg", new APICallbackFloat([](){ return icpz.get_ecc_phase(); }, \
-        [](float f){ icpz.set_ecc_phase(f); }));\
-    api.add_api_variable(prefix "low", new APICallbackUint8([]()->uint8_t{ return icpz.get_ac_eto(); }, \
-        [](uint8_t u){ icpz.set_ac_eto(u); }));\
-    api.add_api_variable(prefix "ac_count", new APICallbackUint8([](){ return icpz.get_ac_count(); }, \
-        [](uint8_t u){ icpz.set_ac_count(u); }));\
-    api.add_api_variable(prefix "led_cur", new APICallbackUint8([](){ return icpz.get_led_cur(); }, \
-        [](uint8_t u){ icpz.set_led_cur(u); }));\
-    api.add_api_variable(prefix "ana_sel", new APICallbackUint8([](){ return icpz.get_ac_sel(); }, \
-        [](uint8_t u){ icpz.set_ac_sel(u); }));\
-    api.add_api_variable(prefix "cal", new const APICallback([](){ return icpz.get_cal_string(); }));\
-    api.add_api_variable(prefix "cals", new const APICallback([](){ return icpz.get_cals_string(); }));\
-    api.add_api_variable(prefix "cmd_result", new const APICallback([](){ return icpz.get_cmd_result(); }));\
-    api.add_api_variable(prefix "disk_um", new const APICallbackFloat([](){ return icpz.r_disk_um[icpz.disk_]; }));\
-    api.add_api_variable(prefix "ipo_filt1", new APICallbackHex<uint8_t>([](){ return icpz.get_ipo_filt1(); }, \
-        [](uint8_t u){ icpz.set_ipo_filt1(u); }));\
-    api.add_api_variable(prefix "ipo_filt2", new APICallbackHex<uint8_t>([](){ return icpz.get_ipo_filt2(); }, \
-        [](uint8_t u){ icpz.set_ipo_filt2(u); })); \
-    api.add_api_variable(prefix "temp", new const APICallbackFloat([]{ return icpz.get_temperature(); })); \
-    api.add_api_variable(prefix "diag_str", new const APICallback([](){ return icpz.read_diagnosis_str(); }));\
-    api.add_api_variable(prefix "clear_diag", new const APICallback([](){ icpz.clear_diag(); return std::string("ok"); }));\
-    api.add_api_variable(prefix "last_error_pos", new const APIInt32(&icpz.last_error_pos_));\
-    api.add_api_variable(prefix "last_warn_pos", new const APIInt32(&icpz.last_warn_pos_));\
-    api.add_api_variable(prefix "i2c_bank", new APICallbackHex<uint8_t>([](){ return icpz.i2c_bank_; }, \
-        [](uint8_t u){ icpz.i2c_bank_ = u; }));\
-    api.add_api_variable(prefix "i2c_adr", new APICallbackHex<uint8_t>([](){ return icpz.i2c_adr_; }, \
-        [](uint8_t u){ icpz.i2c_adr_ = u; }));\
-    api.add_api_variable(prefix "i2c", new APICallbackHex<uint8_t>([]{ return icpz.get_i2c_data(); }, \
-        [](uint8_t d){ icpz.set_i2c_data(d); }));\
-    api.add_api_variable(prefix "user_error", new APICallbackUint8([]{ return icpz.get_user_error(); }, \
-        [](uint8_t u){ icpz.set_user_error(u); }));\
-    api.add_api_variable(prefix "reset", new const APICallback([](){ icpz.reset(); return std::string("ok"); }));\
+    api.add_api_variable<APICallbackFloat>(prefix "ai_phase", []{ return icpz.get_ai_phase(); },\
+      [](float f){ icpz.set_ai_phase(f); });\
+    api.add_api_variable<APICallbackFloat>(prefix "ai_scale", []{ return icpz.get_ai_scale(); },\
+      [](float f){ icpz.set_ai_scale(f); });\
+    api.add_api_variable<const APICallbackFloat>(prefix "cos_off", [](){ return icpz.get_cos_off(); });\
+    api.add_api_variable<const APICallbackFloat>(prefix "sin_off", [](){ return icpz.get_sin_off(); });\
+    api.add_api_variable<const APICallbackFloat>(prefix "sc_gain", [](){ return icpz.get_sc_gain(); });\
+    api.add_api_variable<const APICallbackFloat>(prefix "sc_phase", [](){ return icpz.get_sc_phase(); });\
+    api.add_api_variable<const APICallbackFloat>(prefix "ai_phases", [](){ return icpz.get_ai_phases(); });\
+    api.add_api_variable<const APICallbackFloat>(prefix "ai_scales", [](){ return icpz.get_ai_scales(); });\
+    api.add_api_variable<APICallbackHex<uint8_t>>(prefix "ai_sel", [](){ return icpz.get_ai_sel(); }, \
+        [](uint8_t u){ icpz.set_ai_sel(u); });\
+    api.add_api_variable<const APICallbackFloat>(prefix "cos_offs", [](){ return icpz.get_cos_offs(); });\
+    api.add_api_variable<const APICallbackFloat>(prefix "sin_offs", [](){ return icpz.get_sin_offs(); });\
+    api.add_api_variable<const APICallbackFloat>(prefix "sc_gains", [](){ return icpz.get_sc_gains(); });\
+    api.add_api_variable<const APICallbackFloat>(prefix "sc_phases", [](){ return icpz.get_sc_phases(); });\
+    api.add_api_variable<APICallbackHex<uint16_t>>(prefix "sc_sel", [](){ return icpz.get_sc_sel(); }, \
+        [](uint16_t u){ icpz.set_sc_sel(u); });\
+    api.add_api_variable<APIUint32>(prefix "err", &icpz.error_count_);\
+    api.add_api_variable<APIUint32>(prefix "warn", &icpz.warn_count_);\
+    api.add_api_variable<APIUint32>(prefix "crc_cnt", &icpz.crc_error_count_);\
+    api.add_api_variable<APIUint32>(prefix "raw", &icpz.raw_value_);\
+    api.add_api_variable<const APICallback>(prefix "rawh", [](){ return u32_to_hex(icpz.raw_value_); });\
+    api.add_api_variable<const APIInt32>(prefix "value", &icpz.pos_);\
+    api.add_api_variable<const APICallback>(prefix "diag", [](){ return icpz.read_diagnosis(); });\
+    api.add_api_variable<const APICallback>(prefix "conf_write", [](){ System::set_one_time_api_timeout_us(20000); return icpz.write_conf(); });\
+    api.add_api_variable<const APICallback>(prefix "conf_write_no_check", [](){ return icpz.write_conf_no_check(); });\
+    api.add_api_variable<const APICallback>(prefix "auto_ana", [](){ icpz.start_auto_adj_ana(); return std::string("ok"); });\
+    api.add_api_variable<const APICallback>(prefix "auto_dig", [](){ icpz.start_auto_adj_dig(); return std::string("ok"); });\
+    api.add_api_variable<const APICallback>(prefix "readj_dig", [](){ icpz.start_auto_readj_dig(); return std::string("ok"); });\
+    api.add_api_variable<const APICallback>(prefix "auto_ecc", [](){ icpz.start_auto_adj_ecc(); return std::string("ok"); });\
+    api.add_api_variable<APICallbackUint8>(prefix "ecc_correction", []()->uint8_t{ return icpz.get_ecc_correction(); }, \
+        [](uint8_t u){ icpz.set_ecc_correction(u); });\
+    api.add_api_variable<APICallbackUint8>(prefix "ran_tol", [](){ return icpz.get_ran_tol(); }, \
+        [](uint8_t u){ icpz.set_ran_tol(u); });\
+    api.add_api_variable<APICallbackUint8>(prefix "ran_fld", [](){ return icpz.get_ran_fld(); }, \
+        [](uint8_t u){ icpz.set_ran_fld(u); });\
+    api.add_api_variable<APICallbackFloat>(prefix "ecc_um", [](){ return icpz.get_ecc_um(); }, \
+        [](float f){ icpz.set_ecc_um(f); });\
+    api.add_api_variable<APICallbackFloat>(prefix "ecc_phase_deg", [](){ return icpz.get_ecc_phase(); }, \
+        [](float f){ icpz.set_ecc_phase(f); });\
+    api.add_api_variable<APICallbackUint8>(prefix "low", []()->uint8_t{ return icpz.get_ac_eto(); }, \
+        [](uint8_t u){ icpz.set_ac_eto(u); });\
+    api.add_api_variable<APICallbackUint8>(prefix "ac_count", [](){ return icpz.get_ac_count(); }, \
+        [](uint8_t u){ icpz.set_ac_count(u); });\
+    api.add_api_variable<APICallbackUint8>(prefix "led_cur", [](){ return icpz.get_led_cur(); }, \
+        [](uint8_t u){ icpz.set_led_cur(u); });\
+    api.add_api_variable<APICallbackUint8>(prefix "ana_sel", [](){ return icpz.get_ac_sel(); }, \
+        [](uint8_t u){ icpz.set_ac_sel(u); });\
+    api.add_api_variable<const APICallback>(prefix "cal", [](){ return icpz.get_cal_string(); });\
+    api.add_api_variable<const APICallback>(prefix "cals", [](){ return icpz.get_cals_string(); });\
+    api.add_api_variable<const APICallback>(prefix "cmd_result", [](){ return icpz.get_cmd_result(); });\
+    api.add_api_variable<const APICallbackFloat>(prefix "disk_um", [](){ return icpz.r_disk_um[icpz.disk_]; });\
+    api.add_api_variable<APICallbackHex<uint8_t>>(prefix "ipo_filt1", [](){ return icpz.get_ipo_filt1(); }, \
+        [](uint8_t u){ icpz.set_ipo_filt1(u); });\
+    api.add_api_variable<APICallbackHex<uint8_t>>(prefix "ipo_filt2", [](){ return icpz.get_ipo_filt2(); }, \
+        [](uint8_t u){ icpz.set_ipo_filt2(u); });\
+    api.add_api_variable<const APICallbackFloat>(prefix "temp", []{ return icpz.get_temperature(); });\
+    api.add_api_variable<const APICallback>(prefix "diag_str", [](){ return icpz.read_diagnosis_str(); });\
+    api.add_api_variable<const APICallback>(prefix "clear_diag", [](){ icpz.clear_diag(); return std::string("ok"); });\
+    api.add_api_variable<const APIInt32>(prefix "last_error_pos", &icpz.last_error_pos_);\
+    api.add_api_variable<const APIInt32>(prefix "last_warn_pos", &icpz.last_warn_pos_);\
+    api.add_api_variable<APICallbackHex<uint8_t>>(prefix "i2c_bank", [](){ return icpz.i2c_bank_; }, \
+        [](uint8_t u){ icpz.i2c_bank_ = u; });\
+    api.add_api_variable<APICallbackHex<uint8_t>>(prefix "i2c_adr", [](){ return icpz.i2c_adr_; }, \
+        [](uint8_t u){ icpz.i2c_adr_ = u; });\
+    api.add_api_variable<APICallbackHex<uint8_t>>(prefix "i2c", []{ return icpz.get_i2c_data(); }, \
+        [](uint8_t d){ icpz.set_i2c_data(d); });\
+    api.add_api_variable<APICallbackUint8>(prefix "user_error", []{ return icpz.get_user_error(); }, \
+        [](uint8_t u){ icpz.set_user_error(u); });\
+    api.add_api_variable<const APICallback>(prefix "reset", [](){ icpz.reset(); return std::string("ok"); });\
 
 template<typename ConcreteICPZ>
 class ICPZBase : public EncoderBase {
@@ -883,3 +883,4 @@ uint8_t CRC_BiSS_43_30bit (uint32_t w_InputData)
 } 
 
 #endif  // UNHUMAN_MOTORLIB_ICPZ_H_
+

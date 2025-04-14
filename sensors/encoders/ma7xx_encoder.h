@@ -7,16 +7,16 @@
 #include "../../peripheral/spi_dma.h"
 
 #define MA7XX_SET_DEBUG_VARIABLES(prefix, api, ma7xx) \
-    api.add_api_variable(prefix "err", new APIUint32(&ma7xx.error_count_));\
-    api.add_api_variable(prefix "filt", new APICallbackUint8([]{ return ma7xx.get_filt(); }, \
-        [](uint8_t u){ ma7xx.set_filt(u); }));\
-    api.add_api_variable(prefix "bct", new APICallbackUint8([]{ return ma7xx.get_bct(); }, \
-        [](uint8_t u){ ma7xx.set_bct(u); }));\
-    api.add_api_variable(prefix "et", new APICallbackUint8([]{ return ma7xx.get_et(); }, \
-        [](uint8_t u){ ma7xx.set_et(u); }));\
-    api.add_api_variable(prefix "mgt", new APICallbackHex<uint16_t>([]{ return ma7xx.get_magnetic_field_strength(); }, \
-        [](uint16_t u){ ma7xx.set_mgt(u); }));\
-    api.add_api_variable(prefix "raw", new const APIUint16(&ma7xx.data_));\
+    api.add_api_variable<APIUint32>(prefix "err", &ma7xx.error_count_);\
+    api.add_api_variable<APICallbackUint8>(prefix "filt", []{ return ma7xx.get_filt(); }, \
+        [](uint8_t u){ ma7xx.set_filt(u); });\
+    api.add_api_variable<APICallbackUint8>(prefix "bct", []{ return ma7xx.get_bct(); }, \
+        [](uint8_t u){ ma7xx.set_bct(u); });\
+    api.add_api_variable<APICallbackUint8>(prefix "et", []{ return ma7xx.get_et(); }, \
+        [](uint8_t u){ ma7xx.set_et(u); });\
+    api.add_api_variable<APICallbackHex<uint16_t>>(prefix "mgt", []{ return ma7xx.get_magnetic_field_strength(); }, \
+        [](uint16_t u){ ma7xx.set_mgt(u); });\
+    api.add_api_variable<const APIUint16>(prefix "raw", &ma7xx.data_);\
 
 // Note MA7XX encoder expects cpol 1, cpha 1, max 25 mbit
 // 80 ns cs start to sclk, 25 ns sclk end to cs end
@@ -241,3 +241,5 @@ class MA730Encoder : public MA732Encoder {
 
 
 #endif  // UNHUMAN_MOTORLIB_MA7XX_ENCODER_H_
+
+

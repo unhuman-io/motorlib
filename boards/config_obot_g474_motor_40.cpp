@@ -98,25 +98,24 @@ void system_init() {
         System::log("Torque sensor init failure");
     }
 
-    System::api.add_api_variable("3v3", new APIFloat(&v3v3));
-    System::api.add_api_variable("Tmicro", new APICallbackFloat([]{ return config::temp_sensor.get_value(); },
-        [](float f){ config::temp_sensor.set_value(f); }));
-    System::api.add_api_variable("Tboard", new const APICallbackFloat([](){ return config::board_temperature.get_temperature(); }));
-    System::api.add_api_variable("index_mod", new APIInt32(&index_mod));
-    System::api.add_api_variable("drv_reset", new const APICallback([](){ return config::driver.reset(); }));
-    System::api.add_api_variable("usb_err", new APIUint32(&config::usb.error_count_));
-    System::api.add_api_variable("usb_reset_count", new APIUint32(&config::usb.reset_count_));
-    System::api.add_api_variable("shutdown", new const APICallback([](){
+    System::api.add_api_variable<APIFloat>("3v3", &v3v3);
+    System::api.add_api_variable<APICallbackFloat>("Tmicro", []{ return config::temp_sensor.get_value(); },
+        [](float f){ config::temp_sensor.set_value(f); });
+    System::api.add_api_variable<const APICallbackFloat>("Tboard", [](){ return config::board_temperature.get_temperature(); });
+    System::api.add_api_variable<APIInt32>("index_mod", &index_mod);
+    System::api.add_api_variable<const APICallback>("drv_reset", [](){ return config::driver.reset(); });
+    System::api.add_api_variable<APIUint32>("usb_err", &config::usb.error_count_);
+    System::api.add_api_variable<APIUint32>("usb_reset_count", &config::usb.reset_count_);
+    System::api.add_api_variable<const APICallback>("shutdown", [](){
         // requires power cycle to return 
         setup_sleep();
         SCB->SCR |= SCB_SCR_SLEEPDEEP_Msk;
         PWR->CR1 |= 0b100 << PWR_CR1_LPMS_Pos;
         __WFI();
         return std::string();
-    }));
-    System::api.add_api_variable("deadtime", new APICallbackUint16([](){ 
-        return config::motor_pwm.deadtime_ns_; }, [](uint16_t u) {config::motor_pwm.set_deadtime(u); }));
-
+    });
+    System::api.add_api_variable<APICallbackUint16>("deadtime", [](){ 
+        return config::motor_pwm.deadtime_ns_; }, [](uint16_t u) {config::motor_pwm.set_deadtime(u); });
     for (auto regs : std::vector<ADC_TypeDef*>{ADC1, ADC2, ADC3, ADC4, ADC5}) {
         regs->CR = ADC_CR_ADVREGEN;
         ns_delay(20000);
@@ -213,3 +212,4 @@ void finish_sleep() {
 }
 
 #include "../../motorlib/system.cpp"
+

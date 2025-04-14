@@ -428,67 +428,67 @@ void system_init() {
 
     DRV8323S_SET_DEBUG_API(System::api, config::drv);
 
-    System::api.add_api_variable("3v3", new APIFloat(&v3v3));
-    System::api.add_api_variable("Tmicro", new APICallbackFloat([]{ return config::temp_sensor.get_value(); },
-        [](float f){ config::temp_sensor.set_value(f); }));
+    System::api.add_api_variable<APIFloat>("3v3", &v3v3);
+    System::api.add_api_variable<APICallbackFloat>("Tmicro", []{ return config::temp_sensor.get_value(); },
+        [](float f){ config::temp_sensor.set_value(f); });
     if (config::board_rev.has_max31875) {
-        System::api.add_api_variable("Tboard", new const APICallbackFloat([](){ return config::board_temperature_max31875.get_temperature(); }));
+        System::api.add_api_variable<const APICallbackFloat>("Tboard", [](){ return config::board_temperature_max31875.get_temperature(); });
     } else if (config::board_rev.has_max31889) {
-        System::api.add_api_variable("Tboard", new const APICallbackFloat([](){ return config::board_temperature_max31889.get_temperature(); }));
+        System::api.add_api_variable<const APICallbackFloat>("Tboard", [](){ return config::board_temperature_max31889.get_temperature(); });
     }
     
     if (config::board_rev.has_bridge_thermistors) {
-        System::api.add_api_variable("Tbridge", new const APICallbackFloat([](){ return config::temp_bridge.read(); }));
-        System::api.add_api_variable("Tbridge2", new const APICallbackFloat([](){ return config::temp_bridge2.read(); }));
+        System::api.add_api_variable<const APICallbackFloat>("Tbridge", [](){ return config::temp_bridge.read(); });
+        System::api.add_api_variable<const APICallbackFloat>("Tbridge2", [](){ return config::temp_bridge2.read(); });
     }
-    System::api.add_api_variable("index_mod", new APIInt32(&index_mod));
-    System::api.add_api_variable("pwm_mult", new APICallbackUint8([](){return config::motor_pwm.get_frequency_multiplier();}, [](uint8_t mult){ config::motor_pwm.set_frequency_multiplier(mult);}));
-    System::api.add_api_variable("drv_err", new const APICallbackUint32([](){ return config::drv.get_drv_status(); }));
-    System::api.add_api_variable("drv_reset", new const APICallback([](){
+    System::api.add_api_variable<APIInt32>("index_mod", &index_mod);
+    System::api.add_api_variable<APICallbackUint8>("pwm_mult", [](){return config::motor_pwm.get_frequency_multiplier();}, [](uint8_t mult){ config::motor_pwm.set_frequency_multiplier(mult);});
+    System::api.add_api_variable<const APICallbackUint32>("drv_err", [](){ return config::drv.get_drv_status(); });
+    System::api.add_api_variable<const APICallback>("drv_reset", [](){
         System::set_one_time_api_timeout_us(30 * 1000);
-        return config::drv.drv_reset(); }));
-    System::api.add_api_variable("A1", new const APICallbackUint32([](){ return A1_DR; }));
-    System::api.add_api_variable("A2", new const APICallbackUint32([](){ return A2_DR; }));
-    System::api.add_api_variable("A3", new const APICallbackUint32([](){ return A3_DR; }));
-    System::api.add_api_variable("IA0", new const APIUint32(&ADC3->DR));
-    System::api.add_api_variable("IB0", new const APIUint32(&ADC4->DR));
-    System::api.add_api_variable("IC0", new const APIUint32(&ADC5->DR));
-    System::api.add_api_variable("IA", new const APIUint32(&ADC3->JDR1));
-    System::api.add_api_variable("IB", new const APIUint32(&ADC4->JDR1));
-    System::api.add_api_variable("IC", new const APIUint32(&ADC5->JDR1));
-    System::api.add_api_variable("usb_err", new APIUint32(&config::usb.error_count_));
-    System::api.add_api_variable("usb_reset_count", new APIUint32(&config::usb.reset_count_));
-    System::api.add_api_variable("hsi48_trim", new const APICallbackInt8([](){ return (int8_t) (((CRS->CR & CRS_CR_TRIM) >> CRS_CR_TRIM_Pos) - 64); }));
-    System::api.add_api_variable("shutdown", new const APICallback([](){
+        return config::drv.drv_reset(); });
+    System::api.add_api_variable<const APICallbackUint32>("A1", [](){ return A1_DR; });
+    System::api.add_api_variable<const APICallbackUint32>("A2", [](){ return A2_DR; });
+    System::api.add_api_variable<const APICallbackUint32>("A3", [](){ return A3_DR; });
+    System::api.add_api_variable<const APIUint32>("IA0", &ADC3->DR);
+    System::api.add_api_variable<const APIUint32>("IB0", &ADC4->DR);
+    System::api.add_api_variable<const APIUint32>("IC0", &ADC5->DR);
+    System::api.add_api_variable<const APIUint32>("IA", &ADC3->JDR1);
+    System::api.add_api_variable<const APIUint32>("IB", &ADC4->JDR1);
+    System::api.add_api_variable<const APIUint32>("IC", &ADC5->JDR1);
+    System::api.add_api_variable<APIUint32>("usb_err", &config::usb.error_count_);
+    System::api.add_api_variable<APIUint32>("usb_reset_count", &config::usb.reset_count_);
+    System::api.add_api_variable<const APICallbackInt8>("hsi48_trim", [](){ return (int8_t) (((CRS->CR & CRS_CR_TRIM) >> CRS_CR_TRIM_Pos) - 64); });
+    System::api.add_api_variable<const APICallback>("shutdown", [](){
         // requires power cycle to return 
         setup_sleep();
         SCB->SCR |= SCB_SCR_SLEEPDEEP_Msk;
         PWR->CR1 |= 0b100 << PWR_CR1_LPMS_Pos;
         __WFI();
         return std::string();
-    }));
-    System::api.add_api_variable("deadtime", new APICallbackUint16([](){ 
-        return config::motor_pwm.deadtime_ns_; }, [](uint16_t u) {config::motor_pwm.set_deadtime(u); }));
-    System::api.add_api_variable("idelay", new APICallbackUint16([](){ 
-        return config::motor_pwm.get_current_sample_delay(); }, [](uint16_t u) {config::motor_pwm.set_current_sample_delay(u); }));
+    });
+    System::api.add_api_variable<APICallbackUint16>("deadtime", [](){ 
+        return config::motor_pwm.deadtime_ns_; }, [](uint16_t u) {config::motor_pwm.set_deadtime(u); });
+    System::api.add_api_variable<APICallbackUint16>("idelay", [](){ 
+        return config::motor_pwm.get_current_sample_delay(); }, [](uint16_t u) {config::motor_pwm.set_current_sample_delay(u); });
     if (config::board_rev.has_bmi270) {
-        System::api.add_api_variable("imu_read", new const APICallback([]()->std::string{ config::imu.read(); return "ok"; }));
-        System::api.add_api_variable("ax", new const APICallbackFloat([]()->float{ return config::imu.data_.acc_x*8./pow(2,15); }));
-        System::api.add_api_variable("ay", new const APICallbackFloat([]()->float{ return config::imu.data_.acc_y*8./pow(2,15); }));
-        System::api.add_api_variable("az", new const APICallbackFloat([]()->float{ return config::imu.data_.acc_z*8./pow(2,15); }));
-        System::api.add_api_variable("gx", new const APICallbackFloat([]()->float{ return config::imu.data_.gyr_x*2000.*M_PI/180/pow(2,15); }));
-        System::api.add_api_variable("gy", new const APICallbackFloat([]()->float{ return config::imu.data_.gyr_y*2000.*M_PI/180/pow(2,15); }));
-        System::api.add_api_variable("gz", new const APICallbackFloat([]()->float{ return config::imu.data_.gyr_z*2000.*M_PI/180/pow(2,15); }));
+        System::api.add_api_variable<const APICallback>("imu_read", []()->std::string{ config::imu.read(); return "ok"; });
+        System::api.add_api_variable<const APICallbackFloat>("ax", []()->float{ return config::imu.data_.acc_x*8./pow(2,15); });
+        System::api.add_api_variable<const APICallbackFloat>("ay", []()->float{ return config::imu.data_.acc_y*8./pow(2,15); });
+        System::api.add_api_variable<const APICallbackFloat>("az", []()->float{ return config::imu.data_.acc_z*8./pow(2,15); });
+        System::api.add_api_variable<const APICallbackFloat>("gx", []()->float{ return config::imu.data_.gyr_x*2000.*M_PI/180/pow(2,15); });
+        System::api.add_api_variable<const APICallbackFloat>("gy", []()->float{ return config::imu.data_.gyr_y*2000.*M_PI/180/pow(2,15); });
+        System::api.add_api_variable<const APICallbackFloat>("gz", []()->float{ return config::imu.data_.gyr_z*2000.*M_PI/180/pow(2,15); });
     }
 
     if (config::board_rev.has_5V_sense) {
-        System::api.add_api_variable("5V", new const APIFloat(&v5v));
+        System::api.add_api_variable<const APIFloat>("5V", &v5v);
     }
     if (config::board_rev.has_I5V_sense) {
-        System::api.add_api_variable("i5V", new const APIFloat(&i5v));
+        System::api.add_api_variable<const APIFloat>("i5V", &i5v);
     }
     if (config::board_rev.has_I48V_sense) {
-        System::api.add_api_variable("i48V", new const APIFloat(&i48v));
+        System::api.add_api_variable<const APIFloat>("i48V", &i48v);
     }
 
     if (config::board_rev.has_bmi270) {
@@ -499,8 +499,8 @@ void system_init() {
             std::string s = "startup at " + std::to_string(total_uptime_start) + "\n";
             config::mb85rc64.write_log((uint8_t*) s.c_str(), s.size());
         }
-        System::api.add_api_variable("total_uptime", new const APIUint32(&total_uptime));
-        System::api.add_api_variable("fram_log", new APICallback([](){
+        System::api.add_api_variable<const APIUint32>("total_uptime", &total_uptime);
+        System::api.add_api_variable<APICallback>("fram_log", [](){
             config::i2c1.init(1000);
             std::string s = config::mb85rc64.get_log();
             config::i2c1.init(400);
@@ -509,13 +509,12 @@ void system_init() {
             config::i2c1.init(1000);
             config::mb85rc64.write_log((uint8_t *) s.c_str(), s.size());
             config::i2c1.init(400);
-        }));
+        });
     }
 
-    System::api.add_api_variable("mcmp", new APIUint32(&HRTIM1->sMasterRegs.MCMP1R));
-    System::api.add_api_variable("t1cmp", new APIUint32(&TIM1->CCR1));
-
-    System::api.add_api_variable("flash_cal", new const APICallback([]{
+    System::api.add_api_variable<APIUint32>("mcmp", &HRTIM1->sMasterRegs.MCMP1R);
+    System::api.add_api_variable<APIUint32>("t1cmp", &TIM1->CCR1);
+    System::api.add_api_variable<const APICallback>("flash_cal", []{
         System::set_one_time_api_timeout_us(100 * 1000);
         void * adr = &_eccmram; // End of ccmram is an empty ram space. The linker script ensures that there is enough 
                                 // space for the calibration to reside here temporarily
@@ -531,10 +530,10 @@ void system_init() {
         }
         config::flash.write((uint32_t) calibration, (uint32_t*) cal, sizeof(Calibration));
         return std::string("ok");
-    }));
+    });
 #if (COMMS == COMMS_CAN) || (COMMS == COMMS_CAN_USB)
-    System::api.add_api_variable("can_send_decimation", new APICallbackUint16([](){ return can_communication.get_send_decimation(); },
-        [](uint16_t decimation){ can_communication.set_send_decimation(decimation); }));
+    System::api.add_api_variable<APICallbackUint16>("can_send_decimation", [](){ return can_communication.get_send_decimation(); },
+        [](uint16_t decimation){ can_communication.set_send_decimation(decimation); });
 #endif
     for (auto regs : std::vector<ADC_TypeDef*>{ADC1, ADC2, ADC3, ADC4, ADC5}) {
         regs->CR = ADC_CR_ADVREGEN;
@@ -717,3 +716,7 @@ void finish_sleep() {
 
 
 #include "../../motorlib/system.cpp"
+
+
+
+
