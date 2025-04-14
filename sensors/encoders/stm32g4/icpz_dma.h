@@ -4,8 +4,8 @@
 
 #define ICPZDMA_SET_DEBUG_VARIABLES(prefix, api, icpz) \
     ICPZ_SET_DEBUG_VARIABLES(prefix, api, icpz);\
-    api.add_api_variable(prefix "remapped_error_count", new const APIUint32(&icpz.remapped_error_count_));\
-    api.add_api_variable(prefix "remapped_warn_count", new const APIUint32(&icpz.remapped_warn_count_));\
+    api.add_api_variable<const APIUint32>(prefix "remapped_error_count", &icpz.remapped_error_count_);\
+    api.add_api_variable<const APIUint32>(prefix "remapped_warn_count", &icpz.remapped_warn_count_);\
 
 class ICPZDMA : public ICPZBase<ICPZDMA> {
  public:

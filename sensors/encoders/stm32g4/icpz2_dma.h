@@ -7,26 +7,26 @@
 #define ICPZ2_SET_DEBUG_VARIABLES(prefix, api, icpz) \
     ICPZ_SET_DEBUG_VARIABLES(prefix, api, icpz.icpz_);\
     ICPZ_SET_DEBUG_VARIABLES(prefix "2", api, icpz.icpz2_);\
-    api.add_api_variable(prefix "1enc", new const APIUint32(&icpz.value1_.word));\
-    api.add_api_variable(prefix "2enc", new const APIUint32(&icpz.value2_.word));\
-    api.add_api_variable(prefix "3enc", new const APIUint32(&icpz.value3_.word));\
-    api.add_api_variable(prefix "disagreement_error", new APIUint32(&icpz.disagreement_error_));\
-    api.add_api_variable(prefix "1temp_nb", new const APICallbackFloat([]{ return icpz.get_temperature(0); }));\
-    api.add_api_variable(prefix "2temp_nb", new const APICallbackFloat([]{ return icpz.get_temperature(1); }));\
-    api.add_api_variable(prefix "1diag_nb", new const APICallback([]{ return icpz.get_diagnosis(0); }));\
-    api.add_api_variable(prefix "2diag_nb", new const APICallback([]{ return icpz.get_diagnosis(1); }));\
-    api.add_api_variable(prefix "1diag_str_nb", new const APICallback([]{ return icpz.get_diagnosis_str(0); }));\
-    api.add_api_variable(prefix "2diag_str_nb", new const APICallback([]{ return icpz.get_diagnosis_str(1); }));\
-    api.add_api_variable(prefix "1ai_phases_nb", new const APICallbackFloat([]{ return icpz.get_ai_phases(0); }));\
-    api.add_api_variable(prefix "2ai_phases_nb", new const APICallbackFloat([]{ return icpz.get_ai_phases(1); }));\
-    api.add_api_variable(prefix "diff", new const APIInt32(&icpz.diff_));\
-    api.add_api_variable(prefix "value", new const APIUint32(&icpz.value_.word));\
-    api.add_api_variable(prefix "ivalue", new const APICallbackInt32([] { return icpz.value_.ipos; }));\
-    api.add_api_variable(prefix "use_encoder", new APIUint8(&icpz.use_encoder_));\
-    api.add_api_variable(prefix "1remapped_error_count", new const APIUint32(&icpz.remapped_error_count_[0]));\
-    api.add_api_variable(prefix "2remapped_error_count", new const APIUint32(&icpz.remapped_error_count_[1]));\
-    api.add_api_variable(prefix "1remapped_warn_count", new const APIUint32(&icpz.remapped_warn_count_[0]));\
-    api.add_api_variable(prefix "2remapped_warn_count", new const APIUint32(&icpz.remapped_warn_count_[1]));\
+    api.add_api_variable<const APIUint32>(prefix "1enc", &icpz.value1_.word);\
+    api.add_api_variable<const APIUint32>(prefix "2enc", &icpz.value2_.word);\
+    api.add_api_variable<const APIUint32>(prefix "3enc", &icpz.value3_.word);\
+    api.add_api_variable<APIUint32>(prefix "disagreement_error", &icpz.disagreement_error_);\
+    api.add_api_variable<const APICallbackFloat>(prefix "1temp_nb",[]{ return icpz.get_temperature(0); });\
+    api.add_api_variable<const APICallbackFloat>(prefix "2temp_nb",[]{ return icpz.get_temperature(1); });\
+    api.add_api_variable<const APICallback>(prefix "1diag_nb",[]{ return icpz.get_diagnosis(0); });\
+    api.add_api_variable<const APICallback>(prefix "2diag_nb",[]{ return icpz.get_diagnosis(1); });\
+    api.add_api_variable<const APICallback>(prefix "1diag_str_nb",[]{ return icpz.get_diagnosis_str(0); });\
+    api.add_api_variable<const APICallback>(prefix "2diag_str_nb",[]{ return icpz.get_diagnosis_str(1); });\
+    api.add_api_variable<const APICallbackFloat>(prefix "1ai_phases_nb",[]{ return icpz.get_ai_phases(0); });\
+    api.add_api_variable<const APICallbackFloat>(prefix "2ai_phases_nb",[]{ return icpz.get_ai_phases(1); });\
+    api.add_api_variable<const APIInt32>(prefix "diff", &icpz.diff_);\
+    api.add_api_variable<const APIUint32>(prefix "value", &icpz.value_.word);\
+    api.add_api_variable<const APICallbackInt32>(prefix "ivalue",[] { return icpz.value_.ipos; });\
+    api.add_api_variable<APIUint8>(prefix "use_encoder", &icpz.use_encoder_);\
+    api.add_api_variable<const APIUint32>(prefix "1remapped_error_count", &icpz.remapped_error_count_[0]);\
+    api.add_api_variable<const APIUint32>(prefix "2remapped_error_count", &icpz.remapped_error_count_[1]);\
+    api.add_api_variable<const APIUint32>(prefix "1remapped_warn_count", &icpz.remapped_warn_count_[0]);\
+    api.add_api_variable<const APIUint32>(prefix "2remapped_warn_count", &icpz.remapped_warn_count_[1]);\
 
 
 

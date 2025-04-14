@@ -5,10 +5,10 @@
 #include "parameter_api.h"
 
 #define MAX11158_SET_DEBUG_VARIABLES(prefix, api, max) \
-    api.add_api_variable(prefix "raw", new const APIUint32(&max.raw_value_)); \
-    api.add_api_variable(prefix "max_int", new const APIInt32(&max.signed_value_)); \
-    api.add_api_variable(prefix "max_timeout_error", new const APIUint32(&max.timeout_error_)); \
-    api.add_api_variable(prefix "max_read_error", new const APIUint32(&max.read_error_)); \
+    api.add_api_variable<const APIUint32>(prefix "raw", &max.raw_value_);\
+    api.add_api_variable<const APIInt32>(prefix "max_int", &max.signed_value_);\
+    api.add_api_variable<const APIUint32>(prefix "max_timeout_error", &max.timeout_error_);\
+    api.add_api_variable<const APIUint32>(prefix "max_read_error", &max.read_error_);\
 
 // 3 Wire mode using MOSI set high
 class MAX11158 : public TorqueSensorBase {
