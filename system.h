@@ -50,6 +50,7 @@ class System {
         uint32_t cpu_frequency = CPU_FREQUENCY_HZ;
         //api.add_api_variable("system_count", new APIUint32((uint32_t *) &count_));
         api.add_api_variable<APIUint32>("system_count", &count_);
+        api.add_api_variable<const APIUint32>("system_count_const", &count_);
         //api.add_api_variable<const APIUint32>("mode", &actuator_.main_loop_.mode_);
         api.add_api_variable("mode", new APIUint32((uint32_t *) &actuator_.main_loop_.mode_));
         api.add_api_variable("kp", new APIFloat(&actuator_.main_loop_.position_controller_.controller_.kp_));

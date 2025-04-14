@@ -155,7 +155,7 @@ class ParameterAPI {
     template<typename APIVar, typename... Ts>
     void add_api_variable(const std::string_view name, Ts&&... args) {
         Allocator<APIVar> alloc;
-        add_api_variable(name, new (alloc.allocate(1)) APIVar(std::forward<Ts>(args)...));
+        add_api_variable(name, new (const_cast<std::remove_const_t<APIVar>*>(alloc.allocate(1))) APIVar(std::forward<Ts>(args)...));
     }
     
     bool set_api_variable(const std::string_view name, std::string value);
