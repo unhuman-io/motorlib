@@ -408,44 +408,42 @@ void system_init() {
 
     DRV8323S_SET_DEBUG_API(System::api, config::drv);
 
-    System::api.add_api_variable("3v3", new APIFloat(&v3v3));
-    System::api.add_api_variable("Tmicro", new APICallbackFloat([]{ return config::temp_sensor.get_value(); },
-        [](float f){ config::temp_sensor.set_value(f); }));
-    System::api.add_api_variable("index_mod", new APIInt32(&index_mod));
-    System::api.add_api_variable("pwm_mult", new APICallbackUint8([](){return config::motor_pwm.get_frequency_multiplier();}, [](uint8_t mult){ config::motor_pwm.set_frequency_multiplier(mult);}));
-    System::api.add_api_variable("drv_err", new const APICallbackUint32([](){ return config::drv.get_drv_status(); }));
-    System::api.add_api_variable("drv_reset", new const APICallback([](){
+    System::api.add_api_variable<APIFloat>("3v3", &v3v3);
+    System::api.add_api_variable<APICallbackFloat>("Tmicro", []{ return config::temp_sensor.get_value(); },
+        [](float f){ config::temp_sensor.set_value(f); });
+    System::api.add_api_variable<APIInt32>("index_mod", &index_mod);
+    System::api.add_api_variable<APICallbackUint8>("pwm_mult", [](){return config::motor_pwm.get_frequency_multiplier();}, [](uint8_t mult){ config::motor_pwm.set_frequency_multiplier(mult);});
+    System::api.add_api_variable<const APICallbackUint32>("drv_err", [](){ return config::drv.get_drv_status(); });
+    System::api.add_api_variable<const APICallback>("drv_reset", [](){
         System::set_one_time_api_timeout_us(30 * 1000);
-        return config::drv.drv_reset(); }));
-    System::api.add_api_variable("A1", new const APICallbackUint32([](){ return A1_DR; }));
-    System::api.add_api_variable("A2", new const APICallbackUint32([](){ return A2_DR; }));
-    System::api.add_api_variable("A3", new const APICallbackUint32([](){ return A3_DR; }));
-    System::api.add_api_variable("IA0", new const APIUint32(&ADC3->DR));
-    System::api.add_api_variable("IB0", new const APIUint32(&ADC4->DR));
-    System::api.add_api_variable("IC0", new const APIUint32(&ADC5->DR));
-    System::api.add_api_variable("IA", new const APIUint32(&ADC3->JDR1));
-    System::api.add_api_variable("IB", new const APIUint32(&ADC4->JDR1));
-    System::api.add_api_variable("IC", new const APIUint32(&ADC5->JDR1));
-    System::api.add_api_variable("usb_err", new APIUint32(&config::usb.error_count_));
-    System::api.add_api_variable("usb_reset_count", new APIUint32(&config::usb.reset_count_));
-    System::api.add_api_variable("hsi48_trim", new const APICallbackInt8([](){ return (int8_t) (((CRS->CR & CRS_CR_TRIM) >> CRS_CR_TRIM_Pos) - 64); }));
-    System::api.add_api_variable("shutdown", new const APICallback([](){
+        return config::drv.drv_reset(); });
+    System::api.add_api_variable<const APICallbackUint32>("A1", [](){ return A1_DR; });
+    System::api.add_api_variable<const APICallbackUint32>("A2", [](){ return A2_DR; });
+    System::api.add_api_variable<const APICallbackUint32>("A3", [](){ return A3_DR; });
+    System::api.add_api_variable<const APIUint32>("IA0", &ADC3->DR);
+    System::api.add_api_variable<const APIUint32>("IB0", &ADC4->DR);
+    System::api.add_api_variable<const APIUint32>("IC0", &ADC5->DR);
+    System::api.add_api_variable<const APIUint32>("IA", &ADC3->JDR1);
+    System::api.add_api_variable<const APIUint32>("IB", &ADC4->JDR1);
+    System::api.add_api_variable<const APIUint32>("IC", &ADC5->JDR1);
+    System::api.add_api_variable<APIUint32>("usb_err", &config::usb.error_count_);
+    System::api.add_api_variable<APIUint32>("usb_reset_count", &config::usb.reset_count_);
+    System::api.add_api_variable<const APICallbackInt8>("hsi48_trim", [](){ return (int8_t) (((CRS->CR & CRS_CR_TRIM) >> CRS_CR_TRIM_Pos) - 64); });
+    System::api.add_api_variable<const APICallback>("shutdown", [](){
         // requires power cycle to return 
         setup_sleep();
         SCB->SCR |= SCB_SCR_SLEEPDEEP_Msk;
         PWR->CR1 |= 0b100 << PWR_CR1_LPMS_Pos;
         __WFI();
         return std::string();
-    }));
-    System::api.add_api_variable("deadtime", new APICallbackUint16([](){ 
-        return config::motor_pwm.deadtime_ns_; }, [](uint16_t u) {config::motor_pwm.set_deadtime(u); }));
-        System::api.add_api_variable("idelay", new APICallbackUint16([](){ 
-            return config::motor_pwm.get_current_sample_delay(); }, [](uint16_t u) {config::motor_pwm.set_current_sample_delay(u); }));
-
-    System::api.add_api_variable("mcmp", new APIUint32(&HRTIM1->sMasterRegs.MCMP1R));
-    System::api.add_api_variable("t1cmp", new APIUint32(&TIM1->CCR1));
-
-    System::api.add_api_variable("flash_cal", new const APICallback([]{
+    });
+    System::api.add_api_variable<APICallbackUint16>("deadtime", [](){ 
+        return config::motor_pwm.deadtime_ns_; }, [](uint16_t u) {config::motor_pwm.set_deadtime(u); });
+        System::api.add_api_variable<APICallbackUint16>("idelay", [](){ 
+            return config::motor_pwm.get_current_sample_delay(); }, [](uint16_t u) {config::motor_pwm.set_current_sample_delay(u); });
+    System::api.add_api_variable<APIUint32>("mcmp", &HRTIM1->sMasterRegs.MCMP1R);
+    System::api.add_api_variable<APIUint32>("t1cmp", &TIM1->CCR1);
+    System::api.add_api_variable<const APICallback>("flash_cal", []{
         System::set_one_time_api_timeout_us(100 * 1000);
         void * adr = &_eccmram; // End of ccmram is an empty ram space. The linker script ensures that there is enough 
                                 // space for the calibration to reside here temporarily
@@ -461,7 +459,7 @@ void system_init() {
         }
         config::flash.write((uint32_t) calibration, (uint32_t*) cal, sizeof(Calibration));
         return std::string("ok");
-    }));
+    });
 
     for (auto regs : std::vector<ADC_TypeDef*>{ADC1, ADC2, ADC3, ADC4, ADC5}) {
         regs->CR = ADC_CR_ADVREGEN;
@@ -594,3 +592,5 @@ void finish_sleep() {
 
 
 #include "../../motorlib/system.cpp"
+
+

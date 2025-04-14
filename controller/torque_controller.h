@@ -6,13 +6,13 @@
 #include "../parameter_api.h"
 
 #define TORQUE_CONTROLLER_DEBUG_VARIABLES(api, tc) \
-    api.add_api_variable("tkp", new APIFloat(&tc.controller_.kp_)); \
-    api.add_api_variable("tkd", new APIFloat(&tc.controller_.kd_)); \
-    api.add_api_variable("tki", new APIFloat(&tc.controller_.ki_)); \
-    api.add_api_variable("tki_limit", new APIFloat(&tc.controller_.ki_limit_)); \
-    API_ADD_FILTER_WITH_API(api, t_velocity_filter, tc.controller_.velocity_filter_); \
-    API_ADD_FILTER_WITH_API(api, t_output_filter, tc.controller_.output_filter_); \
-    api.add_api_variable("tmax", new APIFloat(&tc.controller_.command_max_)); \
+    api.add_api_variable<APIFloat>("tkp", &tc.controller_.kp_);\
+    api.add_api_variable<APIFloat>("tkd", &tc.controller_.kd_);\
+    api.add_api_variable<APIFloat>("tki", &tc.controller_.ki_);\
+    api.add_api_variable<APIFloat>("tki_limit", &tc.controller_.ki_limit_);\
+    API_ADD_FILTER_WITH_API(api, t_velocity_filter, tc.controller_.velocity_filter_);\
+    API_ADD_FILTER_WITH_API(api, t_output_filter, tc.controller_.output_filter_);\
+    api.add_api_variable<APIFloat>("tmax", &tc.controller_.command_max_);\
 
 class TorqueController : public Controller {
  public:
@@ -43,3 +43,4 @@ class TorqueController : public Controller {
 };
 
 #endif  // UNHUMAN_MOTORLIB_CONTROLLER_TORQUE_CONTROLLER_H_
+

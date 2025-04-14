@@ -6,8 +6,8 @@
 #include "../parameter_api.h"
 
 #define STATE_CONTROLLER_DEBUG_VARIABLES(api, sc) \
-    api.add_api_variable("state_command_max", new APIFloat(&sc.param_.command_max));\
-    api.add_api_variable("state_ff_tau", new APIFloat(&sc.param_.ff_tau));\
+    api.add_api_variable<APIFloat>("state_command_max", &sc.param_.command_max);\
+    api.add_api_variable<APIFloat>("state_ff_tau", &sc.param_.ff_tau);\
     API_ADD_FILTER_WITH_API(api, state_output_filter, sc.output_filter_);\
     API_ADD_FILTER_WITH_API(api, state_velocity_error_filter, sc.velocity_error_filter_);\
     API_ADD_FILTER_WITH_API(api, state_torque_error_filter, sc.torque_error_filter_);\

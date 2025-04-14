@@ -150,9 +150,6 @@ class APICallbackHex : public APIVariable {
 // allows for setting variables through text commands
 class ParameterAPI {
  public:
-    // type is used by scanf to parse the string
-    void add_api_variable(const std::string_view name, APIVariable *variable);
-    void add_api_variable(const std::string_view name, const APIVariable *variable);
     template<typename APIVar, typename... Ts>
     void add_api_variable(const std::string_view name, Ts&&... args) {
         Allocator<APIVar> alloc;
@@ -199,6 +196,8 @@ class ParameterAPI {
         }
     };
  private:
+    void add_api_variable(const std::string_view name, APIVariable *variable);
+    void add_api_variable(const std::string_view name, const APIVariable *variable);
     std::map<std::string_view, APIVariable *, std::less<std::string_view>, Allocator<std::pair<const std::string_view, APIVariable *>>>
       variable_map_;
     std::map<std::string_view, const APIVariable *, std::less<std::string_view>, Allocator<std::pair<const std::string_view, const APIVariable *>>>

@@ -15,14 +15,14 @@ static const char* drv8323_status2_bits[11] = {"vgs_lc", "vgs_hc", "vgs_lb", "vg
 
 
 #define DRV8323S_SET_DEBUG_API(api, drv) \
-    api.add_api_variable("drv_idrivep_hs", new APICallbackUint8([](){ return drv.get_idrivep_hs(); },\
-        [](uint8_t val){ drv.set_idrivep_hs(val); }));\
-    api.add_api_variable("drv_idrivep_ls", new APICallbackUint8([](){ return drv.get_idrivep_ls(); },\
-        [](uint8_t val){ drv.set_idrivep_ls(val); }));\
-    api.add_api_variable("drv_tdrive", new APICallbackUint8([](){ return drv.get_tdrive(); },\
-        [](uint8_t val){ drv.set_tdrive(val); }));\
-    api.add_api_variable("drv_csa_reg", new APICallbackHex<uint16_t>([](){ return drv.get_csa_reg(); },\
-        [](uint16_t val){ drv.set_csa_reg(val); }));\
+    api.add_api_variable<APICallbackUint8>("drv_idrivep_hs", [](){ return drv.get_idrivep_hs(); },\
+        [](uint8_t val){ drv.set_idrivep_hs(val); });\
+    api.add_api_variable<APICallbackUint8>("drv_idrivep_ls", [](){ return drv.get_idrivep_ls(); },\
+        [](uint8_t val){ drv.set_idrivep_ls(val); });\
+    api.add_api_variable<APICallbackUint8>("drv_tdrive", [](){ return drv.get_tdrive(); },\
+        [](uint8_t val){ drv.set_tdrive(val); });\
+    api.add_api_variable<APICallbackHex<uint16_t>>("drv_csa_reg", [](){ return drv.get_csa_reg(); },\
+        [](uint16_t val){ drv.set_csa_reg(val); });\
         
 class DRV8323S : public DriverBase {
  public:
@@ -215,3 +215,4 @@ class DRV8323S : public DriverBase {
 };
 
 #endif  // UNHUMAN_MOTORLIB_PERIPHERAL_STM32G4_DRV8323S_H_
+
