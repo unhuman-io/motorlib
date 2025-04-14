@@ -145,21 +145,42 @@ class APICallbackHex : public APIVariable {
    void (*const setfun_)(T) = nullptr;
 };
 
+
 // allows for setting variables through text commands
 class ParameterAPI {
  public:
     // type is used by scanf to parse the string
     void add_api_variable(const std::string_view name, APIVariable *variable);
     void add_api_variable(const std::string_view name, const APIVariable *variable);
+    template<typename APIVar, typename... Ts>
+    void add_api_variable(const std::string_view name, Ts&&... args) {
+        Allocator<APIVar> alloc;
+        add_api_variable(name, new (alloc.allocate(1)) APIVar(std::forward<Ts>(args)...));
+    }
+    
     bool set_api_variable(const std::string_view name, std::string value);
     std::string get_api_variable(std::string_view name);
     std::string parse_string(std::string_view);
     std::string get_all_api_variables() const;
     uint16_t get_api_length() const;
     std::string get_api_variable_name(uint16_t index) const;
+    template<typename T>
+    class Allocator {
+      public:
+        using value_type = T;
+    
+        T* allocate(std::size_t n) {
+            return static_cast<T*>(::operator new(n * sizeof(T)));
+        }
+        void deallocate(T* p, std::size_t) {
+            ::operator delete(p);
+        }
+    };
  private:
-    std::map<std::string_view, APIVariable *> variable_map_;
-    std::map<std::string_view, const APIVariable *> const_variable_map_;
+    std::map<std::string_view, APIVariable *, std::less<std::string_view>, Allocator<std::pair<const std::string_view, APIVariable *>>>
+      variable_map_;
+    std::map<std::string_view, const APIVariable *, std::less<std::string_view>, Allocator<std::pair<const std::string_view, const APIVariable *>>>
+      const_variable_map_;
     AutoComplete auto_complete_;
 };
 

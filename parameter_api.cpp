@@ -12,7 +12,7 @@ static std::string trim(std::string_view s)
 
 void ParameterAPI::add_api_variable(std::string_view name, APIVariable *var) {
     if (is_rom((void *) name.data())) {
-        variable_map_[name] = var;
+        variable_map_.emplace(name, var);
         auto_complete_.add_match_string(name);
     } else {
         logger.log_printf("API variable %s not in ROM, not adding, location: %p", std::string(name), name.data());
@@ -21,7 +21,7 @@ void ParameterAPI::add_api_variable(std::string_view name, APIVariable *var) {
 
 void ParameterAPI::add_api_variable(std::string_view name, const APIVariable *var) {
     if (is_rom((void *) name.data())) {
-        const_variable_map_[name] = var;
+        const_variable_map_.emplace(name, var);
         auto_complete_.add_match_string(name);
     } else {
         logger.log_printf("API variable %s not in ROM, not adding, location: %p", std::string(name), name.data());

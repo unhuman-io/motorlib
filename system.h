@@ -48,7 +48,9 @@ class System {
         log("finished startup");
 
         uint32_t cpu_frequency = CPU_FREQUENCY_HZ;
-        api.add_api_variable("system_count", new APIUint32((uint32_t *) &count_));
+        //api.add_api_variable("system_count", new APIUint32((uint32_t *) &count_));
+        api.add_api_variable<APIUint32>("system_count", &count_);
+        //api.add_api_variable<const APIUint32>("mode", &actuator_.main_loop_.mode_);
         api.add_api_variable("mode", new APIUint32((uint32_t *) &actuator_.main_loop_.mode_));
         api.add_api_variable("kp", new APIFloat(&actuator_.main_loop_.position_controller_.controller_.kp_));
         api.add_api_variable("kd", new APIFloat(&actuator_.main_loop_.position_controller_.controller_.kd_));
@@ -146,6 +148,7 @@ class System {
             actuator_.main_loop_.lock_status_log();
             FastLog log;
             std::string out;
+            out.reserve(FAST_LOG_LENGTH * sizeof(log));
             for(int i=0; i<FAST_LOG_LENGTH; i++) {
                 FastLoopStatus &status = actuator_.fast_loop_.status_log_.next();
                 log.timestamp = status.timestamp;
@@ -168,6 +171,7 @@ class System {
             actuator_.main_loop_.lock_status_log();
             FastLog2 log;
             std::string out;
+            out.reserve(FAST_LOG_LENGTH * sizeof(log));
             for(int i=0; i<FAST_LOG_LENGTH; i++) {
                 FastLoopStatus &status = actuator_.fast_loop_.status_log_.next();
                 log.timestamp = status.timestamp;
