@@ -4,7 +4,7 @@
 //#include <sstream>
 
 uint32_t ParameterAPI::AllocatorBase::index_ = 0;
-uint32_t ParameterAPI::AllocatorBase::mem_[API_SIZE];// __attribute((section("ccmram")));
+uint32_t ParameterAPI::AllocatorBase::mem_[API_SIZE] __attribute((section(".bss.api")));
 
 static std::string trim(std::string_view s)
 {

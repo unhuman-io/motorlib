@@ -171,7 +171,7 @@ class ParameterAPI {
       return AllocatorBase::index_ * sizeof(uint32_t);
     }
 
-#define API_SIZE 1580
+#define API_SIZE 5000
     class AllocatorBase {
       public:
         static uint32_t index_;
