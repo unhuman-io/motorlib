@@ -50,6 +50,7 @@ class System {
         uint32_t cpu_frequency = CPU_FREQUENCY_HZ;
         api.add_api_variable("system_count", new APIUint32((uint32_t *) &count_));
         api.add_api_variable("mode", new APIUint32((uint32_t *) &actuator_.main_loop_.mode_));
+        api.add_api_variable("api_memory_used", new const APIUint32(&ParameterAPI::AllocatorBase::index_));
         api.add_api_variable("kp", new APIFloat(&actuator_.main_loop_.position_controller_.controller_.kp_));
         api.add_api_variable("kd", new APIFloat(&actuator_.main_loop_.position_controller_.controller_.kd_));
         api.add_api_variable("ki", new APIFloat(&actuator_.main_loop_.position_controller_.controller_.ki_));
