@@ -417,10 +417,10 @@ class TrajectoryGenerator {
 template<class T>
 inline T wrap1(T value, T rollover) {
     T diff = 2*rollover;
-    if (value > rollover) {
+    if (value > rollover) [[unlikely]] {
         value -= diff;
     }
-    if (value < -rollover) {
+    if (value < -rollover) [[unlikely]] {
         value += diff;
     }
     return value;
@@ -430,10 +430,10 @@ template<class T>
 inline T unwrap1(T value, T last_value, T rollover) {
     T diff = value - last_value;
     T diff2 = 2*rollover;
-    if (diff > rollover) {
+    if (diff > rollover) [[unlikely]] {
         value -= diff2;
     }
-    if (diff < -rollover) {
+    if (diff < -rollover) [[unlikely]] {
         value += diff2;
     }
     return value;
@@ -443,10 +443,10 @@ template<class T>
 inline T wrap1_diff(T value, T value2, T rollover) {
     T diff = value - value2;
     T diff2 = 2*rollover;
-    if (diff > rollover) {
+    if (diff > rollover) [[unlikely]] {
         diff = diff - diff2;
     }
-    if (diff < -rollover) {
+    if (diff < -rollover) [[unlikely]] {
         diff = diff + diff2;
     }
     return diff;

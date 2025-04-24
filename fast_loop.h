@@ -40,7 +40,7 @@ class FastLoop {
     ~FastLoop() {
        delete foc_;
     }
-    void update()  __attribute__((section (".ccmram"))) {
+    void update() {
          // trigger encoder read
 #ifndef END_TRIGGER_MOTOR_ENCODER
       // probably don't use end trigger on a shared spi bus
@@ -70,7 +70,7 @@ class FastLoop {
       // cogging compensation, interpolate in the table
       float iq_ff = param_.cogging.gain * cogging_correction_table_.table_interp(motor_x);
 
-      if (mode_ == CURRENT_TUNING_MODE) {
+      if (mode_ == CURRENT_TUNING_MODE) [[unlikely]] {
         TrajectoryGenerator::TrajectoryValue t = tuning_trajectory_generator_.step(dt_);
         iq_des = t.value + tuning_bias_;
       } else if (mode_ == VOLTAGE_TUNING_MODE) {
@@ -78,7 +78,7 @@ class FastLoop {
         set_vq_des(t.value + tuning_bias_);
       }
 
-      if (beep_) {
+      if (beep_) [[unlikely]] {
         if ((int32_t) (get_clock()-beep_end_) > 0) {
           beep_ = false;
         } else {
@@ -95,7 +95,7 @@ class FastLoop {
       foc_command_.measured.motor_encoder = phase_mode_*(motor_enc_wrap_ - motor_electrical_zero_dir_pos_)*(2*(float) M_PI  * inv_motor_encoder_cpr_);
       foc_command_.desired.i_q = iq_des_gain_ * (iq_des + iq_ff);
 
-      if (mode_ == STEPPER_TUNING_MODE) {
+      if (mode_ == STEPPER_TUNING_MODE) [[unlikely]] {
         foc_command_.measured.motor_encoder = stepper_position_;
         motor_position_filtered_ = stepper_position_;
         stepper_position_ += stepper_velocity_ * dt_;
@@ -110,7 +110,7 @@ class FastLoop {
       dt_ = (timestamp_ - last_timestamp_)*(float) (1.0f/CPU_FREQUENCY_HZ);
       last_timestamp_ = timestamp_;
 
-      if (zero_current_sensors_) {
+      if (zero_current_sensors_) [[unlikely]] {
         if ((int32_t) (get_clock()-zero_current_sensors_end_) > 0) {
           zero_current_sensors_ = false;
         } else {

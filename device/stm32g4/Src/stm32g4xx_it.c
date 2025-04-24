@@ -1,7 +1,7 @@
 
 #include "../../motorlib/system.h"
 
-void ADC5_IRQHandler(void) __attribute__((section (".ccmram")));
+void ADC5_IRQHandler(void) __attribute__((section (".ccmram"), flatten));
 void HRTIM1_Master_IRQHandler(void) __attribute__((section (".ccmram")));
 void TIM1_UP_TIM16_IRQHandler(void) __attribute__((section (".ccmram")));
 void USB_LP_IRQHandler(void) __attribute__((section (".ccmram")));
