@@ -8,6 +8,7 @@ DEBUG = 1
 # optimization
 OPT = -Og -fsingle-precision-constant -O3 
 LTO = -flto=auto
+CPPSTD = -std=gnu++23 -fmodules-ts
 
 #######################################
 # binaries
