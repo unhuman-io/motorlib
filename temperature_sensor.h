@@ -2,6 +2,7 @@
 #define UNHUMAN_MOTORLIB_TEMPERATURE_SENSOR_H_
 
 #include <cmath>
+#include <cstdint>
 
 class TemperatureSensor {
  public:

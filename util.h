@@ -161,7 +161,7 @@ class LeakyBucket {
     uint32_t leak_count_;
     uint32_t leak_period_;
 
-    friend class System;
+    //friend class System;
 };
 
 template <typename T, unsigned B>

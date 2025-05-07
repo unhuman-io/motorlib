@@ -78,6 +78,10 @@ $(SELF_DIR)../peripheral/stm32g4/flash.cpp\
 $(SELF_DIR)../peripheral/stm32g4/can.cpp\
 $(SELF_DIR)../boards/board_rev_trace.cpp\
 $(SELF_DIR)../boards/pin_config_obot_g474_trace.cpp\
+$(SELF_DIR)../boards/config_obot_g474_tracec.cpp\
+$(SELF_DIR)../system2.cpp\
+#$(SELF_DIR)../boards/config_obot_g474_traceb.cpp\
+
 
 
 endif # MCU_TARGET == stm32g474

@@ -1,6 +1,7 @@
 #ifndef UNHUMAN_MOTORLIB_PERIPHERAL_STM32G4_PIN_CONFIG_H_
 #define UNHUMAN_MOTORLIB_PERIPHERAL_STM32G4_PIN_CONFIG_H_
 
+#include <cstdint>
 
 #define MASK_SET(var, item, val) var = (var & ~item##_Msk) | (val << item##_Pos)
 #define GPIO_SETL(gpio, pin, mode, speed, af) \

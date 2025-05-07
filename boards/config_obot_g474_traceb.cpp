@@ -1,3 +1,4 @@
+module;
 #include "../peripheral/usb.h"
 #include "../usb_communication.h"
 #include "../peripheral/stm32g4/hrpwm.h"
@@ -28,22 +29,8 @@ import pin_config_obot_g474_trace;
 #endif
 
 #include "../communication.h"
-#include <protocol_parser.h>
-#include "../peripheral/stm32g4/spi_slave_figure.h"
-#include "../spi_communication_obot.h"
 
-#define COMMS_USB   1
-#define COMMS_SPI   2
-#define COMMS_UART  3
-#define COMMS_CAN   4
 
-#ifndef COMMS
-  #error "COMMS should be defined"
-#endif
-
-#if (COMMS != COMMS_USB) && (COMMS != COMMS_SPI) && (COMMS != COMMS_UART) && (COMMS != COMMS_CAN)
-  #error "Invalid COMMS value"
-#endif
 
 const Param * const param = (const Param * const) 0x8060000;
 const Calibration * const calibration = (const Calibration * const) 0x8070000;
@@ -53,33 +40,8 @@ namespace config {
 };
 
 using PWM = HRPWM;
+using Communication = USBCommunication;
 
-#if COMMS == COMMS_USB
-    using Communication = USBCommunication;
-#endif
-
-#if (COMMS == COMMS_SPI)
-    #include <protocol_parser.h>
-    using Communication = SPICommunication;
-#endif
-
-#if (COMMS == COMMS_UART)
-#ifdef COMMS_UART_OBOT
-    #include <protocol_parser.h>
-    #include "../uart_communication_obot.h"
-#else
-    #include "../uart_communication_protocol.h"
-    using UARTCommunicationProtocol = UARTRawProtocol<>; 
-    #include "../uart_communication.h"
-#endif
-    using Communication = UARTCommunication;
-#endif
-
-#if (COMMS == COMMS_CAN)
-    #include "../communication/can_communication.h"
-    #include "../peripheral/stm32g4/can.h"
-    using Communication = CANCommunication<CAN>;
-#endif
 
 using Driver = DRV8323S;
 uint16_t drv_regs_error = 0;
@@ -176,131 +138,6 @@ namespace config {
 
     const BoardRev board_rev = get_board_rev();
 
-#if COMMS == COMMS_SPI
- SpiSlaveFigure spi({
-      .spi          = SPI1,
-      .gpioPort     = GPIOA,
-      .gpioPinSs    = 4U,
-      .gpioPinSck   = 5U,
-      .gpioPinMosi  = 7U,
-      .gpioPinMiso  = 6U,
-
-      .gpioAlternateFunction = 5U,
-
-      .gpioRccEnableRegister = &RCC->AHB2ENR,
-      .gpioRccEnableBit      = RCC_AHB2ENR_GPIOAEN_Pos,
-      .spiRccEnableRegister = &RCC->APB2ENR,
-      .spiRccEnableBit      = RCC_APB2ENR_SPI1EN_Pos,
-      .spiRccResetRegister  = &RCC->APB2RSTR,
-      .spiRccResetBit       = RCC_APB2RSTR_SPI1RST_Pos,
-
-      .rxDma            = DMA2,
-      .rxDmaIfcrCgif    = DMA_IFCR_CGIF1,
-      .rxDmaChannel     = DMA2_Channel1,
-      .rxDmaMuxChannel  = DMAMUX1_Channel8,
-      .rxDmaMuxId       = 10U,
-      .rxDmaIrqN        = DMA2_Channel1_IRQn,
-      .rxDmaIrqPriority = 1U,
-
-      .txDma            = DMA2,
-      .txDmaIfcrCgif    = DMA_IFCR_CGIF2,
-      .txDmaChannel     = DMA2_Channel2,
-      .txDmaMuxChannel  = DMAMUX1_Channel9,
-      .txDmaMuxId       = 11U,
-      .txDmaIrqN        = DMA2_Channel2_IRQn,
-      .txDmaIrqPriority = 5U,
-    });
-#endif // COMMS_SPI
-
-#if COMMS == COMMS_UART
-#if COMMS_UART_NUMBER == 2
-    Uart uart({
-      .usart        = USART2,
-      .gpioPort     = GPIOA,
-      .gpioPinTx    = 2U,
-      .gpioPinRx    = 3U,
-
-      .gpioAlternateFunction = 7U,
-
-      .gpioRccEnableRegister = &RCC->AHB2ENR,
-      .gpioRccEnableBit      = RCC_AHB2ENR_GPIOAEN_Pos,
-      .uartRccEnableRegister  = &RCC->APB1ENR1,
-      .uartRccEnableBit       = RCC_APB1ENR1_USART2EN_Pos,
-      .uartRccResetRegister   = &RCC->APB1RSTR1,
-      .uartRccResetBit        = RCC_APB1RSTR1_USART2RST_Pos,
-
-      .uartIrqN               = USART2_IRQn,
-
-      .rxDma            = DMA2,
-      .rxDmaIfcrCgif    = DMA_IFCR_CGIF3,
-      .rxDmaChannel     = DMA2_Channel1,
-      .rxDmaMuxChannel  = DMAMUX1_Channel8,
-      .rxDmaMuxId       = 26U,
-      .rxDmaIrqN        = DMA2_Channel1_IRQn,
-
-      .txDma            = DMA2,
-      .txDmaIfcrCgif    = DMA_IFCR_CGIF4,
-      .txDmaChannel     = DMA2_Channel2,
-      .txDmaMuxChannel  = DMAMUX1_Channel9,
-      .txDmaMuxId       = 27U,
-      .txDmaIrqN        = DMA2_Channel2_IRQn,
-
-      .irqPriority = 2U,
-
-      .brrValue         = (uint32_t)((CPU_FREQUENCY_HZ + COMMS_UART_BAUDRATE/2)/ COMMS_UART_BAUDRATE)   // rounding
-    });
-#else // default usart1
-    Uart uart({
-      .usart        = USART1,
-      .gpioPort     = GPIOA,
-      .gpioPinTx    = 9U,
-      .gpioPinRx    = 10U,
-
-      .gpioAlternateFunction = 7U,
-
-      .gpioRccEnableRegister = &RCC->AHB2ENR,
-      .gpioRccEnableBit      = RCC_AHB2ENR_GPIOAEN_Pos,
-      .uartRccEnableRegister  = &RCC->APB2ENR,
-      .uartRccEnableBit       = RCC_APB2ENR_USART1EN_Pos,
-      .uartRccResetRegister   = &RCC->APB2RSTR,
-      .uartRccResetBit        = RCC_APB2RSTR_USART1RST_Pos,
-
-      .uartIrqN               = USART1_IRQn,
-
-      .rxDma            = DMA2,
-      .rxDmaIfcrCgif    = DMA_IFCR_CGIF3,
-      .rxDmaChannel     = DMA2_Channel1,
-      .rxDmaMuxChannel  = DMAMUX1_Channel8,
-      .rxDmaMuxId       = 24U,
-      .rxDmaIrqN        = DMA2_Channel1_IRQn,
-
-      .txDma            = DMA2,
-      .txDmaIfcrCgif    = DMA_IFCR_CGIF4,
-      .txDmaChannel     = DMA2_Channel2,
-      .txDmaMuxChannel  = DMAMUX1_Channel9,
-      .txDmaMuxId       = 25U,
-      .txDmaIrqN        = DMA2_Channel2_IRQn,
-
-      .irqPriority = 2U,
-
-      .brrValue         = (uint32_t)((CPU_FREQUENCY_HZ + COMMS_UART_BAUDRATE/2)/ COMMS_UART_BAUDRATE)   // rounding
-    });
-#endif // COMMS_UART_NUMBER
-#ifdef COMMS_UART_OBOT
-    figure::ProtocolParser uart_protocol(config::uart.rx_buffer_, RX_BUFFER_SIZE);
-#else
-    UARTCommunicationProtocol uart_protocol; 
-#endif
-#endif // COMMS_UART
-
-#if COMMS == COMMS_CAN
-    CAN can(CAN_NUM);
-#endif
-
-#if COMMS == COMMS_SPI
-    figure::ProtocolParser spi_protocol(config::spi.rx_buffer_, RX_BUFFER_SIZE);
-#endif
-
     HRPWM motor_pwm = {pwm_frequency, *HRTIM1, 3, 5, 4, false, 50, 1000, 1000};
     USB1 usb;
     FastLoop fast_loop = {(int32_t) pwm_frequency, motor_pwm, motor_encoder, param->fast_loop_param, *calibration, &I_A_DR, &I_B_DR, &I_C_DR, &V_BUS_DR};
@@ -334,26 +171,7 @@ namespace config {
     MainLoop main_loop = {main_loop_frequency, fast_loop, position_controller, torque_controller, impedance_controller, velocity_controller, state_controller, joint_position_controller, admittance_controller, System::communication_, led, output_encoder, torque_sensor, drv, param->main_loop_param, *calibration};
 };
 
-#if COMMS == COMMS_USB
 Communication System::communication_ = {config::usb};
-#endif
-
-#if (COMMS == COMMS_SPI)
-Communication System::communication_(config::spi, config::spi_protocol);
-#endif
-
-#if (COMMS == COMMS_UART)
-Communication System::communication_(config::uart, config::uart_protocol);
-extern "C" void PendSV_Handler(void) {
-  SET_SCOPE_PIN(C,2);
-  System::communication_.parse();
-  CLEAR_SCOPE_PIN(C,2);
-}
-#endif
-
-#if (COMMS == COMMS_CAN)
-Communication System::communication_(config::can, param->can_id);
-#endif
 
 void usb_interrupt() {
     config::usb.interrupt();
