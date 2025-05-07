@@ -9,6 +9,14 @@
 #include "../peripheral/stm32g4/flash.h"
 #include "../peripheral/stm32g4/rtc.h"
 
+import pin_config_obot_g474_trace;
+
+#include <map>
+#include <string>
+#include "../otp.h"
+#include "st_device.h"
+#include "../peripheral/stm32_serial.h"
+
 #ifdef SCOPE_DEBUG
 #define SET_SCOPE_PIN(X,x) GPIO##X->BSRR = 1 << x
 #define CLEAR_SCOPE_PIN(X,x) GPIO##X->BSRR = 1 << (16 + x)
@@ -110,7 +118,7 @@ uint16_t drv_regs_error = 0;
 #include "../main_loop.h"
 #include "../actuator.h"
 #include "../system.h"
-#include "pin_config_obot_g474_trace.h"
+
 #include "../peripheral/stm32g4/temp_sensor.h"
 #include "../temperature_sensor.h"
 #include "../peripheral/stm32g4/i2c_dma.h"
@@ -122,7 +130,7 @@ uint16_t drv_regs_error = 0;
 #include "../messages.h"
 
 extern "C" void SystemClock_Config();
-void pin_config_obot_g474_trace(const BoardRev&);
+//void pin_config_obot_g474_trace(const BoardRev&);
 
 extern "C" void board_init() {
     const BoardRev board_rev = get_board_rev();

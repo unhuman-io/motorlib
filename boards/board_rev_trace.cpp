@@ -1,4 +1,4 @@
-#pragma once
+module;
 
 #include <map>
 #include <string>
@@ -6,11 +6,13 @@
 #include "st_device.h"
 #include "../peripheral/stm32_serial.h"
 
-struct BoardRev {
+export module board_rev_trace;
+
+export struct BoardRev {
     enum Rev {kR0, kR1} rev;
 };
 
-BoardRev get_board_rev() {
+export BoardRev get_board_rev() {
     init_serial_number();
     BoardRev b = {};
 

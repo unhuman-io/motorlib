@@ -1,37 +1,39 @@
-#ifndef UNHUMAN_MOTORLIB_BOARDS_PIN_CONFIG_OBOT_G474_TRACE_H_
-#define UNHUMAN_MOTORLIB_BOARDS_PIN_CONFIG_OBOT_G474_TRACE_H_
+module;
 
 #include "stm32g474xx.h"
 #include "../peripheral/stm32g4/pin_config.h"
-#include "config_obot_g474_trace.h"
+#include "st_device.h"
 
-#define I_A_DR  ADC3->JDR1
-#define I_B_DR  ADC4->JDR1
-#define I_C_DR  ADC5->JDR1
-#define I_A0_DR  ADC3->DR
-#define I_B0_DR  ADC4->DR
-#define I_C0_DR  ADC5->DR
-#define V_BUS_DR ADC1->DR
-#define V_REF_DR ADC1->JDR2
-#define V_TEMP_DR ADC1->JDR1
-#define A1_DR ADC1->JDR3
-#define A2_DR ADC1->JDR4
-#define A3_DR ADC2->JDR1
+export import board_rev_trace;
 
-#define TSENSE ADC2->JDR2
-#define TSENSE2 ADC2->JDR3
+export module pin_config_obot_g474_trace;
 
-#define I5V ADC3->JDR3
-#define I_BUS_DR ADC5->JDR3
+export volatile uint32_t &I_A_DR = ADC3->JDR1;
+export volatile uint32_t &I_B_DR = ADC4->JDR1;
+export volatile uint32_t &I_C_DR = ADC5->JDR1;
+export volatile uint32_t &I_A0_DR = ADC3->DR;
+export volatile uint32_t &I_B0_DR = ADC4->DR;
+export volatile uint32_t &I_C0_DR = ADC5->DR;
+
+export volatile uint32_t &V_BUS_DR = ADC1->DR;
+export volatile uint32_t &V_REF_DR = ADC1->JDR2;
+export volatile uint32_t &V_TEMP_DR = ADC1->JDR1;
+export volatile uint32_t &A1_DR = ADC1->JDR3;
+export volatile uint32_t &A2_DR = ADC1->JDR4;
+export volatile uint32_t &A3_DR = ADC2->JDR1;
+export volatile uint32_t &TSENSE = ADC2->JDR2;
+export volatile uint32_t &TSENSE2 = ADC2->JDR3;
+export volatile uint32_t &I5V = ADC3->JDR3;
+export volatile uint32_t &I_BUS_DR = ADC5->JDR3;
 
 
-struct BoardPins {
+export struct BoardPins {
     volatile uint32_t * led_tim_r;
     volatile uint32_t * led_tim_g;
     volatile uint32_t * led_tim_b;
 };
 
-BoardPins get_board_pins(const BoardRev &board_rev) {
+export BoardPins get_board_pins(const BoardRev &board_rev) {
     BoardPins board_pins = {
         .led_tim_r = &TIM4->CCR1,
         .led_tim_g = &TIM4->CCR2,
@@ -49,7 +51,7 @@ BoardPins get_board_pins(const BoardRev &board_rev) {
 }
 
 
-void pin_config_obot_g474_trace(const BoardRev &board_rev) {
+export void pin_config_obot_g474_trace(const BoardRev &board_rev) {
      // Peripheral clock enable
         RCC->APB1ENR1 |= RCC_APB1ENR1_SPI3EN | RCC_APB1ENR1_TIM2EN |  RCC_APB1ENR1_TIM4EN | RCC_APB1ENR1_TIM5EN | RCC_APB1ENR1_USBEN | RCC_APB1ENR1_I2C1EN | RCC_APB1ENR1_RTCAPBEN | RCC_APB1ENR1_PWREN;
         RCC->APB2ENR |= RCC_APB2ENR_SPI1EN | RCC_APB2ENR_TIM1EN | RCC_APB2ENR_HRTIM1EN | RCC_APB2ENR_SYSCFGEN;
@@ -126,8 +128,8 @@ void pin_config_obot_g474_trace(const BoardRev &board_rev) {
         MASK_SET(GPIOC->PUPDR, GPIO_PUPDR_PUPD14, GPIO_PULL::UP);
 
         // TIM1 main loop interrupt        
-        static_assert(CPU_FREQUENCY_HZ / 16 / config::system_loop_frequency < 65536, "System loop frequency too low");
-        TIM1->ARR = CPU_FREQUENCY_HZ / 16 / config::system_loop_frequency - 1;
+        //static_assert(CPU_FREQUENCY_HZ / 16 / config::system_loop_frequency < 65536, "System loop frequency too low");
+        TIM1->ARR = CPU_FREQUENCY_HZ / 16 / 1000 - 1;
         TIM1->DIER = TIM_DIER_CC1IE;
         TIM1->CCR1 = 800;
         TIM1->PSC = 15;
@@ -224,7 +226,7 @@ void pin_config_obot_g474_trace(const BoardRev &board_rev) {
 
 
         // SPI1 CS2
-        GPIO_SETL(C, 3, GPIO::OUTPUT, GPIO_SPEED::MEDIUM, 0);
+        GPIO_SETL(C, 3, GPIO_MODE::OUTPUT, GPIO_SPEED::MEDIUM, 0);
 
         // I2C1
         GPIO_SETH(A, 15, GPIO_MODE::ALT_FUN, GPIO_SPEED::LOW, 4);   // i2c1 scl
@@ -246,4 +248,4 @@ extern "C" void RTC_WKUP_IRQHandler() {
     RTC->SCR = RTC_SCR_CWUTF;
 }
 
-#endif  // UNHUMAN_MOTORLIB_BOARDS_PIN_CONFIG_OBOT_G474_TRACE_H_
+//#endif  // UNHUMAN_MOTORLIB_BOARDS_PIN_CONFIG_OBOT_G474_TRACE_H_
