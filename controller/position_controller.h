@@ -58,7 +58,7 @@ class PositionController : public Controller {
     float tracking_tolerance_ = INFINITY;
 
     friend class System;
-    friend void config_init();
+    //friend void config_init();
 };
 
 #endif  // UNHUMAN_MOTORLIB_CONTROLLER_POSITION_CONTROLLER_H_

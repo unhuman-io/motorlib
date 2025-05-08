@@ -78,7 +78,7 @@ class StateController : public Controller {
     SecondOrderLowPassFilter position_desired_filter_;
     StateControllerParam param_ = {};
     friend class System;
-    friend void config_init();
+    //friend void config_init();
 };
 
 #endif  // UNHUMAN_MOTORLIB_CONTROLLER_STATE_CONTROLLER_H_

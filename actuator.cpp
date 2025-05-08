@@ -1,14 +1,17 @@
-#ifndef UNHUMAN_MOTORLIB_ACTUATOR_H_
-#define UNHUMAN_MOTORLIB_ACTUATOR_H_
+module;
 
 #include "messages.h"
-
+#include "logger.h"
 #include "util.h"
+#include "control_fun.h"
 
-extern "C" {
-void system_init();
-}
+export module actuator;
 
+// extern "C" {
+// void system_init();
+// }
+
+export template <typename FastLoop, typename MainLoop, typename Calibration>
 class Actuator {
  public:
     Actuator(FastLoop &fast_loop, MainLoop &main_loop, const volatile StartupParam &startup_param, const volatile Calibration &calibration) : fast_loop_(fast_loop), main_loop_(main_loop), startup_param_(startup_param), calibration_(calibration) {
@@ -164,8 +167,7 @@ private:
     float startup_motor_bias_;
 
     friend class System;
-    friend void system_init();
-    friend void config_init();
+    //friend void system_init();
+    //friend void config_init();
 };
 
-#endif  // UNHUMAN_MOTORLIB_ACTUATOR_H_

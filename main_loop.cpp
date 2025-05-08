@@ -978,7 +978,7 @@ class MainLoop {
     float motor_temperature_limit_;
 
     friend class System;
-    friend class Actuator;
+    //friend class Actuator;
     // friend void system_init();
     // friend void system_maintenance();
     // friend void main_maintenance();

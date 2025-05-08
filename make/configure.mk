@@ -82,6 +82,7 @@ $(SELF_DIR)../boards/config_obot_g474_tracec.cpp\
 $(SELF_DIR)../system2.cpp\
 $(SELF_DIR)../fast_loop.cpp\
 $(SELF_DIR)../main_loop.cpp\
+$(SELF_DIR)../actuator.cpp\
 #$(SELF_DIR)../boards/config_obot_g474_traceb.cpp\
 
 

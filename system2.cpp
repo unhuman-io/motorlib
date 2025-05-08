@@ -138,7 +138,7 @@ void usb_interrupt();
 //   //  System::system_loop();
 // }
 
-extern "C" void system_init() {}
+
 
 
 //RoundRobinLogger round_robin_logger;

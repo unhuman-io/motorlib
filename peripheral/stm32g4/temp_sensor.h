@@ -48,7 +48,7 @@ class TempSensor {
     float bias_ = 0;
     volatile uint32_t &v_temp_dr_;
 
-    friend void system_init();
+    //friend void system_init();
 };
 
 #endif  // UNHUMAN_MOTORLIB_PERIPHERAL_STM32G4_TEMP_SENSOR_H_
