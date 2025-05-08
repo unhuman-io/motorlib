@@ -1,5 +1,4 @@
-#ifndef UNHUMAN_MOTORLIB_FAST_LOOP_H_
-#define UNHUMAN_MOTORLIB_FAST_LOOP_H_
+module;
 
 #include <cstdint>
 #include "messages.h"
@@ -12,8 +11,12 @@
 #include "table_interp.h"
 #include "cstack.h"
 
+export module fast_loop;
+
 extern "C" void system_init();
 
+
+export template <typename PWM, typename MotorEncoder, typename Calibration>
 class FastLoop {
  public:
     FastLoop(int32_t frequency_hz, PWM &pwm, MotorEncoder &encoder, const FastLoopParam &param, const Calibration &calibration,
@@ -407,7 +410,5 @@ class FastLoop {
    CStack<FastLoopStatus,100> status_log_; // 24*4*100*2 = 19200 bytes
 
    friend class System;
-   friend void system_init();
+   //friend void system_init();
 };
-
-#endif  // UNHUMAN_MOTORLIB_FAST_LOOP_H_

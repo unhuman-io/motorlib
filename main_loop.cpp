@@ -1,5 +1,4 @@
-#ifndef UNHUMAN_MOTORLIB_MAIN_LOOP_H_
-#define UNHUMAN_MOTORLIB_MAIN_LOOP_H_
+module;
 
 #include "messages.h"
 
@@ -13,24 +12,34 @@
 #include "round_robin_logger.h"
 #include "temperature_model.h"
 #include <cstring>
+#include "uptime.h"
+#include "table_interp.h"
+#include "cstack.h"
+#include "logger.h"
 
-static const char *error_bit_strings[32] = ERROR_BIT_STRINGS;
+export module main_loop;
+
+//extern volatile uint32_t uptime;
+const char *error_bit_strings[32] = ERROR_BIT_STRINGS;
 
 extern "C" {
 void system_init();
 }
-extern volatile uint32_t uptime;
+
 
 void setup_sleep();
 void finish_sleep();
 
-class MainLoop;
-void load_send_data(const MainLoop &main_loop, SendData * const data);
+// class MainLoop;
+// void load_send_data(const MainLoop &main_loop, SendData * const data);
 
 #ifndef HARDWARE_BRAKE
 using HardwareBrake = HardwareBrakeBase;
 #endif  // HARDWARE_BRAKE
 
+export template <typename FastLoop, typename Driver, typename PositionController, typename TorqueController, typename ImpedanceController, typename VelocityController,
+                typename StateController, typename JointPositionController, typename AdmittanceController, typename Communication, typename LED, 
+                typename OutputEncoder, typename TorqueSensor>
 class MainLoop {
  public:
     MainLoop(int32_t frequency_hz, FastLoop &fast_loop, PositionController &position_controller,  TorqueController &torque_controller, 
@@ -426,7 +435,7 @@ class MainLoop {
       last_energy_uJ_ = current_energy;
 
       SendData send_data;
-      load_send_data(*this, &send_data);
+      load_send_data(&send_data);
       if (started_) { // this will prevent sending bad values before calibration
         communication_.send_data(send_data);
       }
@@ -862,6 +871,27 @@ class MainLoop {
       fast_log_ready_ = true;
     }
 
+    void load_send_data(SendData * const data) {
+      data->iq = status_.fast_loop.iq_filtered;
+      data->host_timestamp_received = host_timestamp_;
+      data->mcu_timestamp = status_.fast_loop.timestamp;
+      data->motor_encoder = status_.fast_loop.motor_position.raw;
+      data->motor_position = status_.motor_position_filtered;
+      data->joint_position = status_.output_position_filtered;
+      data->motor_velocity = status_.motor_velocity_filtered;
+      data->joint_velocity = status_.output_velocity_filtered;
+      data->torque = status_.torque_filtered;
+      data->rr_data = status_.rr_data;
+      data->reserved = *reserved0_;
+      data->iq_desired = status_.fast_loop.foc_status.command.i_q;
+      data->flags.mode = status_.mode;
+      data->flags.error = status_.error;
+      data->flags.misc.byte = 0;
+  #ifdef GPIO_IN
+      data->flags.misc.gpio = GPIO_IN;
+  #endif  // GPIO_IN
+  }
+
     // use to set the command from another low priority source than communication, 
     // such as from the System or Actuator classes
     void set_command(const MotorCommand &command) {
@@ -949,35 +979,10 @@ class MainLoop {
 
     friend class System;
     friend class Actuator;
-    friend void system_init();
-    friend void system_maintenance();
-    friend void main_maintenance();
-    friend void config_init();
-    friend void config_maintenance();
-    friend void load_send_data(const MainLoop &main_loop, SendData *const data);
+    // friend void system_init();
+    // friend void system_maintenance();
+    // friend void main_maintenance();
+    // friend void config_init();
+    // friend void config_maintenance();
 };
 
-#ifndef CUSTOM_SENDDATA
-void load_send_data(const MainLoop &main_loop, SendData * const data) {
-    data->iq = main_loop.status_.fast_loop.iq_filtered;
-    data->host_timestamp_received = main_loop.host_timestamp_;
-    data->mcu_timestamp = main_loop.status_.fast_loop.timestamp;
-    data->motor_encoder = main_loop.status_.fast_loop.motor_position.raw;
-    data->motor_position = main_loop.status_.motor_position_filtered;
-    data->joint_position = main_loop.status_.output_position_filtered;
-    data->motor_velocity = main_loop.status_.motor_velocity_filtered;
-    data->joint_velocity = main_loop.status_.output_velocity_filtered;
-    data->torque = main_loop.status_.torque_filtered;
-    data->rr_data = main_loop.status_.rr_data;
-    data->reserved = *main_loop.reserved0_;
-    data->iq_desired = main_loop.status_.fast_loop.foc_status.command.i_q;
-    data->flags.mode = main_loop.status_.mode;
-    data->flags.error = main_loop.status_.error;
-    data->flags.misc.byte = 0;
-#ifdef GPIO_IN
-    data->flags.misc.gpio = GPIO_IN;
-#endif  // GPIO_IN
-}
-#endif  // CUSTOM_SENDDATA
-
-#endif  // UNHUMAN_MOTORLIB_MAIN_LOOP_H_

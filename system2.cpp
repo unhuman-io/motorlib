@@ -118,25 +118,25 @@ void usb_interrupt();
 #include <fcntl.h>
 #include <cstring>
 
-extern "C" void system_run() {
- //   System::run();
-}
+// extern "C" void system_run() {
+//     //System::run();
+// }
 
-extern "C" void main_loop_interrupt() {
- //   System::main_loop_interrupt();
-}
+// extern "C" void main_loop_interrupt() {
+//  //   System::main_loop_interrupt();
+// }
 
-extern "C" void fast_loop_interrupt() {
-  //  System::fast_loop_interrupt();
-}
+// extern "C" void fast_loop_interrupt() {
+//   //  System::fast_loop_interrupt();
+// }
 
-extern "C" void system_log(std::string s) {
- //   System::log(s);
-}
+// extern "C" void system_log(std::string s) {
+//  //   System::log(s);
+// }
 
-extern "C" void system_loop_interrupt() {
-  //  System::system_loop();
-}
+// extern "C" void system_loop_interrupt() {
+//   //  System::system_loop();
+// }
 
 extern "C" void system_init() {}
 
