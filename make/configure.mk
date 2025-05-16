@@ -76,16 +76,24 @@ $(SELF_DIR)../peripheral/stm32g4/uart.cpp\
 $(SELF_DIR)../peripheral/stm32g4/spi_dma.cpp\
 $(SELF_DIR)../peripheral/stm32g4/flash.cpp\
 $(SELF_DIR)../peripheral/stm32g4/can.cpp\
-$(SELF_DIR)../boards/board_rev_trace.cpp\
-$(SELF_DIR)../boards/pin_config_obot_g474_trace.cpp\
-$(SELF_DIR)../boards/config_obot_g474_tracec.cpp\
 $(SELF_DIR)../system2.cpp\
 $(SELF_DIR)../fast_loop.cpp\
 $(SELF_DIR)../main_loop.cpp\
 $(SELF_DIR)../actuator.cpp\
+$(SELF_DIR)../boards/trace_board.cpp\
 #$(SELF_DIR)../boards/config_obot_g474_traceb.cpp\
+#$(SELF_DIR)../boards/board_rev_trace.cpp\
+#$(SELF_DIR)../boards/pin_config_obot_g474_trace.cpp\
+#$(SELF_DIR)../boards/config_obot_g474_tracec.cpp\
 
+$(BUILD_DIR)/pin_config_obot_g474_trace.o: board_rev_trace.o
 
+$(BUILD_DIR)/config_obot_g474_trace.o: pin_config_obot_g474_trace.o board_rev_trace.o
+
+$(BUILD_DIR)/config_obot_g474_tracec.o: pin_config_obot_g474_trace.o
+
+gcm.cache/%.gcm %.o: %.cpp
+	$(CXX) -c $(CPPFLAGS) $(CPPSTD) -Wa,-a,-ad,-alms=$(BUILD_DIR)/lto.lst $< -o $@
 
 endif # MCU_TARGET == stm32g474
 # __attribute ((init_priority(X))) is used to set constructor initialization order

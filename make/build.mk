@@ -67,6 +67,7 @@ $(VERBOSE).SILENT:
 #######################################
 clean:
 	-$(RM) $(BUILD_DIR)
+	-$(RM) gcm.cache
 
 #######################################
 # dependencies
