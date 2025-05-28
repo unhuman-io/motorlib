@@ -312,7 +312,8 @@ namespace config {
 
     LED led = {const_cast<uint16_t*>(reinterpret_cast<volatile uint16_t *>(get_board_pins(board_rev).led_tim_r)), 
                const_cast<uint16_t*>(reinterpret_cast<volatile uint16_t *>(get_board_pins(board_rev).led_tim_g)),
-               const_cast<uint16_t*>(reinterpret_cast<volatile uint16_t *>(get_board_pins(board_rev).led_tim_b))};
+               const_cast<uint16_t*>(reinterpret_cast<volatile uint16_t *>(get_board_pins(board_rev).led_tim_b)),
+               config::main_loop_frequency};
     volatile uint32_t &V5V_DR = *get_board_pins(board_rev).v5v_dr;
 #ifndef POSITION_CONTROLLER_OVERRIDE
     PositionController position_controller = {(float) (1.0/main_loop_frequency)};
