@@ -44,6 +44,10 @@ float fsat(float a, float sat) {
     // return a;
 }
 
+float fminf(float a, float b) {
+    return a<b ? a : b;
+}
+
 float fsignf(float a) {
     return a>=0 ? 1 : -1;
 }

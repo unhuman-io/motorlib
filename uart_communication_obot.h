@@ -149,7 +149,7 @@ class UARTCommunication : public CommunicationBase {
 #ifdef USE_MOTOR_STATUS_LITE
     const uint32_t buffer_size = sizeof(MotorStatusLite);
 #else
-    const uint32_t buffer_size = sizeof(MotorStatus);
+    const uint32_t buffer_size = sizeof(MotorStatusRegular);
 #endif
     uint8_t* packet = protocol_.generatePacket(reinterpret_cast<uint8_t*>(&obot_status_), buffer_size, OBOT_STATUS, &packet_size);
     send_uart_packet(packet, packet_size);

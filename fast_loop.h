@@ -266,6 +266,7 @@ class FastLoop {
       s.energy_uJ = energy_uJ_;
       foc_->get_status(&s.foc_status);
       s.iq_filtered = iq_filter_.update(s.foc_status.measured.i_q);
+      s.mode = mode_;
       status_.finish();
     }
 
