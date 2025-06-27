@@ -26,6 +26,10 @@ extern "C" {
 void system_init();
 }
 
+void system_reset() {
+  NVIC_SystemReset();
+}
+
 // class MainLoop;
 // void load_send_data(const MainLoop &main_loop, SendData * const data);
 
@@ -671,7 +675,8 @@ class MainLoop {
             }
             break;
           case BOARD_RESET:
-            NVIC_SystemReset();
+            system_reset();
+            
             break;
         }
         if (safe_mode_) {

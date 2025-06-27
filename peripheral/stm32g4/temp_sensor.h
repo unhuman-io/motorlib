@@ -10,8 +10,8 @@ extern "C" {
 #include "../../util.h"
 
 #ifndef V_TEMP_DR
-static volatile uint32_t blah = 0;
-#define V_TEMP_DR blah
+volatile uint32_t default_v_temp_dr = 0;
+#define V_TEMP_DR default_v_temp_dr
 #endif
 
 #include "pin_config.h"
