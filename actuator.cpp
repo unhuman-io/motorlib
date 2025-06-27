@@ -159,6 +159,12 @@ class Actuator {
       }
       return motor_position;
    }
+   void main_loop_update() {
+      main_loop_.update();
+   }
+   void fast_loop_update() {
+      fast_loop_.update();
+   }
 private:
     FastLoop &fast_loop_;
     MainLoop &main_loop_;

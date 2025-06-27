@@ -74,10 +74,10 @@ class System {
         current_api_timeout_us_ = US_TO_CPU(us);
     }
     static void main_loop_interrupt() {
-        actuator_.main_loop_.update();
+        actuator_.main_loop_update();
     }
     static void fast_loop_interrupt() {
-        actuator_.fast_loop_.update();
+        actuator_.fast_loop_update();
     }
     static void system_loop() {
         //system_maintenance();
