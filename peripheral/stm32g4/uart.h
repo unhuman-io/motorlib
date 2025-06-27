@@ -80,7 +80,7 @@ class Uart : public Comms
     const InitStruct init_struct_;
     bool is_initialized_;
 
-    volatile uint8_t transaction_counter_;
+    uint8_t transaction_counter_;
 
     commsCallback transaction_completed_callback_;
     void*         transaction_completed_callback_param_;

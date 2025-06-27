@@ -68,7 +68,7 @@ class SpiSlave : public Comms
     bool is_initialized_;
     uint8_t tx_dummy_byte_;
     uint8_t rx_dummy_byte_;
-    volatile uint8_t transaction_counter_;
+    uint8_t transaction_counter_;
 
     commsCallback transaction_completed_callback_;
     void*         transaction_completed_callback_param_;
