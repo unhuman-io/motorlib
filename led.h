@@ -7,9 +7,9 @@
 
 #include <cstdint>
 // A tricolor led for status, pwm compare registers required
-class LED {
+class TriColorLED {
  public:
-    LED(uint16_t *const red_reg, uint16_t *const green_reg, uint16_t *const blue_reg, uint16_t update_frequency_hz = 10000, float brightness=1.0)
+    TriColorLED(uint16_t *const red_reg, uint16_t *const green_reg, uint16_t *const blue_reg, uint16_t update_frequency_hz = 10000, float brightness=1.0)
         : red_reg_((uint32_t *) red_reg), green_reg_((uint32_t *) green_reg), blue_reg_((uint32_t *) blue_reg), update_frequency_hz_(update_frequency_hz) {
             brightness_ = brightness;
             set_rate(1);

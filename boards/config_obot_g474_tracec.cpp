@@ -24,7 +24,7 @@ export class TraceBoard {
     using PWM = HRPWM;
     using Driver = DriverBase;
     using Communication = USBCommunication;
-    using LED = LED;
+    using LED = TriColorLED;
 
     //static_assert(((double) CPU_FREQUENCY_HZ * 8 / 2) / pwm_frequency < 65535);    // check pwm frequency
 
@@ -39,7 +39,7 @@ export class TraceBoard {
     Communication communication{usb};
 
 
-    LED led = {const_cast<uint16_t*>(reinterpret_cast<volatile uint16_t *>(get_board_pins(board_rev).led_tim_r)), 
+    LED led   {const_cast<uint16_t*>(reinterpret_cast<volatile uint16_t *>(get_board_pins(board_rev).led_tim_r)), 
                const_cast<uint16_t*>(reinterpret_cast<volatile uint16_t *>(get_board_pins(board_rev).led_tim_g)),
                const_cast<uint16_t*>(reinterpret_cast<volatile uint16_t *>(get_board_pins(board_rev).led_tim_b))};
 

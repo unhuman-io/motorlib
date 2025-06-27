@@ -81,10 +81,9 @@ $(SELF_DIR)../fast_loop.cpp\
 $(SELF_DIR)../main_loop.cpp\
 $(SELF_DIR)../actuator.cpp\
 $(SELF_DIR)../boards/trace_board.cpp\
-#$(SELF_DIR)../boards/config_obot_g474_traceb.cpp\
-#$(SELF_DIR)../boards/board_rev_trace.cpp\
-#$(SELF_DIR)../boards/pin_config_obot_g474_trace.cpp\
-#$(SELF_DIR)../boards/config_obot_g474_tracec.cpp\
+$(SELF_DIR)../boards/board_rev_trace.cpp\
+$(SELF_DIR)../boards/pin_config_obot_g474_trace.cpp\
+$(SELF_DIR)../boards/config_obot_g474_tracec.cpp\
 
 $(BUILD_DIR)/pin_config_obot_g474_trace.o: board_rev_trace.o
 
