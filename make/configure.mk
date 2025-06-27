@@ -85,14 +85,15 @@ $(SELF_DIR)../boards/board_rev_trace.cpp\
 $(SELF_DIR)../boards/pin_config_obot_g474_trace.cpp\
 $(SELF_DIR)../boards/config_obot_g474_tracec.cpp\
 
-$(BUILD_DIR)/pin_config_obot_g474_trace.o: board_rev_trace.o
+$(BUILD_DIR)/pin_config_obot_g474_trace.o: $(BUILD_DIR)/board_rev_trace.o
 
-$(BUILD_DIR)/config_obot_g474_trace.o: pin_config_obot_g474_trace.o board_rev_trace.o
+$(BUILD_DIR)/config_obot_g474_trace.o: $(BUILD_DIR)/pin_config_obot_g474_trace.o $(BUILD_DIR)/board_rev_trace.o
 
-$(BUILD_DIR)/config_obot_g474_tracec.o: pin_config_obot_g474_trace.o
+$(BUILD_DIR)/config_obot_g474_tracec.o: $(BUILD_DIR)/pin_config_obot_g474_trace.o
 
-gcm.cache/%.gcm %.o: %.cpp
-	$(CXX) -c $(CPPFLAGS) $(CPPSTD) -Wa,-a,-ad,-alms=$(BUILD_DIR)/lto.lst $< -o $@
+$(BUILD_DIR)/config_obot_g474_trace2.o: $(BUILD_DIR)/config_obot_g474_tracec.o
+
+$(info TARGET is $(TARGET))
 
 endif # MCU_TARGET == stm32g474
 # __attribute ((init_priority(X))) is used to set constructor initialization order
