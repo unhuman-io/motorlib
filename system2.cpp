@@ -47,7 +47,7 @@ class System {
 
         log("finished startup");
 
-        uint32_t cpu_frequency = CPU_FREQUENCY_HZ;
+        //uint32_t cpu_frequency = CPU_FREQUENCY_HZ;
        
         uint32_t t_start = get_clock();
         uint32_t api_timeout_us = 10000;

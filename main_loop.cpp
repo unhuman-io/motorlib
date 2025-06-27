@@ -26,10 +26,6 @@ extern "C" {
 void system_init();
 }
 
-
-void setup_sleep();
-void finish_sleep();
-
 // class MainLoop;
 // void load_send_data(const MainLoop &main_loop, SendData * const data);
 
@@ -37,17 +33,17 @@ void finish_sleep();
 using HardwareBrake = HardwareBrakeBase;
 #endif  // HARDWARE_BRAKE
 
-export template <typename FastLoop, typename Driver, typename PositionController, typename TorqueController, typename ImpedanceController, typename VelocityController,
+export template <typename FastLoop, typename Driver, typename BoardFun, typename PositionController, typename TorqueController, typename ImpedanceController, typename VelocityController,
                 typename StateController, typename JointPositionController, typename AdmittanceController, typename Communication, typename LED, 
                 typename OutputEncoder, typename TorqueSensor>
 class MainLoop {
  public:
-    MainLoop(int32_t frequency_hz, FastLoop &fast_loop, PositionController &position_controller,  TorqueController &torque_controller, 
+    MainLoop(int32_t frequency_hz, FastLoop &fast_loop, BoardFun &board_fun, PositionController &position_controller,  TorqueController &torque_controller, 
         ImpedanceController &impedance_controller, VelocityController &velocity_controller, StateController &state_controller, 
         JointPositionController &joint_position_controller, AdmittanceController &admittance_controller, Communication &communication,
         LED &led, OutputEncoder &output_encoder, TorqueSensor &torque, Driver &driver, const MainLoopParam &param, const Calibration &calibration,
         HardwareBrake &brake=no_brake_) : 
-          param_(param), calibration_(calibration), fast_loop_(fast_loop), position_controller_(position_controller), torque_controller_(torque_controller), 
+          param_(param), calibration_(calibration), fast_loop_(fast_loop), board_fun_(board_fun), position_controller_(position_controller), torque_controller_(torque_controller), 
           impedance_controller_(impedance_controller), velocity_controller_(velocity_controller), state_controller_(state_controller),  
           joint_position_controller_(joint_position_controller), admittance_controller_(admittance_controller), 
           communication_(communication), led_(led), frequency_hz_(frequency_hz), output_encoder_(output_encoder), torque_sensor_(torque),
@@ -661,11 +657,11 @@ class MainLoop {
             led_.set_color(LED::WHITE);
             led_.set_on_dim();
             fast_loop_.open_mode();
-            setup_sleep();
+            board_fun_.setup_sleep();
             while(!communication_.any_new_rx_data()) {
               __WFI();
             }
-            finish_sleep();
+            board_fun_.finish_sleep();
             break;
           case CRASH:
             led_.set_color(LED::RED);
@@ -905,6 +901,7 @@ class MainLoop {
     const MainLoopParam &param_;
     const Calibration &calibration_;
     FastLoop &fast_loop_;
+    BoardFun &board_fun_;
     PositionController &position_controller_;
     TorqueController &torque_controller_;
     ImpedanceController &impedance_controller_;
