@@ -6,6 +6,7 @@ module;
 #include "../led.h"
 #include "../driver.h"
 #include "../usb_communication.h"
+#include "../peripheral/stm32g4/clock_config.h"
 
 export import pin_config_obot_g474_trace;
 
@@ -15,16 +16,24 @@ export class TraceBoard {
  public:
     TraceBoard(const uint32_t &pwm_frequency1, const uint32_t &main_loop_frequency1) :
         pwm_frequency(pwm_frequency1),
-        main_loop_frequency(main_loop_frequency1) {
-        const BoardRev board_rev = get_board_rev();
-        //SystemClock_Config();
-        pin_config_obot_g474_trace(board_rev);
-    }
+        main_loop_frequency(main_loop_frequency1) {}
 
     using PWM = HRPWM;
     using Driver = DriverBase;
     using Communication = USBCommunication;
     using LED = TriColorLED;
+
+    struct Init {
+        Init() {
+            // Initialize the system clock and other peripherals
+            GPIOB->BSRR = GPIO_BSRR_BR7 | GPIO_BSRR_BR8; // set low
+            SystemClock_Config();
+            pin_config_obot_g474_trace(get_board_rev());
+            TIM4->CCR1 = 60000;
+            TIM4->CCR2 = 0000;
+            //while(1);
+        }
+    } init;
 
     //static_assert(((double) CPU_FREQUENCY_HZ * 8 / 2) / pwm_frequency < 65535);    // check pwm frequency
 
