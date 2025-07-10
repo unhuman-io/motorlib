@@ -88,7 +88,7 @@ class UARTCommunication : public CommunicationBase {
   }
 
   bool send_string(const char* string, uint16_t length) {
-    if (string[0] == 0 || length > OBOT_ASCII_MAX_SEND_LENGTH) {
+    if (length > 0 && (string[0] == 0 || length > OBOT_ASCII_MAX_SEND_LENGTH)) {
       struct {
         APIControlPacket control_packet = {0, LONG_PACKET, .long_packet = {0, 1}};
         char data[OBOT_ASCII_MAX_SEND_LENGTH - sizeof(APIControlPacket)];

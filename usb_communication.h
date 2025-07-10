@@ -25,7 +25,7 @@ class USBCommunication : public CommunicationBase {
     }
     bool send_string(const char * const string, uint16_t length) {
        // blocks until entire string has been sent
-       if (string[0] == 0 || length > MAX_API_DATA_SIZE) {
+       if (length > 0 && (string[0] == 0 || length > MAX_API_DATA_SIZE)) {
           // binary that starts with 0, need to send as long packet
           struct LongPacket{
              APIControlPacket control_packet = {0, LONG_PACKET, .long_packet = {0, 1}};
