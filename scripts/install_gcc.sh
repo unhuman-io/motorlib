@@ -29,9 +29,13 @@ cd $gcc_dir
 # declare -A sha=( [x86_64]=95c011cee430e64dd6087c75c800f04b9c49832cc1000127a92a97f9c8d83af4 \
 #                  [aarch64]=c8824bffd057afce2259f7618254e840715f33523a3d4e4294f471208f976764 )
 
-version=14.2.rel1
-declare -A sha=( [x86_64]=62a63b981fe391a9cbad7ef51b17e49aeaa3e7b0d029b36ca1e9c3b2a9b78823 \
-                 [aarch64]=87330bab085dd8749d4ed0ad633674b9dc48b237b61069e3b481abd364d0a684 )
+# version=14.2.rel1
+# declare -A sha=( [x86_64]=62a63b981fe391a9cbad7ef51b17e49aeaa3e7b0d029b36ca1e9c3b2a9b78823 \
+#                  [aarch64]=87330bab085dd8749d4ed0ad633674b9dc48b237b61069e3b481abd364d0a684 )
+
+version=14.3.rel1
+declare -A sha=( [x86_64]=8f6903f8ceb084d9227b9ef991490413014d991874a1e34074443c2a72b14dbd \
+                 [aarch64]=ebaf2d47f2e7f7b645864c5c8cf839e526daed83a2e675a3525d03f5ba3d2be9 )
 
 arch=$(uname -m)
 fname=arm-gnu-toolchain-$version-$arch-arm-none-eabi
