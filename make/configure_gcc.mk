@@ -10,7 +10,7 @@ OPT = -Og -cl-single-precision-constant -O3
 LTO = -flto=auto
 
 
-CC_PATH=~/Downloads/ATfE-20.1.0-Linux-x86_64/bin
+CC_PATH=$(SELF_DIR)../llvm/bin
 CC = $(CC_PATH)/clang
 AS = $(CC_PATH)/clang -x assembler-with-cpp
 CP = $(CC_PATH)/llvm-objcopy
