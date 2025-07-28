@@ -2,11 +2,8 @@
 #include "../util.h"
 #include <cstring>
 
-#pragma GCC push_options
-#pragma GCC optimize ("O0")
 // Global pointer for easy debugging access to the Protocol structure
-Protocol* protocol_instance = NULL;
-#pragma GCC pop_options
+[[maybe_unused]] Protocol* protocol_instance = NULL;
 
 Protocol::Protocol(Comms& comms, Mode mode_, Mailbox::Pool* mailbox_pools, size_t mailbox_pools_count) :
   mailboxes(mailbox_pools, mailbox_pools_count),

@@ -160,7 +160,7 @@ void SpiSlave::startTransaction(BufferDescriptor descriptor)
 {
   volatile uint32_t temp;
 
-  transaction_counter_++;
+  transaction_counter_ += 1;
 
   // Disable the DMA
   init_struct_.rxDmaChannel->CCR &= ~DMA_CCR_EN;

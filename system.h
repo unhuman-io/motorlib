@@ -133,7 +133,7 @@ class System {
         api.add_api_variable("heap_current_used", new const APICallbackUint32(get_current_heap_used));
         api.add_api_variable("malloc", new APICallbackUint32([](){ return (uint32_t) get_heap_free() + get_heap_used(); }, 
             [](uint32_t u) {
-                try { char* volatile c = new char[u]; delete c; }
+                try { char* volatile c = new char[u]; delete [] c; }
                 catch(...) { logger.log_printf("couldn't allocate %d", u); } }));
         api.add_api_variable("vbus_min", new APIFloat(&actuator_.main_loop_.vbus_min_));
         api.add_api_variable("vbus_max", new APIFloat(&actuator_.main_loop_.vbus_max_));
@@ -237,7 +237,7 @@ class System {
             FastLoopStatus status = actuator_.fast_loop_.status_.top();
             uint8_t len = 192;
             char c[len];
-            std::snprintf(c, len, "%ld, %f, %f, %f, %f, %f, %f, %f, %f, %f, %f", 
+            std::snprintf(c, len, "%u, %f, %f, %f, %f, %f, %f, %f, %f, %f, %f", 
                     status.timestamp,
                     status.foc_command.measured.motor_encoder,
                     status.foc_command.desired.i_q,

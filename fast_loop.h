@@ -62,7 +62,7 @@ class FastLoop {
       int32_t motor_enc_diff;
       float motor_x;
       motor_position_ = motor_enc_to_position(motor_enc, motor_enc_diff, motor_x);
-      motor_position_filtered_ = motor_position_filter_.update(motor_position_);//(1-alpha10)*motor_position_filtered_ + alpha10*motor_position_;
+      motor_position_filtered_ = motor_position_filter_.update(motor_position_);
       motor_velocity_ =  motor_encoder_dir_ * (motor_enc_diff)*(2*(float) M_PI * inv_motor_encoder_cpr_ * frequency_hz_);
       motor_velocity_filtered_ = motor_velocity_filter_.update(motor_velocity_);
       
@@ -350,8 +350,6 @@ class FastLoop {
     float motor_position_filtered_ = 0;
     float motor_velocity_=0;
     float motor_velocity_filtered_=0;
-    float alpha=0.001;
-    float alpha10=1;//0.3859;   // 1/10 cutoff frequency
     float phase_mode_ = 1;    // 1: standard or -1: two wires switched
     float phase_mode_desired_ = 1;
     int32_t motor_mechanical_position_ = 0;
@@ -360,7 +358,6 @@ class FastLoop {
     float max_i_bias_ = 0;
 
     float iq_des = 0;
-    float id_des = 0;
     float iq_des_gain_ = 1;
     volatile uint16_t adc1, adc2, adc3;
     FOCCommand foc_command_ = {};

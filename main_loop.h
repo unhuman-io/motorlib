@@ -54,7 +54,7 @@ class MainLoop {
           torque_sensor_.trigger();
 #endif
     } // todo: init filters with first status
-    void update() __attribute__((section (".ccmram"), externally_visible)) {
+    void update() __attribute__((section (".ccmram"))) {
       count_++;
 #if !defined(END_TRIGGER_MAIN_SENSORS) && !defined(EXT_TRIGGER_MAIN_SENSORS)
       output_encoder_.trigger();
@@ -64,7 +64,7 @@ class MainLoop {
 
       if (count_ >= frequency_hz_) {
         count_ = 0;
-        uptime++;
+        uptime += 1;
       }
       
       last_timestamp_ = timestamp_;
@@ -515,7 +515,7 @@ class MainLoop {
     void adjust_motor_encoder(float adjustment) { motor_encoder_bias_ += adjustment; }
     const MainLoopStatus & get_status() const { return status_stack_.top(); }
     void set_started() { started_ = true; }
-    void set_mode(MainControlMode mode) __attribute__((section (".ccmram"), externally_visible)) {
+    void set_mode(MainControlMode mode) __attribute__((section (".ccmram"))) {
       if (mode != mode_ || safe_mode_ != last_safe_mode_) {
         if(mode_ == HARDWARE_BRAKE && mode != HARDWARE_BRAKE) {
           brake_.off();
@@ -893,7 +893,7 @@ class MainLoop {
     ReceiveData receive_data_ = {};
     MotorCommand command_current_ = {};
     mcu_time host_timestamp_ = {};
-    ReceiveData last_receive_data_ = {};
+    //ReceiveData last_receive_data_ = {};
     MotorCommand internal_command_;
     bool internal_command_received_ = false;
     uint32_t frequency_hz_;

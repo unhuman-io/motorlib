@@ -17,7 +17,7 @@ void init_serial_number() {
 
   deviceserial0 += deviceserial2;
   
-  std::sprintf(serial_number,"%lX%X",deviceserial0, (uint16_t) (deviceserial1>>16));
+  std::sprintf(serial_number,"%X%X",deviceserial0, (uint16_t) (deviceserial1>>16));
 }
 
 const char * get_serial_number() {

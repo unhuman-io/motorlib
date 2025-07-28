@@ -31,7 +31,7 @@ MCU = --target=armv7em-none-eabihf $(FPU) -mcpu=cortex-m4
 # compile cc flags
 ASFLAGS = $(MCU) $(AS_DEFS) $(AS_INCLUDES) $(OPT) -Wall -fdata-sections -ffunction-sections $(LTO)
 
-CFLAGS = $(MCU) $(C_DEFS) $(C_INCLUDES) $(OPT) -Wall -fdata-sections -ffunction-sections $(LTO)
+CFLAGS = $(MCU) $(C_DEFS) $(C_INCLUDES) $(OPT) -Wall -fdata-sections -ffunction-sections $(LTO) -Wno-vla-cxx-extension -Wno-c99-designator -Wno-c23-extensions
 
 ifeq ($(DEBUG), 1)
 CFLAGS += -g -gdwarf-2

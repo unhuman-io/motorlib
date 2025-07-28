@@ -151,17 +151,17 @@ class I2C_DMA {
         asm("nop"); // todo: a nop seems necessary in order to recognize a data update (due to dma), make volatile maybe
         return nbytes;
     }
-    volatile bool busy() const {
+    bool busy() const {
         // note start can be asserted before busy becomes active
         if (regs_.ISR & I2C_ISR_TC) {
             return false;
         }
         return (regs_.ISR & I2C_ISR_BUSY) | (regs_.CR2 & I2C_CR2_START);
     }
-    volatile bool ready() const {
+    bool ready() const {
         return !busy();
     }
-    volatile bool trouble() const {
+    bool trouble() const {
         return regs_.ISR & (I2C_ISR_NACKF | I2C_ISR_ARLO | I2C_ISR_BERR);
     }
  private:

@@ -46,7 +46,7 @@ class Logger {
     }
     void log(std::string_view str) {
         char header[50];
-        snprintf(header, sizeof(header), "(%lu %lu) ", get_uptime(), get_clock());
+        snprintf(header, sizeof(header), "(%u %u) ", get_uptime(), get_clock());
         front_log_.set_value(front_atomic_.load(std::memory_order_acquire));
         read_front_.set_value(read_front_atomic_.load(std::memory_order_acquire));
         log_raw(header);
