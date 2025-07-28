@@ -43,22 +43,22 @@ class SPIDMABase {
     void readwrite(const uint8_t * const data_out, uint8_t * const data_in, uint16_t length) {
         claim();
         reinit();
-        asm("" : : "m" (*(const uint8_t (*)[]) data_out)); // ensure data_out[] is in memory
+        asm("" : : "m" (*(const uint8_t (*)[length]) data_out)); // ensure data_out[] is in memory
         static_cast<T*>(this)->start_readwrite_impl(data_out, data_in, length);
         static_cast<T*>(this)->finish_readwrite_impl();
-        asm("" : "=m" (*(uint8_t (*)[]) data_in));
+        asm("" : "=m" (*(uint8_t (*)[length]) data_in));
         release();
     }
 
     // Note, use memory barrier before accesing data_in
     // Example: asm("" : "=m" (*(uint8_t (*)[]) data_in));
     void start_continuous_readwrite(const uint8_t * const data_out, uint8_t * const data_in, uint16_t length) {
-        asm("" : : "m" (*(const uint8_t (*)[]) data_out)); // ensure data_out[] is in memory
+        asm("" : : "m" (*(const uint8_t (*)[length]) data_out)); // ensure data_out[] is in memory
         static_cast<T*>(this)->start_continuous_readwrite_impl(data_out, data_in, length);
     }
 
     void start_continuous_write(const uint8_t * const data_out, uint16_t length) {
-        asm("" : : "m" (*(const uint8_t (*)[]) data_out)); // ensure data_out[] is in memory
+        asm("" : : "m" (*(const uint8_t (*)[length]) data_out)); // ensure data_out[] is in memory
         static_cast<T*>(this)->start_continuous_write_impl(data_out, length);
     }
 
@@ -70,9 +70,9 @@ class SPIDMABase {
     void start_readwrite_isr(const uint8_t * const data_out, uint8_t * const data_in, uint16_t length) {
         if (!pause_.is_paused()) {
             reinit();
-            asm("" : : "m" (*(const uint8_t (*)[]) data_out)); // ensure data_out[] is in memory
+            asm("" : : "m" (*(const uint8_t (*)[length]) data_out)); // ensure data_out[] is in memory
             static_cast<T*>(this)->start_readwrite_impl(data_out, data_in, length);
-            asm("" : "=m" (*(uint8_t (*)[]) data_in));
+            asm("" : "=m" (*(uint8_t (*)[length]) data_in));
         }
     }
 
@@ -80,7 +80,7 @@ class SPIDMABase {
     void start_write_isr(const uint8_t * const data_out, uint16_t length) {
         if (!pause_.is_paused()) {
             reinit();
-            asm("" : : "m" (*(const uint8_t (*)[]) data_out)); // ensure data_out[] is in memory
+            asm("" : : "m" (*(const uint8_t (*)[length]) data_out)); // ensure data_out[] is in memory
             static_cast<T*>(this)->start_write_impl(data_out, length);
         }
     }

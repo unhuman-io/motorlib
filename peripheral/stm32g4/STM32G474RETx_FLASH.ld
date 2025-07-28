@@ -141,20 +141,20 @@ SECTIONS
     __exidx_end = .;
   } >FLASH
 
-  .preinit_array (READONLY) :
+  .preinit_array :
   {
     PROVIDE_HIDDEN (__preinit_array_start = .);
     KEEP (*(.preinit_array*))
     PROVIDE_HIDDEN (__preinit_array_end = .);
   } >FLASH
-  .init_array (READONLY) :
+  .init_array :
   {
     PROVIDE_HIDDEN (__init_array_start = .);
     KEEP (*(SORT(.init_array.*)))
     KEEP (*(.init_array*))
     PROVIDE_HIDDEN (__init_array_end = .);
   } >FLASH
-  .fini_array (READONLY) :
+  .fini_array :
   {
     PROVIDE_HIDDEN (__fini_array_start = .);
     KEEP (*(SORT(.fini_array.*)))
@@ -212,7 +212,9 @@ SECTIONS
     . = ALIGN(8);
     PROVIDE ( end = . );
     PROVIDE ( _end = . );
+    PROVIDE ( __heap_start = . );
     . = . + _Min_Heap_Size;
+    PROVIDE ( __heap_end = . );
     . = . + _Min_Stack_Size;
     . = ALIGN(8);
   } >RAM

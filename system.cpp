@@ -1,5 +1,7 @@
 #include <string>
 #include <fcntl.h>
+#include <sys/stat.h>
+#include <sys/types.h>
 #include <cstring>
 
 void system_run() {
@@ -71,4 +73,9 @@ extern "C" caddr_t _sbrk (int incr)
   heap += incr;
 
   return (caddr_t) prev_heap;
+}
+
+extern "C" void _exit(int status) {
+    logger.log("Exiting with status: " + std::to_string(status));
+    while (1);
 }

@@ -112,7 +112,7 @@ class Logger {
         return str;
     }
     bool empty() const {
-        return read_front_atomic_.load(std::memory_order_acquire) == back_;
+        return read_front_atomic_.load(std::memory_order_acquire) == (uint32_t) back_;
     }
     void log_printf(const char *s, ...) {
         va_list args;
