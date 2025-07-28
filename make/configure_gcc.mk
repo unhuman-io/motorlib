@@ -6,54 +6,29 @@ SELF_DIR := $(dir $(lastword $(MAKEFILE_LIST)))
 # debug build?
 DEBUG = 1
 # optimization
-OPT = -Og -fsingle-precision-constant -O3 
+OPT = -Og -cl-single-precision-constant -O3 
 LTO = -flto=auto
 
-#######################################
-# binaries
-#######################################
-PREFIX = arm-none-eabi-
-# The gcc compiler bin path can be either defined in make command via GCC_PATH variable (> make GCC_PATH=xxx)
-# either it can be added to the PATH environment variable. 
 
-# Install GCC automatically if GCC_PATH is not specified and it's not already installed.
-
-ifndef GCC_PATH
-upgrade_gcc:
-	@echo upgrading gcc
-	$(SELF_DIR)../scripts/install_gcc.sh
-
-.PHONY: upgrade_gcc
-
-$(SELF_DIR)../gcc/bin/$(PREFIX)gcc:
-	$(SELF_DIR)../scripts/install_gcc.sh
-endif
-
-GCC_PATH=$(SELF_DIR)../gcc/bin
-CC = $(GCC_PATH)/$(PREFIX)gcc
-AS = $(GCC_PATH)/$(PREFIX)gcc -x assembler-with-cpp
-CP = $(GCC_PATH)/$(PREFIX)objcopy
-SZ = $(GCC_PATH)/$(PREFIX)size
-CXX = $(GCC_PATH)/$(PREFIX)g++
+CC_PATH=~/Downloads/ATfE-20.1.0-Linux-x86_64/bin
+CC = $(CC_PATH)/clang
+AS = $(CC_PATH)/clang -x assembler-with-cpp
+CP = $(CC_PATH)/llvm-objcopy
+SZ = $(CC_PATH)/llvm-size
+CXX = $(CC_PATH)/clang++
 HEX = $(CP) -O ihex
 BIN = $(CP) -O binary -S
  
 #######################################
 # CFLAGS
 #######################################
-# cpu
-CPU = -mcpu=cortex-m4
-
 # fpu
 FPU = -mfpu=fpv4-sp-d16
 
-# float-abi
-FLOAT-ABI = -mfloat-abi=hard
-
 # mcu
-MCU = $(CPU) -mthumb $(FPU) $(FLOAT-ABI)
+MCU = --target=armv7em-none-eabihf $(FPU) -mcpu=cortex-m4
 
-# compile gcc flags
+# compile cc flags
 ASFLAGS = $(MCU) $(AS_DEFS) $(AS_INCLUDES) $(OPT) -Wall -fdata-sections -ffunction-sections $(LTO)
 
 CFLAGS = $(MCU) $(C_DEFS) $(C_INCLUDES) $(OPT) -Wall -fdata-sections -ffunction-sections $(LTO)
@@ -71,13 +46,13 @@ LIBS = -lc -lm -lnosys
 LIBDIR = 
 LDFLAGS = $(MCU) -specs=nosys.specs -T$(LDSCRIPT) $(LIBDIR) $(LIBS) -Wl,-Map=$(BUILD_DIR)/$(TARGET).map,--cref -Wl,--gc-sections,--print-memory-usage -u _printf_float
 
-GCC_VERSION := $(shell $(CC) -dumpversion)
-GCC_MAJOR_VERSION := $(word 1, $(subst ., ,$(GCC_VERSION)))
+CC_VERSION := $(shell $(CC) -dumpversion)
+CC_MAJOR_VERSION := $(word 1, $(subst ., ,$(CC_VERSION)))
 
-ifeq ($(GCC_MAJOR_VERSION), $(filter $(GCC_MAJOR_VERSION),10 11 12 13 14))
-$(call info_once,gcc version $(GCC_VERSION))
+ifeq ($(CC_MAJOR_VERSION), $(filter $(CC_MAJOR_VERSION),20))
+$(call info_once,clang version $(CC_VERSION))
 else
-$(error gcc version $(GCC_VERSION), 10 - 14 required)
+$(error clang version $(CC_VERSION), 20 required)
 endif
 
 ifeq ($(OS),Windows_NT)
