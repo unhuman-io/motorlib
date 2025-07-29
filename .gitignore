@@ -1,3 +1,4 @@
 gcc/
+llvm/
 package/
 peripheral/stm32g4/otp/otp.bin

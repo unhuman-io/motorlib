@@ -4,7 +4,9 @@
 #include "messages.h"
 #undef _DEFAULT_SOURCE
 #include <cmath>
-#define M_PI 3.1415926f
+#ifndef M_PI
+#define M_PI 3.141592653f
+#endif
 #include "sincos.h"
 #include <algorithm>
 #include <vector>
@@ -15,11 +17,13 @@ inline float fabsf2(float f) {
 
 float fminf(float, float);
 
+#ifndef __clang__
 inline float sqrtf(float f) {
     float r;
     asm("vsqrt.f32 %[dst], %[src]" : [dst] "=t" (r) : [src] "t" (f));
     return r;
 }
+#endif
 
 class Hysteresis {
  public:
@@ -226,6 +230,8 @@ class FIRFilter {
     int current_pos_;
 };
 
+template <> const float FIRFilter<>::default_coeff_[];
+
 class PIController {
 public:
     ~PIController() {}
@@ -388,7 +394,7 @@ class TrajectoryGenerator {
                 break;
             case TuningMode::RANDOM: {
                     low_pass_filter_.set_dt(dt);
-                    float raw = amplitude_ * (2 * (float) rand() * (1.0 / RAND_MAX) - 1);
+                    float raw = amplitude_ * (2 * (float) rand() * (1.0 / static_cast<float>(RAND_MAX)) - 1);
                     float raw_scaled = raw * random_scale_;
                     
                     float value_last = trajectory_value_.value;

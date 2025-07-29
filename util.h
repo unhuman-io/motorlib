@@ -118,8 +118,8 @@ class LeakyBucket {
 
     void set_leak_period(float leak_period_s, float dt) {
         float leak_period = leak_period_s/dt;
-        if (leak_period > UINT32_MAX) {
-            leak_period_ = UINT32_MAX;
+        if (leak_period > static_cast<float>(INT32_MAX)) {
+            leak_period_ = INT32_MAX;
         } else {
             leak_period_ = leak_period;
         }

@@ -116,7 +116,9 @@ class MB85RC64 {
 
     void write(uint16_t address, const uint8_t *bytes, uint8_t length, uint16_t timeout_us = 1000) {
       Address addr = {.word = address};
-      uint8_t data[2+length] = {addr.high, addr.low};
+      uint8_t data[2+length];
+      data[0] = addr.high;
+      data[1] = addr.low;
       std::memcpy(data+2, bytes, length);
       i2c_dma_.write(address_, length+2, data, true, timeout_us);
     }
