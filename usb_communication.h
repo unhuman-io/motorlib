@@ -28,7 +28,9 @@ class USBCommunication : public CommunicationBase {
        if (length > 0 && (string[0] == 0 || length > MAX_API_DATA_SIZE)) {
           // binary that starts with 0, need to send as long packet
           struct LongPacket{
-             APIControlPacket control_packet = {0, LONG_PACKET, .long_packet = {0, 1}};
+             APIControlPacket control_packet = {.control_packet_id = 0,
+                                                .type = LONG_PACKET,
+                                                .long_packet = {0, 1}};
              char data[MAX_API_DATA_SIZE - sizeof(APIControlPacket)];
           };
           LongPacket *long_packet_ptr = new LongPacket(); // prevent large allocation on stack
@@ -59,7 +61,9 @@ class USBCommunication : public CommunicationBase {
     bool tx_data_ack() { return usb_.tx_data_ack(2); }
 
     void send_one_time_api_timeout_request(uint32_t us) {
-       APIControlPacket timeout_request = {0, TIMEOUT_REQUEST, .timeout_request = {us}};
+       APIControlPacket timeout_request = {.control_packet_id = 0,
+                                           .type = TIMEOUT_REQUEST,
+                                           .timeout_request = {us}};
        usb_.send_data(1, (const uint8_t * const) &timeout_request, sizeof(timeout_request), true);
     }
     void cancel_one_time_api_timeout_request() {

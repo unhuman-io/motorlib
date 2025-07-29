@@ -23,7 +23,7 @@ void ParameterAPI::add_api_variable(std::string_view name, APIVariable *var) {
         }
         auto_complete_.add_match_string(name);
     } else {
-        logger.log_printf("API variable %s not in ROM, not adding, location: %p", std::string(name), name.data());
+        logger.log_printf("API variable %s not in ROM, not adding, location: %p", std::string(name).c_str(), name.data());
     }
 }
 
@@ -37,7 +37,7 @@ void ParameterAPI::add_api_variable(std::string_view name, const APIVariable *va
         }
         auto_complete_.add_match_string(name);
     } else {
-        logger.log_printf("API variable %s not in ROM, not adding, location: %p", std::string(name), name.data());
+        logger.log_printf("API variable %s not in ROM, not adding, location: %p", std::string(name).c_str(), name.data());
     }
 }
 

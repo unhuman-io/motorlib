@@ -3,6 +3,8 @@
 #######################################
 # Requires CONFIG_FILE, and TARGET_MCU defined
 
+CPPSTD = c++17
+
 # Build path
 BUILD_DIR = build
 ifndef OBOT_VERSION
@@ -99,6 +101,8 @@ endif
 # Uncomment to disable the watchdog timer
 #override C_DEFS += \
 -DNO_WATCHDOG
+
+CPPFLAGS += -std=$(CPPSTD)
 
 C_INCLUDES +=  \
 -I. \

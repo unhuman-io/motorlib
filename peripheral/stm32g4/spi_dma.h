@@ -18,7 +18,7 @@ class SPIDMA : public SPIDMABase<SPIDMA> {
         NUM_SPIS,
     };
 
-    static constexpr SPI_TypeDef *spi_regs[NUM_SPIS] = {SPI1, SPI2, SPI3, SPI4};
+    SPI_TypeDef * const spi_regs[NUM_SPIS] = {SPI1, SPI2, SPI3, SPI4};
     static SPIPause spi_pause[NUM_SPIS];
 
     SPIDMA(SPI_INSTANCE inst, GPIO &gpio_cs, DMA_CHANNEL_INSTANCE tx_channel, DMA_CHANNEL_INSTANCE rx_channel, 
