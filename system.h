@@ -7,6 +7,7 @@
 #include "round_robin_logger.h"
 #include "otp.h"
 #include "peripheral/stm32_serial.h"
+#include <cinttypes>
 
 
 extern uint32_t t_exec_fastloop;
@@ -237,7 +238,7 @@ class System {
             FastLoopStatus status = actuator_.fast_loop_.status_.top();
             uint8_t len = 192;
             char c[len];
-            std::snprintf(c, len, "%u, %f, %f, %f, %f, %f, %f, %f, %f, %f, %f", 
+            std::snprintf(c, len, "%" PRIu32", %f, %f, %f, %f, %f, %f, %f, %f, %f, %f", 
                     status.timestamp,
                     status.foc_command.measured.motor_encoder,
                     status.foc_command.desired.i_q,
