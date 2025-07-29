@@ -36,12 +36,12 @@ $(BUILD_DIR)/%.o: %.c | $(BUILD_DIR)
 
 $(BUILD_DIR)/%.o: %.cpp | $(BUILD_DIR) 
 	@echo "  CXX    " $<
-	$(CXX) -c $(CPPFLAGS) -std=c++23 $< -o $@
+	$(CXX) -c $(CPPFLAGS) $< -o $@
 
 # ensure flash commands stay in allocated section
 $(BUILD_DIR)/flash.o: flash.cpp | $(BUILD_DIR)
 	@echo "  CXX NO LTO" $<
-	$(CXX) -c $(filter-out $(LTO), $(CPPFLAGS)) -std=c++23 $< -o $@
+	$(CXX) -c $(filter-out $(LTO), $(CPPFLAGS)) $< -o $@
 
 $(BUILD_DIR)/%.o: %.s | $(BUILD_DIR)
 	@echo "  AS     " $<
