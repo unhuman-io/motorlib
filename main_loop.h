@@ -54,7 +54,11 @@ class MainLoop {
           torque_sensor_.trigger();
 #endif
     } // todo: init filters with first status
+#ifdef __clang__
     void update() __attribute__((section (".ccmram"))) {
+#else
+    void update() __attribute__((section (".ccmram"), externally_visible)) {
+#endif
       count_++;
 #if !defined(END_TRIGGER_MAIN_SENSORS) && !defined(EXT_TRIGGER_MAIN_SENSORS)
       output_encoder_.trigger();
@@ -515,7 +519,11 @@ class MainLoop {
     void adjust_motor_encoder(float adjustment) { motor_encoder_bias_ += adjustment; }
     const MainLoopStatus & get_status() const { return status_stack_.top(); }
     void set_started() { started_ = true; }
+#ifdef __clang__
     void set_mode(MainControlMode mode) __attribute__((section (".ccmram"))) {
+#else
+    void set_mode(MainControlMode mode) __attribute__((section (".ccmram"), externally_visible)) {
+#endif
       if (mode != mode_ || safe_mode_ != last_safe_mode_) {
         if(mode_ == HARDWARE_BRAKE && mode != HARDWARE_BRAKE) {
           brake_.off();

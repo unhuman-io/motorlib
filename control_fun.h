@@ -17,11 +17,13 @@ inline float fabsf2(float f) {
 
 float fminf(float, float);
 
-// inline float sqrtf(float f) {
-//     float r;
-//     asm("vsqrt.f32 %[dst], %[src]" : [dst] "=t" (r) : [src] "t" (f));
-//     return r;
-// }
+#ifndef __clang__
+inline float sqrtf(float f) {
+    float r;
+    asm("vsqrt.f32 %[dst], %[src]" : [dst] "=t" (r) : [src] "t" (f));
+    return r;
+}
+#endif
 
 class Hysteresis {
  public:

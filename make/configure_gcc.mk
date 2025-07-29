@@ -63,7 +63,7 @@ CFLAGS += -g -gdwarf-2
 endif
 
 # Generate dependency information
-CFLAGS += -MMD -MP -MF"$(@:%.o=%.d)"
+CFLAGS += -MMD -MP -MF"$(@:%.o=%.d)" -Wa,-a,-ad,-alms=$(BUILD_DIR)/lto.lst
 CPPFLAGS += $(CFLAGS)
 
 # libraries
