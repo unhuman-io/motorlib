@@ -3,7 +3,7 @@
 #######################################
 # Requires CONFIG_FILE, and TARGET_MCU defined
 
-CPPSTD = c++17
+CPPSTD = c++20
 
 # Build path
 BUILD_DIR = build
