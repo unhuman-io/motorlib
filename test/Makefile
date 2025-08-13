@@ -7,3 +7,6 @@ test_logger: test_logger.cpp ../logger.h
 
 test_error_mask: test_error_mask.cpp ../motor_messages/motor_messages.h
 	g++ test_error_mask.cpp -o test_error_mask
+
+test_encoder_bias_from_output: test_encoder_bias_from_output.cpp ../motor_messages/motor_messages.h
+	g++-14 -std=c++23 test_encoder_bias_from_output.cpp -o test_encoder_bias_from_output
