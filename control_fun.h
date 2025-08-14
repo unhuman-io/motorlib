@@ -26,7 +26,11 @@ inline float sqrtf(float f) {
 #endif
 
 class Hysteresis {
- public:
+ public:  
+    Hysteresis(float hysteresis = 0, float value = 0) {
+        set_hysteresis(hysteresis);
+        set_value(value);
+    }
     float step(float);
     void set_hysteresis(float);
     void set_value(float value) { value_ = value; }

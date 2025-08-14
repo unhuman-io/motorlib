@@ -171,6 +171,7 @@ namespace config {
 
     // has_mb85rc64
     MB85RC64 mb85rc64(i2c1, 4);
+    StandardMB85RC64 fram(mb85rc64);
 
     Flash flash(*FLASH);
 
@@ -492,25 +493,19 @@ void system_init() {
         System::api.add_api_variable("i48V", new const APIFloat(&i48v));
     }
 
-    if (config::board_rev.has_bmi270) {
+    if (config::board_rev.has_mb85rc64) {
+        config::i2c1.init(1000);
         config::mb85rc64.init();
-        config::mb85rc64.read_block(0, &total_uptime_start);
-        logger.log_printf("total_uptime_start: %u", total_uptime_start);
-        {
-            std::string s = "startup at " + std::to_string(total_uptime_start) + "\n";
-            config::mb85rc64.write_log((uint8_t*) s.c_str(), s.size());
-        }
-        System::api.add_api_variable("total_uptime", new const APIUint32(&total_uptime));
-        System::api.add_api_variable("fram_log", new APICallback([](){
-            config::i2c1.init(1000);
-            std::string s = config::mb85rc64.get_log();
-            config::i2c1.init(400);
-            return s;
-        }, [](std::string s){
-            config::i2c1.init(1000);
-            config::mb85rc64.write_log((uint8_t *) s.c_str(), s.size());
-            config::i2c1.init(400);
-        }));
+        config::fram.init(System::api);
+        System::api.add_api_variable(
+            "fram_log",
+            new APICallback(
+                []() {
+                    // System::set_one_time_api_timeout_us(100 * 1000);
+                    std::string s = config::fram.fram_log_.get_log();
+                    return s;
+                },
+                [](std::string s) { config::fram.fram_log_.write_log((uint8_t*)s.c_str(), s.size()); }));
     }
 
     System::api.add_api_variable("mcmp", new APIUint32(&HRTIM1->sMasterRegs.MCMP1R));
@@ -531,6 +526,14 @@ void system_init() {
             cal->motor_encoder_index_electrical_offset_pos = config::fast_loop.motor_index_electrical_offset_measured_;
         }
         config::flash.write((uint32_t) calibration, (uint32_t*) cal, sizeof(Calibration));
+        std::string s = "Calbration written at " +
+                std::to_string(config::fram.fram1_.total_uptime_s) +
+                ", motor encoder bias: " + std::to_string(cal->motor_encoder_bias) +
+                ", torque sensor bias: " + std::to_string(cal->torque_sensor.bias) +
+                ", output encoder bias: " + std::to_string(cal->output_encoder_bias) +
+                ", motor electrical zero pos: " +
+                std::to_string(cal->motor_encoder_index_electrical_offset_pos) + "\n";
+        config::fram.fram_log_.write_log(reinterpret_cast<const uint8_t*>(s.c_str()), s.size());
         return std::string("ok");
     }));
 #if (COMMS == COMMS_CAN) || (COMMS == COMMS_CAN_USB)
@@ -677,18 +680,9 @@ void main_maintenance() {
             }
         }
         if (config::board_rev.has_mb85rc64) {
-            static bool last_fault = false;
             config::i2c1.init(1000);
-            total_uptime = total_uptime_start + get_uptime();
-            config::mb85rc64.write_block(0, total_uptime);
-            config::mb85rc64.next_block();
-
-            if (config::main_loop.status_.error.fault && !last_fault) {
-                char s[100];
-                std::sprintf(s, "fault detected, error: %08lx\n", config::main_loop.status_.error.all);
-                config::mb85rc64.write_log((uint8_t *) s, std::strlen(s));
-            }
-            last_fault = config::main_loop.status_.error.fault;
+            MainLoopStatus status = config::main_loop.get_status();
+            config::fram.update(status);
 
             config::i2c1.init(400);
         }

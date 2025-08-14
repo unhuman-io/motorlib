@@ -19,6 +19,22 @@ class MB85RC64 {
 
   MB85RC64(I2C_DMA& i2c_dma, uint8_t address = 4) : i2c_dma_(i2c_dma) { address_ = address | 0x50; }
 
+  bool init() {
+    // attempting reset sequence from datasheet. It's not entirely clear.
+    uint8_t data_out = 0xff;
+    i2c_dma_.write(address_, 1, &data_out, false, 100);
+    i2c_dma_.write(address_, 1, &data_out, true, 100);
+
+    // read device id
+    uint8_t address = address_ << 1;
+    i2c_dma_.write(0x7c, 1, &address, false, 100);
+    uint8_t data_in[3] = {};
+    i2c_dma_.read(0x7c, 3, data_in, 100);
+    logger.log_printf("MB85RC64: init, data_in: %02x %02x %02x", data_in[0], data_in[1],
+                        data_in[2]);
+    return data_in[2] == 0x58;
+  }
+
   void read(uint16_t address, uint8_t* bytes, uint16_t length) {
     uint16_t timeout_us1 = 3 * 8 * bit_time_us;
     uint16_t timeout_us2 = (3 + length) * 8 * bit_time_us;
@@ -197,7 +213,7 @@ class StandardMB85RC64 {
     uint32_t total_uptime_s;
     uint32_t enabled_time_s;
     uint32_t revolution_count;
-    uint32_t total_energy_wh;
+    uint32_t total_energy_j;
   };
   StandardMB85RC64(MB85RC64& fram)
       : fram_(fram), fram_block1_(fram), fram_log_(fram, 0x200, 2048) {}
@@ -208,7 +224,7 @@ class StandardMB85RC64 {
     total_uptime_start_ = fram1_.total_uptime_s;
     logger.log_printf("revolution_count: %u", fram1_.revolution_count);
     logger.log_printf("enabled_time: %u", fram1_.enabled_time_s);
-    logger.log_printf("total_energy_wh: %u", fram1_.total_energy_wh);
+    logger.log_printf("total_energy_j: %u", fram1_.total_energy_j);
     {
       std::string s = "startup at " + std::to_string(fram1_.total_uptime_s) + "\n";
       fram_log_.write_log((uint8_t*)s.c_str(), s.size());
@@ -216,10 +232,10 @@ class StandardMB85RC64 {
     api.add_api_variable("total_uptime", new const APIUint32(&fram1_.total_uptime_s));
     api.add_api_variable("revolution_count", new const APIUint32(&fram1_.revolution_count));
     api.add_api_variable("total_enabled_time", new const APIUint32(&fram1_.enabled_time_s));
-    api.add_api_variable("total_energy_wh", new const APIUint32(&fram1_.total_energy_wh));
+    api.add_api_variable("total_energy_j", new const APIUint32(&fram1_.total_energy_j));
   }
 
-  void update(MainLoopStatus& status) {
+  void update(const MainLoopStatus& status) {
     if (first_run_) {
       first_run_ = false;
       last_fast_loop_timestamp_ = status.fast_loop.timestamp;
@@ -238,13 +254,13 @@ class StandardMB85RC64 {
 
     float diff_uj = std::abs((int32_t)(status.fast_loop.energy_uJ - last_energy_uJ_));
     sum_uj_ += diff_uj;
-    if (sum_uj_ >= 3'600'000'000) {
-      fram1_.total_energy_wh += 1;
-      sum_uj_ -= 3'600'000'000;
+    if (sum_uj_ >= 1'000'000) {
+      fram1_.total_energy_j += 1;
+      sum_uj_ -= 1'000'000;
     }
     last_energy_uJ_ = status.fast_loop.energy_uJ;
 
-    if (status.fast_loop.mode != OPEN_MODE && status.fast_loop.mode != BRAKE_MODE) {
+    if (status.fast_loop.mode != 0 && status.fast_loop.mode != 1) {
       sum_enabled_ += status.fast_loop.timestamp - last_fast_loop_timestamp_;
       if (sum_enabled_ > CPU_FREQUENCY_HZ) {
         fram1_.enabled_time_s += 1;
