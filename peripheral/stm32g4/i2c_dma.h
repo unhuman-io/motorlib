@@ -44,6 +44,7 @@ class I2C_DMA {
             return 1;
         }
         clear_isr();
+        asm("" : : "m"(*(const uint8_t(*)[nbytes])data));  // ensure data is in memory
         tx_dma_.CCR = 0;
         tx_dma_.CMAR = (uint32_t) data;
         tx_dma_.CNDTR = nbytes;
@@ -63,11 +64,12 @@ class I2C_DMA {
         }
         clear_isr();
         rx_dma_.CCR = 0;
-        asm("nop"); // memory barrier in case optimization things nothing is using data[*]
         rx_dma_.CMAR = (uint32_t) data;
         rx_dma_.CNDTR = nbytes;
         rx_dma_.CCR = DMA_CCR_EN | DMA_CCR_MINC;
         regs_.CR2 = (address << 1) | I2C_CR2_RD_WRN | (nbytes << I2C_CR2_NBYTES_Pos) | I2C_CR2_AUTOEND | I2C_CR2_START;
+        asm("" : "=m"(*(uint8_t(*)[nbytes])data));  // ensure data is in memory, howevever this is
+                                                    // too soon. Should run this before reading data
         return 0;
     }
 
@@ -148,7 +150,7 @@ class I2C_DMA {
             cancel_async_read();
             return -4;
         }
-        asm("nop"); // todo: a nop seems necessary in order to recognize a data update (due to dma), make volatile maybe
+        asm("" : "=m"(*(uint8_t(*)[nbytes])data));  // ensure data is in memory
         return nbytes;
     }
     bool busy() const {
