@@ -53,7 +53,7 @@ char * get_serial_number() {
 }
 
 
-volatile uint32_t * const cpu_clock = &DWT->CYCCNT;
+extern volatile uint32_t * const cpu_clock = &DWT->CYCCNT;
 uint32_t rcc_csr_copy __attribute__((section (".noload")));
 
 static_assert((uint32_t) CPU_FREQUENCY_HZ % 2000000 == 0, "CPU_FREQUENCY_HZ must be a multiple of 2000000");
@@ -128,7 +128,7 @@ int main() {
     GPIO_SETL(B, 4, GPIO_MODE::ALT_FUN, GPIO_SPEED::VERY_HIGH, 11); // can3 tx
 
     Flash flash(*FLASH);
-    CAN can(CAN::CAN3, CAN::ARB_2M, CAN::DATA_5M);
+    CAN can(CAN::CAN3, CAN::ARB_1M, CAN::DATA_8M);
     CANCommunication can_communication(can, can_id);
 
     int loop_count = 0;
@@ -163,6 +163,7 @@ int main() {
         if (retval > 0) {
             GPIOB->BSRR = GPIO_BSRR_BS6;
             if (data.command == READ) {
+                // example cansend can0 101##00080000000200008
                 if (data.length > 62) {
                     data.length = 62;
                 }
@@ -170,14 +171,15 @@ int main() {
                     send_data.data[i] = *(uint8_t *)data.address;
                     data.address++;
                 }
+                send_data.command = READ;
+                send_data.length = data.length;
                 can_communication.send_data(send_data.send_data);
             } else if (data.command == WRITE) {
+                // example cansend can0 081##001800000002000080102030405060708
                 if (data.length > 56) {
                     data.length = 56;
                 }
-                for (int i = 0; i < data.length; i++) {
-                    flash.write(data.address, data.data, data.length);
-                }
+                flash.write(data.address, data.data, data.length, Flash::ERASE_ONCE);
             }
         }
         char s[65];

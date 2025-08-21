@@ -43,7 +43,6 @@ void Flash::write_impl(uint32_t address, const void *data, uint32_t size, EraseT
         if (erase == ALWAYS_ERASE) {
             clear_erased_status();
         }
-        asm("bkpt 1");
         uint32_t num_pages = (size+1) / page_size_ + 1;
         for (uint32_t i = 0; i < num_pages; i++) {
             IWDG->KR = 0xAAAA;

@@ -31,7 +31,7 @@ C_INCLUDES +=  \
 
 $(BUILD_DIR)/%.o: %.cpp | $(BUILD_DIR) 
 	@echo "  CXX    " $<
-	$(CXX) -c $(CPPFLAGS) -std=c++17 -Wa,-a,-ad,-alms=$(BUILD_DIR)/lto.lst $< -o $@
+	$(CXX) -c $(CPPFLAGS) -std=c++20 -Wa,-a,-ad,-alms=$(BUILD_DIR)/lto.lst $< -o $@
 
 $(BUILD_DIR)/%.o: %.s | $(BUILD_DIR)
 	@echo "  AS     " $<
