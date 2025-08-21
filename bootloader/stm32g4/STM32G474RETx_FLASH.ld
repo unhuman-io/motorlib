@@ -54,6 +54,7 @@ SECTIONS
   {
     . = ALIGN(4);
     _sdata = .;        /* create a global symbol at data start */
+    *(.bootloader_flag)
     *(.text)           /* .text sections (code) */
     *(.text*)          /* .text* sections (code) */
     *(.glue_7)         /* glue arm to thumb code */

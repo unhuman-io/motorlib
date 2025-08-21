@@ -5,7 +5,7 @@
 #include <stm32g4/can.h>
 #include <communication/can_communication.h>
 
-uint32_t go_to_bootloader = 0;
+uint32_t go_to_bootloader __attribute__((section(".bootloader_flag"))) = 0;
 
 extern "C" {
 void _lseek() {}
@@ -193,8 +193,8 @@ int main() {
                 can_communication.send_string(MOTOR_MESSAGES_VERSION, 3);
             } else if (strcmp(s, "version") == 0) {
                 can_communication.send_string("1.0", 3);
-            } else if (strcmp(s, "go_to_bootloader") == 0) {
-                go_to_bootloader = 1;
+            } else if (strcmp(s, "reset") == 0) {
+                NVIC_SystemReset();
             }
         }
 

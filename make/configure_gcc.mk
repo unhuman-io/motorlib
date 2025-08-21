@@ -70,7 +70,7 @@ CPPFLAGS += $(CFLAGS)
 LIBS = -lc -lm -lnosys 
 LIBDIR = 
 
-ifneq (,$(findstring tmotor_can,$(CONFIG)))
+ifneq (,$(findstring tmotor_driver,$(CONFIG)))
 CUSTOM_BOOTLOADER = -Wl,--defsym=CUSTOM_BOOTLOADER=1
 endif
 LDFLAGS = $(MCU) -specs=nosys.specs -T$(LDSCRIPT) $(LIBDIR) $(LIBS) -Wl,-Map=$(BUILD_DIR)/$(TARGET).map,--cref -Wl,--gc-sections,--print-memory-usage -u _printf_float $(CUSTOM_BOOTLOADER)
