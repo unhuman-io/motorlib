@@ -39,6 +39,10 @@ class CANCommunication : public CommunicationBase {
       CANID can_id = {.address = address_, .message_id = OBOT_CMD};
       int recv_len = can_.read(0, can_id.word, (uint8_t*) data);
 
+      if (recv_len > 0) {
+        send_data_counter_ = send_data_delay_;
+      }
+
       if (recv_len < 0) {
         can_id.message_id = OBOT_CMD_STATUS;
         recv_len = can_.read(0, can_id.word, (uint8_t*) data);
@@ -51,23 +55,26 @@ class CANCommunication : public CommunicationBase {
             can_.write(can_id.word, nullptr, 0, 2);
           }
         } else if (recv_len > 0) {
-          send_data_trigger_ = true;
+          send_data_counter_ = send_data_delay_;
         }
       }
       return recv_len;
     }
 
     void send_data(const SendData& data) {
-      send_data_counter_++;
+      //send_data_counter_++;
       if (send_data_counter_ >= send_data_default_decimation_) {
-        send_data_counter_ = 0;
-        send_data_trigger_ = true;
+        //send_data_counter_ = 0;
+        //send_data_trigger_ = true;
       }
-      if (send_data_trigger_) {
+      if (send_data_counter_ >= 0) {
+        send_data_counter_--;
+        if (send_data_counter_ <= 0) {
         CANID can_id = {.address = address_, .message_id = OBOT_STATUS};
         can_.write(can_id.word, (uint8_t*)&data, sizeof(data));
-        send_data_trigger_ = false;
-        send_data_counter_ = 0;
+        //send_data_trigger_ = false;
+        //send_data_counter_ = 0;
+        }
       }
     }
 
@@ -134,8 +141,8 @@ class CANCommunication : public CommunicationBase {
 
  private:
     CAN &can_;
-    volatile bool send_data_trigger_ = false;
-    uint16_t send_data_counter_ = 0;
+    uint32_t send_data_delay_ = 9;
+    uint32_t send_data_counter_ = -1;
     uint16_t send_data_default_decimation_ = 10000;
     uint8_t address_ = 0;
 };
