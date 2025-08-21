@@ -71,17 +71,11 @@ class FastLoop {
       float iq_ff = param_.cogging.gain * cogging_correction_table_.table_interp(motor_x);
 
       if (mode_ == CURRENT_TUNING_MODE) {
-         // only works down to frequencies of .047 Hz, could use kahansum to go slower
-         if (current_tuning_chirp_) {
-           tuning_frequency_ = chirp_frequency_.add(chirp_rate_ * dt_);
-         }
-         phi_ += 2 * (float) M_PI * fabsf(tuning_frequency_) * dt_;   // use id des to set frequency
-         if (phi_ > 2 * (float) M_PI) {
-         phi_ -= 2 * (float) M_PI;
-         }
-         Sincos sincos;
-         sincos = sincos1(phi_);
-         iq_des = tuning_bias_ + tuning_amplitude_ * (tuning_square_ ? fsignf(sincos.sin) : sincos.sin);
+        TrajectoryGenerator::TrajectoryValue t = tuning_trajectory_generator_.step(dt_);
+        iq_des = t.value + tuning_bias_;
+      } else if (mode_ == VOLTAGE_TUNING_MODE) {
+        TrajectoryGenerator::TrajectoryValue t = tuning_trajectory_generator_.step(dt_);
+        set_vq_des(t.value + tuning_bias_);
       }
 
       if (beep_) {
@@ -177,16 +171,12 @@ class FastLoop {
     void set_id_des(float id) { foc_command_.desired.i_d = id; }
     void set_iq_des(float iq) { if (mode_ == CURRENT_MODE || mode_ == STEPPER_TUNING_MODE) iq_des = iq; }
     void set_vq_des(float vq) { foc_command_.desired.v_q = vq; }
-    void set_tuning_amplitude(float amplitude) { tuning_amplitude_ = amplitude; }
-    void set_tuning_frequency(float frequency) { tuning_frequency_ = frequency; }
-    float get_tuning_frequency() const { return tuning_frequency_; }
-    void set_tuning_chirp(bool on, float chirp_rate) { 
-      current_tuning_chirp_ = on; 
-      chirp_rate_ = chirp_rate; 
-      chirp_frequency_.init(0);
-    }
+    void set_tuning_amplitude(float amplitude) { tuning_trajectory_generator_.set_amplitude(amplitude); }
+    void set_tuning_frequency(float frequency) { tuning_trajectory_generator_.set_frequency(frequency); }
+    void set_tuning_mode(TuningMode mode) { tuning_trajectory_generator_.set_mode(mode); }
+    float get_tuning_frequency() const { return tuning_trajectory_generator_.get_frequency(); }
     void set_tuning_bias(float bias) { tuning_bias_ = bias; }
-    void set_tuning_square(bool square = true) { tuning_square_ = square; }
+    float get_tuning_bias() const { return tuning_bias_; }
     void set_stepper_position(float position) { stepper_position_ = position; }
     void set_stepper_velocity(float velocity) { stepper_velocity_ = velocity; }
     void set_reserved(float reserved) { reserved_ = reserved; }
@@ -208,7 +198,6 @@ class FastLoop {
     }
     void current_tuning_mode() {
       current_mode();
-      phi_ = 0;
       mode_ = CURRENT_TUNING_MODE;
     }
     void voltage_mode() {
@@ -216,6 +205,10 @@ class FastLoop {
       pwm_.voltage_mode();
       foc_->voltage_mode();
       mode_ = VOLTAGE_MODE;
+    }
+    void voltage_tuning_mode() {
+      voltage_mode();
+      mode_ = VOLTAGE_TUNING_MODE;
     }
     void stepper_mode(StepperMode mode) {
       switch (mode) {
@@ -273,6 +266,7 @@ class FastLoop {
       s.energy_uJ = energy_uJ_;
       foc_->get_status(&s.foc_status);
       s.iq_filtered = iq_filter_.update(s.foc_status.measured.i_q);
+      s.mode = mode_;
       status_.finish();
     }
 
@@ -346,7 +340,8 @@ class FastLoop {
 
     FOC *foc_;
     PWM &pwm_;
-    enum {OPEN_MODE, BRAKE_MODE, CURRENT_MODE, PHASE_LOCK_MODE, VOLTAGE_MODE, CURRENT_TUNING_MODE, STEPPER_TUNING_MODE} mode_ = CURRENT_MODE;
+    enum {OPEN_MODE, BRAKE_MODE, CURRENT_MODE, PHASE_LOCK_MODE, VOLTAGE_MODE, CURRENT_TUNING_MODE, VOLTAGE_TUNING_MODE,
+          STEPPER_TUNING_MODE} mode_ = CURRENT_MODE;
 
     float motor_encoder_dir_;
     int32_t motor_enc;
@@ -385,14 +380,8 @@ class FastLoop {
    float reserved_ = 0;
    mcu_time last_timestamp_ = 0;
    float dt_ = 0;
-   float phi_ = 0;
-   float tuning_amplitude_ = 0;
-   float tuning_frequency_ = 0;
+   TrajectoryGenerator tuning_trajectory_generator_;
    float tuning_bias_ = 0;
-   bool tuning_square_ = false;
-   float chirp_rate_ = 0;
-   bool current_tuning_chirp_ = false;
-   KahanSum chirp_frequency_;
    float stepper_position_ = 0;
    float stepper_velocity_ = 0;
    int32_t motor_enc_wrap_ = 0;

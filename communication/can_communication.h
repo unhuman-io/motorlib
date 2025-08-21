@@ -85,7 +85,9 @@ class CANCommunication : public CommunicationBase {
       CANID can_id = {.address = address_, .message_id = OBOT_ASCII_RESPONSE};
       if (string[0] == 0 || length > MAX_CAN_DATA_SIZE) {
         struct {
-          APIControlPacket control_packet = {0, LONG_PACKET, .long_packet = {0, 1}};
+          APIControlPacket control_packet = {.control_packet_id = 0,
+                                             .type = LONG_PACKET,
+                                             .long_packet = {0, 1}};
           char data[MAX_CAN_DATA_SIZE - sizeof(APIControlPacket)];
         } long_packet;
         long_packet.control_packet.long_packet.total_length = length;
@@ -124,7 +126,9 @@ class CANCommunication : public CommunicationBase {
     }
 
     void send_one_time_api_timeout_request(uint32_t us) {
-       APIControlPacket timeout_request = {0, TIMEOUT_REQUEST, .timeout_request = {us}};
+       APIControlPacket timeout_request = {.control_packet_id = 0,
+                                           .type = TIMEOUT_REQUEST,
+                                           .timeout_request = {us}};
        CANID can_id = {.address = address_, .message_id = OBOT_ASCII_RESPONSE};
        can_.write(can_id.word, (uint8_t * const) &timeout_request, sizeof(timeout_request));
     }

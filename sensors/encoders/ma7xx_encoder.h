@@ -14,7 +14,9 @@
         [](uint8_t u){ ma7xx.set_bct(u); }));\
     api.add_api_variable(prefix "et", new APICallbackUint8([]{ return ma7xx.get_et(); }, \
         [](uint8_t u){ ma7xx.set_et(u); }));\
-    api.add_api_variable(prefix "mgt", new APICallbackHex<uint16_t>([]{ return ma7xx.get_magnetic_field_strength(); }, \
+    api.add_api_variable(prefix "mgt", new APICallbackHex<uint16_t>([]{ \
+        System::communication_.send_one_time_api_timeout_request(200000);\
+        return ma7xx.get_magnetic_field_strength(); },\
         [](uint16_t u){ ma7xx.set_mgt(u); }));\
     api.add_api_variable(prefix "raw", new const APIUint16(&ma7xx.data_));\
 

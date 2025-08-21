@@ -3,6 +3,9 @@
 //#include <regex>
 //#include <sstream>
 
+uint32_t ParameterAPI::AllocatorBase::index_ = 0;
+uint32_t ParameterAPI::AllocatorBase::mem_[API_SIZE] __attribute((section(".bss.api")));
+
 static std::string trim(std::string_view s)
 {
     auto first = s.find_first_not_of(' ');
@@ -12,19 +15,29 @@ static std::string trim(std::string_view s)
 
 void ParameterAPI::add_api_variable(std::string_view name, APIVariable *var) {
     if (is_rom((void *) name.data())) {
-        variable_map_[name] = var;
+        try {
+            variable_map_.emplace(name, var);
+        } catch (const std::bad_alloc &e) {
+            logger.log_printf("Error adding variable %s (%d): %s", std::string(name).c_str(), variable_map_.size(), e.what());
+            return;
+        }
         auto_complete_.add_match_string(name);
     } else {
-        logger.log_printf("API variable %s not in ROM, not adding, location: %p", std::string(name), name.data());
+        logger.log_printf("API variable %s not in ROM, not adding, location: %p", std::string(name).c_str(), name.data());
     }
 }
 
 void ParameterAPI::add_api_variable(std::string_view name, const APIVariable *var) {
     if (is_rom((void *) name.data())) {
-        const_variable_map_[name] = var;
+        try {
+            const_variable_map_.emplace(name, var);
+        } catch (const std::bad_alloc &e) {
+            logger.log_printf("Error adding const variable %s (%d): %s", std::string(name).c_str(), const_variable_map_.size(), e.what());
+            return;
+        }
         auto_complete_.add_match_string(name);
     } else {
-        logger.log_printf("API variable %s not in ROM, not adding, location: %p", std::string(name), name.data());
+        logger.log_printf("API variable %s not in ROM, not adding, location: %p", std::string(name).c_str(), name.data());
     }
 }
 

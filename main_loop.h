@@ -54,7 +54,11 @@ class MainLoop {
           torque_sensor_.trigger();
 #endif
     } // todo: init filters with first status
+#ifdef __clang__
+    void update() __attribute__((section (".ccmram"))) {
+#else
     void update() __attribute__((section (".ccmram"), externally_visible)) {
+#endif
       count_++;
 #if !defined(END_TRIGGER_MAIN_SENSORS) && !defined(EXT_TRIGGER_MAIN_SENSORS)
       output_encoder_.trigger();
@@ -64,7 +68,7 @@ class MainLoop {
 
       if (count_ >= frequency_hz_) {
         count_ = 0;
-        uptime++;
+        uptime += 1;
       }
       
       last_timestamp_ = timestamp_;
@@ -208,20 +212,24 @@ class MainLoop {
 
       if (receive_data_.mode_desired == TUNING) {
           command_current_ = set_tuning_command(receive_data_, count_received);
-          float desired = *tuning_trajectory_generator_.value();
-          float measured = 0;
-          switch (command_current_.mode_desired) {
-            case POSITION:
-              measured = status_.motor_position;
-              break;
-            case VELOCITY:
-              measured = status_.motor_velocity_filtered;
-              break;
-            case TORQUE:
-              measured = status_.torque;
-              break;
+          if (command_current_.mode_desired == POSITION ||
+              command_current_.mode_desired == VELOCITY ||
+              command_current_.mode_desired == TORQUE) {
+            float desired = *tuning_trajectory_generator_.value();
+            float measured = 0;
+            switch (command_current_.mode_desired) {
+              case POSITION:
+                measured = status_.motor_position;
+                break;
+              case VELOCITY:
+                measured = status_.motor_velocity_filtered;
+                break;
+              case TORQUE:
+                measured = status_.torque;
+                break;
+            }
+            dft_.step(desired, measured, tuning_trajectory_generator_.get_frequency(), timestamp_);
           }
-          dft_.step(desired, measured, tuning_trajectory_generator_.get_frequency(), timestamp_);
       } else {
           command_current_ = receive_data_;
       }
@@ -299,18 +307,14 @@ class MainLoop {
             fast_loop_.set_tuning_amplitude(command_current_.current_tuning.amplitude);
             fast_loop_.set_tuning_frequency(command_current_.current_tuning.frequency);
             fast_loop_.set_tuning_bias(command_current_.current_tuning.bias);
-            fast_loop_.set_tuning_square(command_current_.current_tuning.mode == TuningMode::SQUARE);
-            if (command_current_.current_tuning.mode == TuningMode::CHIRP) { // flag for chirp mode
-              fast_loop_.set_tuning_chirp(true, command_current_.current_tuning.frequency);
-            } else {
-              fast_loop_.set_tuning_chirp(false, 0);
-            }
+            fast_loop_.set_tuning_mode(static_cast<TuningMode>(command_current_.current_tuning.mode));
           }
           // every cycle
           if (fast_log_ready_) {
             if (current_tuning_rate_limiter_.ready()) {
-              if (status_stack_.top().fast_loop.foc_command.desired.i_q < 0 &&
-                  status_.fast_loop.foc_command.desired.i_q > 0) {
+              float trigger_point = fast_loop_.get_tuning_bias();
+              if (status_stack_.top().fast_loop.foc_command.desired.i_q < trigger_point &&
+                  status_.fast_loop.foc_command.desired.i_q >= trigger_point) {
                 fast_loop_.trigger_status_log();
                 current_tuning_rate_limiter_.run();
               }
@@ -318,9 +322,29 @@ class MainLoop {
           }
           dft_.step(status_.fast_loop.foc_command.desired.i_q, status_.fast_loop.foc_status.measured.i_q, 
             fast_loop_.get_tuning_frequency(), status_.fast_loop.timestamp);
+          *reserved0_ = status_.fast_loop.foc_command.desired.i_q;
+          break;
+        case TUNING:
+          // should be in other modes
           break;
         case VOLTAGE:
-          vq_des = command_current_.voltage.voltage_desired;
+          if (command_current_.mode_desired == TUNING) {
+            if (fast_log_ready_) {
+              if (current_tuning_rate_limiter_.ready()) {
+                float trigger_point = fast_loop_.get_tuning_bias();
+                if (status_stack_.top().fast_loop.foc_command.desired.v_q < trigger_point &&
+                    status_.fast_loop.foc_command.desired.v_q >= trigger_point) {
+                  fast_loop_.trigger_status_log();
+                  current_tuning_rate_limiter_.run();
+                }
+              }
+            }
+            dft_.step(status_.fast_loop.foc_command.desired.v_q, status_.fast_loop.foc_status.measured.i_q, 
+              fast_loop_.get_tuning_frequency(), status_.fast_loop.timestamp);
+            *reserved0_ = status_.fast_loop.foc_command.desired.v_q;
+          } else {
+            vq_des = command_current_.voltage.voltage_desired;
+          }
           break;
         case PHASE_LOCK:
           fast_loop_.set_id_des(command_current_.current_desired);
@@ -495,7 +519,11 @@ class MainLoop {
     void adjust_motor_encoder(float adjustment) { motor_encoder_bias_ += adjustment; }
     const MainLoopStatus & get_status() const { return status_stack_.top(); }
     void set_started() { started_ = true; }
+#ifdef __clang__
+    void set_mode(MainControlMode mode) __attribute__((section (".ccmram"))) {
+#else
     void set_mode(MainControlMode mode) __attribute__((section (".ccmram"), externally_visible)) {
+#endif
       if (mode != mode_ || safe_mode_ != last_safe_mode_) {
         if(mode_ == HARDWARE_BRAKE && mode != HARDWARE_BRAKE) {
           brake_.off();
@@ -578,6 +606,15 @@ class MainLoop {
               reserved0_ = tuning_trajectory_generator_.value();
               set_mode(static_cast<MainControlMode>(receive_data_.tuning_command.mode));
               mode = static_cast<MainControlMode>(receive_data_.tuning_command.mode);
+            }
+            if (receive_data_.tuning_command.mode == CURRENT) {
+              set_mode(CURRENT_TUNING);
+              mode = CURRENT_TUNING;
+            }
+            if (receive_data_.tuning_command.mode == VOLTAGE) {
+              set_mode(VOLTAGE);
+              fast_loop_.voltage_tuning_mode();
+              mode = VOLTAGE;
             }
             break;
           case FIND_LIMITS:
@@ -688,7 +725,7 @@ class MainLoop {
             return state_controller_.validate_command(receive_data);
             break;          
           case CURRENT_TUNING:
-            if (receive_data.current_tuning.mode <= TuningMode::CHIRP &&
+            if (receive_data.current_tuning.mode <= TuningMode::RANDOM &&
                 std::isfinite(receive_data.current_tuning.amplitude) &&
                 std::isfinite(receive_data.current_tuning.frequency) &&
                 std::isfinite(receive_data.current_tuning.bias)) {
@@ -697,7 +734,7 @@ class MainLoop {
             return false;
             break;
           case POSITION_TUNING:
-            if (receive_data.position_tuning.mode <= TuningMode::CHIRP &&
+            if (receive_data.position_tuning.mode <= TuningMode::RANDOM &&
                 std::isfinite(receive_data.position_tuning.amplitude) &&
                 std::isfinite(receive_data.position_tuning.frequency) &&
                 std::isfinite(receive_data.position_tuning.bias)) {
@@ -739,10 +776,12 @@ class MainLoop {
             return admittance_controller_.validate_command(receive_data);
             break;
           case TUNING:
-            return (receive_data.tuning_command.mode == POSITION ||
+            return (receive_data.tuning_command.mode == CURRENT ||
+                    receive_data.tuning_command.mode == VOLTAGE ||
+                    receive_data.tuning_command.mode == POSITION ||
                     receive_data.tuning_command.mode == VELOCITY ||
                     receive_data.tuning_command.mode == TORQUE) &&
-                    receive_data.tuning_command.tuning_mode <= TuningMode::CHIRP &&
+                    receive_data.tuning_command.tuning_mode <= TuningMode::RANDOM &&
                     std::isfinite(receive_data.tuning_command.amplitude) &&
                     std::isfinite(receive_data.tuning_command.frequency) &&
                     std::isfinite(receive_data.tuning_command.bias);
@@ -757,29 +796,45 @@ class MainLoop {
 
     MotorCommand set_tuning_command(ReceiveData &receive_data, bool update_parameters) {
       MotorCommand command = {};
-      if (update_parameters) {
-        tuning_trajectory_generator_.set_amplitude(receive_data.tuning_command.amplitude);
-        tuning_trajectory_generator_.set_frequency(receive_data.tuning_command.frequency);
-        tuning_trajectory_generator_.set_mode(static_cast<TuningMode>(receive_data.tuning_command.tuning_mode));
-      }
-      TrajectoryGenerator::TrajectoryValue traj = tuning_trajectory_generator_.step(dt_);
-      switch (receive_data.tuning_command.mode) {
-        case POSITION:
-          command.position_desired = traj.value + receive_data.tuning_command.bias;
-          command.velocity_desired = traj.value_dot;
-          command.mode_desired = POSITION;
-          break;
-        case VELOCITY:
-          command.velocity_desired = traj.value + receive_data.tuning_command.bias;
-          command.mode_desired = VELOCITY;
-          break;
-        case TORQUE:
-          command.torque_desired = traj.value + receive_data.tuning_command.bias;
-          command.torque_dot_desired = traj.value_dot;
-          command.mode_desired = TORQUE;
-          break;
-        default:
-          break;
+      if (receive_data.tuning_command.mode == CURRENT) {
+        command.current_tuning.amplitude = receive_data.tuning_command.amplitude;
+        command.current_tuning.frequency = receive_data.tuning_command.frequency;
+        command.current_tuning.bias = receive_data.tuning_command.bias;
+        command.current_tuning.mode = receive_data.tuning_command.tuning_mode;
+        command.mode_desired = CURRENT_TUNING;
+      } else if (receive_data.tuning_command.mode == VOLTAGE) {
+        command = receive_data;
+        if (update_parameters) {
+          fast_loop_.set_tuning_amplitude(command.tuning_command.amplitude);
+          fast_loop_.set_tuning_frequency(command.tuning_command.frequency);
+          fast_loop_.set_tuning_bias(command.tuning_command.bias);
+          fast_loop_.set_tuning_mode(static_cast<TuningMode>(command.tuning_command.tuning_mode));
+        }
+      } else {
+        if (update_parameters) {
+          tuning_trajectory_generator_.set_amplitude(receive_data.tuning_command.amplitude);
+          tuning_trajectory_generator_.set_frequency(receive_data.tuning_command.frequency);
+          tuning_trajectory_generator_.set_mode(static_cast<TuningMode>(receive_data.tuning_command.tuning_mode));
+        }
+        TrajectoryGenerator::TrajectoryValue traj = tuning_trajectory_generator_.step(dt_);
+        switch (receive_data.tuning_command.mode) {
+          case POSITION:
+            command.position_desired = traj.value + receive_data.tuning_command.bias;
+            command.velocity_desired = traj.value_dot;
+            command.mode_desired = POSITION;
+            break;
+          case VELOCITY:
+            command.velocity_desired = traj.value + receive_data.tuning_command.bias;
+            command.mode_desired = VELOCITY;
+            break;
+          case TORQUE:
+            command.torque_desired = traj.value + receive_data.tuning_command.bias;
+            command.torque_dot_desired = traj.value_dot;
+            command.mode_desired = TORQUE;
+            break;
+          default:
+            break;
+        }
       }
       return command;
     }
@@ -846,7 +901,7 @@ class MainLoop {
     ReceiveData receive_data_ = {};
     MotorCommand command_current_ = {};
     mcu_time host_timestamp_ = {};
-    ReceiveData last_receive_data_ = {};
+    //ReceiveData last_receive_data_ = {};
     MotorCommand internal_command_;
     bool internal_command_received_ = false;
     uint32_t frequency_hz_;

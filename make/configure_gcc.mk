@@ -63,8 +63,8 @@ CFLAGS += -g -gdwarf-2
 endif
 
 # Generate dependency information
-CFLAGS += -MMD -MP -MF"$(@:%.o=%.d)"
-CPPFLAGS = $(CFLAGS)
+CFLAGS += -MMD -MP -MF"$(@:%.o=%.d)" -Wa,-a,-ad,-alms=$(BUILD_DIR)/lto.lst
+CPPFLAGS += $(CFLAGS)
 
 # libraries
 LIBS = -lc -lm -lnosys 
@@ -78,10 +78,10 @@ LDFLAGS = $(MCU) -specs=nosys.specs -T$(LDSCRIPT) $(LIBDIR) $(LIBS) -Wl,-Map=$(B
 GCC_VERSION := $(shell $(CC) -dumpversion)
 GCC_MAJOR_VERSION := $(word 1, $(subst ., ,$(GCC_VERSION)))
 
-ifeq ($(GCC_MAJOR_VERSION), $(filter $(GCC_MAJOR_VERSION),10 11 12 13))
+ifeq ($(GCC_MAJOR_VERSION), $(filter $(GCC_MAJOR_VERSION),10 11 12 13 14))
 $(call info_once,gcc version $(GCC_VERSION))
 else
-$(error gcc version $(GCC_VERSION), 10 - 13 required)
+$(error gcc version $(GCC_VERSION), 10 - 14 required)
 endif
 
 ifeq ($(OS),Windows_NT)

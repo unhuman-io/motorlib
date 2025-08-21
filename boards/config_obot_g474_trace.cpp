@@ -300,7 +300,8 @@ namespace config {
 
     LED led = {const_cast<uint16_t*>(reinterpret_cast<volatile uint16_t *>(get_board_pins(board_rev).led_tim_r)), 
                const_cast<uint16_t*>(reinterpret_cast<volatile uint16_t *>(get_board_pins(board_rev).led_tim_g)),
-               const_cast<uint16_t*>(reinterpret_cast<volatile uint16_t *>(get_board_pins(board_rev).led_tim_b))};
+               const_cast<uint16_t*>(reinterpret_cast<volatile uint16_t *>(get_board_pins(board_rev).led_tim_b)),
+               config::main_loop_frequency};
     volatile uint32_t &V5V_DR = V_BUS_DR;
 #ifndef POSITION_CONTROLLER_OVERRIDE
     PositionController position_controller = {(float) (1.0/main_loop_frequency)};
@@ -439,7 +440,8 @@ void system_init() {
     }));
     System::api.add_api_variable("deadtime", new APICallbackUint16([](){ 
         return config::motor_pwm.deadtime_ns_; }, [](uint16_t u) {config::motor_pwm.set_deadtime(u); }));
-
+        System::api.add_api_variable("idelay", new APICallbackUint16([](){ 
+            return config::motor_pwm.get_current_sample_delay(); }, [](uint16_t u) {config::motor_pwm.set_current_sample_delay(u); }));
 
     System::api.add_api_variable("mcmp", new APIUint32(&HRTIM1->sMasterRegs.MCMP1R));
     System::api.add_api_variable("t1cmp", new APIUint32(&TIM1->CCR1));

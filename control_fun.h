@@ -4,7 +4,9 @@
 #include "messages.h"
 #undef _DEFAULT_SOURCE
 #include <cmath>
-#define M_PI 3.1415926f
+#ifndef M_PI
+#define M_PI 3.141592653f
+#endif
 #include "sincos.h"
 #include <algorithm>
 #include <vector>
@@ -13,8 +15,22 @@ inline float fabsf2(float f) {
     return f >= 0 ? f : -f;
 }
 
+float fminf(float, float);
+
+#ifndef __clang__
+inline float sqrtf(float f) {
+    float r;
+    asm("vsqrt.f32 %[dst], %[src]" : [dst] "=t" (r) : [src] "t" (f));
+    return r;
+}
+#endif
+
 class Hysteresis {
- public:
+ public:  
+    Hysteresis(float hysteresis = 0, float value = 0) {
+        set_hysteresis(hysteresis);
+        set_value(value);
+    }
     float step(float);
     void set_hysteresis(float);
     void set_value(float value) { value_ = value; }
@@ -89,7 +105,7 @@ class KahanSum {
 
 class FirstOrderLowPassFilter {
 public:
-    FirstOrderLowPassFilter(float dt, float frequency_hz=0) {
+    FirstOrderLowPassFilter(float dt=1, float frequency_hz=0) {
         dt_ = dt;
         set_frequency(frequency_hz);
     }
@@ -112,6 +128,14 @@ public:
     }
     float get_frequency() const {
         return alpha_/(2*M_PI*dt_*(1-alpha_));
+    }
+    void set_dt(float dt) {
+        float frequency = get_frequency();
+        dt_ = dt;
+        if (!std::isfinite(frequency)) {
+            frequency = 0;
+        }
+        set_frequency(frequency);
     }
 private:
     float value_ = 0, last_value_ = 0;
@@ -209,6 +233,8 @@ class FIRFilter {
     float values_[size] = {};
     int current_pos_;
 };
+
+template <> const float FIRFilter<>::default_coeff_[];
 
 class PIController {
 public:
@@ -322,10 +348,13 @@ class TrajectoryGenerator {
     struct TrajectoryValue {
         float value, value_dot;
     };
-    void set_frequency(float frequency) { frequency_ = frequency; }
+    void set_frequency(float frequency) {
+        frequency_ = frequency;
+        low_pass_filter_.set_frequency(frequency);
+    }
     void set_amplitude(float amplitude) { amplitude_ = amplitude; }
     void set_mode(TuningMode mode) {
-        if (mode <= TuningMode::CHIRP) {
+        if (mode <= TuningMode::RANDOM) {
             mode_ = mode;
             if (mode == TuningMode::CHIRP) {
                 chirp_rate_ = frequency_;
@@ -367,6 +396,17 @@ class TrajectoryGenerator {
                     trajectory_value_.value_dot = -4 * amplitude_ * frequency_;
                 }
                 break;
+            case TuningMode::RANDOM: {
+                    low_pass_filter_.set_dt(dt);
+                    float raw = amplitude_ * (2 * (float) rand() * (1.0 / static_cast<float>(RAND_MAX)) - 1);
+                    float raw_scaled = raw * random_scale_;
+                    
+                    float value_last = trajectory_value_.value;
+                    float new_value = low_pass_filter_.update(raw_scaled);
+                    trajectory_value_.value = fsat(new_value, amplitude_);
+                    trajectory_value_.value_dot = (trajectory_value_.value - value_last) / dt;
+                }
+                break;
         }
         return trajectory_value_;
     }
@@ -375,10 +415,12 @@ class TrajectoryGenerator {
     float get_frequency() const { return frequency_; }
  private:
     TuningMode mode_ = TuningMode::SINE;
+    float random_scale_ = 1;
     float frequency_, amplitude_;
     TrajectoryValue trajectory_value_;
     KahanSum phi_, chirp_frequency_;
     float chirp_rate_;
+    FirstOrderLowPassFilter low_pass_filter_;
     friend class System;
 };
 

@@ -71,7 +71,7 @@ Protocol::State Protocol::getCommandStateHandler(bool first_run)
 void Protocol::readMailboxCommandInit()
 {
   mailbox_command_context_ = {
-    .state      = mailbox_command_context_.State::kReadId,
+    .state      = decltype(mailbox_command_context_)::State::kReadId,
     .mailboxId  = 0,
     .length     = 0,
     .dataSent   = false
@@ -85,12 +85,12 @@ Protocol::State Protocol::readMailboxCommandStateHandler(bool first_run)
 
   switch(context.state)
   {
-    case context.State::kReadIdAndLength:
-    case context.State::kReadData:
+    case decltype(mailbox_command_context_)::State::kReadIdAndLength:
+    case decltype(mailbox_command_context_)::State::kReadData:
       FIGURE_ASSERT(false, "Invalid state");
       break;
 
-    case context.State::kReadId:
+    case decltype(mailbox_command_context_)::State::kReadId:
       if(first_run)
       {
         comms_.startTransaction({
@@ -111,7 +111,7 @@ Protocol::State Protocol::readMailboxCommandStateHandler(bool first_run)
 
         if(context.length > 0)
         {
-          context.state = context.State::kWriteLengthAndData;
+          context.state = decltype(mailbox_command_context_)::State::kWriteLengthAndData;
           new_state = sendAckNack(false, kStateRunCommand);
         }
         else
@@ -121,7 +121,7 @@ Protocol::State Protocol::readMailboxCommandStateHandler(bool first_run)
       }
       break;
 
-    case context.State::kWriteLengthAndData:
+    case decltype(mailbox_command_context_)::State::kWriteLengthAndData:
       if(first_run)
       {
         if(send_dummy_byte_)
@@ -171,7 +171,7 @@ Protocol::State Protocol::readMailboxCommandStateHandler(bool first_run)
 void Protocol::writeMailboxCommandInit()
 {
   mailbox_command_context_ = {
-    .state      = mailbox_command_context_.State::kReadIdAndLength,
+    .state      = decltype(mailbox_command_context_)::State::kReadIdAndLength,
     .mailboxId  = 0,
     .length     = 0,
     .dataSent   = false
@@ -185,12 +185,12 @@ Protocol::State Protocol::writeMailboxCommandStateHandler(bool first_run)
 
   switch(context.state)
   {
-    case context.State::kReadId:
-    case context.State::kWriteLengthAndData:
+    case decltype(mailbox_command_context_)::State::kReadId:
+    case decltype(mailbox_command_context_)::State::kWriteLengthAndData:
       FIGURE_ASSERT(false, "Invalid state");
       break;
 
-    case context.State::kReadIdAndLength:
+    case decltype(mailbox_command_context_)::State::kReadIdAndLength:
       if(first_run)
       {
         comms_.startTransaction({
@@ -206,7 +206,7 @@ Protocol::State Protocol::writeMailboxCommandStateHandler(bool first_run)
 
         if(context.length <= mailboxes.kBufferSize)
         {
-          context.state = context.State::kReadData;
+          context.state = decltype(mailbox_command_context_)::State::kReadData;
           new_state = sendAckNack(false, kStateRunCommand);
         }
         else
@@ -216,7 +216,7 @@ Protocol::State Protocol::writeMailboxCommandStateHandler(bool first_run)
       }
       break;
 
-    case context.State::kReadData:
+    case decltype(mailbox_command_context_)::State::kReadData:
       if(first_run)
       {
         comms_.startTransaction({

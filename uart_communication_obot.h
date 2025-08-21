@@ -88,9 +88,11 @@ class UARTCommunication : public CommunicationBase {
   }
 
   bool send_string(const char* string, uint16_t length) {
-    if (string[0] == 0 || length > OBOT_ASCII_MAX_SEND_LENGTH) {
+    if (length > 0 && (string[0] == 0 || length > OBOT_ASCII_MAX_SEND_LENGTH)) {
       struct {
-        APIControlPacket control_packet = {0, LONG_PACKET, .long_packet = {0, 1}};
+        APIControlPacket control_packet = {.control_packet_id = 0,
+                                           .type = LONG_PACKET,
+                                           .long_packet = {0, 1}};
         char data[OBOT_ASCII_MAX_SEND_LENGTH - sizeof(APIControlPacket)];
       } long_packet;
       long_packet.control_packet.long_packet.total_length = length;
@@ -111,7 +113,9 @@ class UARTCommunication : public CommunicationBase {
   }
 
   void send_one_time_api_timeout_request(uint32_t us) {
-    APIControlPacket timeout_request = {0, TIMEOUT_REQUEST, .timeout_request = {us}};
+    APIControlPacket timeout_request = {.control_packet_id = 0,
+                                        .type = TIMEOUT_REQUEST,
+                                        .timeout_request = {us}};
     uint8_t packet_size;
     uint8_t* packet = protocol_.generatePacket((const uint8_t *) &timeout_request, sizeof(timeout_request), (size_t) OBOT_ASCII_RESPONSE, &packet_size);
     send_uart_packet(packet, packet_size);
@@ -149,7 +153,7 @@ class UARTCommunication : public CommunicationBase {
 #ifdef USE_MOTOR_STATUS_LITE
     const uint32_t buffer_size = sizeof(MotorStatusLite);
 #else
-    const uint32_t buffer_size = sizeof(MotorStatus);
+    const uint32_t buffer_size = sizeof(MotorStatusRegular);
 #endif
     uint8_t* packet = protocol_.generatePacket(reinterpret_cast<uint8_t*>(&obot_status_), buffer_size, OBOT_STATUS, &packet_size);
     send_uart_packet(packet, packet_size);
