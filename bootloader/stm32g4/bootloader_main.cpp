@@ -116,7 +116,7 @@ extern "C" void SystemClock_Config(void)
   CRS->CR |= CRS_CR_AUTOTRIMEN | CRS_CR_CEN;
 }
 
-uint8_t can_id = 1;
+uint8_t can_id = *(uint8_t *) (0x8060000);
 
 int main() {
     SystemClock_Config();
