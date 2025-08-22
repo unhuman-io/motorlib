@@ -29,6 +29,9 @@
       api.add_api_variable(prefix "gain", new const APICallbackHex<uint32_t>([]{\
         return encoder.read_extended_reg(0x31);\
       }));\
+      api.add_api_variable(prefix "gain2", new const APICallbackHex<uint32_t>([]{\
+        return encoder.read_extended_reg(0x32);\
+      }));\
       api.add_api_variable(prefix "stuff", new const APICallbackHex<uint32_t>([]{\
         return encoder.read_extended_reg(0x30);\
       }));\
@@ -36,6 +39,18 @@
         int16_t ret = encoder.read_reg(0x0a).data;\
         return ret;\
       }));\
+      api.add_api_variable(prefix "factory", new const APICallbackHex<uint32_t>([]{\
+        return encoder.read_extended_reg(0);\
+      }));\
+      api.add_api_variable(prefix "factory2", new const APICallbackHex<uint32_t>([]{\
+        return encoder.read_extended_reg(1);\
+      }));\
+      api.add_api_variable(prefix "unlock", new const APICallbackHex<uint16_t>([]{\
+        return encoder.unlock();\
+      }));\
+      api.add_api_variable(prefix "cs3", new APICallbackHex<uint32_t>([]{\
+        return encoder.read_extended_reg(0x1a);\
+      }, [](uint32_t value){ encoder.write_extended_reg(0x1a, value); }));\
       api.add_api_variable(prefix "s0_s1_flag_count", new const APIUint32(&encoder.s0_s1_flag_count_)); \
       api.add_api_variable(prefix "frame_error_count", new const APIUint32(&encoder.frame_error_count_)); \
       api.add_api_variable(prefix "crc_error_count", new const APIUint32(&encoder.crc_error_count_)); \
@@ -165,11 +180,26 @@ class A17803 : public EncoderBase {
         spidma_.claim();
         write_reg(0x5, reg);
         write_reg(0x6, 0x8000);
+        A17803_Message message = read_reg(0x6);
+        
+        logger.log_printf("A17803: read_extended_reg(0x%02X) = 0x%08X", reg, message.data);
         ms_delay(1);
+        message = read_reg(0x6);
+        
         uint32_t value = read_reg(0x7).data << 16;
         value |= read_reg(0x8).data;
         spidma_.release();
         return value;
+    }
+
+    void write_extended_reg(uint8_t reg, uint32_t value) {
+        spidma_.claim();
+        write_reg(0x1, reg);
+        write_reg(0x2, value >> 16);
+        write_reg(0x3, value & 0xffff);
+        write_reg(0x4, 0x8000);
+        write_reg(0x6, 0x0000 | (value >> 16));
+        spidma_.release();
     }
 
     void write_reg(uint8_t reg, uint16_t value) {
@@ -187,6 +217,14 @@ class A17803 : public EncoderBase {
         message_.frame_count = message.frame_count; // to prevent frame count errors in read
         spidma_.release();
 
+    }
+
+    uint16_t unlock() {
+        logger.log_printf("A17803: unlocking %04X", read_reg(0x1e).data);
+        write_reg(0x1e, 0xC418);
+        write_reg(0x1e, 0x0e80);
+        
+        return read_reg(0x1e).data;
     }
 
     uint16_t get_diag() {
