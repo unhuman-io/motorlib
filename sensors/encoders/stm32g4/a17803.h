@@ -26,12 +26,12 @@
         uint16_t ret = encoder.read_reg(0x1f).data; \
         return ret; }, \
         [](uint16_t value){ encoder.write_reg(0x1f, value); })); \
-      api.add_api_variable(prefix "gain", new const APICallbackHex<uint32_t>([]{\
+      api.add_api_variable(prefix "reg31", new APICallbackHex<uint32_t>([]{\
         return encoder.read_extended_reg(0x31);\
-      }));\
-      api.add_api_variable(prefix "gain2", new const APICallbackHex<uint32_t>([]{\
+      }, [](uint32_t value){ encoder.write_extended_reg(0x31, value); }));\
+      api.add_api_variable(prefix "reg32", new APICallbackHex<uint32_t>([]{\
         return encoder.read_extended_reg(0x32);\
-      }));\
+      }, [](uint32_t value){ encoder.write_extended_reg(0x32, value); }));\
       api.add_api_variable(prefix "stuff", new const APICallbackHex<uint32_t>([]{\
         return encoder.read_extended_reg(0x30);\
       }));\
@@ -47,6 +47,36 @@
       }));\
       api.add_api_variable(prefix "unlock", new const APICallbackHex<uint16_t>([]{\
         return encoder.unlock();\
+      }));\
+      api.add_api_variable(prefix "trim_sens", new const APICallbackHex<uint16_t>([]{\
+        return static_cast<uint16_t>(encoder.read_extended_reg(0x51));\
+      }));\
+      api.add_api_variable(prefix "reg35", new APICallbackHex<uint32_t>([]{\
+        return encoder.read_extended_reg(0x35);\
+      }, [](uint32_t value){ encoder.write_extended_reg(0x35, value); }));\
+      api.add_api_variable(prefix "y_gain", new const APICallbackHex<uint32_t>([]{\
+        return encoder.read_extended_reg(0x5a);\
+      }));\
+      api.add_api_variable(prefix "y_offset", new const APICallbackHex<uint32_t>([]{\
+        return encoder.read_extended_reg(0x5b);\
+      }));\
+      api.add_api_variable(prefix "x_gain", new const APICallbackHex<uint32_t>([]{\
+        return encoder.read_extended_reg(0x5c);\
+      }));\
+      api.add_api_variable(prefix "x_offset", new const APICallbackHex<uint32_t>([]{\
+        return encoder.read_extended_reg(0x5d);\
+      }));\
+      api.add_api_variable(prefix "x_ref_amp", new const APICallbackHex<uint32_t>([]{\
+        return encoder.read_extended_reg(0x5e);\
+      }));\
+      api.add_api_variable(prefix "x_ref_offset", new const APICallbackHex<uint32_t>([]{\
+        return encoder.read_extended_reg(0x5f);\
+      }));\
+      api.add_api_variable(prefix "y_ref_amp", new const APICallbackHex<uint32_t>([]{\
+        return encoder.read_extended_reg(0x60);\
+      }));\
+      api.add_api_variable(prefix "y_ref_offset", new const APICallbackHex<uint32_t>([]{\
+        return encoder.read_extended_reg(0x61);\
       }));\
       api.add_api_variable(prefix "cs3", new APICallbackHex<uint32_t>([]{\
         return encoder.read_extended_reg(0x1a);\
@@ -181,10 +211,12 @@ class A17803 : public EncoderBase {
         write_reg(0x5, reg);
         write_reg(0x6, 0x8000);
         A17803_Message message = read_reg(0x6);
-        
-        logger.log_printf("A17803: read_extended_reg(0x%02X) = 0x%08X", reg, message.data);
-        ms_delay(1);
-        message = read_reg(0x6);
+        if (message.data & 0x01) [[likely]] {
+          // read is ready
+        } else {
+          // are eeprom reads slower? Datasheet says 2 us. This doesn't trigger so far though
+          logger.log_printf("A17803: read_extended_reg(0x%02X) not ready, diag: %04X", reg, message.data);
+        }
         
         uint32_t value = read_reg(0x7).data << 16;
         value |= read_reg(0x8).data;
@@ -199,6 +231,7 @@ class A17803 : public EncoderBase {
         write_reg(0x3, value & 0xffff);
         write_reg(0x4, 0x8000);
         write_reg(0x6, 0x0000 | (value >> 16));
+        // would need to wait 6.5 ms for write to complete
         spidma_.release();
     }
 
