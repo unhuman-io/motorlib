@@ -6,6 +6,10 @@
 #include "../../util.h"
 #include "spi_dma.h"
 
+#define SPIDEBUG_SET_DEBUG_API(prefix, api, spi_debug) \
+      api.add_api_variable(prefix "spi", new APICallback([](){ return spi_debug.read(); }, \
+        [](std::string s) { spi_debug.write(s); }));
+
 class SPIDebug {
  public:
     SPIDebug(SPIDMA &spi_dma) : 
