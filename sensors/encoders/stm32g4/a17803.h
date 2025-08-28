@@ -32,6 +32,15 @@
       api.add_api_variable(prefix "reg32", new APICallbackHex<uint32_t>([]{\
         return encoder.read_extended_reg(0x32);\
       }, [](uint32_t value){ encoder.write_extended_reg(0x32, value); }));\
+      api.add_api_variable(prefix "reg39", new APICallbackHex<uint32_t>([]{\
+        return encoder.read_extended_reg(0x39);\
+      }, [](uint32_t value){ encoder.write_extended_reg(0x39, value); }));\
+      api.add_api_variable(prefix "reg3c", new APICallbackHex<uint32_t>([]{\
+        return encoder.read_extended_reg(0x3c);\
+      }, [](uint32_t value){ encoder.write_extended_reg(0x3c, value); }));\
+      api.add_api_variable(prefix "reg1c", new APICallbackHex<uint32_t>([]{\
+        return encoder.read_extended_reg(0x1c);\
+      }, [](uint32_t value){ encoder.write_extended_reg(0x1c, value); }));\
       api.add_api_variable(prefix "stuff", new const APICallbackHex<uint32_t>([]{\
         return encoder.read_extended_reg(0x30);\
       }));\
@@ -197,7 +206,7 @@ class A17803 : public EncoderBase {
         //logger.log_printf("frame_count2: %d", message.frame_count);
         if (message.crc != crc_calc(message.crc_view.crc_bits)) [[unlikely]] {
             crc_error_count_++;
-        } else if (message.address != reg) {
+        } else if (message.address != reg) [[unlikely]] {
             logger.log_printf("A17803: Unexpected address 0x%02X, expected 0x%02X",
                 message.address, reg);
             logger.log_printf("A17803: sent: %08x crc %02x", rev, crc_calc(reg_message.crc_view.crc_bits));
