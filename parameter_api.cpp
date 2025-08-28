@@ -74,22 +74,39 @@ std::string ParameterAPI::parse_string(std::string_view s) {
             }
         }
 
-        auto equal_pos = s.find("=");
-        if (equal_pos != std::string::npos) {
-            auto variable = trim(s.substr(0,equal_pos));
-            auto value = trim(s.substr(equal_pos+1));
-            if (variable == "api_name") {
-                out = get_api_variable_name(std::stoi(value));
-            } else {
-                if (set_api_variable(variable, value)) {
-                    out = variable + " set " + value;
-                } else {
-                    out = variable + " error";
+        // GDB commands
+        if (s.rfind("$", 0) == 0) {
+            auto command = trim(s.substr(1));
+            if (command.rfind("m", 0) == 0) {
+                auto comma_pos = command.find(",");
+                if (comma_pos != std::string::npos) {
+                    auto length_str = trim(command.substr(comma_pos + 1));
+                    auto address_str = trim(command.substr(1, comma_pos - 1));
+                    uint32_t address = std::stoul(address_str, nullptr, 16);
+                    uint32_t length = std::stoul(length_str, nullptr, 16);
+                    std::vector<char>bytes((char *) address,(char *) address+length);
+                    out += bytes_to_hex(bytes);
                 }
-                
             }
+            return out;
         } else {
-            out = get_api_variable(s);
+            auto equal_pos = s.find("=");
+            if (equal_pos != std::string::npos) {
+                auto variable = trim(s.substr(0,equal_pos));
+                auto value = trim(s.substr(equal_pos+1));
+                if (variable == "api_name") {
+                    out = get_api_variable_name(std::stoi(value));
+                } else {
+                    if (set_api_variable(variable, value)) {
+                        out = variable + " set " + value;
+                    } else {
+                        out = variable + " error";
+                    }
+                    
+                }
+            } else {
+                out = get_api_variable(s);
+            }
         }
         
         if (autocomplete) {
