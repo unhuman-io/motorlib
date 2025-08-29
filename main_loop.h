@@ -865,9 +865,11 @@ class MainLoop {
     }
     void lock_status_log() {
       fast_log_ready_ = false;
+      fast_loop_.trigger_status_log();
     }
     void unlock_status_log() {
       fast_log_ready_ = true;
+      fast_loop_.enable_status_log();
     }
 
     // use to set the command from another low priority source than communication, 

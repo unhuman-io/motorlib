@@ -268,6 +268,34 @@ class FastLoop {
       s.iq_filtered = iq_filter_.update(s.foc_status.measured.i_q);
       s.mode = mode_;
       status_.finish();
+      if (enable_status_log_) {
+        std::pair<FastLog, FastLog2> &log = status_log_.next();
+        FastLog &log1 = log.first;
+        log1.timestamp = timestamp_;
+        log1.electrical_position = s.foc_command.measured.motor_encoder / foc_->num_poles_;
+        log1.command_iq = s.foc_status.command.i_q;
+        log1.command_id = s.foc_status.command.i_d;
+        log1.measured_iq = s.foc_status.measured.i_q;
+        log1.measured_id = s.foc_status.measured.i_d;
+        log1.command_vq = s.foc_status.command.v_q;
+        log1.command_vd = s.foc_status.command.v_d;
+        log1.vbus = s.vbus;
+        log1.ibus = s.ibus;
+
+        FastLog2 &log2 = log.second;
+        log2.timestamp = timestamp_;
+        log2.electrical_position = s.foc_command.measured.motor_encoder / foc_->num_poles_;
+        log2.measured_ia = s.foc_command.measured.i_a;
+        log2.measured_ib = s.foc_command.measured.i_b;
+        log2.measured_ic = s.foc_command.measured.i_c;
+        log2.command_va = s.foc_status.command.v_a;
+        log2.command_vb = s.foc_status.command.v_b;
+        log2.command_vc = s.foc_status.command.v_c;
+        log2.motor_encoder_flags = s.foc_command.motor_encoder_flags;
+        log2.mode = s.mode;
+
+        status_log_.finish();
+      }
     }
 
     void zero_current_sensors() {
@@ -330,7 +358,10 @@ class FastLoop {
     }
     bool motor_encoder_error() { return encoder_.error(); }
     void trigger_status_log() {
-      status_log_.copy(status_);
+      enable_status_log_ = false;
+    }
+    void enable_status_log() {
+      enable_status_log_ = true;
     }
     void clear_faults() {
       encoder_.clear_faults();
@@ -397,14 +428,15 @@ class FastLoop {
    uint32_t zero_current_sensors_end_ = 0;
    float phi_beep_ = 0;
    uint32_t energy_uJ_ = 0;
+   bool enable_status_log_ = true;
   
    FirstOrderLowPassFilter iq_filter_;
    FirstOrderLowPassFilter motor_velocity_filter_;
    FirstOrderLowPassFilter motor_position_filter_;
    
    FastLoopParam param_; // reallocate tables in ram
-   CStack<FastLoopStatus,100> status_;
-   CStack<FastLoopStatus,100> status_log_; // 24*4*100*2 = 19200 bytes
+   CStack<FastLoopStatus,2> status_;
+   CStack<std::pair<FastLog, FastLog2>> status_log_;
 
    friend class System;
    friend void system_init();

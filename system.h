@@ -146,42 +146,20 @@ class System {
         api.add_api_variable("energy", new const APIUint32(&actuator_.main_loop_.status_.fast_loop.energy_uJ));
         api.add_api_variable("fast_log", new const APICallback([](){
             actuator_.main_loop_.lock_status_log();
-            FastLog log;
             std::string out;
             for(int i=0; i<FAST_LOG_LENGTH; i++) {
-                FastLoopStatus &status = actuator_.fast_loop_.status_log_.next();
-                log.timestamp = status.timestamp;
-                log.electrical_position = status.foc_command.measured.motor_encoder / actuator_.fast_loop_.foc_->num_poles_;
-                log.command_iq = status.foc_status.command.i_q;
-                log.command_id = status.foc_status.command.i_d;
-                log.measured_iq = status.foc_status.measured.i_q;
-                log.measured_id = status.foc_status.measured.i_d;
-                log.command_vq = status.foc_status.command.v_q;
-                log.command_vd = status.foc_status.command.v_d;
-                log.vbus = status.vbus;
-                log.ibus = status.ibus;
+                FastLog &log = actuator_.fast_loop_.status_log_.next().first;
                 std::string s((char *) &log, sizeof(log));
                 actuator_.fast_loop_.status_log_.finish();
                 out += s;
             }
-            actuator_.main_loop_.unlock_status_log();
+            //actuator_.main_loop_.unlock_status_log();
             return out; }));
         api.add_api_variable("fast_log2", new const APICallback([](){
             actuator_.main_loop_.lock_status_log();
-            FastLog2 log;
             std::string out;
             for(int i=0; i<FAST_LOG_LENGTH; i++) {
-                FastLoopStatus &status = actuator_.fast_loop_.status_log_.next();
-                log.timestamp = status.timestamp;
-                log.electrical_position = status.foc_command.measured.motor_encoder / actuator_.fast_loop_.foc_->num_poles_;
-                log.measured_ia = status.foc_command.measured.i_a;
-                log.measured_ib = status.foc_command.measured.i_b;
-                log.measured_ic = status.foc_command.measured.i_c;
-                log.command_va = status.foc_status.command.v_a;
-                log.command_vb = status.foc_status.command.v_b;
-                log.command_vc = status.foc_status.command.v_c;
-                log.motor_encoder_flags = status.foc_command.motor_encoder_flags;
-                log.mode = status.mode;
+                FastLog2 &log = actuator_.fast_loop_.status_log_.next().second;
                 std::string s((char *) &log, sizeof(log));
                 actuator_.fast_loop_.status_log_.finish();
                 out += s;

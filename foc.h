@@ -22,9 +22,9 @@ public:
     void set_iq_limit(float limit) { iq_limiter_.set_limit(limit*dt_); }
     float get_id_limit() const { return id_limiter_.get_limit()/dt_; }
     float get_iq_limit() const { return iq_limiter_.get_limit()/dt_; }
-
+float num_poles_ = 7;
 private:
-    float num_poles_ = 7;
+    
     volatile float i_gain_ = 0;
     PIController pi_id_, pi_iq_;
     FOCStatus status_;
