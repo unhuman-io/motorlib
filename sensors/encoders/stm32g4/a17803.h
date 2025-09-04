@@ -13,19 +13,19 @@
       api.add_api_variable(prefix "temp", new const APICallbackFloat([](){ \
         return encoder.get_temperature(); }));\
       api.add_api_variable(prefix "x_ehc", new const APICallbackInt16([]{\
-        int16_t ret = encoder.read_reg(0x10).data;\
+        int16_t ret = encoder.read_reg(A17803::PrimaryAddress::X_EHC).data;\
         return ret;}));\
       api.add_api_variable(prefix "y_ehc", new const APICallbackInt16([]{\
-        int16_t ret = encoder.read_reg(0x11).data;\
+        int16_t ret = encoder.read_reg(A17803::PrimaryAddress::Y_EHC).data;\
         return ret;}));\
       api.add_api_variable(prefix "ctrl", new APICallbackHex<uint16_t>([](){ \
-        uint16_t ret = encoder.read_reg(0xd).data; \
+        uint16_t ret = encoder.read_reg(A17803::PrimaryAddress::CTRL).data; \
         return ret; }, \
-        [](uint16_t value){ encoder.write_reg(0xd, value); })); \
+        [](uint16_t value){ encoder.write_reg(A17803::PrimaryAddress::CTRL, value); })); \
       api.add_api_variable(prefix "loopback", new APICallbackHex<uint16_t>([](){ \
-        uint16_t ret = encoder.read_reg(0x1f).data; \
+        uint16_t ret = encoder.read_reg(A17803::PrimaryAddress::LOOPBACK).data; \
         return ret; }, \
-        [](uint16_t value){ encoder.write_reg(0x1f, value); })); \
+        [](uint16_t value){ encoder.write_reg(A17803::PrimaryAddress::LOOPBACK, value); })); \
       api.add_api_variable(prefix "reg31", new APICallbackHex<uint32_t>([]{\
         return encoder.read_extended_reg(0x31);\
       }, [](uint32_t value){ encoder.write_extended_reg(0x31, value); }));\
@@ -98,6 +98,9 @@
 
 class A17803 : public EncoderBase {
   public:
+
+
+
     union A17803_Message {
         struct {
             uint32_t crc: 5;
@@ -130,6 +133,28 @@ class A17803 : public EncoderBase {
             uint32_t dc: 9;
             int32_t temperature: 13;
         } temperature_view;
+        uint8_t bytes[4];
+        uint32_t word;
+    };
+
+    enum class PrimaryAddress : uint8_t {
+      INDIRECT_WR_ADDRESS = 0x1,
+      INDIRECT_WR_DATA_MSB = 0x2,
+      INDIRECT_WR_DATA_LSB = 0x3,
+      INDIRECT_WR_STATUS = 0x4,
+      INDIRECT_RD_ADDRESS = 0x5,
+      INDIRECT_RD_STATUS = 0x6,
+      INDIRECT_RD_DATA_MSB = 0x7,
+      INDIRECT_RD_DATA_LSB = 0x8,
+      ANGLE = 0x9,
+      SPEED = 0xa,
+      CTRL = 0xd,
+      ERROR = 0xe,
+      TEMPERATURE = 0xf,
+      X_EHC = 0x10,
+      Y_EHC = 0x11,
+      ACCESS = 0x1e,
+      LOOPBACK = 0x1f
     };
 
     static constexpr std::string_view diag_strs[16] = {
@@ -138,6 +163,30 @@ class A17803 : public EncoderBase {
         "vcf", "tse", "sme", "ese",
         "eue", "bsy", "xee", "ier"
     };
+
+    static consteval uint32_t crc_calc_consteval(uint32_t crc_bits) {
+        uint32_t crc = 0x1F; // seed value
+        for (int i = 0; i < 26; i++) {
+            bool bit = ((crc_bits >> (25 - i)) & 1) ^ ((crc >> 4) & 1);
+            crc = (crc << 1) & 0x1F;
+            if (bit) {
+                crc ^= 0x25;
+            }
+        }
+        return crc & 0x1F;
+    }
+    static consteval A17803_Message make_reg_message_consteval(uint8_t reg) {
+        A17803_Message message {
+            .request_view = {
+                .address = reg,
+            }
+        };
+        message.request_view.crc = crc_calc_consteval((reg & 0x1f) << 20);
+        return message;
+    }
+    static consteval A17803_Message make_reg_message_consteval(PrimaryAddress reg) {
+        return make_reg_message_consteval(static_cast<uint8_t>(reg));
+    }
 
     A17803(SPIDMA &spidma) : spidma_(spidma) {
     }
@@ -187,6 +236,12 @@ class A17803 : public EncoderBase {
         return message;
     }
 
+
+
+    A17803_Message read_reg(PrimaryAddress reg) {
+        return read_reg(static_cast<uint8_t>(reg));
+    }
+
     A17803_Message read_reg(uint8_t reg) {
         uint8_t data_in[4];
         A17803_Message reg_message = make_reg_message(reg);
@@ -217,9 +272,9 @@ class A17803 : public EncoderBase {
 
     uint32_t read_extended_reg(uint8_t reg) {
         spidma_.claim();
-        write_reg(0x5, reg);
-        write_reg(0x6, 0x8000);
-        A17803_Message message = read_reg(0x6);
+        write_reg(PrimaryAddress::INDIRECT_RD_ADDRESS, reg);
+        write_reg(PrimaryAddress::INDIRECT_RD_STATUS, 0x8000);
+        A17803_Message message = read_reg(PrimaryAddress::INDIRECT_RD_STATUS);
         if (message.data & 0x01) [[likely]] {
           // read is ready
         } else {
@@ -227,21 +282,24 @@ class A17803 : public EncoderBase {
           logger.log_printf("A17803: read_extended_reg(0x%02X) not ready, diag: %04X", reg, message.data);
         }
         
-        uint32_t value = read_reg(0x7).data << 16;
-        value |= read_reg(0x8).data;
+        uint32_t value = read_reg(PrimaryAddress::INDIRECT_RD_DATA_MSB).data << 16;
+        value |= read_reg(PrimaryAddress::INDIRECT_RD_DATA_LSB).data;
         spidma_.release();
         return value;
     }
 
     void write_extended_reg(uint8_t reg, uint32_t value) {
         spidma_.claim();
-        write_reg(0x1, reg);
-        write_reg(0x2, value >> 16);
-        write_reg(0x3, value & 0xffff);
-        write_reg(0x4, 0x8000);
-        write_reg(0x6, 0x0000 | (value >> 16));
+        write_reg(PrimaryAddress::INDIRECT_WR_ADDRESS, reg);
+        write_reg(PrimaryAddress::INDIRECT_WR_DATA_MSB, value >> 16);
+        write_reg(PrimaryAddress::INDIRECT_WR_DATA_LSB, value & 0xffff);
+        write_reg(PrimaryAddress::INDIRECT_WR_STATUS, 0x8000);
         // would need to wait 6.5 ms for write to complete
         spidma_.release();
+    }
+
+    void write_reg(PrimaryAddress reg, uint16_t value) {
+        write_reg(static_cast<uint8_t>(reg), value);
     }
 
     void write_reg(uint8_t reg, uint16_t value) {
@@ -262,15 +320,15 @@ class A17803 : public EncoderBase {
     }
 
     uint16_t unlock() {
-        logger.log_printf("A17803: unlocking %04X", read_reg(0x1e).data);
-        write_reg(0x1e, 0xC418);
-        write_reg(0x1e, 0x0e80);
-        
-        return read_reg(0x1e).data;
+        logger.log_printf("A17803: unlocking %04X", read_reg(PrimaryAddress::ACCESS).data);
+        write_reg(PrimaryAddress::ACCESS, 0xC418);
+        write_reg(PrimaryAddress::ACCESS, 0x0e80);
+
+        return read_reg(PrimaryAddress::ACCESS).data;
     }
 
     uint16_t get_diag() {
-        last_diag_ = read_reg(0xe).data;
+        last_diag_ = read_reg(PrimaryAddress::ERROR).data;
         return last_diag_;
     }
 
@@ -296,7 +354,7 @@ class A17803 : public EncoderBase {
     }
 
     float get_temperature() __attribute__((externally_visible)) {
-        return (read_reg(0xf).temperature_view.temperature) * (1.0 / 13.3226) + 25;
+        return (read_reg(PrimaryAddress::TEMPERATURE).temperature_view.temperature) * (1.0 / 13.3226) + 25;
     }
 
     void clear_faults() {
@@ -321,7 +379,7 @@ class A17803 : public EncoderBase {
     uint32_t s0_s1_flag_count_ = 0;
   //private:
     SPIDMA &spidma_;
-    uint32_t position_command_ = __builtin_bswap32(0x1200'001e);
+    uint32_t position_command_ = __builtin_bswap32(make_reg_message_consteval(PrimaryAddress::ANGLE).word);
     uint32_t received_data_;
 
 };
