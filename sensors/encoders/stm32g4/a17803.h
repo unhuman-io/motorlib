@@ -338,6 +338,10 @@ class A17803 : public EncoderBase {
         return read_reg(PrimaryAddress::ACCESS).data;
     }
 
+    uint16_t get_diag(A17803_Message message) {
+        return message.data;
+    }
+
     uint16_t get_diag() {
         last_diag_ = read_reg(PrimaryAddress::ERROR).data;
         return last_diag_;
@@ -364,8 +368,12 @@ class A17803 : public EncoderBase {
         return s;
     }
 
+    float get_temperature(A17803_Message message) {
+        return (message.temperature_view.temperature) * (1.0 / 13.3226) + 25;
+    }
+
     float get_temperature() __attribute__((externally_visible)) {
-        return (read_reg(PrimaryAddress::TEMPERATURE).temperature_view.temperature) * (1.0 / 13.3226) + 25;
+        return get_temperature(read_reg(PrimaryAddress::TEMPERATURE));
     }
 
     void clear_faults() {
