@@ -98,9 +98,6 @@
 
 class A17803 : public EncoderBase {
   public:
-
-
-
     union A17803_Message {
         struct {
             uint32_t crc: 5;
@@ -135,6 +132,17 @@ class A17803 : public EncoderBase {
         } temperature_view;
         uint8_t bytes[4];
         uint32_t word;
+    };
+
+    struct A17803_Message_Rev {
+      uint32_t word;
+      constexpr operator A17803_Message() const {
+        return std::bit_cast<A17803_Message>(__builtin_bswap32(word));
+      }
+      A17803_Message_Rev() = default;
+      constexpr A17803_Message_Rev(const A17803_Message& message) {
+        word = __builtin_bswap32(std::bit_cast<uint32_t>(message));
+      }
     };
 
     enum class PrimaryAddress : uint8_t {
@@ -198,21 +206,24 @@ class A17803 : public EncoderBase {
     int32_t read() {
         spidma_.finish_readwrite_isr();
         if (!spidma_.pause_.is_paused()) {
-            uint32_t rev = __builtin_bswap32(received_data_);
-            A17803_Message new_message = std::bit_cast<A17803_Message>(rev);
-            if (new_message.crc != crc_calc(new_message.crc_view.crc_bits)) [[unlikely]] {
-                crc_error_count_++;
-            }
-            if (((new_message.frame_count - message_.frame_count) & 0x7) != 1) [[unlikely]] {
-                frame_error_count_++;
-            }
-            if (new_message.s0 || new_message.s1) [[unlikely]] {
-                s0_s1_flag_count_++;
-            }
-            int16_t diff = new_message.angle_view.angle - message_.angle_view.angle;
-            angle_ += diff;
-            message_ = new_message;
+          read_buf(received_data_);
         }
+        return get_value();
+    }
+
+    int32_t read_buf(const A17803_Message new_message) {
+        if (new_message.crc != crc_calc(new_message.crc_view.crc_bits)) [[unlikely]] {
+            crc_error_count_++;
+        }
+        if (((new_message.frame_count - message_.frame_count) & 0x7) != 1) [[unlikely]] {
+            frame_error_count_++;
+        }
+        if (new_message.s0 || new_message.s1) [[unlikely]] {
+            s0_s1_flag_count_++;
+        }
+        int16_t diff = new_message.angle_view.angle - message_.angle_view.angle;
+        angle_ += diff;
+        message_ = new_message;
         return get_value();
     }
 
@@ -230,9 +241,11 @@ class A17803 : public EncoderBase {
                 .address = reg,
             }
         };
-        spidma_.claim();
-        message.request_view.crc = crc_calc(message.crc_view.crc_bits);
-        spidma_.release();
+        if (do_crc) {
+            spidma_.claim();
+            message.request_view.crc = crc_calc(message.crc_view.crc_bits);
+            spidma_.release();
+        }
         return message;
     }
 
@@ -243,31 +256,29 @@ class A17803 : public EncoderBase {
     }
 
     A17803_Message read_reg(uint8_t reg) {
-        uint8_t data_in[4];
+        A17803_Message_Rev message_in_rev;
         A17803_Message reg_message = make_reg_message(reg);
-        uint32_t rev = __builtin_bswap32(std::bit_cast<uint32_t>(reg_message));
+        A17803_Message_Rev reg_message_rev(reg_message);
         spidma_.claim();
-        spidma_.readwrite((uint8_t *) &rev, data_in, sizeof(data_in));
+        spidma_.readwrite((uint8_t *) &reg_message_rev, (uint8_t *) &message_in_rev, sizeof(reg_message_rev));
         ns_delay(200);
-        uint32_t rev1 = __builtin_bswap32(*reinterpret_cast<uint32_t *>(data_in));
-        A17803_Message message = std::bit_cast<A17803_Message>(rev1);
+        A17803_Message message_in(message_in_rev);
         //logger.log_printf("frame_count: %d", message.frame_count);
-        spidma_.readwrite((uint8_t *) &position_command_, data_in, sizeof(data_in));
+        spidma_.readwrite((uint8_t *) &position_command_, (uint8_t *) &message_in_rev, sizeof(reg_message_rev));
         ns_delay(200);
-        uint32_t rev2 = __builtin_bswap32(*reinterpret_cast<uint32_t *>(data_in));
-        message = std::bit_cast<A17803_Message>(rev2);
-        message_.frame_count = message.frame_count; // to prevent frame count errors in read
+        message_in = message_in_rev;
+        message_.frame_count = message_in.frame_count; // to prevent frame count errors in read
        
         //logger.log_printf("frame_count2: %d", message.frame_count);
-        if (message.crc != crc_calc(message.crc_view.crc_bits)) [[unlikely]] {
+        if (message_in.crc != crc_calc(message_in.crc_view.crc_bits)) [[unlikely]] {
             crc_error_count_++;
-        } else if (message.address != reg) [[unlikely]] {
-            logger.log_printf("A17803: Unexpected address 0x%02X, expected 0x%02X",
-                message.address, reg);
-            logger.log_printf("A17803: sent: %08x crc %02x", rev, crc_calc(reg_message.crc_view.crc_bits));
+        } else if (message_in.address != reg) [[unlikely]] {
+            // logger.log_printf("A17803: Unexpected address 0x%02X, expected 0x%02X",
+            //     message.address, reg);
+            // logger.log_printf("A17803: sent: %08x crc %02x", rev1, crc_calc(reg_message.crc_view.crc_bits));
         }
         spidma_.release();
-        return message;
+        return message_in;
     }
 
     uint32_t read_extended_reg(uint8_t reg) {
@@ -306,15 +317,15 @@ class A17803 : public EncoderBase {
         A17803_Message message = make_reg_message(reg, false);
         message.request_view.data = value;
         message.request_view.rw = 1; // write
-        message.request_view.crc = crc_calc(message.crc_view.crc_bits);
-        uint32_t rev = __builtin_bswap32(std::bit_cast<uint32_t>(message));
         spidma_.claim();
-        uint8_t data_in[4];
-        spidma_.readwrite((uint8_t *) &rev, data_in, sizeof(rev));
+        message.request_view.crc = crc_calc(message.crc_view.crc_bits);
+        A17803_Message_Rev message_rev(message);
+   
+        A17803_Message_Rev message_in_rev;
+        spidma_.readwrite((uint8_t *) &message_rev, (uint8_t *) &message_in_rev, sizeof(message_rev));
         ns_delay(200);
-        rev = __builtin_bswap32(*reinterpret_cast<uint32_t *>(data_in));
-        message = std::bit_cast<A17803_Message>(rev);
-        message_.frame_count = message.frame_count; // to prevent frame count errors in read
+        A17803_Message message_in(message_in_rev);
+        message_.frame_count = message_in.frame_count; // to prevent frame count errors in read
         spidma_.release();
 
     }
@@ -379,7 +390,7 @@ class A17803 : public EncoderBase {
     uint32_t s0_s1_flag_count_ = 0;
   //private:
     SPIDMA &spidma_;
-    uint32_t position_command_ = __builtin_bswap32(make_reg_message_consteval(PrimaryAddress::ANGLE).word);
-    uint32_t received_data_;
+    A17803_Message_Rev position_command_ = make_reg_message_consteval(PrimaryAddress::ANGLE);
+    A17803_Message_Rev received_data_;
 
 };
