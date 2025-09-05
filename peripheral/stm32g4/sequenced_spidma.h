@@ -1,7 +1,7 @@
 
 #include <cstdint>
 
-template<int sequence_length, int reads_per_cycle, typename T>
+template<typename SPIDMA, int sequence_length, int reads_per_cycle, typename T>
 class Sequenced_SPIDMA {
   public:
     Sequenced_SPIDMA(SPIDMA &spidma, DMAMUX_Channel_TypeDef &dmamux_tx_regs, DMAMUX_Channel_TypeDef &dmamux_rx_regs, int exti_num,

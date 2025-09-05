@@ -96,8 +96,7 @@
       api.add_api_variable(prefix "pause_reads", new const APICallback([](){ encoder.spidma_.claim(); return std::string("ok"); })); \
       api.add_api_variable(prefix "resume_reads", new const APICallback([](){ encoder.spidma_.release(); return std::string("ok"); }));
 
-class A17803 : public EncoderBase {
-  public:
+struct A17803 {
     union A17803_Message {
         struct {
             uint32_t crc: 5;
@@ -164,14 +163,6 @@ class A17803 : public EncoderBase {
       ACCESS = 0x1e,
       LOOPBACK = 0x1f
     };
-
-    static constexpr std::string_view diag_strs[16] = {
-        "spe", "sat", "spd", "ica",
-        "ofe", "vcc", "por", "tde",
-        "vcf", "tse", "sme", "ese",
-        "eue", "bsy", "xee", "ier"
-    };
-
     static consteval uint32_t crc_calc_consteval(uint32_t crc_bits) {
         uint32_t crc = 0x1F; // seed value
         for (int i = 0; i < 26; i++) {
@@ -195,8 +186,23 @@ class A17803 : public EncoderBase {
     static consteval A17803_Message make_reg_message_consteval(PrimaryAddress reg) {
         return make_reg_message_consteval(static_cast<uint8_t>(reg));
     }
+};
 
-    A17803(SPIDMA &spidma) : spidma_(spidma) {
+template<typename SPIDMA>
+class A17803Encoder : public EncoderBase {
+  public:
+    using A17803_Message = A17803::A17803_Message;
+    using A17803_Message_Rev = A17803::A17803_Message_Rev;
+    using PrimaryAddress = A17803::PrimaryAddress;
+
+    static constexpr std::string_view diag_strs[16] = {
+        "spe", "sat", "spd", "ica",
+        "ofe", "vcc", "por", "tde",
+        "vcf", "tse", "sme", "ese",
+        "eue", "bsy", "xee", "ier"
+    };
+
+    A17803Encoder(SPIDMA &spidma) : spidma_(spidma) {
     }
 
     void trigger() {
@@ -398,7 +404,7 @@ class A17803 : public EncoderBase {
     uint32_t s0_s1_flag_count_ = 0;
   //private:
     SPIDMA &spidma_;
-    A17803_Message_Rev position_command_ = make_reg_message_consteval(PrimaryAddress::ANGLE);
+    A17803_Message_Rev position_command_ = A17803::make_reg_message_consteval(PrimaryAddress::ANGLE);
     A17803_Message_Rev received_data_;
 
 };

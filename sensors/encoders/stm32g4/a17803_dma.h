@@ -9,9 +9,10 @@
     api.add_api_variable(prefix "diag2", new const APIHex<uint16_t>(&encoder.diag_[1]));\
 
 
+template<typename SPIDMA>
 class A17803_DMA : public EncoderBase {
   public:
-    A17803_DMA(SPIDMA &spidma1, SPIDMA &spidma2, void(*start_cs_trigger)(), void(*stop_cs_trigger)()) : a17803_{A17803(spidma1), A17803(spidma2)}, sequenced_spidma_{spidma1,
+    A17803_DMA(SPIDMA &spidma1, SPIDMA &spidma2, void(*start_cs_trigger)(), void(*stop_cs_trigger)()) : a17803_{A17803Encoder(spidma1), A17803Encoder(spidma2)}, sequenced_spidma_{spidma1,
         *DMAMUX1_Channel0, *DMAMUX1_Channel1, 0,
         *DMA1_Channel3, *DMA1_Channel4, (uint32_t *) &GPIOA->BSRR,
         start_cs_trigger, stop_cs_trigger} {
@@ -72,9 +73,9 @@ class A17803_DMA : public EncoderBase {
   //private:
     static constexpr int sequence_length = 4;
     static constexpr int reads_per_cycle = 3;
-    A17803 a17803_[2];
+    A17803Encoder<SPIDMA> a17803_[2];
     float temp_[2] = {};
     uint16_t diag_[2] = {};
-    Sequenced_SPIDMA<sequence_length, reads_per_cycle, A17803::A17803_Message_Rev> sequenced_spidma_;
+    Sequenced_SPIDMA<SPIDMA, sequence_length, reads_per_cycle, A17803::A17803_Message_Rev> sequenced_spidma_;
 
 };
