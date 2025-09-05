@@ -76,6 +76,7 @@ $(SELF_DIR)../peripheral/stm32g4/spi_slave.cpp\
 $(SELF_DIR)../peripheral/stm32g4/spi_slave_figure.cpp\
 $(SELF_DIR)../peripheral/stm32g4/uart.cpp\
 $(SELF_DIR)../peripheral/stm32g4/spi_dma.cpp\
+$(SELF_DIR)../peripheral/stm32g4/spi_dma_usart.cpp\
 $(SELF_DIR)../peripheral/stm32g4/flash.cpp\
 $(SELF_DIR)../peripheral/stm32g4/can.cpp\
 
