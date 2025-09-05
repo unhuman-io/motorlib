@@ -19,6 +19,17 @@ class Sequenced_SPIDMA {
             gpio_cs_set_dma.CCR = DMA_CCR_EN | DMA_CCR_MINC | DMA_CCR_DIR | DMA_CCR_CIRC | DMA_CCR_MSIZE_1 | DMA_CCR_PSIZE_1;
     }
 
+    void init() {
+      for (int i=0; i<sequence_length; i++) {
+        for (int j=0; j<reads_per_cycle; j++) {
+          spidma_.readwrite((uint8_t *) &read_sequence_[i][j], (uint8_t *) &data_buffer_[i][j], sizeof(T));
+        }
+      }
+      for (int j=0; j<reads_per_cycle; j++) {
+          spidma_.readwrite((uint8_t *) &read_sequence_[0][j], (uint8_t *) &data_buffer_[0][j], sizeof(T));
+      }
+    }
+
     void start_continuous_read() {
       if (!stopped_) {
         dmamux_tx_regs_.CCR |= exti_num_ << DMAMUX_CxCR_SYNC_ID_Pos | (sizeof(T)-1) << DMAMUX_CxCR_NBREQ_Pos | 2 << DMAMUX_CxCR_SPOL_Pos | DMAMUX_CxCR_SE;

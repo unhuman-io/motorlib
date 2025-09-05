@@ -9,18 +9,9 @@
     api.add_api_variable(prefix "diag2", new const APIHex<uint16_t>(&encoder.diag_[1]));\
 
 
-void start_cs_trigger() {
-    HRTIM1->sTimerxRegs[0].TIMxDIER = HRTIM_TIMDIER_CMP1DE |  HRTIM_TIMDIER_CMP2DE |  HRTIM_TIMDIER_CMP3DE ;
-}
-void stop_cs_trigger() {
-    HRTIM1->sTimerxRegs[0].TIMxDIER = 0;
-    // wait for CS high
-    while(!(GPIOA->IDR & 0x0001));
-}
-
 class A17803_DMA : public EncoderBase {
   public:
-    A17803_DMA(SPIDMA &spidma1, SPIDMA &spidma2) : a17803_{A17803(spidma1), A17803(spidma2)}, sequenced_spidma_{spidma1, 
+    A17803_DMA(SPIDMA &spidma1, SPIDMA &spidma2, void(*start_cs_trigger)(), void(*stop_cs_trigger)()) : a17803_{A17803(spidma1), A17803(spidma2)}, sequenced_spidma_{spidma1,
         *DMAMUX1_Channel0, *DMAMUX1_Channel1, 0,
         *DMA1_Channel3, *DMA1_Channel4, (uint32_t *) &GPIOA->BSRR,
         start_cs_trigger, stop_cs_trigger} {
@@ -53,6 +44,7 @@ class A17803_DMA : public EncoderBase {
         spidma1.pause_.start_callback_ = [this]{sequenced_spidma_.start_continuous_read();};
         spidma1.pause_.stop_callback_ = [this]{sequenced_spidma_.stop_continuous_read();};
 
+        sequenced_spidma_.init();
         sequenced_spidma_.start_continuous_read();
     }
 
