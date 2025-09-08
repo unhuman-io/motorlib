@@ -3,11 +3,11 @@
 #include "../peripheral/stm32g4/hrpwm.h"
 #include "../util.h"
 #include "../peripheral/stm32g4/pin_config.h"
-#include "../peripheral/stm32g4/drv8323s.h"
 #include "../peripheral/stm32g4/uart.h"
 #include "../peripheral/protocol.h"
 #include "../peripheral/stm32g4/flash.h"
 #include "../peripheral/stm32g4/rtc.h"
+#include "../driver.h"
 
 #ifdef SCOPE_DEBUG
 #define SET_SCOPE_PIN(X,x) GPIO##X->BSRR = 1 << x
@@ -73,8 +73,8 @@ using PWM = HRPWM;
     using Communication = CANCommunication<CAN>;
 #endif
 
-using Driver = DRV8323S;
-uint16_t drv_regs_error = 0;
+using Driver = DriverBase;
+
 
 #ifndef GPIO_OUT
 #define GPIO_OUT (reinterpret_cast<volatile gpio_bits*>(&GPIOA->ODR)->bit1)
@@ -140,30 +140,8 @@ extern "C" void board_init() {
 
 namespace config {
     static_assert(((double) CPU_FREQUENCY_HZ * 8 / 2) / pwm_frequency < 65535);    // check pwm frequency
-    DRV8323S drv(*SPI1, SPIDMA::spi_pause[SPIDMA::SP1]);
-
+    Driver drv;
     TempSensor temp_sensor;
-    I2C_DMA i2c1(*I2C1, *DMA1_Channel7, *DMA1_Channel8, 400);
-    
-    // has_max31875
-    MAX31875 board_temperature_max31875(i2c1);
-
-    // has_max31889
-    MAX31889 board_temperature_max31889(i2c1);
-
-    // has_bridge_thermistors
-    NTC temp_bridge(TSENSE);
-    NTC temp_bridge2(TSENSE2);
-
-    // has_bmi270
-    GPIO imu_cs(*GPIOC, 4, GPIO::OUTPUT);
-    SPIDMA spi1_dma_bmi270(SPIDMA::SP1, imu_cs, DMA1_CH3, DMA1_CH4, 1000, 40, 40,
-        SPI_CR1_MSTR | (4 << SPI_CR1_BR_Pos) | SPI_CR1_SSI | SPI_CR1_SSM);    // baud = clock/32
-    BMI270 imu(spi1_dma_bmi270);
-
-    // has_mb85rc64
-    MB85RC64 mb85rc64(i2c1, 4);
-
     Flash flash(*FLASH);
 
     const BoardRev board_rev = get_board_rev();
@@ -359,10 +337,6 @@ float v3v3 = 3.3;
 // has_5V,i5V,i48V_sense
 float v5v, i5v, i48v;
 
-// has_mb85rc64
-uint32_t total_uptime_start;
-uint32_t total_uptime;
-
 int32_t index_mod = 0;
 
 uint32_t init_failure = 0;
@@ -377,10 +351,6 @@ void system_init() {
     config::uart.init();
 #endif
 
-    DMAMUX1_Channel6->CCR =  DMA_REQUEST_I2C1_TX;
-    DMAMUX1_Channel7->CCR =  DMA_REQUEST_I2C1_RX;
-    DMAMUX1_Channel2->CCR =  DMA_REQUEST_SPI1_TX;
-    DMAMUX1_Channel3->CCR =  DMA_REQUEST_SPI1_RX;
     if (config::motor_encoder.init()) {
         System::log("Motor encoder init success");
     } else {
@@ -393,12 +363,6 @@ void system_init() {
         System::log("Output encoder init failure");
         init_failure |= 1;
     }
-    if (drv_regs_error) {
-        System::log("drv configure failure");
-        init_failure |= 1;
-    } else {
-        System::log("drv configure success");
-    }
     if (config::torque_sensor.init()) {
         System::log("torque sensor init success");
     } else {
@@ -406,18 +370,11 @@ void system_init() {
         init_failure |= 1;
     }
 
-
-    DRV8323S_SET_DEBUG_API(System::api, config::drv);
-
     System::api.add_api_variable("3v3", new APIFloat(&v3v3));
     System::api.add_api_variable("Tmicro", new APICallbackFloat([]{ return config::temp_sensor.get_value(); },
         [](float f){ config::temp_sensor.set_value(f); }));
     System::api.add_api_variable("index_mod", new APIInt32(&index_mod));
     System::api.add_api_variable("pwm_mult", new APICallbackUint8([](){return config::motor_pwm.get_frequency_multiplier();}, [](uint8_t mult){ config::motor_pwm.set_frequency_multiplier(mult);}));
-    System::api.add_api_variable("drv_err", new const APICallbackUint32([](){ return config::drv.get_drv_status(); }));
-    System::api.add_api_variable("drv_reset", new const APICallback([](){
-        System::set_one_time_api_timeout_us(30 * 1000);
-        return config::drv.drv_reset(); }));
     System::api.add_api_variable("A1", new const APICallbackUint32([](){ return A1_DR; }));
     System::api.add_api_variable("A2", new const APICallbackUint32([](){ return A2_DR; }));
     System::api.add_api_variable("A3", new const APICallbackUint32([](){ return A3_DR; }));
