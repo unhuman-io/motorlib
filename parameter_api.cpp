@@ -174,3 +174,55 @@ std::string ParameterAPI::get_api_variable_name(uint16_t index) const {
 void APIFloat::set(std::string s) {
     *value_ = std::stof(s);
 }
+
+struct ContextState {
+  unsigned int r0, r1, r2, r3;
+  unsigned int r12, lr;
+  unsigned int return_address;
+  unsigned int xpsr;
+};
+
+struct GDBRegisters {
+  unsigned int r0, r1, r2, r3, r4, r5, r6, r7, r8, r9, r10, r11, r12;
+  unsigned int sp, lr, pc;
+  unsigned int xpsr;
+};
+
+std::string make_reg_string(ContextState *context_state) {
+  unsigned int *sp = (unsigned int *) context_state;
+  register unsigned int r4 asm ("r4");
+  register unsigned int r5 asm ("r5");
+  register unsigned int r6 asm ("r6");
+  register unsigned int r7 asm ("r7");
+  register unsigned int r8 asm ("r8");
+  register unsigned int r9 asm ("r9");
+  register unsigned int r10 asm ("r10");
+  register unsigned int r11 asm ("r11");
+  register unsigned int r12 asm ("r12");
+  GDBRegisters regs;
+  regs.r0 = context_state->r0;
+  regs.r1 = context_state->r1;
+  regs.r2 = context_state->r2;
+  regs.r3 = context_state->r3;
+  regs.r4 = r4;
+  regs.r5 = r5;
+  regs.r6 = r6;
+  regs.r7 = r7;
+  regs.r8 = r8;
+  regs.r9 = r9;
+  regs.r10 = r10;
+  regs.r11 = r11;
+  regs.r12 = r12;
+  regs.sp = (unsigned int) sp;
+  regs.lr = context_state->lr;
+  regs.pc = context_state->return_address;
+  regs.xpsr = context_state->xpsr;
+  std::vector<char> bytes((char *) &regs,(char *) &regs + sizeof(GDBRegisters));
+  return bytes_to_hex(bytes);
+}
+
+extern "C" __attribute__((used))
+void debug_mon_handler(ContextState *context_state) {
+  std::string reg_string = make_reg_string(context_state);
+  logger.log(reg_string);
+}
