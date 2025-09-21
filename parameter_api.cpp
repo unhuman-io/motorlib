@@ -2,6 +2,7 @@
 #include "logger.h"
 //#include <regex>
 //#include <sstream>
+#include <cstring>
 
 uint32_t ParameterAPI::AllocatorBase::index_ = 0;
 uint32_t ParameterAPI::AllocatorBase::mem_[API_SIZE] __attribute((section(".bss.api")));
@@ -86,6 +87,25 @@ std::string ParameterAPI::parse_string(std::string_view s) {
                     uint32_t length = std::stoul(length_str, nullptr, 16);
                     std::vector<char>bytes((char *) address,(char *) address+length);
                     out += bytes_to_hex(bytes);
+                }
+            } else if (command.rfind("M", 0) == 0) {
+                auto comma_pos = command.find(",");
+                if (comma_pos != std::string::npos) {
+                    auto colon_pos = command.find(":", comma_pos + 1);
+                    if (colon_pos != std::string::npos) {
+                        auto address_str = trim(command.substr(1, comma_pos - 1));
+                        auto length_str = trim(command.substr(comma_pos + 1, colon_pos - comma_pos - 1));
+                        auto data_str = trim(command.substr(colon_pos + 1));
+                        uint32_t address = std::stoul(address_str, nullptr, 16);
+                        uint32_t length = std::stoul(length_str, nullptr, 16);
+                        std::vector<char> bytes = hex_to_bytes(data_str);
+                        if (bytes.size() == length) {
+                            std::memcpy((void *) address, bytes.data(), length);
+                            out = "OK";
+                        } else {
+                            out = "E00";
+                        }
+                    }
                 }
             }
             return out;
