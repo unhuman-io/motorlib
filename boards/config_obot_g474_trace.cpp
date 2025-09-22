@@ -329,6 +329,11 @@ namespace config {
 
 #if COMMS == COMMS_USB
 Communication System::communication_ = {config::usb};
+extern "C" void PendSV_Handler(void) {
+  SET_SCOPE_PIN(C,2);
+  System::communication_interrupt();
+  CLEAR_SCOPE_PIN(C,2);
+}
 #endif
 
 #if (COMMS == COMMS_SPI)
@@ -350,6 +355,9 @@ Communication System::communication_(config::can, param->can_id);
 
 void usb_interrupt() {
     config::usb.interrupt();
+    volatile uint32_t* icsr = (uint32_t*)0xE000ED04;
+    // Pend a PendSV exception using by writing 1 to PENDSVSET at bit 28
+    *icsr = 0x1 << 28;
 }
 
 Actuator System::actuator_ = {config::fast_loop, config::main_loop, param->startup_param, *calibration};
@@ -376,6 +384,8 @@ void system_init() {
 #if COMMS == COMMS_UART
     config::uart.init();
 #endif
+    NVIC_SetPriority(PendSV_IRQn, NVIC_EncodePriority(NVIC_GetPriorityGrouping(), 4, 0));
+    NVIC_EnableIRQ(PendSV_IRQn);
 
     DMAMUX1_Channel6->CCR =  DMA_REQUEST_I2C1_TX;
     DMAMUX1_Channel7->CCR =  DMA_REQUEST_I2C1_RX;

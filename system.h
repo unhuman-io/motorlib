@@ -267,8 +267,7 @@ class System {
         api.add_api_variable("obot_hash", new const APIStringView(OBOT_HASH));
         api.add_api_variable("motorlib_hash", new const APIStringView(MOTORLIB_HASH));
         api.add_api_variable("name", new const APIStringView(param->name));
-        uint32_t api_timeout_us = 10000;
-        api.add_api_variable("api_timeout", new APIUint32(&api_timeout_us));
+        api.add_api_variable("api_timeout", new APIUint32(&api_timeout_us_));
         api.add_api_variable("notes", new const APIStringView(NOTES));
         api.add_api_variable("tuning_desired", new const APIFloat(&actuator_.main_loop_.tuning_trajectory_generator_.trajectory_value_.value ));
         api.add_api_variable("dft_frequency", new const APIFloat(&actuator_.main_loop_.dft_.desired_.frequency_last_));
@@ -321,25 +320,29 @@ class System {
         api.add_api_variable("reset", new const APICallbackUint8([]()->uint8_t{ NVIC_SystemReset(); return 0; }));
 
 
-        uint32_t t_start = get_clock();
-        current_api_timeout_us_ = api_timeout_us;
+        
+        current_api_timeout_us_ = api_timeout_us_;
         while(1) {
-            TOGGLE_SCOPE_PIN(C,4);
-            count_++;
-            if (communication_.send_string_active() && get_clock() - t_start > US_TO_CPU(current_api_timeout_us_)) {
-                communication_.cancel_send_string();
-                current_api_timeout_us_ = api_timeout_us;
-            }
-            char *s = System::get_string();
-            if (s[0] != 0) {
-                auto response = api.parse_string(s);
-                current_api_timeout_us_ = api_timeout_us;
-                communication_.send_string(response.c_str(), response.length());
-                t_start = get_clock();
-            }
             main_maintenance();
         }
     }
+    static void communication_interrupt() {
+        TOGGLE_SCOPE_PIN(C,4);
+        count_++;
+        static uint32_t t_start = get_clock();
+        if (communication_.send_string_active() && get_clock() - t_start > US_TO_CPU(current_api_timeout_us_)) {
+            communication_.cancel_send_string();
+            current_api_timeout_us_ = api_timeout_us_;
+        }
+        char *s = System::get_string();
+        if (s[0] != 0) {
+            auto response = api.parse_string(s);
+            current_api_timeout_us_ = api_timeout_us_;
+            communication_.send_string(response.c_str(), response.length());
+            t_start = get_clock();
+        }
+    }
+
     static void set_one_time_api_timeout_us(uint32_t us) {
         communication_.send_one_time_api_timeout_request(us);
         current_api_timeout_us_ = US_TO_CPU(us);
@@ -373,6 +376,7 @@ class System {
     static ParameterAPI api;
     static uint32_t count_;
     static uint32_t current_api_timeout_us_;
+    static uint32_t api_timeout_us_;
 };
 
 extern "C" {
