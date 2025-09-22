@@ -68,8 +68,11 @@ void SVC_Handler(void)
 {
 }
 
+__attribute__((naked))
 void DebugMon_Handler(void)
 {
+  asm("mrs r0, msp \n"
+      "b debug_mon_handler");
 }
 
 // void PendSV_Handler(void)
