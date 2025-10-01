@@ -54,7 +54,7 @@ CPPFLAGS += $(CFLAGS)
 # libraries
 LIBS = -lc -lm -lnosys 
 LIBDIR = 
-LDFLAGS = $(MCU) -specs=nosys.specs -T$(LDSCRIPT) $(LIBDIR) $(LIBS) -Wl,-Map=$(BUILD_DIR)/$(TARGET).map,--cref -Wl,--gc-sections,--print-memory-usage,--defsym=vfprintf=__f_vfprintf
+LDFLAGS = $(MCU) -T$(LDSCRIPT) $(LIBDIR) $(LIBS) -Wl,-Map=$(BUILD_DIR)/$(TARGET).map,--cref "-Wl,--gc-sections,--print-memory-usage,--defsym=vfprintf=__f_vfprintf,-z,norelro"
 
 CC_VERSION := $(shell $(CC) -dumpversion)
 CC_MAJOR_VERSION := $(word 1, $(subst ., ,$(CC_VERSION)))

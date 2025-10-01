@@ -181,6 +181,12 @@ LoopFillZerobss:
   cmp r2, r4
   bcc FillZerobss
 
+#ifdef __clang__
+	ldr r0, =__tdata_start
+	bl _set_tls
+	ldr r0, =__tdata_start
+	bl _init_tls
+#endif // clang
 /* Call the clock system intitialization function.*/
     bl  SystemInit
 	bl  board_init
