@@ -10,6 +10,7 @@
 #include "sincos.h"
 #include <algorithm>
 #include <vector>
+#include "st_device.h"
 
 inline float fabsf2(float f) {
     return f >= 0 ? f : -f;
@@ -27,14 +28,23 @@ inline float sqrtf(float f) {
 
 // saturating add
 template <class T>
-inline T qadd(T, T) = delete;
-
-inline uint16_t qadd(uint16_t a, uint16_t b) {
-    uint16_t result;
-    asm("uqadd16 %[result], %[a], %[b]"
-        : [result] "=r" (result)
-        : [a] "r" (a), [b] "r" (b));
-    return result;
+inline T qadd(T a, T b) {
+    if constexpr (std::is_same_v<T, uint8_t>) {
+        return __UQADD8(a,b);
+    } else if constexpr (std::is_same_v<T, uint16_t>) {
+        return __UQADD16(a,b);
+    } else if constexpr (std::is_same_v<T, uint32_t>) {
+        return __UQADD(a,b);
+    } else if constexpr (std::is_same_v<T, int8_t>) {
+        return __QADD8(a,b);
+    } else if constexpr (std::is_same_v<T, int16_t>) {
+        return __QADD16(a,b);
+    } else if constexpr (std::is_same_v<T, int32_t>) {
+        return __QADD(a,b);
+    } else {
+        static_assert(0, "qadd not implemented for this type");
+        return T();
+    }
 }
 
 class Hysteresis {
