@@ -114,9 +114,7 @@ class MainLoop {
             invalid_command_fault_.add();
           }
         } else { // !count_received
-          no_command_++;
-          if (no_command_ > 16000)
-            no_command_ = 16000;
+          no_command_ = qadd(no_command_, (uint16_t) 1);
         }
       }
         

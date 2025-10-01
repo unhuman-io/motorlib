@@ -25,6 +25,18 @@ inline float sqrtf(float f) {
 }
 #endif
 
+// saturating add
+template <class T>
+inline T qadd(T, T) = delete;
+
+inline uint16_t qadd(uint16_t a, uint16_t b) {
+    uint16_t result;
+    asm("uqadd16 %[result], %[a], %[b]"
+        : [result] "=r" (result)
+        : [a] "r" (a), [b] "r" (b));
+    return result;
+}
+
 class Hysteresis {
  public:  
     Hysteresis(float hysteresis = 0, float value = 0) {
