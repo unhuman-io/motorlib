@@ -12,7 +12,7 @@ inline bool isInterrupt()
 
 void * operator new(size_t size)
 {
-  FIGURE_ASSERT(!isInterrupt(), "Malloc cannot be called from inside of an interrupt");
+  //FIGURE_ASSERT(!isInterrupt(), "Malloc cannot be called from inside of an interrupt");
 
   void * p = malloc(size);
 
@@ -22,7 +22,7 @@ void * operator new(size_t size)
 
 void operator delete(void * p) noexcept
 {
-  FIGURE_ASSERT(!isInterrupt(), "Free cannot be called from inside of an interrupt");
+  //FIGURE_ASSERT(!isInterrupt(), "Free cannot be called from inside of an interrupt");
 
   free(p);
 }

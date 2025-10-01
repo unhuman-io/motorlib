@@ -86,7 +86,7 @@ std::string ParameterAPI::parse_string(std::string_view s) {
                     uint32_t address = std::stoul(address_str, nullptr, 16);
                     uint32_t length = std::stoul(length_str, nullptr, 16);
                     std::vector<char>bytes((char *) address,(char *) address+length);
-                    out += bytes_to_hex(bytes);
+                    out = bytes_to_hex(bytes);
                 }
             } else if (command.rfind("M", 0) == 0) {
                 auto comma_pos = command.find(",");
@@ -106,6 +106,14 @@ std::string ParameterAPI::parse_string(std::string_view s) {
                             out = "E00";
                         }
                     }
+                }
+            } else if (command.rfind("qRcmd", 0) == 0) {
+                auto comma_pos = command.find(",");
+                if (comma_pos != std::string::npos) {
+                    auto data_str = trim(command.substr(comma_pos + 1));
+                    out = data_str;
+                } else {
+                    out = "unknown";
                 }
             }
             return out;
