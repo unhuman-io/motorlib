@@ -413,6 +413,7 @@ void USB1::interrupt() {
 }
 
  void USB1::handle_setup_packet(usb_control_request *setup_data) {
+    asm("nop; // findme");
     switch(setup_data->bRequestType) {
         case 0x80:  // standard request get
             switch (setup_data->bRequest) {
@@ -539,5 +540,6 @@ void USB1::interrupt() {
             send_stall(0);
             break;
     }
+    asm("invalid; // findme2");
 }
     
