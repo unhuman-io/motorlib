@@ -294,6 +294,7 @@ int USB1::receive_data(uint8_t endpoint, uint8_t * const data, uint8_t length) {
 
 void USB1::send_string(uint8_t endpoint, const char *str, uint8_t length) {
     uint16_t str_out[length+1];
+    std::memset(str_out, 0, sizeof(str_out));
     uint8_t length_total = 2 + 2*length;
     str_out[0] = length_total | (3 << 8); // header
     for (int i=0; i<length; i++) {
@@ -309,7 +310,9 @@ void USB1::send_stall(uint8_t endpoint) {
 void read_pma(uint8_t byte_count, __IO uint16_t * pma_address, uint8_t *buffer_out) {
     int count_received_16 = (byte_count + 1) >> 1;
     for(int i=0; i<count_received_16; i++) {
-        ((uint16_t *) buffer_out)[i] = pma_address[i];
+        uint16_t word = pma_address[i];
+        buffer_out[2*i] = word & 0xFF;
+        buffer_out[2*i+1] = (word >> 8) & 0xFF;
     }
 }
 
@@ -358,7 +361,9 @@ void USB1::interrupt() {
                         uint8_t buffer[64];
                         uint8_t byte_count = USBPMA->btable[0].COUNT_RX & USB_COUNT0_RX_COUNT0_RX;
                         read_pma(byte_count, USBPMA->buffer[0].EP_RX, buffer);
-                        handle_setup_packet(reinterpret_cast<usb_control_request *>(buffer));
+                        usb_control_request ctrl_req {};
+                        std::memcpy(&ctrl_req, buffer, sizeof(usb_control_request));
+                        handle_setup_packet(&ctrl_req);
                     }
                     // clear CTR
                     USB->EP0R = (USB_EP_CTR_TX | (USB->EP0R & USB_EPREG_MASK)) & ~USB_EP_CTR_RX;
