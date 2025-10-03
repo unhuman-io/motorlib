@@ -108,6 +108,8 @@ class SPIDMA : public SPIDMABase<SPIDMA> {
         while(rx_dma_.CNDTR && (get_clock() - time_start_ < timeout)); // Busy wait with timeout
         ns_delay(end_cs_delay_ns_);
         gpio_cs_.set();
+        tx_dma_.CMAR = 0;
+        rx_dma_.CMAR = 0;
         ns_delay(interframe_delay_ns_);
     }
 
