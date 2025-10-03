@@ -1,9 +1,6 @@
 #!/bin/bash
 
 set -e
-if [[ $- != *i* ]]; then
-  quiet=-q
-fi
 
 gcc_dir=$(dirname $0)/../gcc
 mkdir -p $gcc_dir

@@ -1,9 +1,6 @@
 #!/bin/bash
 
 set -e
-if [[ $- != *i* ]]; then
-  quiet=-q
-fi
 
 llvm_dir=$(dirname $0)/../llvm
 mkdir -p $llvm_dir
