@@ -1,6 +1,9 @@
 #!/bin/bash
 
 set -e
+if [[ $- != *i* ]]; then
+  quiet=-q
+fi
 
 llvm_dir=$(dirname $0)/../llvm
 mkdir -p $llvm_dir
@@ -24,7 +27,7 @@ sha_keys=($arch newlib)
 for i in "${!fnames[@]}"; do
   fname=${fnames[$i]}
   url=https://github.com/arm/arm-toolchain/releases/download/release-$version-ATfE/$fname.tar.xz
-  wget $url -O $fname.tar.xz
+  wget $quiet $url -O $fname.tar.xz
   cat <(printf "${sha[${sha_keys[$i]}]} $fname.tar.xz\n")
   sha256sum -c <(printf "${sha[${sha_keys[$i]}]} $fname.tar.xz\n")
   if [ $i -eq 0 ]; then
@@ -33,5 +36,5 @@ for i in "${!fnames[@]}"; do
     tar xf $fname.tar.xz
   fi
   
-  #rm $fname.tar.xz
+  rm $fname.tar.xz
 done

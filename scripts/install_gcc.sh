@@ -1,6 +1,9 @@
 #!/bin/bash
 
 set -e
+if [[ $- != *i* ]]; then
+  quiet=-q
+fi
 
 gcc_dir=$(dirname $0)/../gcc
 mkdir -p $gcc_dir
@@ -40,7 +43,7 @@ declare -A sha=( [x86_64]=8f6903f8ceb084d9227b9ef991490413014d991874a1e34074443c
 arch=$(uname -m)
 fname=arm-gnu-toolchain-$version-$arch-arm-none-eabi
 url=https://developer.arm.com/-/media/Files/downloads/gnu/$version/binrel/$fname.tar.xz
-wget $url -O $fname.tar.xz
+wget $quiet $url -O $fname.tar.xz
 cat <(printf "${sha[$arch]} $fname.tar.xz\n")
 sha256sum -c <(printf "${sha[$arch]} $fname.tar.xz\n")
 tar xf $fname.tar.xz --strip-components=1
