@@ -14,7 +14,7 @@ all:: $(BUILD_DIR)/$(TARGET).elf $(BUILD_DIR)/$(TARGET).hex $(BUILD_DIR)/$(TARGE
 
 FORCE:
 
-.PHONY: FORCE clean all clean_build
+.PHONY: FORCE clean all clean_build scan_build
 
 # always build the config since C_DEFS may be different
 $(BUILD_DIR)/$(notdir $(CONFIG_FILE:cpp=o)): FORCE
@@ -59,6 +59,9 @@ $(BUILD_DIR)/%.hex: $(BUILD_DIR)/%.elf | $(BUILD_DIR)
 	
 $(BUILD_DIR):
 	$(MKDIR) $@
+
+scan_build:
+	scan-build --use-cc $(CC) --use-c++ $(CXX) --use-analyzer $(SELF_DIR)../llvm/bin/clang --analyzer-target=armv7m-none-eabi $(MAKE)
 
 $(VERBOSE).SILENT:
 

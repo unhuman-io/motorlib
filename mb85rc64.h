@@ -47,7 +47,10 @@ class MB85RC64 {
   void write(uint16_t address, const uint8_t* bytes, uint16_t length) {
     uint16_t timeout_us = (3 + length) * 8 * bit_time_us;
     Address addr = {.word = address};
-    uint8_t data[2 + length] = {addr.high, addr.low};
+    uint8_t data[2 + length];
+    std::memset(data, 0, sizeof(data));
+    data[0] = addr.high;
+    data[1] = addr.low;
     std::memcpy(data + 2, bytes, length);
     i2c_dma_.write(address_, length + 2, data, true, timeout_us);
   }
@@ -171,7 +174,7 @@ class TypedFRAMBlock : public FRAMBlock {
 class FRAMLog {
  public:
   FRAMLog(MB85RC64& fram, uint16_t address, uint16_t size)
-      : fram_(fram), address_(address), log_max_(size - 4) {}
+      : fram_(fram), address_{.word = address}, log_max_(size - 4) {}
 
   void write_log(const uint8_t* bytes, uint8_t length) {
     uint32_t log_pointer;
@@ -273,7 +276,7 @@ class StandardMB85RC64 {
 
     if (status.error.fault && !last_fault) {
       char s[100];
-      std::sprintf(s, "fault detected, error: %08lx\n", status.error.all);
+      std::sprintf(s, "fault detected, error: %08" PRIx32 "\n", status.error.all);
       fram_log_.write_log((uint8_t*)s, std::strlen(s));
     }
     last_fault = status.error.fault;
