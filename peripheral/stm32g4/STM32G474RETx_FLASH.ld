@@ -131,6 +131,10 @@ SECTIONS
     . = ALIGN(4);
     *(.rodata)         /* .rodata sections (constants, strings, etc.) */
     *(.rodata*)        /* .rodata* sections (constants, strings, etc.) */
+    . = ALIGN(8);
+    PROVIDE_HIDDEN (api_list_start = .);
+    KEEP(*(api_list*))
+    PROVIDE_HIDDEN (api_list_end = .);
     . = ALIGN(4);
   } >FLASH
 

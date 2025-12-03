@@ -195,3 +195,74 @@ class ParameterAPI {
 };
 
 #endif  // UNHUMAN_MOTORLIB_PARAMETER_API_H_
+
+
+
+#include <concepts>
+struct Item {
+    virtual constexpr const char *get() const = 0;
+    virtual constexpr void set (char *cin) const = 0;
+    virtual constexpr char * set_with_response(char *cin) const = 0;
+};
+
+struct ROItem : public Item {
+    virtual constexpr const char * get() const { return "item"; }
+    virtual constexpr void set(char *cin) const {}
+    virtual constexpr char * set_with_response(char *cin) const { return cin; }
+};
+
+struct RWItem : public ROItem {
+    int a = 2;
+    char *c = "abc";
+    constexpr const char * get() { return c; }
+    constexpr void set(char *cin) const override { c[1] = cin[0];  }
+};
+
+struct ResponseItem : public RWItem {
+    constexpr char* set_with_response(char *cin) const { c[2] = cin[0]; return c; }
+};
+
+struct SpecialItem : public RWItem {
+    SpecialItem() {
+        c = "hij";
+    }
+};
+
+template<typename T, typename base>
+struct IntItem : public base {
+    IntItem(T& t) : t(t) {}
+    virtual constexpr const char * get() const { return "iteem"; }
+    virtual constexpr void set(char *cin) const {
+        if constexpr (std::derived_from<base, RWItem>) {
+            t = cin[0];
+        }
+    }
+    virtual constexpr char * set_with_response(char *cin) const { 
+        if constexpr (std::derived_from<base, ResponseItem>) {
+            t = cin[0];
+            return &t;
+        }
+        return "no way";
+    }
+    T& t;
+};
+
+
+struct LessSpecialItem : public ROItem {
+    constexpr const char *get() const override { return "less special item";}
+};
+
+const ROItem i;
+const RWItem b, b2;
+const SpecialItem s;
+const LessSpecialItem l;
+int a;
+const IntItem<int, ROItem> ro_int(a);
+constinit const Item* const items[] {&i, &b, &b2, &s, &l, &ro_int};
+
+//constinit const Item* const items2[] {new const ROItem};
+
+const char* fun(int i) {
+    items[i]->set("def");
+    return items[i]->get();
+}

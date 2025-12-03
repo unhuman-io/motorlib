@@ -6,6 +6,9 @@
 uint32_t ParameterAPI::AllocatorBase::index_ = 0;
 uint32_t ParameterAPI::AllocatorBase::mem_[API_SIZE] __attribute((section(".bss.api")));
 
+extern std::pair<const std::string_view, APIVariable &> api_list_start;
+extern std::pair<const std::string_view, APIVariable &> api_list_end;
+
 static std::string trim(std::string_view s)
 {
     auto first = s.find_first_not_of(' ');
@@ -41,20 +44,44 @@ void ParameterAPI::add_api_variable(std::string_view name, const APIVariable *va
     }
 }
 
+int get_index_from_name(std::string_view name) {
+    int index = 0;
+    for (auto *pair = &api_list_start; pair != &api_list_end; ++pair) {
+        if (pair->first == name) {
+            return index;
+        }
+        index++;
+    }
+    return -1;
+}
+
 bool ParameterAPI::set_api_variable(std::string_view name, std::string value) {
     if (variable_map_.count(name))  {
         variable_map_[name]->set(value);
+        return true;
+    } else if (int index = get_index_from_name(name); index != -1) {
+        APIVariable &var = (&api_list_start + index)->second;
+        var.set(value);
         return true;
     }
     return false;
 }
 
+
+
 std::string ParameterAPI::get_api_variable(std::string_view name) {
     std::string out;
+    
     if (variable_map_.count(name)) {
         out = variable_map_[name]->get();
     } else if (const_variable_map_.count(name)) {
         out = const_variable_map_[name]->get();
+    } else if (int index = get_index_from_name(name); index != -1) {
+        APIVariable &var = (&api_list_start + index)->second;
+        out = var.get();
+        out += " " + std::to_string(index);
+    } else {
+        out = "error";
     }
     return out;
 }

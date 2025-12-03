@@ -79,3 +79,16 @@ extern "C" void _exit(int status) {
     logger.log("Exiting with status: " + std::to_string(status));
     while (1);
 }
+
+
+APIUint32 a((uint32_t *) &System::actuator_.main_loop_.mode_);
+__attribute__((used,section("api_list"))) constinit const std::pair<const std::string_view, APIVariable &> api3 
+    {"mode", a};
+
+APICallbackUint32 baaa (get_heap_used);
+__attribute__((used,section("api_list2"))) constinit const std::pair<const std::string_view, APIVariable &> api4 
+    {"heap_used", baaa};
+// api.add_api_variable("api_memory_used", new const APIUint32(&ParameterAPI::AllocatorBase::index_));
+// api.add_api_variable("kp", new APIFloat(&actuator_.main_loop_.position_controller_.controller_.kp_));
+// api.add_api_variable("kd", new APIFloat(&actuator_.main_loop_.position_controller_.controller_.kd_));
+// api.add_api_variable("ki", new APIFloat(&actuator_.main_loop_.position_controller_.controller_.ki_));

@@ -156,7 +156,7 @@ class Actuator {
       }
       return motor_position;
    }
-private:
+//private:
     FastLoop &fast_loop_;
     MainLoop &main_loop_;
     const volatile StartupParam &startup_param_;
