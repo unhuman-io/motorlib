@@ -9,6 +9,14 @@
 #include "autocomplete.h"
 #include "logger.h"
 
+
+class APIVariable;
+
+template<class type, class param_type> consteval const std::pair<const std::string_view, const APIVariable &> create_api_variable(std::string_view name, param_type param) {
+    const type api_var(param);
+    return {name, api_var};
+}
+
 #define API_ADD_FILTER(name, type, location) \
     api.add_api_variable(#name, new APICallbackFloat([]{ return location.get_frequency(); },\
         [](float f){ location.set_frequency(f); }));
@@ -21,14 +29,13 @@
 class APIVariable {
  public:
    virtual std::string get() const = 0;
-   virtual void set(std::string) = 0;
+   virtual void set(std::string) const {};
 };
 
 class APIStringView : public APIVariable {
  public:
    APIStringView(const std::string_view s) : value_(s) {}
-   void set(std::string s) {}
-   std::string get() const { return std::string(value_); }
+   std::string get() const override { return std::string(value_); }
  private:
    std::string_view value_;
 };
@@ -36,31 +43,41 @@ class APIStringView : public APIVariable {
 template<class T>
 class APIVariable2 : public APIVariable {
  public:
-   APIVariable2(T *value) : value_(value) {};
-   APIVariable2(volatile T *value) : value_(value) {};
-   APIVariable2(const T* value) : value_(const_cast<T*>(value)) {}
-   virtual std::string get() const { return std::to_string(*value_); }
-   virtual void set(std::string) = 0;
+   constexpr APIVariable2(T *value) : value_(value) {};
+   constexpr APIVariable2(volatile T *value) : value_(value) {};
+   constexpr APIVariable2(const T* value) : value_(const_cast<T*>(value)) {}
+   virtual std::string get() const override { return std::to_string(*value_); }
+   virtual void set(std::string) const {};
  protected:
    volatile T *value_;
 };
 
+struct RWVariable {};
+struct ROVariable {};
+
+template<class access = RWVariable>
 class APIFloat : public APIVariable2<float> {
  public:
    APIFloat(float *f) : APIVariable2(f) {}
    APIFloat(volatile float *f) : APIVariable2(f) {}
    APIFloat(const  float *f) : APIVariable2(f) {}
-   void set(std::string);
+   virtual void set(std::string s) const override {
+      if constexpr (std::is_same_v<access, RWVariable>) {
+        *this->value_ = std::stof(s);
+      }
+   }
 };
 
-template<class T>
+template<class T, class access = RWVariable>
 class APIInt : public APIVariable2<T> {
   public:
-    APIInt(T *u) : APIVariable2<T>(u) {}
-    APIInt(volatile T *u) : APIVariable2<T>(u) {}
-    APIInt(const T *u) : APIVariable2<T>(u) {}
-    void set(std::string s) {
-      *this->value_ = std::stoi(s);
+    constexpr APIInt(T *u) : APIVariable2<T>(u) {}
+    constexpr APIInt(volatile T *u) : APIVariable2<T>(u) {}
+    constexpr APIInt(const T *u) : APIVariable2<T>(u) {}
+    virtual void set(std::string s) const override{
+      if constexpr (std::is_same_v<access, RWVariable>) {
+        *this->value_ = std::stoi(s);
+      }
     }
 };
 
@@ -72,15 +89,17 @@ typedef APIInt<int16_t> APIInt16;
 typedef APIInt<int8_t> APIInt8;
 typedef APIInt<bool> APIBool;
 
-template<class T>
-class APIHex : public APIInt<T> {
+template<class T, class access = RWVariable>
+class APIHex : public APIInt<T, access> {
  public:
-    APIHex(T *u) : APIInt<T>(u) {}
-    APIHex(const T *u) : APIInt<T>(u) {}
-    void set(std::string s) {
-      *this->value_ = std::stoi(s, nullptr, 16);
+    APIHex(T *u) : APIInt<T, access>(u) {}
+    APIHex(const T *u) : APIInt<T, access>(u) {}
+    virtual void set(std::string s) const override {
+      if constexpr (std::is_same_v<access, RWVariable>) {
+        *this->value_ = std::stoi(s, nullptr, 16);
+      }
     }
-    virtual std::string get() const { 
+    virtual std::string get() const override { 
       std::vector<char>bytes((char *) this->value_,(char *) this->value_+sizeof(T)); 
       std::reverse(bytes.begin(),bytes.end());
       return bytes_to_hex(bytes); }
@@ -88,35 +107,49 @@ class APIHex : public APIInt<T> {
 
 #include <functional>
 
+template<class access = RWVariable>
 class APICallback : public APIVariable {
  public:
   APICallback(std::string (*const getfun)(), void (*const setfun)(std::string)) : getfun_(getfun), setfun_(setfun) {}
   APICallback(std::string (*const getfun)()) : getfun_(getfun) {}
-  void set(std::string s) { setfun_(s); }
-  std::string get() const {return getfun_(); }
+  virtual void set(std::string s) const override {
+    if constexpr (std::is_same_v<access, RWVariable>) {
+      setfun_(s); 
+    }
+  }
+  virtual std::string get() const override {return getfun_(); }
  private:
   std::string (*const getfun_)();
   void (*const setfun_)(std::string) = nullptr;
 };
 
+template<class access = RWVariable>
 class APICallbackFloat : public APIVariable {
  public:
    APICallbackFloat(float (*const getfun)(), void (*const setfun)(float)) : getfun_(getfun), setfun_(setfun) {}
    APICallbackFloat(float (*const getfun)()) : getfun_(getfun) {}
-   void set(std::string s) { setfun_(stof(s)); }
-   std::string get() const { return std::to_string(getfun_()); };
+   virtual void set(std::string s) const override {
+     if constexpr (std::is_same_v<access, RWVariable>) {
+       setfun_(stof(s));
+     }
+   }
+   virtual std::string get() const override { return std::to_string(getfun_()); };
  private:
    float (*const getfun_)();
    void (*const setfun_)(float) = nullptr;
 };
 
-template<class T>
+template<class T, class access = RWVariable>
 class APICallbackUint : public APIVariable {
  public:
    APICallbackUint(T (*const getfun)(), void (*const setfun)(T)) : getfun_(getfun), setfun_(setfun) {}
    APICallbackUint(T (*const getfun)()) : getfun_(getfun) {}
-   void set(std::string s) { setfun_(std::stoi(s)); }
-   std::string get() const { return std::to_string(getfun_()); }
+   virtual void set(std::string s) const override {
+     if constexpr (std::is_same_v<access, RWVariable>) {
+       setfun_(std::stoi(s));
+     }
+   }
+   virtual std::string get() const override { return std::to_string(getfun_()); }
  private:
    T (*const getfun_)();
    void (*const setfun_)(T) = nullptr;
@@ -129,13 +162,17 @@ typedef APICallbackUint<int32_t> APICallbackInt32;
 typedef APICallbackUint<int16_t> APICallbackInt16;
 typedef APICallbackUint<int8_t> APICallbackInt8;
 
-template<class T>
+template<class T, class access = RWVariable>
 class APICallbackHex : public APIVariable {
  public:
    APICallbackHex(T (*const getfun)(), void (*const setfun)(T)) : getfun_(getfun), setfun_(setfun) {}
    APICallbackHex(T (*const getfun)()) : getfun_(getfun) {}
-   void set(std::string s) { setfun_(std::stoul(s, nullptr, 16)); }
-   std::string get() const {
+   virtual void set(std::string s) const override {
+     if constexpr (std::is_same_v<access, RWVariable>) {
+       setfun_(std::stoul(s, nullptr, 16));
+     }
+   }
+   virtual std::string get() const override {
       T value = getfun_();
       std::vector<char>bytes((char *) &value,(char *) &value+sizeof(T)); 
       std::reverse(bytes.begin(),bytes.end());
@@ -195,74 +232,3 @@ class ParameterAPI {
 };
 
 #endif  // UNHUMAN_MOTORLIB_PARAMETER_API_H_
-
-
-
-#include <concepts>
-struct Item {
-    virtual constexpr const char *get() const = 0;
-    virtual constexpr void set (char *cin) const = 0;
-    virtual constexpr char * set_with_response(char *cin) const = 0;
-};
-
-struct ROItem : public Item {
-    virtual constexpr const char * get() const { return "item"; }
-    virtual constexpr void set(char *cin) const {}
-    virtual constexpr char * set_with_response(char *cin) const { return cin; }
-};
-
-struct RWItem : public ROItem {
-    int a = 2;
-    char *c = "abc";
-    constexpr const char * get() { return c; }
-    constexpr void set(char *cin) const override { c[1] = cin[0];  }
-};
-
-struct ResponseItem : public RWItem {
-    constexpr char* set_with_response(char *cin) const { c[2] = cin[0]; return c; }
-};
-
-struct SpecialItem : public RWItem {
-    SpecialItem() {
-        c = "hij";
-    }
-};
-
-template<typename T, typename base>
-struct IntItem : public base {
-    IntItem(T& t) : t(t) {}
-    virtual constexpr const char * get() const { return "iteem"; }
-    virtual constexpr void set(char *cin) const {
-        if constexpr (std::derived_from<base, RWItem>) {
-            t = cin[0];
-        }
-    }
-    virtual constexpr char * set_with_response(char *cin) const { 
-        if constexpr (std::derived_from<base, ResponseItem>) {
-            t = cin[0];
-            return &t;
-        }
-        return "no way";
-    }
-    T& t;
-};
-
-
-struct LessSpecialItem : public ROItem {
-    constexpr const char *get() const override { return "less special item";}
-};
-
-const ROItem i;
-const RWItem b, b2;
-const SpecialItem s;
-const LessSpecialItem l;
-int a;
-const IntItem<int, ROItem> ro_int(a);
-constinit const Item* const items[] {&i, &b, &b2, &s, &l, &ro_int};
-
-//constinit const Item* const items2[] {new const ROItem};
-
-const char* fun(int i) {
-    items[i]->set("def");
-    return items[i]->get();
-}

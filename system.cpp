@@ -81,14 +81,16 @@ extern "C" void _exit(int status) {
 }
 
 
-APIUint32 a((uint32_t *) &System::actuator_.main_loop_.mode_);
-__attribute__((used,section("api_list"))) constinit const std::pair<const std::string_view, APIVariable &> api3 
-    {"mode", a};
 
-APICallbackUint32 baaa (get_heap_used);
-__attribute__((used,section("api_list2"))) constinit const std::pair<const std::string_view, APIVariable &> api4 
-    {"heap_used", baaa};
 // api.add_api_variable("api_memory_used", new const APIUint32(&ParameterAPI::AllocatorBase::index_));
-// api.add_api_variable("kp", new APIFloat(&actuator_.main_loop_.position_controller_.controller_.kp_));
-// api.add_api_variable("kd", new APIFloat(&actuator_.main_loop_.position_controller_.controller_.kd_));
-// api.add_api_variable("ki", new APIFloat(&actuator_.main_loop_.position_controller_.controller_.ki_));
+
+// API_ADD_VARIABLE(api_memory_used, APIInt<uint32_t, ROVariable>, &ParameterAPI::AllocatorBase::index_);
+// API_ADD_VARIABLE(kp, APIFloat, &System::actuator_.main_loop_.position_controller_.controller_.kp_);
+// API_ADD_VARIABLE(kd, APIFloat, &System::actuator_.main_loop_.position_controller_.controller_.kd_);
+// API_ADD_VARIABLE(ki, APIFloat, &System::actuator_.main_loop_.position_controller_.controller_.ki_);
+// API_ADD_VARIABLE(ki_limit, APIFloat, &System::actuator_.main_loop_.position_controller_.controller_.ki_limit_);
+// API_ADD_VARIABLE(max, APIFloat, &System::actuator_.main_loop_.position_controller_.controller_.command_max_);
+// API_ADD_VARIABLE(tracking_tol, APIFloat, &System::actuator_.main_loop_.position_controller_.tracking_tolerance_);
+// API_ADD_VARIABLE(vlimit, APIFloat, &System::actuator_.main_loop_.position_controller_.velocity_limit_);
+
+__attribute__((used, section("api_list"))) constinit const auto a = create_api_variable<APIUint32>("api_memory_used", &ParameterAPI::AllocatorBase::index_);

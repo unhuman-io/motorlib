@@ -48,7 +48,7 @@ class PositionController : public Controller {
         }
         return false;
     }
- private:
+ //private:
     PIDController controller_;
     float velocity_limit_ = INFINITY;
     SecondOrderLowPassFilter desired_filter_;
@@ -57,8 +57,6 @@ class PositionController : public Controller {
     uint32_t tracking_timeout_count_;
     float tracking_tolerance_ = INFINITY;
 
-    friend class System;
-    friend void config_init();
 };
 
 #endif  // UNHUMAN_MOTORLIB_CONTROLLER_POSITION_CONTROLLER_H_
