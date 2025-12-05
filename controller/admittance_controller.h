@@ -28,7 +28,7 @@ class AdmittanceController : public Controller {
         }
         return false;
     }
- private:
+ //private:
     VelocityController velocity_controller_;
     PIDController torque_controller_;
 

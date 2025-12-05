@@ -156,7 +156,7 @@ class LeakyBucket {
         count_++;
     }
 
- private:
+ //private:
     uint32_t count_;
     uint32_t leak_count_;
     uint32_t leak_period_;

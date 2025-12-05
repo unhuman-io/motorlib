@@ -31,7 +31,7 @@ class VelocityController : public Controller {
         }
         return false;
     }
- private:
+ //private:
     float velocity_measured_filt_ = 0;
     float last_motor_position_ = 0;
     float rollover_ = 0;

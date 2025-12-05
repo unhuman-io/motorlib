@@ -12,18 +12,14 @@
 
 class APIVariable;
 
-template<class type, class param_type> consteval const std::pair<const std::string_view, const APIVariable &> create_api_variable(std::string_view name, param_type param) {
-    const type api_var(param);
+consteval const std::pair<const std::string_view, const APIVariable &> create_api_variable(std::string_view name, const APIVariable &api_var) {
     return {name, api_var};
 }
 
 #define API_ADD_FILTER(name, type, location) \
-    api.add_api_variable(#name, new APICallbackFloat([]{ return location.get_frequency(); },\
-        [](float f){ location.set_frequency(f); }));
+  //  api.add_api_variable(#name, new APICallbackFloat([]{ return location.get_frequency(); },
+  //      [](float f){ location.set_frequency(f); }));
 
-#define API_ADD_FILTER_WITH_API(api, name, location) \
-    api.add_api_variable(#name, new APICallbackFloat([]{ return location.get_frequency(); },\
-        [](float f){ location.set_frequency(f); }));
 
 
 class APIVariable {
@@ -58,9 +54,9 @@ struct ROVariable {};
 template<class access = RWVariable>
 class APIFloat : public APIVariable2<float> {
  public:
-   APIFloat(float *f) : APIVariable2(f) {}
-   APIFloat(volatile float *f) : APIVariable2(f) {}
-   APIFloat(const  float *f) : APIVariable2(f) {}
+   constexpr APIFloat(float *f) : APIVariable2(f) {}
+   constexpr APIFloat(volatile float *f) : APIVariable2(f) {}
+   constexpr APIFloat(const  float *f) : APIVariable2(f) {}
    virtual void set(std::string s) const override {
       if constexpr (std::is_same_v<access, RWVariable>) {
         *this->value_ = std::stof(s);

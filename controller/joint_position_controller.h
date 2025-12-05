@@ -29,7 +29,7 @@ class JointPositionController : public Controller {
         }
         return false;
     }
- private:
+ //private:
     VelocityController velocity_controller_;
     JointPositionControllerParam param_ = {};
 

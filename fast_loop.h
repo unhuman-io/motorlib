@@ -335,7 +335,7 @@ class FastLoop {
     void clear_faults() {
       encoder_.clear_faults();
     }
- private:
+ //private:
     float motor_encoder_index_electrical_offset_pos_;
 
     FOC *foc_;

@@ -264,7 +264,7 @@ public:
     float step(float desired, float measured);
     void set_param(const PIParam &pi_param);
     void initialize() { ki_sum_ = 0; }
-private:
+//private:
     float kp_ = 0, ki_ = 0, ki_sum_ = 0, ki_limit_ = 0, command_max_ = 0;
 
     friend class System;
@@ -325,7 +325,7 @@ public:
     float kp_ = 0, kd_ = 0, ki_ = 0, ki_sum_ = 0, ki_limit_ = 0, command_max_ = 0;
     SecondOrderLowPassFilter velocity_filter_;
     FirstOrderLowPassFilter output_filter_;
-protected:
+//protected:
     float error_ = 0, velocity_measured_ = 0;
     float measured_last_ = 0;
     
@@ -435,7 +435,7 @@ class TrajectoryGenerator {
     float * value() { return &trajectory_value_.value; }
     float get_amplitude() const { return amplitude_; }
     float get_frequency() const { return frequency_; }
- private:
+ //private:
     TuningMode mode_ = TuningMode::SINE;
     float random_scale_ = 1;
     float frequency_, amplitude_;
