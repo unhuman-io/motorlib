@@ -59,10 +59,10 @@ LDFLAGS = $(MCU) -specs=nosys.specs -T$(LDSCRIPT) $(LIBDIR) $(LIBS) -Wl,-Map=$(B
 CC_VERSION := $(shell $(CC) -dumpversion)
 CC_MAJOR_VERSION := $(word 1, $(subst ., ,$(CC_VERSION)))
 
-ifeq ($(CC_MAJOR_VERSION), $(filter $(CC_MAJOR_VERSION),20))
+ifeq ($(CC_MAJOR_VERSION), $(filter $(CC_MAJOR_VERSION),20 21))
 $(call info_once,clang version $(CC_VERSION))
 else
-$(error clang version $(CC_VERSION), 20 required)
+$(error clang version $(CC_VERSION), 20-21 required)
 endif
 
 ifeq ($(OS),Windows_NT)
