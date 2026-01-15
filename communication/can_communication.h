@@ -31,7 +31,7 @@ class CANCommunication : public CommunicationBase {
       can_id.message_id = OBOT_ASCII;
       can_.add_acceptance_filter(can_id.word, 1);
       can_id.message_id = OBOT_ENUM;
-      can_id.address = 0;
+      can_id.address = 0x7f;
       can_.add_acceptance_filter(can_id.word, 0);
     };
 
