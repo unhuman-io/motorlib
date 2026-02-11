@@ -63,7 +63,7 @@ void Flash::write_impl(uint32_t address, const void *data, uint32_t size, EraseT
     }
     regs_.CR &= ~FLASH_CR_PG;
     __enable_irq();
-    uint32_t t_write = get_clock() - t_erase - t_start;
+    [[maybe_unused]] uint32_t t_write = get_clock() - t_erase - t_start;
     // logger.log_printf("flash write address: %x, %d bytes, %d pages, erase %d us, write %d us", address, size,
     //     num_pages, CPU_TO_US(t_erase), CPU_TO_US(t_write));
 }
