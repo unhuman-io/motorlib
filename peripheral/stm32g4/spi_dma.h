@@ -23,12 +23,12 @@ class SPIDMA : public SPIDMABase<SPIDMA> {
 
     SPIDMA(SPI_INSTANCE inst, GPIO &gpio_cs, DMA_CHANNEL_INSTANCE tx_channel, DMA_CHANNEL_INSTANCE rx_channel, 
         uint32_t baudrate,
-        uint16_t start_cs_delay_ns = 100, uint16_t end_cs_delay_ns = 100, uint32_t regs_cr1 = 0) : 
+        uint16_t start_cs_delay_ns = 100, uint16_t end_cs_delay_ns = 100, uint32_t regs_cr1 = 0, uint16_t interframe_delay_ns = 0) : 
         SPIDMABase(baudrate, spi_pause[inst]),
         regs_(*spi_regs[inst]), gpio_cs_(gpio_cs),
         tx_dma_(*dma_ch_regs[tx_channel]), rx_dma_(*dma_ch_regs[rx_channel]),
         start_cs_delay_ns_(start_cs_delay_ns), end_cs_delay_ns_(end_cs_delay_ns),
-        regs_cr1_(regs_cr1) {
+        regs_cr1_(regs_cr1), interframe_delay_ns_(interframe_delay_ns) {
 
             if (regs_cr1 == 0) {
                 regs_cr1_ = regs_.CR1;
@@ -108,6 +108,9 @@ class SPIDMA : public SPIDMABase<SPIDMA> {
         while(rx_dma_.CNDTR && (get_clock() - time_start_ < timeout)); // Busy wait with timeout
         ns_delay(end_cs_delay_ns_);
         gpio_cs_.set();
+        tx_dma_.CMAR = 0;
+        rx_dma_.CMAR = 0;
+        ns_delay(interframe_delay_ns_);
     }
 
 
@@ -117,6 +120,7 @@ class SPIDMA : public SPIDMABase<SPIDMA> {
     uint16_t start_cs_delay_ns_;
     uint16_t end_cs_delay_ns_;
     uint32_t regs_cr1_;
+    uint16_t interframe_delay_ns_;
     uint32_t tmp_rx_;
     uint32_t length_;
     uint32_t time_start_;

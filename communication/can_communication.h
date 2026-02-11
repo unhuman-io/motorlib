@@ -32,7 +32,7 @@ class CANCommunication : public CommunicationBase {
       can_id.message_id = OBOT_ASCII;
       can_.add_acceptance_filter(can_id.word, 1);
       can_id.message_id = OBOT_ENUM;
-      can_id.address = 0;
+      can_id.address = 0x7f;
       can_.add_acceptance_filter(can_id.word, 0);
     };
 
@@ -44,7 +44,7 @@ class CANCommunication : public CommunicationBase {
         can_id.message_id = OBOT_CMD_STATUS;
         recv_len = can_.read(0, can_id.word, (uint8_t*) data);
         if (recv_len < 0) {
-          CANID can_id_enum = {.message_id = OBOT_ENUM};
+          CANID can_id_enum = {.address = 0x7f, .message_id = OBOT_ENUM};
           recv_len = can_.read(0, can_id_enum.word, (uint8_t*) nullptr);
           if (recv_len >= 0) {
             //logger.log("recv enum");
