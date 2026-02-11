@@ -195,6 +195,8 @@ int main() {
                 can_communication.send_string("1.0", 3);
             } else if (strcmp(s, "reset") == 0) {
                 NVIC_SystemReset();
+            } else {
+                can_communication.send_string("", 0);
             }
         }
 
