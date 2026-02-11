@@ -318,7 +318,7 @@ class System {
             actuator_.main_loop_.get_fault_str(c, 600);
             return std::string(c);
         }));
-        api.add_api_variable("reset", new const APICallbackUint8([]()->uint8_t{ NVIC_SystemReset(); return 0; }));
+        api.add_api_variable("go_to_bootloader", new APIHex<uint32_t>(&go_to_bootloader));
 
 
         uint32_t t_start = get_clock();

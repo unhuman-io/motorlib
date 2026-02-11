@@ -63,7 +63,7 @@ MEMORY
 {
 RAM (xrw)      : ORIGIN = 0x20000000, LENGTH = 96K
 CCMRAM (xrw)   : ORIGIN = 0x10000000, LENGTH = 32K
-FLASH (rx)      : ORIGIN = 0x8000000, LENGTH = 384K
+FLASH (rx)      : ORIGIN = DEFINED(CUSTOM_BOOTLOADER) ? 0x8002000 : 0x8000000, LENGTH = DEFINED(CUSTOM_BOOTLOADER) ? 376K : 384K
 PARAM_DATA (rx)  : ORIGIN = 0x8060000, LENGTH = 64K
 CALIBRATION_DATA (rx) : ORIGIN = 0x8070000, LENGTH = 64K
 }
@@ -182,6 +182,7 @@ SECTIONS
   {
     . = ALIGN(4);
     _sdata = .;        /* create a global symbol at data start */
+    *(.bootloader_flag)
     *(.data)           /* .data sections */
     *(.data*)          /* .data* sections */
 

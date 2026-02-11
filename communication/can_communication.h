@@ -2,6 +2,7 @@
 
 #include "../communication.h"
 #include <cstring>
+#include <algorithm>
 
 template <class CAN>
 class CANCommunication : public CommunicationBase {
@@ -82,7 +83,7 @@ class CANCommunication : public CommunicationBase {
 
     bool send_string(const char* string, uint16_t length) {
       CANID can_id = {.address = address_, .message_id = OBOT_ASCII_RESPONSE};
-      if (string[0] == 0 || length > MAX_CAN_DATA_SIZE) {
+      if (length && (string[0] == 0 || length > MAX_CAN_DATA_SIZE - 1)) {
         struct {
           APIControlPacket control_packet = {.control_packet_id = 0,
                                              .type = LONG_PACKET,

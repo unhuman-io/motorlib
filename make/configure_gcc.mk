@@ -69,7 +69,11 @@ CPPFLAGS += $(CFLAGS)
 # libraries
 LIBS = -lc -lm -lnosys 
 LIBDIR = 
-LDFLAGS = $(MCU) -specs=nosys.specs -T$(LDSCRIPT) $(LIBDIR) $(LIBS) -Wl,-Map=$(BUILD_DIR)/$(TARGET).map,--cref -Wl,--gc-sections,--print-memory-usage -u _printf_float
+
+ifneq (,$(findstring tmotor_driver,$(CONFIG)))
+CUSTOM_BOOTLOADER = -Wl,--defsym=CUSTOM_BOOTLOADER=1
+endif
+LDFLAGS = $(MCU) -specs=nosys.specs -T$(LDSCRIPT) $(LIBDIR) $(LIBS) -Wl,-Map=$(BUILD_DIR)/$(TARGET).map,--cref -Wl,--gc-sections,--print-memory-usage -u _printf_float $(CUSTOM_BOOTLOADER)
 
 GCC_VERSION := $(shell $(CC) -dumpversion)
 GCC_MAJOR_VERSION := $(word 1, $(subst ., ,$(GCC_VERSION)))
