@@ -188,10 +188,10 @@ class System {
             }
             actuator_.main_loop_.unlock_status_log();
             return out; }));
-        api.add_api_variable("beep", new const APICallbackFloat([](){ return 0.0; }, [](float f){ actuator_.fast_loop_.beep_on(f); }));
+        api.add_api_variable("beep", new const APICallbackFloat([](){ return 0.0f; }, [](float f){ actuator_.fast_loop_.beep_on(f); }));
         api.add_api_variable("beep_frequency", new APIFloat(&actuator_.fast_loop_.param_.beep_frequency));
         api.add_api_variable("beep_amplitude", new APIFloat(&actuator_.fast_loop_.param_.beep_amplitude));
-        api.add_api_variable("zero_current_sensors", new APICallbackFloat([](){ return 0.0; }, [](float f){ actuator_.fast_loop_.zero_current_sensors_on(f); }));
+        api.add_api_variable("zero_current_sensors", new APICallbackFloat([](){ return 0.0f; }, [](float f){ actuator_.fast_loop_.zero_current_sensors_on(f); }));
         api.add_api_variable("disable_safe_mode", new const APICallback([]()->std::string{ actuator_.main_loop_.error_mask_.all = ERROR_MASK_NONE; return "ok"; }));
         api.add_api_variable("error_mask", new APICallback([](){ return u32_to_hex(actuator_.main_loop_.error_mask_.all); },
                 [](std::string s){ try {
@@ -318,7 +318,7 @@ class System {
             actuator_.main_loop_.get_fault_str(c, 600);
             return std::string(c);
         }));
-        api.add_api_variable("reset", new const APICallbackUint8([]()->uint8_t{ NVIC_SystemReset(); return 0; }));
+        api.add_api_variable("go_to_bootloader", new APIHex<uint32_t>(&go_to_bootloader));
 
 
         uint32_t t_start = get_clock();

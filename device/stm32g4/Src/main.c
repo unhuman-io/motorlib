@@ -9,7 +9,7 @@ void _kill_r() {}
 void _lseek_r() {}
 void _read_r() {}
 
-uint32_t go_to_bootloader = 0;
+uint32_t go_to_bootloader __attribute__((section(".bootloader_flag"))) = 0;
 
 
 int main(void)

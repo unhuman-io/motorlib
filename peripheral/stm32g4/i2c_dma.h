@@ -76,6 +76,7 @@ class I2C_DMA {
     void cancel_async_read() {
         rx_dma_.CCR = 0;
         rx_dma_.CNDTR = 0;
+        rx_dma_.CMAR = 0;
         regs_.CR2 |= I2C_CR2_STOP;
         ns_delay(10000);
         regs_.CR1 &= ~I2C_CR1_PE;
@@ -86,6 +87,7 @@ class I2C_DMA {
     void cancel_async_write() {
         tx_dma_.CCR = 0;
         tx_dma_.CNDTR = 0;
+        tx_dma_.CMAR = 0;
         regs_.CR2 |= I2C_CR2_STOP;
         ns_delay(10000);
         regs_.CR1 &= ~I2C_CR1_PE;
@@ -116,7 +118,7 @@ class I2C_DMA {
             cancel_async_write();
             return -2;
         }
-
+        tx_dma_.CMAR = 0;
         return nbytes;
     }
 
@@ -150,6 +152,7 @@ class I2C_DMA {
             cancel_async_read();
             return -4;
         }
+        rx_dma_.CMAR = 0;
         asm("" : "=m"(*(uint8_t(*)[nbytes])data));  // ensure data is in memory
         return nbytes;
     }

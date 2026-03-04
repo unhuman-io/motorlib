@@ -2,6 +2,7 @@
 
 #include "../communication.h"
 #include <cstring>
+#include <algorithm>
 
 template <class CAN>
 class CANCommunication : public CommunicationBase {
@@ -31,7 +32,7 @@ class CANCommunication : public CommunicationBase {
       can_id.message_id = OBOT_ASCII;
       can_.add_acceptance_filter(can_id.word, 1);
       can_id.message_id = OBOT_ENUM;
-      can_id.address = 0;
+      can_id.address = 0x7f;
       can_.add_acceptance_filter(can_id.word, 0);
     };
 
@@ -43,7 +44,7 @@ class CANCommunication : public CommunicationBase {
         can_id.message_id = OBOT_CMD_STATUS;
         recv_len = can_.read(0, can_id.word, (uint8_t*) data);
         if (recv_len < 0) {
-          CANID can_id_enum = {.message_id = OBOT_ENUM};
+          CANID can_id_enum = {.address = 0x7f, .message_id = OBOT_ENUM};
           recv_len = can_.read(0, can_id_enum.word, (uint8_t*) nullptr);
           if (recv_len >= 0) {
             //logger.log("recv enum");
@@ -82,7 +83,7 @@ class CANCommunication : public CommunicationBase {
 
     bool send_string(const char* string, uint16_t length) {
       CANID can_id = {.address = address_, .message_id = OBOT_ASCII_RESPONSE};
-      if (string[0] == 0 || length > MAX_CAN_DATA_SIZE) {
+      if (length && (string[0] == 0 || length > MAX_CAN_DATA_SIZE - 1)) {
         struct {
           APIControlPacket control_packet = {.control_packet_id = 0,
                                              .type = LONG_PACKET,

@@ -44,7 +44,7 @@ ASFLAGS = $(MCU) $(AS_DEFS) $(AS_INCLUDES) $(OPT) -Wall -fdata-sections -ffuncti
 CFLAGS = --config=newlib.cfg $(MCU) $(C_DEFS) $(C_INCLUDES) $(OPT) -Wall -fdata-sections -ffunction-sections $(LTO) -Wno-vla-cxx-extension -Wno-c99-designator -Wno-c23-extensions -Wno-error=microsoft-exception-spec
 
 ifeq ($(DEBUG), 1)
-CFLAGS += -g -gdwarf-2
+CFLAGS += -g3
 endif
 
 # Generate dependency information
@@ -59,10 +59,10 @@ LDFLAGS = $(MCU) -specs=nosys.specs -T$(LDSCRIPT) $(LIBDIR) $(LIBS) -Wl,-Map=$(B
 CC_VERSION := $(shell $(CC) -dumpversion)
 CC_MAJOR_VERSION := $(word 1, $(subst ., ,$(CC_VERSION)))
 
-ifeq ($(CC_MAJOR_VERSION), $(filter $(CC_MAJOR_VERSION),20))
+ifeq ($(CC_MAJOR_VERSION), $(filter $(CC_MAJOR_VERSION),20 21))
 $(call info_once,clang version $(CC_VERSION))
 else
-$(error clang version $(CC_VERSION), 20 required)
+$(error clang version $(CC_VERSION), 20-21 required)
 endif
 
 ifeq ($(OS),Windows_NT)
