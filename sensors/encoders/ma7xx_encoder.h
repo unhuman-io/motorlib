@@ -5,6 +5,7 @@
 #include "../../util.h"
 #include "../../logger.h"
 #include "../../peripheral/spi_dma.h"
+#include <type_traits>
 
 #define MA7XX_SET_DEBUG_VARIABLES(prefix, api, ma7xx) \
     api.add_api_variable(prefix "err", new APIUint32(&ma7xx.error_count_));\
@@ -39,12 +40,14 @@ class MA7XXEncoderBase : public SPIEncoder<SPI> {
     }
 
     void reinit() {
+        if constexpr (std::is_same_v<decltype(SPI::regs_), SPI_TypeDef>) {
 #ifdef STM32F446xx
-        this->spi_.regs_.CR1 = SPI_CR1_MSTR | (3 << SPI_CR1_BR_Pos) | SPI_CR1_SSI | SPI_CR1_SSM | SPI_CR1_SPE | SPI_CR1_DFF;    // baud = clock/16, 16 bit
+            this->spi_.regs_.CR1 = SPI_CR1_MSTR | (3 << SPI_CR1_BR_Pos) | SPI_CR1_SSI | SPI_CR1_SSM | SPI_CR1_SPE | SPI_CR1_DFF;    // baud = clock/16, 16 bit
 #else    
-        this->spi_.regs_.CR2 = (15 << SPI_CR2_DS_Pos);   // 16 bit
-        this->spi_.regs_.CR1 = SPI_CR1_MSTR | (3 << SPI_CR1_BR_Pos) | SPI_CR1_SSI | SPI_CR1_SSM | SPI_CR1_SPE;    // baud = clock/16
+            this->spi_.regs_.CR2 = (15 << SPI_CR2_DS_Pos);   // 16 bit
+            this->spi_.regs_.CR1 = SPI_CR1_MSTR | (3 << SPI_CR1_BR_Pos) | SPI_CR1_SSI | SPI_CR1_SSM | SPI_CR1_SPE;    // baud = clock/16
 #endif
+        }
     }
 
     // interrupt context
