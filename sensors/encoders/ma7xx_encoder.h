@@ -5,20 +5,7 @@
 #include "../../util.h"
 #include "../../logger.h"
 #include "../../peripheral/spi_dma.h"
-
-#define MA7XX_SET_DEBUG_VARIABLES(prefix, api, ma7xx) \
-    api.add_api_variable(prefix "err", new APIUint32(&ma7xx.error_count_));\
-    api.add_api_variable(prefix "filt", new APICallbackUint8([]{ return ma7xx.get_filt(); }, \
-        [](uint8_t u){ ma7xx.set_filt(u); }));\
-    api.add_api_variable(prefix "bct", new APICallbackUint8([]{ return ma7xx.get_bct(); }, \
-        [](uint8_t u){ ma7xx.set_bct(u); }));\
-    api.add_api_variable(prefix "et", new APICallbackUint8([]{ return ma7xx.get_et(); }, \
-        [](uint8_t u){ ma7xx.set_et(u); }));\
-    api.add_api_variable(prefix "mgt", new APICallbackHex<uint16_t>([]{ \
-        System::communication_.send_one_time_api_timeout_request(200000);\
-        return ma7xx.get_magnetic_field_strength(); },\
-        [](uint16_t u){ ma7xx.set_mgt(u); }));\
-    api.add_api_variable(prefix "raw", new const APIUint16(&ma7xx.data_));\
+#include "../../parameter_api.h"
 
 // Note MA7XX encoder expects cpol 1, cpha 1, max 25 mbit
 // 80 ns cs start to sclk, 25 ns sclk end to cs end
@@ -214,6 +201,25 @@ class MA7XXEncoderBase : public SPIEncoder {
     void clear_faults() {
         error_count_ = 0;
     }
+
+    template<FixedString prefix>
+    void add_debug_variables(ParameterAPI &api) {
+        api.add_api_variable(StaticString<prefix + "err">, new APIUint32(&error_count_));
+        api.add_api_variable(StaticString<prefix + "erer">, new APIUint32(&error_count_));
+        api.add_api_variable(StaticString<prefix + "filt">, new APICallbackUint8([this]{ return get_filt(); },
+            [this](uint8_t u){ set_filt(u); }));
+    }
+    // api.add_api_variable(prefix "filt", new APICallbackUint8([]{ return ma7xx.get_filt(); },
+    //     [](uint8_t u){ ma7xx.set_filt(u); }))
+    // api.add_api_variable(prefix "bct", new APICallbackUint8([]{ return ma7xx.get_bct(); },
+    //     [](uint8_t u){ ma7xx.set_bct(u); }));
+    // api.add_api_variable(prefix "et", new APICallbackUint8([]{ return ma7xx.get_et(); },
+    //     [](uint8_t u){ ma7xx.set_et(u); }));
+    // api.add_api_variable(prefix "mgt", new APICallbackHex<uint16_t>([]{
+    //     System::communication_.send_one_time_api_timeout_request(200000);
+    //     return ma7xx.get_magnetic_field_strength(); },
+    //     [](uint16_t u){ ma7xx.set_mgt(u); }));
+    // api.add_api_variable(prefix "raw", new const APIUint16(&ma7xx.data_));
 
     uint8_t filter_;
     SPI_TypeDef &regs_;
