@@ -135,6 +135,11 @@ extern "C" void board_init() {
     GPIO_SETL(C, 4, GPIO_MODE::OUTPUT, GPIO_SPEED::HIGH, 0); // main() scope
     GPIO_SETL(A, 0, GPIO_MODE::OUTPUT, GPIO_SPEED::HIGH, 0); // system loop scope
 #endif
+#if COMMS == COMMS_CAN
+    RCC->APB1ENR1 |= RCC_APB1ENR1_FDCANEN;
+    GPIO_SETL(B, 5, GPIO_MODE::ALT_FUN, GPIO_SPEED::MEDIUM, 9); // can2 rx
+    GPIO_SETL(B, 6, GPIO_MODE::ALT_FUN, GPIO_SPEED::MEDIUM, 9); // can2 tx
+#endif
 }
 
 
@@ -264,7 +269,7 @@ namespace config {
 #endif // COMMS_UART
 
 #if COMMS == COMMS_CAN
-    CAN can(CAN_NUM);
+    CAN can(CAN::CAN2);
 #endif
 
 #if COMMS == COMMS_SPI
@@ -349,6 +354,10 @@ void system_init() {
 
 #if COMMS == COMMS_UART
     config::uart.init();
+#endif
+#if COMMS == COMMS_CAN
+    System::api.add_api_variable("can_send_decimation", new APICallbackUint16([]{ return System::communication_.get_send_decimation(); },
+        [](uint16_t u){ System::communication_.set_send_decimation(u); }));
 #endif
 
     if (config::motor_encoder.init()) {

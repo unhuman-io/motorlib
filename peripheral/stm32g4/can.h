@@ -9,7 +9,7 @@ class CAN {
     enum CAN_INST {CAN1, CAN2, CAN3};
     enum ArbitrationBaudRate {ARB_1M, ARB_2M};
     enum DataBaudRate {DATA_1M, DATA_2M, DATA_5M, DATA_8M, DATA_10M, DATA_12M, DATA_15M};
-    CAN(CAN_INST inst, ArbitrationBaudRate arb = ARB_2M, DataBaudRate data = DATA_10M);
+    CAN(CAN_INST inst, ArbitrationBaudRate arb = ARB_1M, DataBaudRate data = DATA_8M);
     int read(uint8_t fifo, uint16_t id, uint8_t* data);
 
     // use buf_num to select a buffer 0-2, currently 0 for status, 1 for text_api, 2 for enum
