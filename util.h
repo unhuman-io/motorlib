@@ -76,6 +76,8 @@ inline uint32_t get_current_heap_free() {
 #ifdef __cplusplus
 #include <string>
 #include <vector>
+#include <string_view>
+#include <algorithm>
 class FrequencyLimiter {
  public:
     FrequencyLimiter(float rate_seconds) {
@@ -178,6 +180,37 @@ std::string u32_to_hex(const uint32_t w);
 std::string bytes_to_hex(const std::vector<char>& bytes);
 std::string bytes_to_hex(const std::vector<uint8_t>& bytes);
 std::string bytes_to_hex(const uint8_t bytes[], const uint8_t length);
+
+template <size_t N>
+struct FixedString {
+    char buf[N + 1] = {};
+    size_t size = N;
+
+    consteval FixedString(const char (&str)[N + 1]) {
+        std::copy_n(str, N, buf);
+    }
+
+    consteval FixedString() : size(0) {}
+template <size_t M>
+consteval auto operator+(const char (&other)[M]) const {
+    FixedString<N + M - 1> result;
+    for (size_t i = 0; i < N; ++i) result.buf[i] = buf[i];
+    for (size_t i = 0; i < M; ++i) result.buf[N + i] = other[i];
+    
+    result.size = N + M - 1; 
+    return result;
+}
+
+    consteval operator std::string_view() const {
+        return {buf, N};
+    }
+};
+
+template<unsigned int N>
+FixedString(const char (&)[N]) -> FixedString<N - 1>;
+
+template<auto FS>
+constexpr auto StaticString = std::string_view{FS.buf, FS.size};
 
 #endif  // __cplusplus
 #endif  // UNHUMAN_MOTORLIB_UTIL_H_
