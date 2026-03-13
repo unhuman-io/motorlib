@@ -11,10 +11,10 @@
 extern volatile uint32_t * const cpu_clock;
 extern volatile uint32_t uptime;
 
-static inline uint32_t get_clock() { return *cpu_clock; }
-static inline uint8_t get_cpi_count() { return DWT->CPICNT; }
-static inline uint8_t get_lsu_count() { return DWT->LSUCNT; }
-static inline uint32_t get_uptime() { return uptime; }
+inline uint32_t get_clock() { return *cpu_clock; }
+inline uint8_t get_cpi_count() { return DWT->CPICNT; }
+inline uint8_t get_lsu_count() { return DWT->LSUCNT; }
+inline uint32_t get_uptime() { return uptime; }
 
 void ms_delay(uint16_t ms);
 void us_delay(uint16_t us);

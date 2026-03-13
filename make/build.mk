@@ -36,7 +36,11 @@ $(BUILD_DIR)/%.o: %.c | $(BUILD_DIR)
 
 $(BUILD_DIR)/%.o: %.cpp | $(BUILD_DIR) 
 	@echo "  CXX    " $<
-	$(CXX) -c $(CPPFLAGS) $< -o $@
+	$(CXX) -c $(CPPFLAGS) $(CXXFLAGS) $< -o $@
+
+gcm.cache/%.gcm %.pcm %.o: %.cppm | $(BUILD_DIR)
+	@echo "  CXXM  $<"
+	$(CXX) -c $(C_INCLUDES) $(CPPFLAGS) $(CFLAGS) $(CXXFLAGS) $(CXXMFLAGS) $<
 
 # ensure flash commands stay in allocated section
 $(BUILD_DIR)/flash.o: flash.cpp | $(BUILD_DIR)
@@ -69,7 +73,7 @@ $(VERBOSE).SILENT:
 # clean up
 #######################################
 clean:
-	-$(RM) $(BUILD_DIR)
+	-$(RM) $(BUILD_DIR) gcm.cache *.o
 
 #######################################
 # dependencies

@@ -1,5 +1,4 @@
-#ifndef UNHUMAN_MOTORLIB_MA7XX_ENCODER_H_
-#define UNHUMAN_MOTORLIB_MA7XX_ENCODER_H_
+module;
 
 #include "../../peripheral/spi_encoder.h"
 #include "../../util.h"
@@ -8,9 +7,11 @@
 #include "../../parameter_api.h"
 #include <type_traits>
 
+export module ma7xx_encoder;
+
 // Note MA7XX encoder expects cpol 1, cpha 1, max 25 mbit
 // 80 ns cs start to sclk, 25 ns sclk end to cs end
-template <class T, class SPI>
+export template <class T, class SPI>
 class MA7XXEncoderBase : public SPIEncoder<SPI> {
  public:
     union MA7XXreg {
@@ -232,14 +233,14 @@ class MA7XXEncoderBase : public SPIEncoder<SPI> {
     uint32_t stall_count_max_ = 50;
 };
 
-template<typename SPI>
+export template<typename SPI>
 class MA732Encoder : public MA7XXEncoderBase<MA732Encoder<SPI>, SPI> {
  public:
     MA732Encoder(SPI &s, GPIO &gpio_cs, SPIPause &spi_pause, uint8_t filter = 119)
         : MA7XXEncoderBase<MA732Encoder<SPI>, SPI>(s, gpio_cs, spi_pause, filter) {}
 };
 
-template<typename SPI>
+export template<typename SPI>
 class MA730Encoder : public MA732Encoder<SPI> {
  public:
     MA730Encoder(SPI &s, GPIO& g, SPIPause &sp) : MA732Encoder<SPI>(s, g, sp) {
@@ -249,6 +250,3 @@ class MA730Encoder : public MA732Encoder<SPI> {
     // don't set filter, it is fixed at 23 Hz
     bool init() { return this->check_magnetic_field_strength(); }
 };
-
-
-#endif  // UNHUMAN_MOTORLIB_MA7XX_ENCODER_H_
