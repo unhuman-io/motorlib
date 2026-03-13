@@ -191,14 +191,15 @@ struct FixedString {
     }
 
     consteval FixedString() : size(0) {}
-
-    template <size_t M>
-    consteval auto operator+(const char (&other)[M]) const {
-        FixedString<N + M - 1> result;
-        std::copy_n(buf, N, result.buf);
-        std::copy_n(other, M, result.buf + N);
-        return result;
-    }
+template <size_t M>
+consteval auto operator+(const char (&other)[M]) const {
+    FixedString<N + M - 1> result;
+    for (size_t i = 0; i < N; ++i) result.buf[i] = buf[i];
+    for (size_t i = 0; i < M; ++i) result.buf[N + i] = other[i];
+    
+    result.size = N + M - 1; 
+    return result;
+}
 
     consteval operator std::string_view() const {
         return {buf, N};

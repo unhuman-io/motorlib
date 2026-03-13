@@ -220,7 +220,7 @@ class MA7XXEncoderBase : public SPIEncoder<SPI> {
             comms2.send_one_time_api_timeout_request(200000);
             return instance.get_magnetic_field_strength(); },
             [](uint16_t u){ instance.set_mgt(u); }));
-        api.add_api_variable(StaticString<prefix + "raw">, new const APIUint16(&data_));
+        api.add_api_variable(StaticString<prefix + "raw">, new const APIUint16(&instance.data_));
     }
 
     uint8_t filter_;
