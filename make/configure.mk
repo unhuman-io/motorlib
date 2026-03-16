@@ -129,3 +129,5 @@ else
 $(call info_once,using motorlib protocol_parser.cpp)
 CPP_SOURCES += $(SELF_DIR)../obot-protocol/protocol_parser.cpp
 endif
+
+include $(SELF_DIR)../sensors/encoders/Makefile

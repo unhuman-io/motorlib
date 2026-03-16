@@ -65,6 +65,7 @@ endif
 # Generate dependency information
 CFLAGS += -MMD -MP -MF"$(@:%.o=%.d)" -Wa,-a,-ad,-alms=$(BUILD_DIR)/lto.lst
 CPPFLAGS += $(CFLAGS)
+CXXFLAGS += -fmodules -Mno-modules
 
 # libraries
 LIBS = -lc -lm -lnosys 

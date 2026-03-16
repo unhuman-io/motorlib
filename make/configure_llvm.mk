@@ -50,6 +50,8 @@ endif
 # Generate dependency information
 CFLAGS += -MMD -MP -MF"$(@:%.o=%.d)"
 CPPFLAGS += $(CFLAGS)
+CXXFLAGS += -fprebuilt-module-path=$(BUILD_DIR)
+CXXMFLAGS += -fmodule-output -x c++-module
 
 # libraries
 LIBS = -lc -lm -lnosys 

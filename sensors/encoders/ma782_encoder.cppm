@@ -1,12 +1,18 @@
-#ifndef UNHUMAN_MOTORLIB_MA782_ENCODER_H_
-#define UNHUMAN_MOTORLIB_MA782_ENCODER_H_
+module;
 
-#include "ma7xx_encoder.h"
 #include "../../logger.h"
+#include "../../gpio.h"
+#include "../../peripheral/spi_dma.h"
+
+export module ma782_encoder;
+
+import ma7xx_encoder;
+
+export using ::MA7XXEncoderBase;
 
 // Note MA782 is similar to MA732 with different registers and such encoder expects cpol 1, cpha 1, max 25 mbit or cpol 0 cpha 0, modes 0 or 3
 // 100 ns cs start to sclk, 20 ns sclk end to cs end
-template<typename SPI>
+export template<typename SPI>
 class MA782Encoder : public MA7XXEncoderBase<MA782Encoder<SPI>, SPI> {
  public:
     enum MA782FW {_1, _2, _4, _8, _16, _32, _64, _128, _256, _512, _1024, _2048, _4096}; // us
@@ -61,5 +67,3 @@ class MA782Encoder : public MA7XXEncoderBase<MA782Encoder<SPI>, SPI> {
     }
 
 };
-
-#endif  // UNHUMAN_MOTORLIB_MA782_ENCODER_H_
