@@ -28,6 +28,7 @@ class System {
     static void run() {
         {
             char t[18];
+            asm("bkpt #2");
             RTClock::power_on_date_time(t);
             logger.log(t);
         }
@@ -41,6 +42,7 @@ class System {
                 NVIC_SystemReset();
             }
         } else {
+            asm("bkpt #1");
             logger.log_printf("param version match: %s", OBOT_HASH);
         }
 

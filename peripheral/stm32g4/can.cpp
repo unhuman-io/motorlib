@@ -75,7 +75,7 @@ CAN::CAN(CAN_INST inst, ArbitrationBaudRate arb, DataBaudRate data) :
 
 
     regs_.TSCC = 1 << FDCAN_TSCC_TSS_Pos; // start counter
-    regs_.RXGFC = 4 << FDCAN_RXGFC_LSS_Pos | FDCAN_RXGFC_ANFS | FDCAN_RXGFC_ANFE | FDCAN_RXGFC_RRFE; // 4 acceptance filters, reject everything else
+    regs_.RXGFC = 5 << FDCAN_RXGFC_LSS_Pos | FDCAN_RXGFC_ANFS | FDCAN_RXGFC_ANFE | FDCAN_RXGFC_RRFE; // 5 acceptance filters, reject everything else
     regs_.TXBC |= FDCAN_TXBC_TFQM; // transmit fifo request queue mode
 
 
@@ -88,20 +88,20 @@ int CAN::read(uint8_t fifo, uint16_t id, uint8_t* data) {
     switch (fifo) {
         case 0 :
             if (!(regs_.RXF0S & FDCAN_RXF0S_F0FL)) {
-                return 0;
+                return -1;
             }
             ind = (regs_.RXF0S >> FDCAN_RXF0S_F0GI_Pos) & 0x3;
             buffer = reinterpret_cast<RX_FIFO*>(ram_.RX_FIFO0[ind]);
             break;
         case 1:
             if (!(regs_.RXF1S & FDCAN_RXF1S_F1FL)) {
-                return 0;
+                return -1;
             }
             ind = (regs_.RXF1S >> FDCAN_RXF1S_F1GI_Pos) & 0x3;
             buffer = reinterpret_cast<RX_FIFO*>(ram_.RX_FIFO1[ind]);
             break;
         default:
-            return 0;
+            return -2;
             break;
     }
     int length = -1;

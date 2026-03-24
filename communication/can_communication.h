@@ -29,6 +29,8 @@ class CANCommunication : public CommunicationBase {
       can_.add_acceptance_filter(can_id.word, 0);
       can_id.message_id = OBOT_CMD_STATUS;
       can_.add_acceptance_filter(can_id.word, 0);
+      can_id.message_id = OBOT_STATUS;
+      can_.add_acceptance_filter(can_id.word, 0);
       can_id.message_id = OBOT_ASCII;
       can_.add_acceptance_filter(can_id.word, 1);
       can_id.message_id = OBOT_ENUM;
@@ -37,25 +39,35 @@ class CANCommunication : public CommunicationBase {
     };
 
     int receive_data(ReceiveData* const data) {
-      CANID can_id = {.address = address_, .message_id = OBOT_CMD};
-      int recv_len = can_.read(0, can_id.word, (uint8_t*) data);
+        CANID can_id = {.address = address_, .message_id = OBOT_CMD};
+        if (int recv_len = can_.read(0, can_id.word, (uint8_t*)data);
+            recv_len > 0) {
+            return recv_len;
+        }
 
-      if (recv_len < 0) {
         can_id.message_id = OBOT_CMD_STATUS;
-        recv_len = can_.read(0, can_id.word, (uint8_t*) data);
-        if (recv_len < 0) {
-          CANID can_id_enum = {.address = 0x7f, .message_id = OBOT_ENUM};
-          recv_len = can_.read(0, can_id_enum.word, (uint8_t*) nullptr);
-          if (recv_len >= 0) {
-            //logger.log("recv enum");
+        if (int recv_len = can_.read(0, can_id.word, (uint8_t*)data);
+            recv_len > 0) {
+            send_data_trigger_ = true;
+            return recv_len;
+        }
+
+        can_id.message_id = OBOT_STATUS;
+        if (int recv_len = can_.read(0, can_id.word, (uint8_t*)nullptr);
+            recv_len == 0) {
+            send_data_trigger_ = true;
+            return 0;
+        }
+
+        CANID can_id_enum = {.address = 0x7f, .message_id = OBOT_ENUM};
+        if (int recv_len = can_.read(0, can_id_enum.word, (uint8_t*)nullptr);
+            recv_len == 0) {
             can_id.message_id = OBOT_ENUM;
             can_.write(can_id.word, nullptr, 0, 2);
-          }
-        } else if (recv_len > 0) {
-          send_data_trigger_ = true;
+            return 0;
         }
-      }
-      return recv_len;
+
+        return 0;
     }
 
     void send_data(const SendData& data) {
@@ -75,7 +87,7 @@ class CANCommunication : public CommunicationBase {
     int receive_string(char* const string) {
       CANID can_id = {.address = address_, .message_id = OBOT_ASCII};
       int recv_len = can_.read(1, can_id.word, (uint8_t*) string);
-      if (recv_len == 0) {
+      if (recv_len < 0) {
         string[0] = 0;
       }
       return recv_len;
