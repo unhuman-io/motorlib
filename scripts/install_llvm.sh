@@ -11,10 +11,16 @@ cd $llvm_dir
 #                  [aarch64]=2fa9220f64097b71c07e6de2917f33fda1bb736964730786e90a430fdc0fa6be \
 #                  [newlib]=2e649e17b161b81f0ddf5361dc8f648d66f9c1cf9665c6b8a621d44aef51ad7d)
 
-version=21.1.1
-declare -A sha=( [x86_64]=fd7fcc2eb4c88c53b71c45f9c6aa83317d45da5c1b51b0720c66f1ac70151e6e \
-                 [aarch64]=dfd93d7c79f26667f4baf7f388966aa4cbfd938bc5cbcf0ae064553faf3e9604 \
-                 [newlib]=d9750863c5561c05a57f6df6019efea87e9206c0eef34c4e6441f339824cc908)
+# version=21.1.1
+# declare -A sha=( [x86_64]=fd7fcc2eb4c88c53b71c45f9c6aa83317d45da5c1b51b0720c66f1ac70151e6e \
+#                  [aarch64]=dfd93d7c79f26667f4baf7f388966aa4cbfd938bc5cbcf0ae064553faf3e9604 \
+#                  [newlib]=d9750863c5561c05a57f6df6019efea87e9206c0eef34c4e6441f339824cc908)
+
+version=22.1.0
+declare -A sha=( [x86_64]=e2e9e637bba097ba6e4bae6982883fe705ffd7e8c3a7dc876964835ef1c7a724 \
+                 [aarch64]=ca73e75963bb90c4bc66d67b1875a05e120a8a4febf3db0ad5f09330fbffda17 \
+                 [newlib]=05b61549c9fa7d51af1b91f15ba9c59f2aee7f269fd70930a94db31bb090133e)
+
 
 arch=$(uname -m)
 if [ "$arch" == "aarch64" ]; then
