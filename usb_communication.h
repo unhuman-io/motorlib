@@ -3,6 +3,7 @@
 
 #include "communication.h"
 #include <cstring>
+#include <algorithm>
 
 class USBCommunication : public CommunicationBase {
  public:

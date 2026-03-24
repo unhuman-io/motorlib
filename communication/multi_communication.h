@@ -39,7 +39,7 @@ class MultiCommunication : public CommunicationBase {
         int i = -1;
         int retval = std::apply([&string, &i](auto&&... comms) {
             int retval;
-            ((i++, retval = comms.receive_string(string), retval) || ...);
+            ((i++, retval = comms.receive_string(string), retval > 0) || ...);
             return retval;
         }, comms_);
         if (retval) {
