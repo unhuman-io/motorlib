@@ -322,4 +322,11 @@ typedef struct {
     float power;
 } MainLoopStatus;
 
+typedef struct {
+  uint32_t max;
+  uint32_t min;
+  uint32_t total_sum;
+  uint32_t count;
+} CycleStats;
+
 #endif  // UNHUMAN_MOTORLIB_MESSAGES_H_

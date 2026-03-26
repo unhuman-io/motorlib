@@ -14,7 +14,9 @@ extern uint32_t t_exec_fastloop;
 extern uint32_t t_exec_mainloop;
 extern uint32_t t_period_fastloop;
 extern uint32_t t_period_mainloop;
-
+extern "C" CycleStats get_fastloop_stats();
+extern "C" CycleStats get_mainloop_stats();
+extern "C" CycleStats get_comint_stats();
 void system_maintenance();
 void main_maintenance();
 
@@ -323,6 +325,7 @@ class System {
 
         uint32_t t_start = get_clock();
         current_api_timeout_us_ = api_timeout_us;
+        FrequencyLimiter exec_rate {10};
         while(1) {
             TOGGLE_SCOPE_PIN(C,4);
             count_++;
@@ -338,6 +341,14 @@ class System {
                 t_start = get_clock();
             }
             main_maintenance();
+            if (exec_rate.run()) {
+                [[maybe_unused]] __attribute__((used)) static CycleStats fastloop_stats;
+                [[maybe_unused]] __attribute__((used)) static CycleStats mainloop_stats;
+                [[maybe_unused]] __attribute__((used)) static CycleStats comint_stats;
+                fastloop_stats = get_fastloop_stats();
+                mainloop_stats = get_mainloop_stats();
+                comint_stats = get_comint_stats();
+            }
         }
     }
     static void set_one_time_api_timeout_us(uint32_t us) {
