@@ -64,6 +64,7 @@ defined in linker script */
 .set RCC_CSR_SFTRSTF_POS, 28
 .set RCC_CSR_RMVF_POS,    23
 .set RCC_CSR_IWDGRSTF_POS, 29
+.set RCC_CSR_WWDGRSTF_POS, 30
 .set RCC_CSR_PINRSTF_POS,    26
 
 .set RCC_APB2SMENR,         0x40021080
@@ -87,7 +88,7 @@ no_csr_copy:
 	orr r1, #(1<<RCC_CSR_RMVF_POS)
 	str r1, [r0, #RCC_CSR_OFFSET]			// clear reset flags
 
-	tst r1, #(1<<RCC_CSR_IWDGRSTF_POS)		// watchdog reset
+	tst r1, #((1<<RCC_CSR_IWDGRSTF_POS) | (1<<RCC_CSR_WWDGRSTF_POS))		// watchdog reset
 	bne Reboot_Loader
 	tst r1, #(1<<RCC_CSR_SFTRSTF_POS)		// software reset
 	beq Original_Reset_Handler
@@ -115,7 +116,7 @@ Reboot_Loader:
 Original_Reset_Handler:
   // start watchdog IWDG->KR = 0xCCCC;
 #ifndef NO_WATCHDOG
-  ldr	r0, =(1<<12)
+  ldr	r0, =((1<<12) | (1<<11))
   ldr	r1, =0xE0042008
   str   r0, [r1]		// IWDG stop on debug
   ldr	r0, =0xCCCC

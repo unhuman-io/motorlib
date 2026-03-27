@@ -1,5 +1,6 @@
 #ifndef UNHUMAN_MOTORLIB_SYSTEM_H_
 #define UNHUMAN_MOTORLIB_SYSTEM_H_
+#include <stdint.h>
 
 #ifdef __cplusplus
 #include "parameter_api.h"
@@ -395,6 +396,7 @@ void main_loop_interrupt();
 void fast_loop_interrupt();
 void system_loop_interrupt();
 void usb_interrupt();
+void log_watchdog(uint32_t address);
 
 #ifdef __cplusplus
 }
