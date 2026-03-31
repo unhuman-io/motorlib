@@ -1,4 +1,4 @@
-add_library(motorlib)
+add_library(motorlib OBJECT)
 set_target_properties(motorlib PROPERTIES LINKER_LANGUAGE CXX)
 
 target_sources(motorlib
@@ -19,12 +19,35 @@ target_sources(motorlib
     PUBLIC
         FILE_SET HEADERS
         BASE_DIRS ${CMAKE_CURRENT_LIST_DIR}
-        FILES system.h
+        FILES
+            system.h
+            version.h
 )
 
 target_compile_definitions(motorlib
     PUBLIC
         STM32G474xx
+)
+
+target_sources(motorlib
+    PUBLIC
+        device/stm32g4/Src/main.c
+        device/stm32g4/Src/stm32g4xx_it.c
+        peripheral/stm32g4/startup_stm32g474xx.s
+        peripheral/stm32g4/can.cpp
+        peripheral/stm32g4/clock_config.cpp
+        peripheral/stm32g4/flash.cpp
+        peripheral/stm32g4/hrpwm.cpp
+        peripheral/stm32g4/spi_dma_usart.cpp
+        peripheral/stm32g4/spi_dma.cpp
+        peripheral/stm32g4/stm32g4_serial.cpp
+        peripheral/stm32g4/usb.cpp
+        parameter_api.cpp
+
+)
+
+target_link_options(motorlib PUBLIC 
+    -T${CMAKE_CURRENT_LIST_DIR}/peripheral/stm32g4/STM32G474RETx_FLASH.ld
 )
 
 find_package(Git QUIET)
