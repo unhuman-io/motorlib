@@ -17,11 +17,26 @@ target_sources(motorlib
 
 target_sources(motorlib
     PUBLIC
+        FILE_SET obot_protocol_headers TYPE HEADERS
+        BASE_DIRS obot-protocol
+        FILES obot-protocol/protocol_parser.h
+)
+
+target_sources(motorlib
+    PUBLIC
         FILE_SET HEADERS
         BASE_DIRS ${CMAKE_CURRENT_LIST_DIR}
         FILES
             system.h
             version.h
+            peripheral/stm32g4/can.h
+)
+
+target_sources(motorlib
+    PUBLIC
+        FILE_SET motorlib_modules TYPE CXX_MODULES
+        FILES 
+            sensors/encoders/ma7xx_encoder.cppm
 )
 
 target_compile_definitions(motorlib
@@ -30,9 +45,10 @@ target_compile_definitions(motorlib
 )
 
 target_sources(motorlib
-    PUBLIC
+    PRIVATE
         device/stm32g4/Src/main.c
         device/stm32g4/Src/stm32g4xx_it.c
+        device/stm32g4/Src/system_stm32g4xx.c
         peripheral/stm32g4/startup_stm32g474xx.s
         peripheral/stm32g4/can.cpp
         peripheral/stm32g4/clock_config.cpp
@@ -42,11 +58,19 @@ target_sources(motorlib
         peripheral/stm32g4/spi_dma.cpp
         peripheral/stm32g4/stm32g4_serial.cpp
         peripheral/stm32g4/usb.cpp
+        control_fun.cpp
+        foc.cpp
+        gpio.cpp
+        hall.cpp
+        malloc.cpp
         parameter_api.cpp
-
+        sincos.cpp
+        util.cpp
+        obot-protocol/protocol_parser.cpp
 )
 
-target_link_options(motorlib PUBLIC 
+target_link_options(motorlib PUBLIC
+    -Wl,--no-warn-rwx-segments
     -T${CMAKE_CURRENT_LIST_DIR}/peripheral/stm32g4/STM32G474RETx_FLASH.ld
 )
 
