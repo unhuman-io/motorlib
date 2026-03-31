@@ -56,8 +56,16 @@ target_sources(motorlib
         peripheral/stm32g4/hrpwm.cpp
         peripheral/stm32g4/spi_dma_usart.cpp
         peripheral/stm32g4/spi_dma.cpp
+        peripheral/stm32g4/spi_slave_figure.cpp
+        peripheral/stm32g4/spi_slave.cpp
         peripheral/stm32g4/stm32g4_serial.cpp
         peripheral/stm32g4/usb.cpp
+        peripheral/mailbox.cpp
+        peripheral/protocol_commands.cpp
+        peripheral/protocol_states_spi.cpp
+        peripheral/protocol_states_uart.cpp
+        peripheral/protocol.cpp
+        peripheral/spi_encoder.cpp
         control_fun.cpp
         foc.cpp
         gpio.cpp
@@ -67,6 +75,11 @@ target_sources(motorlib
         sincos.cpp
         util.cpp
         obot-protocol/protocol_parser.cpp
+)
+
+set_source_files_properties(
+    peripheral/stm32g4/flash.cpp 
+    PROPERTIES COMPILE_OPTIONS "-fno-lto"
 )
 
 target_link_options(motorlib PUBLIC
