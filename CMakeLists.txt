@@ -37,6 +37,7 @@ target_sources(motorlib
         FILE_SET motorlib_modules TYPE CXX_MODULES
         FILES 
             sensors/encoders/ma7xx_encoder.cppm
+            sensors/encoders/ma782_encoder.cppm
 )
 
 target_compile_definitions(motorlib
@@ -59,6 +60,7 @@ target_sources(motorlib
         peripheral/stm32g4/spi_slave_figure.cpp
         peripheral/stm32g4/spi_slave.cpp
         peripheral/stm32g4/stm32g4_serial.cpp
+        peripheral/stm32g4/uart.cpp
         peripheral/stm32g4/usb.cpp
         peripheral/mailbox.cpp
         peripheral/protocol_commands.cpp
