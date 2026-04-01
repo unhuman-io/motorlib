@@ -17,6 +17,7 @@ set(CMAKE_ASM_COMPILER "${BIN_DIR}/clang")
 
 set(CMAKE_C_FLAGS_INIT "${COMMON_FLAGS}")
 set(CMAKE_CXX_FLAGS_INIT "${COMMON_FLAGS}")
+set(CMAKE_ASM_FLAGS_INIT "${COMMON_FLAGS} -x assembler-with-cpp")
 
 # Match your Makefile LDFLAGS exactly
 set(CMAKE_EXE_LINKER_FLAGS_INIT "${COMMON_FLAGS} -nostartfiles -lc -lm -lnosys -Wl,--gc-sections -Wl,--defsym=vfprintf=__f_vfprintf")
