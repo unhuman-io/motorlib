@@ -81,7 +81,7 @@ target_sources(motorlib
 
 set_source_files_properties(
     peripheral/stm32g4/flash.cpp 
-    PROPERTIES INTERPROCEDURAL_OPTIMIZATION FALSE
+    PROPERTIES COMPILE_OPTIONS "-fno-lto"
 )
 
 target_link_options(motorlib PUBLIC
