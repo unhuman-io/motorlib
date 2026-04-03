@@ -77,10 +77,12 @@ target_sources(motorlib
         sincos.cpp
         util.cpp
         obot-protocol/protocol_parser.cpp
+        calibration_example.c
 )
 
 set_source_files_properties(
-    peripheral/stm32g4/flash.cpp 
+    peripheral/stm32g4/flash.cpp
+    calibration_example.c
     PROPERTIES COMPILE_OPTIONS "-fno-lto"
 )
 
