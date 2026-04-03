@@ -13,6 +13,8 @@ set(MCU_FLAGS "-mcpu=cortex-m4" "-mfpu=fpv4-sp-d16" "-mfloat-abi=hard")
 
 add_compile_options(${MCU_FLAGS})
 add_link_options(${MCU_FLAGS})
+add_compile_options("-fsingle-precision-constant")
+
 
 # 4. Linker Flags
 set(CMAKE_EXE_LINKER_FLAGS_INIT "-specs=nosys.specs")
