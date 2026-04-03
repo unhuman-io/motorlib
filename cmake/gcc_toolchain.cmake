@@ -9,12 +9,10 @@ set(CMAKE_ASM_COMPILER "arm-none-eabi-g++") # Let GCC handle the .s files
 
 # 3. Hardware-Specific Compiler Flags
 # Define the common flags once so you don't repeat yourself
-set(MCU_FLAGS "-mcpu=cortex-m4 -mfpu=fpv4-sp-d16 -mfloat-abi=hard")
+set(MCU_FLAGS "-mcpu=cortex-m4" "-mfpu=fpv4-sp-d16" "-mfloat-abi=hard")
 
-# Use _INIT to safely inject these into CMake's default flags
-set(CMAKE_C_FLAGS_INIT "${MCU_FLAGS}")
-set(CMAKE_CXX_FLAGS_INIT "${MCU_FLAGS}")
-set(CMAKE_ASM_FLAGS_INIT "${MCU_FLAGS}")
+add_compile_options(${MCU_FLAGS})
+add_link_options(${MCU_FLAGS})
 
 # 4. Linker Flags
 set(CMAKE_EXE_LINKER_FLAGS_INIT "-specs=nosys.specs")
