@@ -93,13 +93,13 @@ target_link_options(motorlib PUBLIC
 
 find_package(Git QUIET)
 if(NOT GIT_EXECUTABLE)
-    set(GIT_EXECUTABLE "git") # Fallback if find_package fails
+    set(GIT_EXECUTABLE "git")
 endif()
 
 if(NOT DEFINED OBOT_HASH)
     execute_process(
         COMMAND ${GIT_EXECUTABLE} rev-parse HEAD
-        WORKING_DIRECTORY ${CMAKE_SOURCE_DIR} # Assuming this runs in your project root
+        WORKING_DIRECTORY ${CMAKE_SOURCE_DIR}
         OUTPUT_VARIABLE OBOT_HASH
         OUTPUT_STRIP_TRAILING_WHITESPACE
         ERROR_QUIET
@@ -109,7 +109,7 @@ endif()
 if(NOT DEFINED OBOT_VERSION)
     execute_process(
         COMMAND ${GIT_EXECUTABLE} describe --long --dirty --always --abbrev=7
-        WORKING_DIRECTORY ${CMAKE_SOURCE_DIR} # Assuming this runs in your project root
+        WORKING_DIRECTORY ${CMAKE_SOURCE_DIR}
         OUTPUT_VARIABLE OBOT_VERSION
         OUTPUT_STRIP_TRAILING_WHITESPACE
         ERROR_QUIET
@@ -119,7 +119,7 @@ endif()
 if(NOT DEFINED NOTES)
     execute_process(
         COMMAND ${GIT_EXECUTABLE} branch --show-current
-        WORKING_DIRECTORY ${CMAKE_SOURCE_DIR} # Assuming this runs in your project root
+        WORKING_DIRECTORY ${CMAKE_SOURCE_DIR}
         OUTPUT_VARIABLE NOTES
         OUTPUT_STRIP_TRAILING_WHITESPACE
         ERROR_QUIET
@@ -128,7 +128,7 @@ endif()
 
 execute_process(
     COMMAND ${GIT_EXECUTABLE} rev-parse HEAD
-    WORKING_DIRECTORY ${CMAKE_CURRENT_LIST_DIR} # This is the CMake equivalent of $(SELF_DIR)
+    WORKING_DIRECTORY ${CMAKE_CURRENT_LIST_DIR}
     OUTPUT_VARIABLE MOTORLIB_HASH
     OUTPUT_STRIP_TRAILING_WHITESPACE
     ERROR_QUIET
@@ -152,13 +152,13 @@ function(add_obot_param_target SOURCE_FILE)
     set(TGT_NAME "${FILE_BASE}")
     set(BIN_OUT  "${CMAKE_CURRENT_BINARY_DIR}/${FILE_BASE}.bin")
     
-    # 1. Create the data-only executable
+    # Create the data-only executable
     add_executable(${TGT_NAME} EXCLUDE_FROM_ALL ${SOURCE_FILE})
     target_compile_definitions(${TGT_NAME}
         PUBLIC
             OBOT_HASH=\"${OBOT_HASH}\"
     )
-    # 3. Strip LTO and disable standard startup
+    # Strip LTO and disable standard startup
     set_target_properties(${TGT_NAME} PROPERTIES 
         INTERPROCEDURAL_OPTIMIZATION FALSE
         INTERPROCEDURAL_OPTIMIZATION_RELEASE FALSE
@@ -172,7 +172,7 @@ function(add_obot_param_target SOURCE_FILE)
         "-Wl,--entry=0"
     )
 
-    # 4. Binary Extraction
+    # Binary Extraction
     add_custom_command(
         TARGET ${TGT_NAME} POST_BUILD
         COMMAND ${CMAKE_OBJCOPY} -O binary -S -j flash_param $<TARGET_FILE:${TGT_NAME}> ${BIN_OUT}
@@ -184,13 +184,12 @@ endfunction()
 function(add_obot_firmware_target obot_config)
    set(tgt ${obot_config}.elf)
     
-    # 1. Use standard variables for the OUTPUT paths
-    # This puts the bins in your build folder where CMake can track them
+    # Use standard variables for the OUTPUT paths
     set(bin_full ${CMAKE_CURRENT_BINARY_DIR}/${obot_config}.bin)
     set(bin_no_param ${CMAKE_CURRENT_BINARY_DIR}/${obot_config}_noparam.bin)
     set(tgz_file ${CMAKE_CURRENT_BINARY_DIR}/${obot_config}.tgz)
 
-    # 2. Define the target FIRST
+    # Define the target FIRST
     add_executable(${tgt} EXCLUDE_FROM_ALL config_obot_g474_${obot_config}.cpp ../param/param_obot_g474_${obot_config}.c ${CALIBRATION_FILE})
     target_link_libraries(${tgt} PRIVATE motorlib)
     target_compile_definitions(${tgt} PRIVATE CONFIG=\"${obot_config}\")
@@ -202,10 +201,9 @@ function(add_obot_firmware_target obot_config)
     )
     add_obot_param_target(../param/param_obot_g474_${obot_config}.c)
 
-    # 3. Generate binary variations
+    # Generate binary variations
     add_custom_command(OUTPUT ${bin_full} ${bin_no_param}
         DEPENDS ${tgt}
-        # Generator expression is only used HERE in the command
         COMMAND ${CMAKE_OBJCOPY} -O binary $<TARGET_FILE:${tgt}> ${bin_full}
         COMMAND ${CMAKE_OBJCOPY} -O binary $<TARGET_FILE:${tgt}> 
                 --remove-section flash_param 
@@ -214,26 +212,26 @@ function(add_obot_firmware_target obot_config)
         COMMENT "Generating bin variations for ${obot_config}..."
     )
 
-    # 4. Create the TGZ package
+    # Create the TGZ package
     set(pkg_dir ${CMAKE_CURRENT_BINARY_DIR}/${obot_config})
     set(load_script ${pkg_dir}/load_${obot_config}.sh)
 
     add_custom_command(OUTPUT ${tgz_file}
         DEPENDS ${bin_no_param}
         
-        # 1. Directory Setup
+        # Directory Setup
         COMMAND ${CMAKE_COMMAND} -E rm -rf ${pkg_dir}
         COMMAND ${CMAKE_COMMAND} -E make_directory ${pkg_dir}
         COMMAND ${CMAKE_COMMAND} -E copy ${bin_no_param} ${pkg_dir}/
         
-        # 2. Script Generation (Using quotes to protect the #)
+        # Script Generation
         COMMAND ${CMAKE_COMMAND} -E echo "#!/bin/bash -e" > ${load_script}
         COMMAND ${CMAKE_COMMAND} -E echo "cd $(dirname $0)" >> ${load_script}
         COMMAND ${CMAKE_COMMAND} -E echo "dfu-util -a0 -s 0x8000000 -D ${obot_config}_noparam.bin $@" >> ${load_script}
         COMMAND ${CMAKE_COMMAND} -E echo "dfu-util -a0 -s 0x8000000:8:leave -U /tmp/dfu_tmp $@ || true" >> ${load_script}
         COMMAND chmod +x ${load_script}
         
-        # 3. Packaging
+        # Packaging
         COMMAND ${CMAKE_COMMAND} -E tar czf ${tgz_file} --format=gnutar ${pkg_dir}/
         
         # CRITICAL: This ensures the shell receives the quotes correctly
@@ -241,7 +239,7 @@ function(add_obot_firmware_target obot_config)
         COMMENT "Packaging ${obot_config} into tarball..."
     )
 
-    # 5. Final Targets
+    # Final Targets
     add_custom_target(obot_g474_${obot_config}_pkg DEPENDS ${tgz_file})
 
     add_custom_target(load_${obot_config}
