@@ -1,8 +1,6 @@
 add_library(motorlib OBJECT)
 set_target_properties(motorlib PROPERTIES LINKER_LANGUAGE CXX)
 
-add_compile_options("-fsingle-precision-constant")
-
 target_sources(motorlib
     PUBLIC
         FILE_SET project_headers TYPE HEADERS
