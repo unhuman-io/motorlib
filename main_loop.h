@@ -929,7 +929,7 @@ class MainLoop {
     bool first_command_received_ = false;
     Driver &driver_;
     HardwareBrake brake_;
-    static HardwareBrakeBase no_brake_;
+    inline static HardwareBrakeBase no_brake_{};
     volatile bool driver_enable_triggered_ = false;
     volatile bool driver_disable_triggered_ = false;
     uint32_t last_energy_uJ_ = 0;

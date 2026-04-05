@@ -20,7 +20,7 @@
 #endif
 
 #include "../communication.h"
-#include <protocol_parser.h>
+#include "protocol_parser.h"
 #include "../peripheral/stm32g4/spi_slave_figure.h"
 #include "../spi_communication_obot.h"
 

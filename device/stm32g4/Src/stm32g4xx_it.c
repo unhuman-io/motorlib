@@ -1,6 +1,6 @@
 
-#include "../../motorlib/system.h"
-#include "../../motorlib/messages.h"
+#include "system.h"
+#include "messages.h"
 #include <stdatomic.h>
 #include <string.h>
 
@@ -57,7 +57,7 @@ void update_stats(CycleStats* s, uint32_t current_cycles) {
 #endif
                                     
 
-#include "../../motorlib/util.h"
+#include "util.h"
 INTERRUPT_PROFILE_GLOBALS(fastloop);
 INTERRUPT_PROFILE_GLOBALS(mainloop);
 INTERRUPT_PROFILE_GLOBALS(systemloop);

@@ -111,6 +111,7 @@ C_INCLUDES +=  \
 -I$(SELF_DIR)../peripheral \
 -I$(SELF_DIR)../../../lib/protocol \
 -I$(SELF_DIR)../obot-protocol \
+-I$(SELF_DIR)../ \
 
 CPP_SOURCES += \
 $(SELF_DIR)../malloc.cpp\
