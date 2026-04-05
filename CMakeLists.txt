@@ -77,7 +77,7 @@ target_sources(motorlib
         sincos.cpp
         util.cpp
         obot-protocol/protocol_parser.cpp
-        calibration_example.c
+        #calibration_example.c
 )
 
 set_source_files_properties(
@@ -104,6 +104,7 @@ if(NOT DEFINED OBOT_HASH)
         OUTPUT_STRIP_TRAILING_WHITESPACE
         ERROR_QUIET
     )
+    set(OBOT_HASH "${OBOT_HASH}" PARENT_SCOPE)
 endif()
 
 if(NOT DEFINED OBOT_VERSION)
@@ -168,25 +169,28 @@ function(add_obot_param_target SOURCE_FILE)
 
     target_link_options(${TGT_NAME} PRIVATE 
         "-nostartfiles" 
-        "-nodefaultlibs" 
         "-Wl,--entry=0"
+        "-Wl,--no-gc-sections"
     )
 
     # Binary Extraction
     add_custom_command(
         TARGET ${TGT_NAME} POST_BUILD
         COMMAND ${CMAKE_OBJCOPY} -O binary -S -j flash_param $<TARGET_FILE:${TGT_NAME}> ${BIN_OUT}
+        BYPRODUCTS ${BIN_OUT}
         COMMENT "Generated Parameter Binary: ${BIN_OUT}"
         VERBATIM
     )
 endfunction()
 
 function(add_obot_firmware_target obot_config)
-   set(tgt ${obot_config}.elf)
+    set(tgt ${obot_config}.elf)
     
     # Use standard variables for the OUTPUT paths
     set(bin_full ${CMAKE_CURRENT_BINARY_DIR}/${obot_config}.bin)
     set(bin_no_param ${CMAKE_CURRENT_BINARY_DIR}/${obot_config}_noparam.bin)
+    set(bin_param ${CMAKE_CURRENT_BINARY_DIR}/${obot_config}_param.bin)
+    set(bin_calibration ${CMAKE_CURRENT_BINARY_DIR}/${obot_config}_calibration.bin)
     set(tgz_file ${CMAKE_CURRENT_BINARY_DIR}/${obot_config}.tgz)
 
     # Define the target FIRST
@@ -202,13 +206,16 @@ function(add_obot_firmware_target obot_config)
     add_obot_param_target(../param/param_obot_g474_${obot_config}.c)
 
     # Generate binary variations
-    add_custom_command(OUTPUT ${bin_full} ${bin_no_param}
+    add_custom_command(OUTPUT ${bin_full} ${bin_no_param} ${bin_calibration}
         DEPENDS ${tgt}
         COMMAND ${CMAKE_OBJCOPY} -O binary $<TARGET_FILE:${tgt}> ${bin_full}
         COMMAND ${CMAKE_OBJCOPY} -O binary $<TARGET_FILE:${tgt}> 
                 --remove-section flash_param 
                 --remove-section calibration_data 
                 ${bin_no_param}
+        COMMAND ${CMAKE_OBJCOPY} -O binary $<TARGET_FILE:${tgt}> 
+                --only-section calibration_data 
+                ${bin_calibration}
         COMMENT "Generating bin variations for ${obot_config}..."
     )
 
@@ -217,18 +224,22 @@ function(add_obot_firmware_target obot_config)
     set(load_script ${pkg_dir}/load_${obot_config}.sh)
 
     add_custom_command(OUTPUT ${tgz_file}
-        DEPENDS ${bin_no_param}
+        DEPENDS ${bin_no_param} param_obot_g474_${obot_config} ${bin_calibration}
         
         # Directory Setup
         COMMAND ${CMAKE_COMMAND} -E rm -rf ${pkg_dir}
         COMMAND ${CMAKE_COMMAND} -E make_directory ${pkg_dir}
-        COMMAND ${CMAKE_COMMAND} -E copy ${bin_no_param} ${pkg_dir}/
+        COMMAND ${CMAKE_COMMAND} -E copy ${bin_no_param} ${bin_calibration} ${pkg_dir}/
+        COMMAND ${CMAKE_COMMAND} -E copy param_obot_g474_${obot_config}.bin ${pkg_dir}/${obot_config}_param.bin
         
         # Script Generation
         COMMAND ${CMAKE_COMMAND} -E echo "#!/bin/bash -e" > ${load_script}
         COMMAND ${CMAKE_COMMAND} -E echo "cd $(dirname $0)" >> ${load_script}
         COMMAND ${CMAKE_COMMAND} -E echo "dfu-util -a0 -s 0x8000000 -D ${obot_config}_noparam.bin $@" >> ${load_script}
+        COMMAND ${CMAKE_COMMAND} -E echo "dfu-util -a0 -s 0x8060000 -D ${obot_config}_param.bin $@" >> ${load_script}
+        COMMAND ${CMAKE_COMMAND} -E echo "dfu-util -a0 -s 0x8070000 -D ${obot_config}_calibration.bin $@" >> ${load_script}
         COMMAND ${CMAKE_COMMAND} -E echo "dfu-util -a0 -s 0x8000000:8:leave -U /tmp/dfu_tmp $@ || true" >> ${load_script}
+        COMMAND ${CMAKE_COMMAND} -E echo "rm /tmp/dfu_tmp" >> ${load_script}
         COMMAND chmod +x ${load_script}
         
         # Packaging
@@ -238,6 +249,7 @@ function(add_obot_firmware_target obot_config)
         VERBATIM 
         COMMENT "Packaging ${obot_config} into tarball..."
     )
+    set_target_properties(${tgt} PROPERTIES ADDITIONAL_CLEAN_FILES ${pkg_dir})
 
     # Final Targets
     add_custom_target(obot_g474_${obot_config}_pkg DEPENDS ${tgz_file})
