@@ -378,7 +378,7 @@ class A17803Encoder : public EncoderBase {
         return (message.temperature_view.temperature) * (1.0 / 13.3226) + 25;
     }
 
-    float get_temperature() __attribute__((externally_visible)) {
+    float get_temperature() {
         return get_temperature(read_reg(PrimaryAddress::TEMPERATURE));
     }
 

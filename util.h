@@ -81,7 +81,7 @@ inline uint32_t get_current_heap_free() {
 class FrequencyLimiter {
  public:
     FrequencyLimiter(float rate_seconds) {
-        t_diff_ = CPU_FREQUENCY_HZ/rate_seconds;
+        t_diff_ = (float) CPU_FREQUENCY_HZ/rate_seconds;
         last_time_ = get_clock();
     }
     // returns true once for each time it is allowed to run

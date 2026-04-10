@@ -535,14 +535,14 @@ class ICPZBase : public EncoderBase {
     float get_sc_gain() {
         auto data = read_register(1, 4, 2);
         int16_t gain_raw = ((int16_t) (data[1] << 8 | data[0])) >> 6;
-        float gain = std::pow((float) 14.0/11, (float) gain_raw/511); 
+        float gain = std::powf((float) 14.0/11, (float) gain_raw/511); 
         return gain;
     }
 
     float get_sc_phase() {
         auto data = read_register(1, 6, 2);
         int16_t phase_raw = ((int16_t) (data[1] << 8 | data[0])) >> 6;
-        float phase =  (float) phase_raw/511 * 11.4; 
+        float phase =  (float) phase_raw/511.f * 11.4f; 
         return phase;
     }
 
@@ -589,14 +589,14 @@ class ICPZBase : public EncoderBase {
     float get_sc_gains() {
         auto data = read_register(1, 0x24, 2);
         int16_t gain_raw = ((int16_t) (data[1] << 8 | data[0])) >> 6;
-        float gain = std::pow((float) 14.0/11, (float) gain_raw/511); 
+        float gain = std::powf((float) 14.0/11, (float) gain_raw/511); 
         return gain;
     }
 
     float get_sc_phases() {
         auto data = read_register(1, 0x26, 2);
         int16_t phase_raw = ((int16_t) (data[1] << 8 | data[0])) >> 6;
-        float phase =  (float) phase_raw/511 * 11.4; 
+        float phase =  (float) phase_raw/511.f * 11.4f; 
         return phase;
     }
 
@@ -646,14 +646,14 @@ class ICPZBase : public EncoderBase {
     std::string get_cal_string() {
         char c[200];
         std::snprintf(c, 200, "cos_off: %f, sin_off: %f, sc_gain: %f, sc_phase: %f, ai_phase: %f, ai_scale: %f, ecc_amp: %f, ecc_phase: %f", 
-          get_cos_off(), get_sin_off(), get_sc_gain(), get_sc_phase(), get_ai_phase(), get_ai_scale(), get_ecc_um(), get_ecc_phase());
+          (double)get_cos_off(), (double)get_sin_off(), (double)get_sc_gain(), (double)get_sc_phase(), (double)get_ai_phase(), (double)get_ai_scale(), (double)get_ecc_um(), (double)get_ecc_phase());
         return std::string(c);
     }
 
     std::string get_cals_string() {
         char c[200];
         std::snprintf(c, 200, "cos_off: %f, sin_off: %f, sc_gain: %f, sc_phase: %f, ai_phase: %f, ai_scale: %f", 
-          get_cos_offs(), get_sin_offs(), get_sc_gains(), get_sc_phases(), get_ai_phases(), get_ai_scales());
+          (double)get_cos_offs(), (double)get_sin_offs(), (double)get_sc_gains(), (double)get_sc_phases(), (double)get_ai_phases(), (double)get_ai_scales());
         return std::string(c);
     }
 
@@ -705,25 +705,25 @@ class ICPZBase : public EncoderBase {
     float get_ecc_um() {
         auto data = read_register(2, 4, 4);
         uint32_t ecc_amp_raw = data[3] << 24 | data[2] << 16 | data[1] << 8 | data[0];
-        float ecc_amp  = ecc_amp_raw * r_disk_um[disk_] * 1.407e-9;
+        float ecc_amp  = ecc_amp_raw * r_disk_um[disk_] * 1.407e-9f;
         return ecc_amp;
     }
 
     float get_ecc_phase() {
         auto data = read_register(2, 8, 2);
         int16_t phase_raw = ((int16_t) (data[1] << 8 | data[0])) >> 2;
-        float phase =  (float) phase_raw/std::pow(2, 14) * 360; 
+        float phase =  (float) phase_raw/(float)std::powf(2, 14) * 360; 
         return phase;
     }
 
     bool set_ecc_um(float ecc) {
-        uint32_t ecc_raw = ecc/r_disk_um[disk_] / 1.407e-9;
+        uint32_t ecc_raw = ecc/r_disk_um[disk_] / 1.407e-9f;
         return set_register(2, 4, {(uint8_t) (ecc_raw & 0xff), (uint8_t) ((ecc_raw >> 8) & 0xff), 
           (uint8_t) ((ecc_raw >> 16) & 0xff), (uint8_t) ((ecc_raw >> 24) & 0xff)});
     }
 
     bool set_ecc_phase(float phase_deg) {
-        int16_t phase_raw = phase_deg/360 * std::pow(2, 14);
+        int16_t phase_raw = phase_deg/360 * (float)std::powf(2, 14);
         return set_register(2, 8, {(uint8_t) ((phase_raw << 2) & 0xff), (uint8_t) ((phase_raw >> 6) & 0xff)});
     }
 

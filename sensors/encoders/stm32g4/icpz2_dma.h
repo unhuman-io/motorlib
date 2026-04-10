@@ -150,7 +150,7 @@ class ICPZ2DMA : public EncoderBase {
         uint8_t *data_buf2 = data_mult_[current_buf_index][2];
         bool crc_error1, crc_error2;
         value1_.word = icpz_.read_raw_buf(data_buf1, crc_error1);
-        value2_.pos = icpz2_.read_raw_buf(data_buf2, crc_error2) + (uint32_t) pow(2, 23);
+        value2_.pos = icpz2_.read_raw_buf(data_buf2, crc_error2) + (uint32_t) powf(2, 23);
         ICPZ::Encoder24 diff_ref = {};
         diff_ref.ipos = value1_.ipos - value2_.ipos;
         diff_ = diff_ref.ipos;
@@ -176,7 +176,7 @@ class ICPZ2DMA : public EncoderBase {
           pos_ += diff;
           last_value_ = value_;
 
-          if (std::abs(diff_ - (int32_t) pow(2, 23)) > disagreement_tolerance_) {
+          if (std::abs(diff_ - (int32_t) powf(2, 23)) > disagreement_tolerance_) {
             disagreement_error_++;
           }
         }
@@ -323,7 +323,7 @@ class ICPZ2DMA : public EncoderBase {
     ICPZ::Encoder24 value_ = {}, last_value_ = {}, value1_ = {}, value2_ = {}, value3_ = {};
     int32_t diff_ = 0;
     uint32_t disagreement_error_ = 0;
-    int32_t disagreement_tolerance_ = .1/2/M_PI*pow(2,24);
+    int32_t disagreement_tolerance_ = .1/2/M_PI*powf(2,24);
     uint32_t total_error_count_ = 0;
     uint32_t total_crc_error_count_ = 0;
     ICPZ::DiagBits last_diag_bits_[2] = {};
