@@ -13,7 +13,7 @@ class MultiCommunication : public CommunicationBase {
     int receive_data(ReceiveData* const data) {
         int retval = std::apply([&data](auto&&... comms) {
             int retval;
-            ((retval = comms.receive_data(data), retval) || ...);
+            (void) ((retval = comms.receive_data(data), retval) || ...);
             return retval;
         }, comms_);
         return retval;
@@ -39,7 +39,7 @@ class MultiCommunication : public CommunicationBase {
         int i = -1;
         int retval = std::apply([&string, &i](auto&&... comms) {
             int retval;
-            ((i++, retval = comms.receive_string(string), retval > 0) || ...);
+            (void) ((i++, retval = comms.receive_string(string), retval > 0) || ...);
             return retval;
         }, comms_);
         if (retval) {
@@ -53,7 +53,7 @@ class MultiCommunication : public CommunicationBase {
         int active_str_comms = active_str_comms_;
         bool retval = std::apply([&string, &length, &i, &active_str_comms](auto&&... comms) {
             bool retval = false;
-            ((active_str_comms == i++ ? retval = comms.send_string(string, length) : 0) || ...);
+            (void) ((active_str_comms == i++ ? retval = comms.send_string(string, length) : 0) || ...);
             return retval;
         }, comms_);
         return retval;
@@ -76,7 +76,7 @@ class MultiCommunication : public CommunicationBase {
         int i = 0;
         int active_str_comms = active_str_comms_;
         std::apply([us, &i, &active_str_comms](auto&&... comms) {
-            ((active_str_comms == i++ ? comms.send_one_time_api_timeout_request(us), 1 : 0) || ...);
+            (void) ((active_str_comms == i++ ? comms.send_one_time_api_timeout_request(us), 1 : 0) || ...);
         }, comms_);
     }
 

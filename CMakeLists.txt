@@ -159,6 +159,8 @@ function(add_obot_param_target SOURCE_FILE)
         PUBLIC
             OBOT_HASH=\"${OBOT_HASH}\"
     )
+    target_compile_options(${TGT_NAME} PRIVATE "-Wno-initializer-overrides")
+
     # Strip LTO and disable standard startup
     set_target_properties(${TGT_NAME} PROPERTIES 
         INTERPROCEDURAL_OPTIMIZATION FALSE
@@ -201,7 +203,7 @@ function(add_obot_firmware_target obot_config)
     set_source_files_properties(
         ../param/param_obot_g474_${obot_config}.c
         ${CALIBRATION_FILE}
-        PROPERTIES COMPILE_OPTIONS "-fno-lto"
+        PROPERTIES COMPILE_OPTIONS "-fno-lto;$<$<OR:$<C_COMPILER_ID:Clang>,$<CXX_COMPILER_ID:Clang>>:-Wno-initializer-overrides>"
     )
     add_obot_param_target(../param/param_obot_g474_${obot_config}.c)
 
