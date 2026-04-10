@@ -49,7 +49,7 @@ class BMI270 {
         data_.gyr_y = (int16_t) (data_in_[11] << 8 | data_in_[10]);
         data_.gyr_z = (int16_t) (data_in_[13] << 8 | data_in_[12]);
         // logger.log_printf("ax: %0.3f, ay: %0.3f, az: %0.3f, gx: %d, gy: %d, gz: %d",
-        //     data_.acc_x*8./pow(2,15), data_.acc_y*8./pow(2,15), data_.acc_z*8./pow(2,15),
+        //     data_.acc_x*8./powf(2,15), data_.acc_y*8./powf(2,15), data_.acc_z*8./powf(2,15),
         //     data_.gyr_x, data_.gyr_y, data_.gyr_z);
     }
 

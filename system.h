@@ -242,16 +242,16 @@ class System {
             char c[len];
             std::snprintf(c, len, "%" PRIu32", %f, %f, %f, %f, %f, %f, %f, %f, %f, %f", 
                     status.timestamp,
-                    status.foc_command.measured.motor_encoder,
-                    status.foc_command.desired.i_q,
-                    status.foc_status.measured.i_q,
-                    status.foc_command.measured.i_a,
-                    status.foc_command.measured.i_b,
-                    status.foc_command.measured.i_c,
-                    status.foc_status.command.v_a,
-                    status.foc_status.command.v_b,
-                    status.foc_status.command.v_c,
-                    status.vbus);
+                    (double)status.foc_command.measured.motor_encoder,
+                    (double)status.foc_command.desired.i_q,
+                    (double)status.foc_status.measured.i_q,
+                    (double)status.foc_command.measured.i_a,
+                    (double)status.foc_command.measured.i_b,
+                    (double)status.foc_command.measured.i_c,
+                    (double)status.foc_status.command.v_a,
+                    (double)status.foc_status.command.v_b,
+                    (double)status.foc_status.command.v_c,
+                    (double)status.vbus);
             std::string s(c);
             return s;
         }));
