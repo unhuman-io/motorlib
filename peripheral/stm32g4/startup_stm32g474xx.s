@@ -184,7 +184,8 @@ LoopFillZerobss:
 /* Call the clock system intitialization function.*/
     bl  SystemInit
 	bl  board_init
-/* --------------------------------------------------------- */
+#ifdef __clang__
+    /* --------------------------------------------------------- */
     /* Call C++ Static Constructors Manually                     */
     /* --------------------------------------------------------- */
     ldr     r4, =__init_array_start   /* r4 = current pointer */
@@ -200,6 +201,9 @@ LoopFillZerobss:
 
     b       .L_call_constructors_loop /* Repeat for next constructor */
 .L_call_constructors_done:
+#else
+    bl __libc_init_array
+#endif
 /* Call the application's entry point.*/
 	bl	main
 
