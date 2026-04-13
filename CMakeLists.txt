@@ -86,6 +86,11 @@ set_source_files_properties(
     PROPERTIES COMPILE_OPTIONS "-fno-lto"
 )
 
+set_source_files_properties(
+    peripheral/stm32g4/startup_stm32g474xx.s
+    PROPERTIES COMPILE_OPTIONS "-x;assembler-with-cpp"
+)
+
 target_link_options(motorlib PUBLIC
     $<$<CXX_COMPILER_ID:GNU>:-Wl,--no-warn-rwx-segments>
     -T${CMAKE_CURRENT_LIST_DIR}/peripheral/stm32g4/STM32G474RETx_FLASH.ld

@@ -11,9 +11,16 @@ set(CMAKE_C_COMPILER "${BIN_DIR}/clang")
 set(CMAKE_CXX_COMPILER "${BIN_DIR}/clang++")
 set(CMAKE_ASM_COMPILER "${BIN_DIR}/clang")
 
-add_compile_options($<$<COMPILE_LANGUAGE:ASM>:-x> $<$<COMPILE_LANGUAGE:ASM>:assembler-with-cpp>)
+# set(CLANG_CONFIG "--config=newlib.cfg")
+# set(CMAKE_C_FLAGS_INIT "${CLANG_CONFIG}")
+# set(CMAKE_CXX_FLAGS_INIT "${CLANG_CONFIG}")
+# set(CMAKE_ASM_FLAGS_INIT "${CLANG_CONFIG}")
 
-set(CMAKE_EXE_LINKER_FLAGS_INIT "-nostartfiles -lc -lm -lnosys -Wl,--defsym=vfprintf=__f_vfprintf")
+# set(CMAKE_SHARED_LINKER_FLAGS_INIT "${CLANG_CONFIG}")
+# set(CMAKE_MODULE_LINKER_FLAGS_INIT "${CLANG_CONFIG}")
+set(CMAKE_EXE_LINKER_FLAGS_INIT "${CLANG_CONFIG} -nostartfiles -lc -lm -Wl,-u,_printf_float")
+
+#-Wl,--defsym=vfprintf=__f_vfprintf
 
 # Cross-Compilation Search Behavior
 set(CMAKE_FIND_ROOT_PATH_MODE_PROGRAM NEVER)
