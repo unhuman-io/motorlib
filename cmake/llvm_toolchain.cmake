@@ -22,7 +22,6 @@ set(CMAKE_EXE_LINKER_FLAGS_INIT "${CLANG_CONFIG} -nostartfiles -lc -lm -Wl,-u,_p
 
 #-Wl,--defsym=vfprintf=__f_vfprintf
 
-add_compile_options($<$<COMPILE_LANGUAGE:ASM>:-x> $<$<COMPILE_LANGUAGE:ASM>:assembler-with-cpp>)
 # Cross-Compilation Search Behavior
 set(CMAKE_FIND_ROOT_PATH_MODE_PROGRAM NEVER)
 set(CMAKE_FIND_ROOT_PATH_MODE_LIBRARY ONLY)
