@@ -200,7 +200,7 @@ class System {
                         actuator_.main_loop_.error_mask_.all = std::stoul(s, nullptr, 16) & ERROR_MASK_ALL;}
                     catch(...) {} }));
         api.add_api_variable("help", new const APICallback([](){ return api.get_all_api_variables(); }));
-        //api.add_api_variable("compiler", new const APICallback([]()->std::string { return __VERSION__; }));
+        api.add_api_variable("compiler", new const APICallback([]()->std::string { return __VERSION__; }));
         api.add_api_variable("api_length", new const APICallbackUint16([](){ return api.get_api_length(); }));
         api.add_api_variable("disable_position_limits", new APIBool(&actuator_.main_loop_.position_limits_disable_));
         api.add_api_variable("jkpj", new APIFloat(&actuator_.main_loop_.joint_position_controller_.param_.kpj));
