@@ -28,7 +28,7 @@ class MA7XXEncoderBase : public SPIEncoder<SPI> {
     }
 
     void reinit() {
-        if constexpr (std::is_same_v<decltype(SPI::regs_), SPI_TypeDef>) {
+        if constexpr (std::is_same_v<std::decay_t<decltype(SPI::regs_)>, SPI_TypeDef>) {
 #ifdef STM32F446xx
             this->spi_.regs_.CR1 = SPI_CR1_MSTR | (3 << SPI_CR1_BR_Pos) | SPI_CR1_SSI | SPI_CR1_SSM | SPI_CR1_SPE | SPI_CR1_DFF;    // baud = clock/16, 16 bit
 #else    
