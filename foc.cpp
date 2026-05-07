@@ -48,10 +48,12 @@ FOCStatus * const FOC::step(const FOCCommand &command) {
     float v_q_desired = i_gain_*pi_iq_.step(i_q_desired_limited, i_q_measured_filtered) + command.desired.v_q;
 
     float v_dq_magnitude_desired = sqrtf(v_d_desired*v_d_desired + v_q_desired*v_q_desired);
-    float v_dq_magnitude_limited = fminf(v_dq_magnitude_desired, param_.voltage_limit);
+    float v_dq_magnitude_limited = flimit(v_dq_magnitude_desired, param_.voltage_limit);
 
-    float v_d_desired_limited = v_d_desired * (v_dq_magnitude_limited / v_dq_magnitude_desired);
-    float v_q_desired_limited = v_q_desired * (v_dq_magnitude_limited / v_dq_magnitude_desired);
+    const float scale_factor = v_dq_magnitude_limited / (v_dq_magnitude_desired + std::numeric_limits<float>::epsilon());
+
+    const float v_d_desired_limited = v_d_desired * scale_factor;
+    const float v_q_desired_limited = v_q_desired * scale_factor;
 
     float v_alpha_desired = cos_t * v_d_desired_limited + sin_t * v_q_desired_limited;
     float v_beta_desired = -sin_t * v_d_desired_limited + cos_t * v_q_desired_limited;

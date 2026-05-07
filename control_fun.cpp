@@ -45,7 +45,7 @@ float fsat(float a, float sat) {
 }
 
 float fminf(float a, float b) {
-    return a<b ? a : b;
+    return a > b ? b : a;
 }
 
 float fsignf(float a) {
