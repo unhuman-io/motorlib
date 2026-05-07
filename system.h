@@ -14,7 +14,9 @@ extern uint32_t t_exec_fastloop;
 extern uint32_t t_exec_mainloop;
 extern uint32_t t_period_fastloop;
 extern uint32_t t_period_mainloop;
-
+extern "C" CycleStats get_fastloop_stats();
+extern "C" CycleStats get_mainloop_stats();
+extern "C" CycleStats get_comint_stats();
 void system_maintenance();
 void main_maintenance();
 
@@ -198,6 +200,7 @@ class System {
                         actuator_.main_loop_.error_mask_.all = std::stoul(s, nullptr, 16) & ERROR_MASK_ALL;}
                     catch(...) {} }));
         api.add_api_variable("help", new const APICallback([](){ return api.get_all_api_variables(); }));
+        api.add_api_variable("compiler", new const APICallback([]()->std::string { return __VERSION__; }));
         api.add_api_variable("api_length", new const APICallbackUint16([](){ return api.get_api_length(); }));
         api.add_api_variable("disable_position_limits", new APIBool(&actuator_.main_loop_.position_limits_disable_));
         api.add_api_variable("jkpj", new APIFloat(&actuator_.main_loop_.joint_position_controller_.param_.kpj));
@@ -240,16 +243,16 @@ class System {
             char c[len];
             std::snprintf(c, len, "%" PRIu32", %f, %f, %f, %f, %f, %f, %f, %f, %f, %f", 
                     status.timestamp,
-                    status.foc_command.measured.motor_encoder,
-                    status.foc_command.desired.i_q,
-                    status.foc_status.measured.i_q,
-                    status.foc_command.measured.i_a,
-                    status.foc_command.measured.i_b,
-                    status.foc_command.measured.i_c,
-                    status.foc_status.command.v_a,
-                    status.foc_status.command.v_b,
-                    status.foc_status.command.v_c,
-                    status.vbus);
+                    (double)status.foc_command.measured.motor_encoder,
+                    (double)status.foc_command.desired.i_q,
+                    (double)status.foc_status.measured.i_q,
+                    (double)status.foc_command.measured.i_a,
+                    (double)status.foc_command.measured.i_b,
+                    (double)status.foc_command.measured.i_c,
+                    (double)status.foc_status.command.v_a,
+                    (double)status.foc_status.command.v_b,
+                    (double)status.foc_status.command.v_c,
+                    (double)status.vbus);
             std::string s(c);
             return s;
         }));
@@ -323,6 +326,7 @@ class System {
 
         uint32_t t_start = get_clock();
         current_api_timeout_us_ = api_timeout_us;
+        FrequencyLimiter exec_rate {10};
         while(1) {
             TOGGLE_SCOPE_PIN(C,4);
             count_++;
@@ -338,6 +342,14 @@ class System {
                 t_start = get_clock();
             }
             main_maintenance();
+            if (exec_rate.run()) {
+                [[maybe_unused]] __attribute__((used)) static CycleStats fastloop_stats;
+                [[maybe_unused]] __attribute__((used)) static CycleStats mainloop_stats;
+                [[maybe_unused]] __attribute__((used)) static CycleStats comint_stats;
+                fastloop_stats = get_fastloop_stats();
+                mainloop_stats = get_mainloop_stats();
+                comint_stats = get_comint_stats();
+            }
         }
     }
     static void set_one_time_api_timeout_us(uint32_t us) {

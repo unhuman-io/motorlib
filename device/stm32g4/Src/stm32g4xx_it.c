@@ -1,20 +1,52 @@
 
-#include "../../motorlib/system.h"
+#include "system.h"
+#include "messages.h"
+#include <stdatomic.h>
+#include <string.h>
 
 void ADC5_IRQHandler(void) __attribute__((section (".ccmram")));
 void HRTIM1_Master_IRQHandler(void) __attribute__((section (".ccmram")));
 void TIM1_UP_TIM16_IRQHandler(void) __attribute__((section (".ccmram")));
 void USB_LP_IRQHandler(void) __attribute__((section (".ccmram")));
 
-#define INTERRUPT_PROFILE_GLOBALS(loop) uint32_t t_exec_##loop __attribute__((used));\
-                                        uint32_t t_period_##loop __attribute__((used));\
-                                        uint32_t loop##_count __attribute__((used)) = 0;
-#define INTERRUPT_PROFILE_START static uint32_t last_start = 0; \
-                                      uint32_t t_start = get_clock();
-#define INTERRUPT_PROFILE_END(loop) t_exec_##loop = get_clock()-t_start; \
-                                      t_period_##loop = t_start - last_start; \
-                                      loop##_count += t_exec_##loop; \
-                                      last_start = t_start;
+void update_stats(CycleStats* s, uint32_t current_cycles) {
+  if (current_cycles > s->max) s->max = current_cycles;
+  if (current_cycles < s->min) s->min = current_cycles;
+
+  s->total_sum += current_cycles;
+  s->count++;
+}
+
+#define GET_EXEC_STATS(loop)                                                        \
+  CycleStats get_##loop##_stats() {                                                 \
+    static CycleStats* spare_buffer = &loop##_stats_buffer_B;                       \
+    CycleStats* filled_stats = atomic_exchange(&loop##_active_stats, spare_buffer); \
+    CycleStats c = *filled_stats;                                                   \
+    memset(filled_stats, 0, sizeof(CycleStats));                                    \
+    filled_stats->min = 0xFFFFFFFF;                                                 \
+    spare_buffer = filled_stats;                                                    \
+    return c;                                                                       \
+  }
+
+#define INTERRUPT_PROFILE_GLOBALS(loop)                                     \
+  uint32_t t_exec_##loop __attribute__((used));                             \
+  uint32_t t_period_##loop __attribute__((used));                           \
+  uint32_t loop##_count __attribute__((used)) = 0;                          \
+  static CycleStats loop##_stats_buffer_A = {.min=0xFFFFFFFF};              \
+  static CycleStats loop##_stats_buffer_B = {.min=0xFFFFFFFF};              \
+  static _Atomic(CycleStats*) loop##_active_stats = &loop##_stats_buffer_A; \
+  GET_EXEC_STATS(loop)
+#define INTERRUPT_PROFILE_START   \
+  static uint32_t last_start = 0; \
+  uint32_t t_start = get_clock();
+#define INTERRUPT_PROFILE_END(loop)                                                 \
+  t_exec_##loop = get_clock() - t_start;                                            \
+  t_period_##loop = t_start - last_start;                                           \
+  loop##_count += t_exec_##loop;                                                    \
+  last_start = t_start;                                                             \
+  CycleStats* s = atomic_load_explicit(&loop##_active_stats, memory_order_relaxed); \
+  update_stats(s, t_exec_##loop);
+
 
 #ifdef SCOPE_DEBUG
 #define SET_SCOPE_PIN(X,x) GPIO##X->BSRR = 1 << x
@@ -25,7 +57,7 @@ void USB_LP_IRQHandler(void) __attribute__((section (".ccmram")));
 #endif
                                     
 
-#include "../../motorlib/util.h"
+#include "util.h"
 INTERRUPT_PROFILE_GLOBALS(fastloop);
 INTERRUPT_PROFILE_GLOBALS(mainloop);
 INTERRUPT_PROFILE_GLOBALS(systemloop);

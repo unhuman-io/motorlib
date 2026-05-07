@@ -3,7 +3,23 @@
 
 #include "st_device.h"
 #include "core_cm4.h"
-#include <malloc.h>
+#ifdef __clang__
+#include <stdlib.h>
+#define _calloc_r __hide_calloc_r
+#define _free_r __hide_free_r
+#define _realloc_r __hide_realloc_r
+#define _malloc_r __hide_malloc_r
+#endif
+
+#include <malloc.h> // Now safely grabs `struct mallinfo` and `mallinfo()`
+
+#ifdef __clang__
+// Clean up the macros so we don't poison the rest of the codebase
+#undef _calloc_r
+#undef _free_r
+#undef _realloc_r
+#undef _malloc_r
+#endif
 
 
 #define US_TO_CPU(t_us) (t_us*((uint32_t) CPU_FREQUENCY_HZ/1000000))
@@ -81,7 +97,7 @@ inline uint32_t get_current_heap_free() {
 class FrequencyLimiter {
  public:
     FrequencyLimiter(float rate_seconds) {
-        t_diff_ = CPU_FREQUENCY_HZ/rate_seconds;
+        t_diff_ = (float) CPU_FREQUENCY_HZ/rate_seconds;
         last_time_ = get_clock();
     }
     // returns true once for each time it is allowed to run

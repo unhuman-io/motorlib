@@ -20,7 +20,7 @@
 #endif
 
 #include "../communication.h"
-#include <protocol_parser.h>
+#include "protocol_parser.h"
 #include "../peripheral/stm32g4/spi_slave_figure.h"
 #include "../spi_communication_obot.h"
 
@@ -475,12 +475,12 @@ void system_init() {
         return config::motor_pwm.get_current_sample_delay(); }, [](uint16_t u) {config::motor_pwm.set_current_sample_delay(u); }));
     if (config::board_rev.has_bmi270) {
         System::api.add_api_variable("imu_read", new const APICallback([]()->std::string{ config::imu.read(); return "ok"; }));
-        System::api.add_api_variable("ax", new const APICallbackFloat([]()->float{ return config::imu.data_.acc_x*8./pow(2,15); }));
-        System::api.add_api_variable("ay", new const APICallbackFloat([]()->float{ return config::imu.data_.acc_y*8./pow(2,15); }));
-        System::api.add_api_variable("az", new const APICallbackFloat([]()->float{ return config::imu.data_.acc_z*8./pow(2,15); }));
-        System::api.add_api_variable("gx", new const APICallbackFloat([]()->float{ return config::imu.data_.gyr_x*2000.*M_PI/180/pow(2,15); }));
-        System::api.add_api_variable("gy", new const APICallbackFloat([]()->float{ return config::imu.data_.gyr_y*2000.*M_PI/180/pow(2,15); }));
-        System::api.add_api_variable("gz", new const APICallbackFloat([]()->float{ return config::imu.data_.gyr_z*2000.*M_PI/180/pow(2,15); }));
+        System::api.add_api_variable("ax", new const APICallbackFloat([]()->float{ return config::imu.data_.acc_x*8./powf(2,15); }));
+        System::api.add_api_variable("ay", new const APICallbackFloat([]()->float{ return config::imu.data_.acc_y*8./powf(2,15); }));
+        System::api.add_api_variable("az", new const APICallbackFloat([]()->float{ return config::imu.data_.acc_z*8./powf(2,15); }));
+        System::api.add_api_variable("gx", new const APICallbackFloat([]()->float{ return config::imu.data_.gyr_x*2000.*M_PI/180/powf(2,15); }));
+        System::api.add_api_variable("gy", new const APICallbackFloat([]()->float{ return config::imu.data_.gyr_y*2000.*M_PI/180/powf(2,15); }));
+        System::api.add_api_variable("gz", new const APICallbackFloat([]()->float{ return config::imu.data_.gyr_z*2000.*M_PI/180/powf(2,15); }));
     }
 
     if (config::board_rev.has_5V_sense) {

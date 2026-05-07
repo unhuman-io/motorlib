@@ -18,6 +18,8 @@ inline float fabsf2(float f) {
 
 float fminf(float, float);
 
+inline float flimit(float f, float limit) { return fminf(f, limit); }
+
 #ifndef __clang__
 inline float sqrtf(float f) {
     float r;
