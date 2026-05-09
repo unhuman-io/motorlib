@@ -96,6 +96,37 @@ public:
         current_len = res.ptr - buffer;
     }
 
+    // Hyper-optimized unsigned 32-bit integer push
+    inline __attribute__((always_inline))
+    void push(uint32_t val) {
+        if (val == 0) {
+            buffer[current_len++] = '0';
+            return;
+        }
+
+        // Max uint32_t is 4294967295 (10 digits)
+        char temp[10];
+        char* p = temp + 10;
+        
+        // Write digits backwards (fastest mathematical method)
+        while (val > 0) {
+            // Cortex-M4 will compile this into a fast UDIV and MLS instruction pair
+            uint32_t quotient = val / 10; 
+            uint32_t remainder = val - (quotient * 10); 
+            
+            *--p = '0' + remainder;
+            val = quotient;
+        }
+        
+        // Calculate length and copy forward
+        uint32_t len = (temp + 10) - p;
+        
+        // __builtin_memcpy tells GCC to use native LDM/STM instructions 
+        // instead of calling the C-library memcpy.
+        __builtin_memcpy(buffer + current_len, p, len);
+        current_len += len;
+    }
+
     // --- Allow composing StackStrings together! ---
     template <size_t OtherCap>
     inline __attribute__((always_inline))
