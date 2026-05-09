@@ -10,6 +10,7 @@
 #include <atomic>
 #include <string_view>
 #include <cinttypes>
+#include "text_fun.h"
 
 #define LOGGING_MAX_SIZE 4096
 class Logger {
@@ -46,8 +47,7 @@ class Logger {
         log("**** Logger initialized ****");
     }
     void log(std::string_view str) {
-        char header[50];
-        snprintf(header, sizeof(header), "(%" PRIu32 ", %" PRIu32 ") ", get_uptime(), get_clock());
+        auto header = make_string("(", get_uptime(), ", ", get_clock(), ") ");
         front_log_.set_value(front_atomic_.load(std::memory_order_acquire));
         read_front_.set_value(read_front_atomic_.load(std::memory_order_acquire));
         log_raw(header);

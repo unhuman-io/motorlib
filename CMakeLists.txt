@@ -30,6 +30,7 @@ target_sources(motorlib
             system.h
             version.h
             peripheral/stm32g4/can.h
+            text_fun.h
 )
 
 target_sources(motorlib
