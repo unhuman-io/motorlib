@@ -394,8 +394,8 @@ class System {
     static Actuator actuator_;
     static ParameterAPI api;
     static uint32_t count_;
-    static uint32_t current_api_timeout_us_;
     inline static uint32_t api_timeout_us_ {10'000};
+    inline static uint32_t current_api_timeout_us_ = api_timeout_us_;
     inline static AllProcessedStats interrupt_stats_ {};
 };
 

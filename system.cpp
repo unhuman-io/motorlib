@@ -39,7 +39,6 @@ __attribute__ ((init_priority(LOGGER_INIT_PRIORITY))) Logger logger(log_index, l
 RoundRobinLogger round_robin_logger;
 uint32_t System::count_ = 0;
 ParameterAPI System::api = {};
-uint32_t System::current_api_timeout_us_ = 0;
 
 // send printf and other stdout/err to the logger
 extern "C" void _write(int fd, const char *buf, size_t count) {
