@@ -516,25 +516,28 @@ void system_maintenance() {
     config::main_loop.status_.error.init_failure |= init_failure;
 }
 
-Task<> main_maintenance(CycleScheduler &sched) {
-    co_await sched.async_delay_us(100'000);
-    ADC1->CR |= ADC_CR_JADSTART;
-    while(ADC1->CR & ADC_CR_JADSTART) {
-        co_await sched.yield();
-    }
-    T = microcontroller_temperature_filter.update(config::temp_sensor.read());
-    round_robin_logger.log_data(MICROCONTROLLER_TEMPERATURE_INDEX, T);
-    v3v3 =  *((uint16_t *) (0x1FFF75AA)) * 3.0 * ADC1->GCOMP / 4096.0 / ADC1->JDR2;
-    round_robin_logger.log_data(VOLTAGE_3V3_INDEX, v3v3);
-    if (T > 100) {
-        config::main_loop.status_.error.microcontroller_temperature = 1;
-    }
+#define CUSTOM_MAIN_MAINTENANCE_ASYNC
+Task<> main_maintenance_async(CycleScheduler &sched) {
+    while (1) {
+        co_await sched.async_delay_us(100'000);
+        ADC1->CR |= ADC_CR_JADSTART;
+        while(ADC1->CR & ADC_CR_JADSTART) {
+            co_await sched.yield();
+        }
+        T = microcontroller_temperature_filter.update(config::temp_sensor.read());
+        round_robin_logger.log_data(MICROCONTROLLER_TEMPERATURE_INDEX, T);
+        v3v3 =  *((uint16_t *) (0x1FFF75AA)) * 3.0 * ADC1->GCOMP / 4096.0 / ADC1->JDR2;
+        round_robin_logger.log_data(VOLTAGE_3V3_INDEX, v3v3);
+        if (T > 100) {
+            config::main_loop.status_.error.microcontroller_temperature = 1;
+        }
 
-    float Tboard = 0;
+        float Tboard = 0;
 
-    round_robin_logger.log_data(BOARD_TEMPERATURE_INDEX, Tboard);
-    if (Tboard > 120 || Tboard < -40) {
-        config::main_loop.status_.error.board_temperature = 1;
+        round_robin_logger.log_data(BOARD_TEMPERATURE_INDEX, Tboard);
+        if (Tboard > 120 || Tboard < -40) {
+            config::main_loop.status_.error.board_temperature = 1;
+        }
     }
 }
 

@@ -11,9 +11,9 @@
 #include "interrupt_profiler.h"
 #include "task.h"
 
-void main_maintenance(); 
-Task<void> main_maintenance(CycleScheduler& sched);
+void main_maintenance();
 void system_maintenance();
+Task<void> main_maintenance_async(CycleScheduler& sched);
 
 #ifndef TOGGLE_SCOPE_PIN
 #define TOGGLE_SCOPE_PIN(X,x)
@@ -130,7 +130,7 @@ class System {
         api.add_api_variable("heap_used", new const APICallbackUint32(get_heap_used));
         api.add_api_variable("heap_current_free", new const APICallbackUint32(get_current_heap_free));
         api.add_api_variable("heap_current_used", new const APICallbackUint32(get_current_heap_used));
-        api.add_api_variable("malloc", new APICallbackUint32([](){ return (uint32_t) get_heap_free() + get_heap_used(); }, 
+        api.add_api_variable("malloc", new APICallbackUint32([](){ return (uint32_t) get_heap_free() + get_heap_used(); },
             [](uint32_t u) {
                 try { char* volatile c = new char[u]; delete [] c; }
                 catch(...) { logger.log_printf("couldn't allocate %d", u); } }));
@@ -233,11 +233,11 @@ class System {
         api.add_api_variable("akp", new APIFloat(&actuator_.main_loop_.admittance_controller_.torque_controller_.kp_));
         api.add_api_variable("Tmotor_est", new const APIFloat(&actuator_.main_loop_.status_.motor_temperature_estimate));
         API_ADD_FILTER(a_output_filter, FirstOrderLowPassFilter, actuator_.main_loop_.admittance_controller_.torque_controller_.output_filter_);
-        api.add_api_variable("fast_loop_status", new const APICallback([](){ 
+        api.add_api_variable("fast_loop_status", new const APICallback([](){
             FastLoopStatus status = actuator_.fast_loop_.status_.top();
             uint8_t len = 192;
             char c[len];
-            std::snprintf(c, len, "%" PRIu32", %f, %f, %f, %f, %f, %f, %f, %f, %f, %f", 
+            std::snprintf(c, len, "%" PRIu32", %f, %f, %f, %f, %f, %f, %f, %f, %f, %f",
                     status.timestamp,
                     (double)status.foc_command.measured.motor_encoder,
                     (double)status.foc_command.desired.i_q,
@@ -281,7 +281,7 @@ class System {
         api.add_api_variable("board_name", new const APICallback([]()->std::string{ return otp->version == 1 ? otp->name : ""; }));
         api.add_api_variable("board_rev", new const APICallback([]()->std::string{ return otp->version == 1 ? otp->rev : ""; }));
         api.add_api_variable("board_num", new const APIInt32(&otp->num));
-        api.add_api_variable("long_packet", new const APICallback([]{ 
+        api.add_api_variable("long_packet", new const APICallback([]{
           char long_packet[MAX_API_DATA_SIZE+1] = "This is a long packet test\n";
           int len = std::strlen(long_packet);
           for (int i=0; i<MAX_API_DATA_SIZE-len; i++) {
@@ -322,23 +322,12 @@ class System {
 
         auto stats_task = update_stats_async(sched);
         auto comms_task = process_communication_async(sched);
-        auto maintenanc_task = main_maintenance_async(sched);
+        auto maintenance_task = main_maintenance_async(sched);
 
         while(1) {
             TOGGLE_SCOPE_PIN(C,4);
             count_++;
             sched.poll();
-        }
-    }
-    template <typename TSched>
-    static Task<void> main_maintenance_async(TSched& sched) {
-        while (1) {
-            if constexpr (requires { { main_maintenance(sched) } -> std::same_as<Task<void>>; }) {
-                co_await main_maintenance(sched);
-            } else {
-                main_maintenance();
-                co_await sched.yield();
-            }
         }
     }
     static Task<void> process_communication_async(CycleScheduler& sched) {
