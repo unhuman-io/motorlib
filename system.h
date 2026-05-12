@@ -27,6 +27,12 @@ void main_maintenance();
 
 class System {
  public:
+    struct ProcessedStats {
+        float avg_cycles;
+        float internal_cycles;
+        uint32_t max;
+        uint32_t min;
+    };
     static void run() {
         {
             char t[18];
@@ -75,8 +81,10 @@ class System {
         API_ADD_FILTER(vfilt, FirstOrderLowPassFilter, actuator_.main_loop_.velocity_controller_.velocity_filter_);
         API_ADD_FILTER(voutput_filt, FirstOrderLowPassFilter, actuator_.main_loop_.velocity_controller_.controller_.output_filter_);
         api.add_api_variable("cpu_frequency", new APIUint32(&cpu_frequency));
-        api.add_api_variable("t_exec_fastloop", new APIUint32(&t_exec_fastloop));
-        api.add_api_variable("t_exec_mainloop", new APIUint32(&t_exec_mainloop));
+        api.add_api_variable("t_avg_fastloop", new const APIFloat(&fastloop_stats_.avg_cycles));
+        api.add_api_variable("t_avg_mainloop", new const APIFloat(&mainloop_stats_.avg_cycles));
+        api.add_api_variable("t_exec_fastloop", new const APIUint32(&t_exec_fastloop));
+        api.add_api_variable("t_exec_mainloop", new const APIUint32(&t_exec_mainloop));
         api.add_api_variable("t_period_fastloop", new APIUint32(&t_period_fastloop));
         api.add_api_variable("t_period_mainloop", new APIUint32(&t_period_mainloop));
         api.add_api_variable("vbus", new APIFloat(&actuator_.main_loop_.status_.fast_loop.vbus));
@@ -343,14 +351,18 @@ class System {
             }
             main_maintenance();
             if (exec_rate.run()) {
-                [[maybe_unused]] __attribute__((used)) static CycleStats fastloop_stats;
-                [[maybe_unused]] __attribute__((used)) static CycleStats mainloop_stats;
-                [[maybe_unused]] __attribute__((used)) static CycleStats comint_stats;
-                fastloop_stats = get_fastloop_stats();
-                mainloop_stats = get_mainloop_stats();
-                comint_stats = get_comint_stats();
+                fastloop_stats_ = process_cycle_stats(get_fastloop_stats());
+                mainloop_stats_ = process_cycle_stats(get_mainloop_stats());
+                comint_stats_ = process_cycle_stats(get_comint_stats());
             }
         }
+    }
+    static ProcessedStats process_cycle_stats(const CycleStats &cycle_stats) {
+        ProcessedStats stats;
+        stats.avg_cycles = (float) cycle_stats.total_sum / cycle_stats.count;
+        stats.max = cycle_stats.max;
+        stats.min = cycle_stats.min;
+        return stats;
     }
     static void set_one_time_api_timeout_us(uint32_t us) {
         communication_.send_one_time_api_timeout_request(us);
@@ -385,6 +397,7 @@ class System {
     static ParameterAPI api;
     static uint32_t count_;
     static uint32_t current_api_timeout_us_;
+    static ProcessedStats fastloop_stats_, mainloop_stats_, comint_stats_;
 };
 
 extern "C" {

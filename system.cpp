@@ -31,6 +31,9 @@ RoundRobinLogger round_robin_logger;
 uint32_t System::count_ = 0;
 ParameterAPI System::api = {};
 uint32_t System::current_api_timeout_us_ = 0;
+System::ProcessedStats System::fastloop_stats_ {};
+System::ProcessedStats System::mainloop_stats_ {};
+System::ProcessedStats System::comint_stats_ {};
 
 // send printf and other stdout/err to the logger
 extern "C" void _write(int fd, const char *buf, size_t count) {
