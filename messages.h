@@ -329,4 +329,11 @@ typedef struct {
   uint32_t count;
 } CycleStats;
 
+typedef struct {
+    CycleStats fastloop_stats;
+    CycleStats mainloop_stats;
+    CycleStats systemloop_stats;
+    CycleStats comint_stats;
+} InterruptStats;
+
 #endif  // UNHUMAN_MOTORLIB_MESSAGES_H_

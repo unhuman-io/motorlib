@@ -33,6 +33,7 @@ ParameterAPI System::api = {};
 uint32_t System::current_api_timeout_us_ = 0;
 System::ProcessedStats System::fastloop_stats_ {};
 System::ProcessedStats System::mainloop_stats_ {};
+System::ProcessedStats System::systemloop_stats_ {};
 System::ProcessedStats System::comint_stats_ {};
 
 // send printf and other stdout/err to the logger

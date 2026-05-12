@@ -14,9 +14,7 @@ extern uint32_t t_exec_fastloop;
 extern uint32_t t_exec_mainloop;
 extern uint32_t t_period_fastloop;
 extern uint32_t t_period_mainloop;
-extern "C" CycleStats get_fastloop_stats();
-extern "C" CycleStats get_mainloop_stats();
-extern "C" CycleStats get_comint_stats();
+extern "C" InterruptStats get_exec_stats();
 void system_maintenance();
 void main_maintenance();
 
@@ -351,9 +349,11 @@ class System {
             }
             main_maintenance();
             if (exec_rate.run()) {
-                fastloop_stats_ = process_cycle_stats(get_fastloop_stats());
-                mainloop_stats_ = process_cycle_stats(get_mainloop_stats());
-                comint_stats_ = process_cycle_stats(get_comint_stats());
+                InterruptStats stats = get_exec_stats();
+                fastloop_stats_ = process_cycle_stats(stats.fastloop_stats);
+                mainloop_stats_ = process_cycle_stats(stats.mainloop_stats);
+                systemloop_stats_ = process_cycle_stats(stats.systemloop_stats);
+                comint_stats_ = process_cycle_stats(stats.comint_stats);
             }
         }
     }
@@ -397,7 +397,7 @@ class System {
     static ParameterAPI api;
     static uint32_t count_;
     static uint32_t current_api_timeout_us_;
-    static ProcessedStats fastloop_stats_, mainloop_stats_, comint_stats_;
+    static ProcessedStats fastloop_stats_, mainloop_stats_, systemloop_stats_, comint_stats_;
 };
 
 extern "C" {
