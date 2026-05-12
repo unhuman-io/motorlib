@@ -8,15 +8,8 @@
 #include "otp.h"
 #include "peripheral/stm32_serial.h"
 #include <cinttypes>
+#include "interrupt_profiler.h"
 
-
-extern uint32_t t_exec_fastloop;
-extern uint32_t t_exec_mainloop;
-extern uint32_t t_period_fastloop;
-extern uint32_t t_period_mainloop;
-extern "C" CycleStats get_fastloop_stats();
-extern "C" CycleStats get_mainloop_stats();
-extern "C" CycleStats get_comint_stats();
 void system_maintenance();
 void main_maintenance();
 
@@ -75,10 +68,11 @@ class System {
         API_ADD_FILTER(vfilt, FirstOrderLowPassFilter, actuator_.main_loop_.velocity_controller_.velocity_filter_);
         API_ADD_FILTER(voutput_filt, FirstOrderLowPassFilter, actuator_.main_loop_.velocity_controller_.controller_.output_filter_);
         api.add_api_variable("cpu_frequency", new APIUint32(&cpu_frequency));
-        api.add_api_variable("t_exec_fastloop", new APIUint32(&t_exec_fastloop));
-        api.add_api_variable("t_exec_mainloop", new APIUint32(&t_exec_mainloop));
-        api.add_api_variable("t_period_fastloop", new APIUint32(&t_period_fastloop));
-        api.add_api_variable("t_period_mainloop", new APIUint32(&t_period_mainloop));
+        api.add_api_variable("t__fastloop", new const APIFloat(&interrupt_stats_.fastloop.avg_total));
+        api.add_api_variable("t_exec_fastloop", new const APIFloat(&interrupt_stats_.fastloop.avg_internal));
+        api.add_api_variable("t_exec_mainloop", new const APIFloat(&interrupt_stats_.mainloop.avg_internal));
+        api.add_api_variable("t_period_fastloop", new const APIFloat(&interrupt_stats_.fastloop.avg_period));
+        api.add_api_variable("t_period_mainloop", new const APIFloat(&interrupt_stats_.mainloop.avg_period));
         api.add_api_variable("vbus", new APIFloat(&actuator_.main_loop_.status_.fast_loop.vbus));
         api.add_api_variable("phase_mode", new APICallbackUint8([](){ return actuator_.fast_loop_.get_phase_mode(); }, [](uint8_t p){ actuator_.fast_loop_.set_phase_mode(p); }));
         api.add_api_variable("va", new APIFloat(&actuator_.main_loop_.status_.fast_loop.foc_status.command.v_a));
@@ -343,12 +337,7 @@ class System {
             }
             main_maintenance();
             if (exec_rate.run()) {
-                [[maybe_unused]] __attribute__((used)) static CycleStats fastloop_stats;
-                [[maybe_unused]] __attribute__((used)) static CycleStats mainloop_stats;
-                [[maybe_unused]] __attribute__((used)) static CycleStats comint_stats;
-                fastloop_stats = get_fastloop_stats();
-                mainloop_stats = get_mainloop_stats();
-                comint_stats = get_comint_stats();
+                interrupt_stats_ = get_exec_stats();
             }
         }
     }
@@ -385,6 +374,7 @@ class System {
     static ParameterAPI api;
     static uint32_t count_;
     static uint32_t current_api_timeout_us_;
+    inline static AllProcessedStats interrupt_stats_ {};
 };
 
 extern "C" {
