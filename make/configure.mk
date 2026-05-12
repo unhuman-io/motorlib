@@ -29,7 +29,6 @@ ifeq "$(TARGET_MCU)" "stm32g474"
 # C sources
 ifndef C_SOURCES
 C_SOURCES =  \
-$(SELF_DIR)../device/stm32g4/Src/stm32g4xx_it.c \
 $(SELF_DIR)../device/stm32g4/Src/system_stm32g4xx.c \
 $(SELF_DIR)../device/stm32g4/Src/main.c
 endif
@@ -61,6 +60,7 @@ C_INCLUDES +=  \
 LDSCRIPT = $(SELF_DIR)../peripheral/stm32g4/STM32G474RETx_FLASH.ld
 
 CPP_SOURCES += \
+$(SELF_DIR)../device/stm32g4/Src/stm32g4xx_it.cpp \
 $(SELF_DIR)../peripheral/spi_encoder.cpp\
 $(SELF_DIR)../peripheral/protocol.cpp\
 $(SELF_DIR)../peripheral/mailbox.cpp\
