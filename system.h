@@ -9,6 +9,7 @@
 #include "peripheral/stm32_serial.h"
 #include <cinttypes>
 #include "interrupt_profiler.h"
+#include "task.h"
 
 void system_maintenance();
 void main_maintenance();
@@ -320,7 +321,10 @@ class System {
 
         uint32_t t_start = get_clock();
         current_api_timeout_us_ = api_timeout_us;
-        FrequencyLimiter exec_rate {10};
+        CycleScheduler sched;
+
+        auto stats_task = update_stats_async(sched);
+        
         while(1) {
             TOGGLE_SCOPE_PIN(C,4);
             count_++;
@@ -336,9 +340,14 @@ class System {
                 t_start = get_clock();
             }
             main_maintenance();
-            if (exec_rate.run()) {
-                interrupt_stats_ = get_exec_stats();
-            }
+
+            sched.poll();
+        }
+    }
+    static Task<void> update_stats_async(CycleScheduler& sched) {
+        while (1) {
+            interrupt_stats_ = get_exec_stats();
+            co_await sched.async_delay_us(100'000);
         }
     }
     static void set_one_time_api_timeout_us(uint32_t us) {
