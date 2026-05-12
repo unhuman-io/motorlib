@@ -324,7 +324,7 @@ class System {
         CycleScheduler sched;
 
         auto stats_task = update_stats_async(sched);
-        
+
         while(1) {
             TOGGLE_SCOPE_PIN(C,4);
             count_++;
@@ -345,9 +345,13 @@ class System {
         }
     }
     static Task<void> update_stats_async(CycleScheduler& sched) {
+        constexpr uint32_t PERIOD_CYCLES = CPU_FREQUENCY_HZ / 10; // 10Hz
+        uint32_t target_wake_time = get_clock();
+
         while (1) {
+            target_wake_time += PERIOD_CYCLES;
             interrupt_stats_ = get_exec_stats();
-            co_await sched.async_delay_us(100'000);
+            co_await sched.delay_until(target_wake_time);
         }
     }
     static void set_one_time_api_timeout_us(uint32_t us) {
