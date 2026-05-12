@@ -118,8 +118,6 @@ struct Profiler {
         legacy_count += net;
         last_start_wall = t_start_wall;
 
-        // Update double-buffered stats
-        InterruptStats* s_ptr = active_stats.load(std::memory_order_relaxed);
         update_stats(&stats, net, gross);
     }
 };

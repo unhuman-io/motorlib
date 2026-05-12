@@ -2,8 +2,6 @@
 #include "../../interrupt_profiler.h"
 
 extern "C" {
-void system_init();
-void system_run();
 void main_loop_interrupt();
 void fast_loop_interrupt();
 void system_loop_interrupt();
@@ -135,4 +133,4 @@ void HRTIM1_Master_IRQHandler(void)
         t_exec_mainloop, t_period_mainloop, mainloop_count, mainloop_last_start);
   CLEAR_SCOPE_PIN(C,0); 
 }
-};
+} // extern "C"
