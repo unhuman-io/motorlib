@@ -265,8 +265,7 @@ class System {
         api.add_api_variable("obot_hash", new const APIStringView(OBOT_HASH));
         api.add_api_variable("motorlib_hash", new const APIStringView(MOTORLIB_HASH));
         api.add_api_variable("name", new const APIStringView(param->name));
-        uint32_t api_timeout_us = 10000;
-        api.add_api_variable("api_timeout", new APIUint32(&api_timeout_us));
+        api.add_api_variable("api_timeout", new APIUint32(&api_timeout_us_));
         api.add_api_variable("notes", new const APIStringView(NOTES));
         api.add_api_variable("tuning_desired", new const APIFloat(&actuator_.main_loop_.tuning_trajectory_generator_.trajectory_value_.value ));
         api.add_api_variable("dft_frequency", new const APIFloat(&actuator_.main_loop_.dft_.desired_.frequency_last_));
@@ -318,32 +317,47 @@ class System {
         }));
         api.add_api_variable("go_to_bootloader", new APIHex<uint32_t>(&go_to_bootloader));
 
-
-        uint32_t t_start = get_clock();
-        current_api_timeout_us_ = api_timeout_us;
         CycleScheduler sched;
 
         auto stats_task = update_stats_async(sched);
+        auto comms_task = process_communication_async(sched);
+        auto maintenanc_task = main_maintenance_async(sched);
 
         while(1) {
             TOGGLE_SCOPE_PIN(C,4);
             count_++;
-            if (communication_.send_string_active() && get_clock() - t_start > US_TO_CPU(current_api_timeout_us_)) {
-                communication_.cancel_send_string();
-                current_api_timeout_us_ = api_timeout_us;
-            }
-            char *s = System::get_string();
-            if (s[0] != 0) {
-                auto response = api.parse_string(s);
-                current_api_timeout_us_ = api_timeout_us;
-                communication_.send_string(response.c_str(), response.length());
-                t_start = get_clock();
-            }
-            main_maintenance();
-
             sched.poll();
         }
     }
+    template <typename TSched>
+    static Task<void> main_maintenance_async(TSched& sched) {
+        while (1) {
+            main_maintenance();
+            co_await sched.yield();
+        }
+    }
+    static Task<void> process_communication_async(CycleScheduler& sched) {
+        while (1) {
+            char *s = System::get_string();
+            while (s[0] == 0) {
+                co_await sched.yield();
+                s = System::get_string();
+            }
+
+            auto response = api.parse_string(s);
+            communication_.send_string(response.c_str(), response.length());
+            uint32_t t_start = get_clock();
+
+            while (communication_.send_string_active()) {
+                if (get_clock() - t_start > US_TO_CPU(current_api_timeout_us_)) {
+                    communication_.cancel_send_string();
+                    current_api_timeout_us_ = api_timeout_us_;
+                }
+                co_await sched.yield();
+            }
+        }
+    }
+
     static Task<void> update_stats_async(CycleScheduler& sched) {
         constexpr uint32_t PERIOD_CYCLES = CPU_FREQUENCY_HZ / 10; // 10Hz
         uint32_t target_wake_time = get_clock();
@@ -387,6 +401,7 @@ class System {
     static ParameterAPI api;
     static uint32_t count_;
     static uint32_t current_api_timeout_us_;
+    inline static uint32_t api_timeout_us_ {10'000};
     inline static AllProcessedStats interrupt_stats_ {};
 };
 

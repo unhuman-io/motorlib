@@ -66,6 +66,31 @@ public:
         // Just calculate the absolute deadline and reuse the logic!
         return delay_until(get_clock() + cycles);
     }
+
+    // Yield the CPU for exactly one pass of the main loop
+    auto yield() {
+        struct YieldAwaiter {
+            CycleScheduler& sched;
+            
+            // ALWAYS suspend to force a context switch
+            bool await_ready() const { return false; } 
+            
+            void await_suspend(std::coroutine_handle<> h) {
+                for (auto& s : sched.sleepers) {
+                    if (s.handle == nullptr) {
+                        // Set target time to current time so it wakes up instantly on the next poll
+                        s.target_time = get_clock(); 
+                        s.handle = h;
+                        return;
+                    }
+                }
+                while(1); // Trap: Scheduler queue full!
+            }
+            void await_resume() {}
+        };
+
+        return YieldAwaiter{ *this };
+    }
 };
 
 // ============================================================================
