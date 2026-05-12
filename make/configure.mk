@@ -29,7 +29,7 @@ ifeq "$(TARGET_MCU)" "stm32g474"
 # C sources
 ifndef C_SOURCES
 C_SOURCES =  \
-$(SELF_DIR)../device/stm32g4/Src/stm32g4xx_it.c \
+$(SELF_DIR)../device/stm32g4/Src/stm32g4xx_it.cpp \
 $(SELF_DIR)../device/stm32g4/Src/system_stm32g4xx.c \
 $(SELF_DIR)../device/stm32g4/Src/main.c
 endif
