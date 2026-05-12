@@ -8,6 +8,7 @@
 #include "../peripheral/stm32g4/flash.h"
 #include "../peripheral/stm32g4/rtc.h"
 #include "../driver.h"
+#include "../task.h"
 
 #ifdef SCOPE_DEBUG
 #define SET_SCOPE_PIN(X,x) GPIO##X->BSRR = 1 << x
@@ -485,7 +486,6 @@ void system_init() {
     HRTIM1->sMasterRegs.MCR |= HRTIM_MCR_MCEN + HRTIM_MCR_TACEN + HRTIM_MCR_TDCEN + HRTIM_MCR_TECEN + HRTIM_MCR_TFCEN; // start high res timer, also triggers TIM1
 }
 
-FrequencyLimiter temp_rate = {10};
 float T = 0;
 MedianFilter<> board_temperature_filter;
 MedianFilter<> microcontroller_temperature_filter;
@@ -516,25 +516,25 @@ void system_maintenance() {
     config::main_loop.status_.error.init_failure |= init_failure;
 }
 
-void main_maintenance() {
-    if (temp_rate.run()) {
-        ADC1->CR |= ADC_CR_JADSTART;
-        while(ADC1->CR & ADC_CR_JADSTART);
-        T = microcontroller_temperature_filter.update(config::temp_sensor.read());
-        round_robin_logger.log_data(MICROCONTROLLER_TEMPERATURE_INDEX, T);
-        v3v3 =  *((uint16_t *) (0x1FFF75AA)) * 3.0 * ADC1->GCOMP / 4096.0 / ADC1->JDR2;
-        round_robin_logger.log_data(VOLTAGE_3V3_INDEX, v3v3);
-        if (T > 100) {
-            config::main_loop.status_.error.microcontroller_temperature = 1;
-        }
+Task<> main_maintenance(CycleScheduler &sched) {
+    co_await sched.async_delay_us(100'000);
+    ADC1->CR |= ADC_CR_JADSTART;
+    while(ADC1->CR & ADC_CR_JADSTART) {
+        co_await sched.yield();
+    }
+    T = microcontroller_temperature_filter.update(config::temp_sensor.read());
+    round_robin_logger.log_data(MICROCONTROLLER_TEMPERATURE_INDEX, T);
+    v3v3 =  *((uint16_t *) (0x1FFF75AA)) * 3.0 * ADC1->GCOMP / 4096.0 / ADC1->JDR2;
+    round_robin_logger.log_data(VOLTAGE_3V3_INDEX, v3v3);
+    if (T > 100) {
+        config::main_loop.status_.error.microcontroller_temperature = 1;
+    }
 
-        float Tboard = 0;
+    float Tboard = 0;
 
-        round_robin_logger.log_data(BOARD_TEMPERATURE_INDEX, Tboard);
-        if (Tboard > 120 || Tboard < -40) {
-            config::main_loop.status_.error.board_temperature = 1;
-        }
-
+    round_robin_logger.log_data(BOARD_TEMPERATURE_INDEX, Tboard);
+    if (Tboard > 120 || Tboard < -40) {
+        config::main_loop.status_.error.board_temperature = 1;
     }
 }
 

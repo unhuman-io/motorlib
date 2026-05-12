@@ -94,17 +94,36 @@ public:
 };
 
 // ============================================================================
-// Coroutine Return Base (Solves the void duplication problem)
+// Coroutine Nesting Core
 // ============================================================================
+
+// 1. Base promise types to hold values and continuation handles
 template <typename T>
 struct PromiseReturn {
     T value_;
+    std::coroutine_handle<> continuation_ = nullptr;
     void return_value(T v) { value_ = v; }
 };
 
 template <>
 struct PromiseReturn<void> {
+    std::coroutine_handle<> continuation_ = nullptr;
     void return_void() {}
+};
+
+// 2. The Final Awaiter: Transfers control back to parent instantly if one exists
+struct FinalAwaiter {
+    bool await_ready() const noexcept { return false; }
+    
+    template <typename PromiseType>
+    std::coroutine_handle<> await_suspend(std::coroutine_handle<PromiseType> h) noexcept {
+        if (h.promise().continuation_) {
+            return h.promise().continuation_; 
+        }
+        return std::noop_coroutine(); 
+    }
+    
+    void await_resume() noexcept {}
 };
 
 // ============================================================================
@@ -120,7 +139,7 @@ struct Task {
         }
         
         std::suspend_never initial_suspend() { return {}; }
-        std::suspend_always final_suspend() noexcept { return {}; }
+        FinalAwaiter final_suspend() noexcept { return {}; } // Hand off to parent
         
         void unhandled_exception() { while(1); } 
     };
@@ -151,5 +170,29 @@ struct Task {
     
     bool is_done() const {
         return !handle_ || handle_.done();
+    }
+
+    // --- Enables `co_await child_task()` ---
+    auto operator co_await() const noexcept {
+        struct TaskAwaiter {
+            std::coroutine_handle<promise_type> child_;
+
+            bool await_ready() const noexcept {
+                return !child_ || child_.done();
+            }
+
+            void await_suspend(std::coroutine_handle<> parent) noexcept {
+                // Link the parent so FinalAwaiter knows who to wake up
+                child_.promise().continuation_ = parent;
+            }
+
+            T await_resume() {
+                if constexpr (!std::is_same_v<T, void>) {
+                    return child_.promise().value_;
+                }
+            }
+        };
+
+        return TaskAwaiter{handle_};
     }
 };

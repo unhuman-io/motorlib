@@ -11,8 +11,9 @@
 #include "interrupt_profiler.h"
 #include "task.h"
 
+void main_maintenance(); 
+Task<void> main_maintenance(CycleScheduler& sched);
 void system_maintenance();
-void main_maintenance();
 
 #ifndef TOGGLE_SCOPE_PIN
 #define TOGGLE_SCOPE_PIN(X,x)
@@ -332,8 +333,12 @@ class System {
     template <typename TSched>
     static Task<void> main_maintenance_async(TSched& sched) {
         while (1) {
-            main_maintenance();
-            co_await sched.yield();
+            if constexpr (requires { { main_maintenance(sched) } -> std::same_as<Task<void>>; }) {
+                co_await main_maintenance(sched);
+            } else {
+                main_maintenance();
+                co_await sched.yield();
+            }
         }
     }
     static Task<void> process_communication_async(CycleScheduler& sched) {
