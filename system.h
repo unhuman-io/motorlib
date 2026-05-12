@@ -10,12 +10,6 @@
 #include <cinttypes>
 #include "interrupt_profiler.h"
 
-
-extern uint32_t t_exec_fastloop;
-extern uint32_t t_exec_mainloop;
-extern uint32_t t_period_fastloop;
-extern uint32_t t_period_mainloop;
-
 void system_maintenance();
 void main_maintenance();
 
