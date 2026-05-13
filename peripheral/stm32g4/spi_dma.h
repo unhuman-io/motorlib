@@ -113,6 +113,21 @@ class SPIDMA : public SPIDMABase<SPIDMA> {
         ns_delay(interframe_delay_ns_);
     }
 
+    Task<bool> finish_readwrite_async_impl(CycleScheduler& sched) {
+        uint8_t brr = (regs_.CR1 & SPI_CR1_BR) >> SPI_CR1_BR_Pos;
+        uint32_t timeout = (length_*8+3)*(2 << brr); // 3 extra bits time
+        while(rx_dma_.CNDTR){// && (get_clock() - time_start_ < timeout)) {
+            co_await sched.yield();
+        }
+        bool success = rx_dma_.CNDTR == 0;
+        ns_delay(end_cs_delay_ns_);
+        gpio_cs_.set();
+        tx_dma_.CMAR = 0;
+        rx_dma_.CMAR = 0;
+        ns_delay(interframe_delay_ns_);
+        co_return success;
+    }
+
 
     SPI_TypeDef &regs_;
     GPIO &gpio_cs_;
