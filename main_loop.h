@@ -13,6 +13,7 @@
 #include "round_robin_logger.h"
 #include "temperature_model.h"
 #include <cstring>
+#include "task.h"
 
 static const char *error_bit_strings[32] = ERROR_BIT_STRINGS;
 
@@ -958,6 +959,7 @@ class MainLoop {
     friend void system_init();
     friend void system_maintenance();
     friend void main_maintenance();
+    friend Task<void> main_maintenance_async(CycleScheduler& sched);
     friend void config_init();
     friend void config_maintenance();
     friend void load_send_data(const MainLoop &main_loop, SendData *const data);

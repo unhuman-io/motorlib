@@ -9,9 +9,11 @@
 #include "peripheral/stm32_serial.h"
 #include <cinttypes>
 #include "interrupt_profiler.h"
+#include "task.h"
 
-void system_maintenance();
 void main_maintenance();
+void system_maintenance();
+Task<void> main_maintenance_async(CycleScheduler& sched);
 
 #ifndef TOGGLE_SCOPE_PIN
 #define TOGGLE_SCOPE_PIN(X,x)
@@ -128,7 +130,7 @@ class System {
         api.add_api_variable("heap_used", new const APICallbackUint32(get_heap_used));
         api.add_api_variable("heap_current_free", new const APICallbackUint32(get_current_heap_free));
         api.add_api_variable("heap_current_used", new const APICallbackUint32(get_current_heap_used));
-        api.add_api_variable("malloc", new APICallbackUint32([](){ return (uint32_t) get_heap_free() + get_heap_used(); }, 
+        api.add_api_variable("malloc", new APICallbackUint32([](){ return (uint32_t) get_heap_free() + get_heap_used(); },
             [](uint32_t u) {
                 try { char* volatile c = new char[u]; delete [] c; }
                 catch(...) { logger.log_printf("couldn't allocate %d", u); } }));
@@ -231,11 +233,11 @@ class System {
         api.add_api_variable("akp", new APIFloat(&actuator_.main_loop_.admittance_controller_.torque_controller_.kp_));
         api.add_api_variable("Tmotor_est", new const APIFloat(&actuator_.main_loop_.status_.motor_temperature_estimate));
         API_ADD_FILTER(a_output_filter, FirstOrderLowPassFilter, actuator_.main_loop_.admittance_controller_.torque_controller_.output_filter_);
-        api.add_api_variable("fast_loop_status", new const APICallback([](){ 
+        api.add_api_variable("fast_loop_status", new const APICallback([](){
             FastLoopStatus status = actuator_.fast_loop_.status_.top();
             uint8_t len = 192;
             char c[len];
-            std::snprintf(c, len, "%" PRIu32", %f, %f, %f, %f, %f, %f, %f, %f, %f, %f", 
+            std::snprintf(c, len, "%" PRIu32", %f, %f, %f, %f, %f, %f, %f, %f, %f, %f",
                     status.timestamp,
                     (double)status.foc_command.measured.motor_encoder,
                     (double)status.foc_command.desired.i_q,
@@ -264,8 +266,7 @@ class System {
         api.add_api_variable("obot_hash", new const APIStringView(OBOT_HASH));
         api.add_api_variable("motorlib_hash", new const APIStringView(MOTORLIB_HASH));
         api.add_api_variable("name", new const APIStringView(param->name));
-        uint32_t api_timeout_us = 10000;
-        api.add_api_variable("api_timeout", new APIUint32(&api_timeout_us));
+        api.add_api_variable("api_timeout", new APIUint32(&api_timeout_us_));
         api.add_api_variable("notes", new const APIStringView(NOTES));
         api.add_api_variable("tuning_desired", new const APIFloat(&actuator_.main_loop_.tuning_trajectory_generator_.trajectory_value_.value ));
         api.add_api_variable("dft_frequency", new const APIFloat(&actuator_.main_loop_.dft_.desired_.frequency_last_));
@@ -280,7 +281,7 @@ class System {
         api.add_api_variable("board_name", new const APICallback([]()->std::string{ return otp->version == 1 ? otp->name : ""; }));
         api.add_api_variable("board_rev", new const APICallback([]()->std::string{ return otp->version == 1 ? otp->rev : ""; }));
         api.add_api_variable("board_num", new const APIInt32(&otp->num));
-        api.add_api_variable("long_packet", new const APICallback([]{ 
+        api.add_api_variable("long_packet", new const APICallback([]{
           char long_packet[MAX_API_DATA_SIZE+1] = "This is a long packet test\n";
           int len = std::strlen(long_packet);
           for (int i=0; i<MAX_API_DATA_SIZE-len; i++) {
@@ -317,28 +318,48 @@ class System {
         }));
         api.add_api_variable("go_to_bootloader", new APIHex<uint32_t>(&go_to_bootloader));
 
+        CycleScheduler sched;
 
-        uint32_t t_start = get_clock();
-        current_api_timeout_us_ = api_timeout_us;
-        FrequencyLimiter exec_rate {10};
+        auto stats_task = update_stats_async(sched);
+        auto comms_task = process_communication_async(sched);
+        auto maintenance_task = main_maintenance_async(sched);
+
         while(1) {
             TOGGLE_SCOPE_PIN(C,4);
             count_++;
-            if (communication_.send_string_active() && get_clock() - t_start > US_TO_CPU(current_api_timeout_us_)) {
-                communication_.cancel_send_string();
-                current_api_timeout_us_ = api_timeout_us;
-            }
+            sched.poll();
+        }
+    }
+    static Task<void> process_communication_async(CycleScheduler& sched) {
+        while (1) {
             char *s = System::get_string();
-            if (s[0] != 0) {
-                auto response = api.parse_string(s);
-                current_api_timeout_us_ = api_timeout_us;
-                communication_.send_string(response.c_str(), response.length());
-                t_start = get_clock();
+            while (s[0] == 0) {
+                co_await sched.yield();
+                s = System::get_string();
             }
-            main_maintenance();
-            if (exec_rate.run()) {
-                interrupt_stats_ = get_exec_stats();
+
+            auto response = api.parse_string(s);
+            communication_.send_string(response.c_str(), response.length());
+            uint32_t t_start = get_clock();
+
+            while (communication_.send_string_active()) {
+                if (get_clock() - t_start > US_TO_CPU(current_api_timeout_us_)) {
+                    communication_.cancel_send_string();
+                    current_api_timeout_us_ = api_timeout_us_;
+                }
+                co_await sched.yield();
             }
+        }
+    }
+
+    static Task<void> update_stats_async(CycleScheduler& sched) {
+        constexpr uint32_t PERIOD_CYCLES = CPU_FREQUENCY_HZ / 10; // 10Hz
+        uint32_t target_wake_time = get_clock();
+
+        while (1) {
+            target_wake_time += PERIOD_CYCLES;
+            interrupt_stats_ = get_exec_stats();
+            co_await sched.delay_until(target_wake_time);
         }
     }
     static void set_one_time_api_timeout_us(uint32_t us) {
@@ -373,7 +394,8 @@ class System {
     static Actuator actuator_;
     static ParameterAPI api;
     static uint32_t count_;
-    static uint32_t current_api_timeout_us_;
+    inline static uint32_t api_timeout_us_ {10'000};
+    inline static uint32_t current_api_timeout_us_ = api_timeout_us_;
     inline static AllProcessedStats interrupt_stats_ {};
 };
 
