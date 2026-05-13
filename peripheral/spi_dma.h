@@ -2,6 +2,8 @@
 
 #include <cstdint>
 #include <functional>
+#include "../task.h"
+#include <atomic>
 
 // shared class between SPIx instances. Provides a signal for a SPIx user to pause all SPIx instances
 // start and stop callbacks are provided by the user and generally involve mux config etc.
@@ -48,6 +50,20 @@ class SPIDMABase {
         static_cast<T*>(this)->finish_readwrite_impl();
         asm("" : "=m" (*(uint8_t (*)[length]) data_in));
         release();
+    }
+
+    Task<bool> readwrite_async(CycleScheduler& sched, const uint8_t * const data_out, uint8_t * const data_in, uint16_t length) {
+        claim();
+        reinit();
+        // gcc compiler error on the asm memory fence
+        //asm("" : : "m" (*(const uint8_t (*)[length]) data_out)); // ensure data_out[] is in memory
+        std::atomic_signal_fence(std::memory_order_release);
+        static_cast<T*>(this)->start_readwrite_impl(data_out, data_in, length);
+        bool success = co_await static_cast<T*>(this)->finish_readwrite_async_impl(sched);
+        std::atomic_signal_fence(std::memory_order_release);
+        //asm("" : "=m" (*(uint8_t (*)[length]) data_in));
+        release();
+        co_return success;
     }
 
     // Note, use memory barrier before accesing data_in
