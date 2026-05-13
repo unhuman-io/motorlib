@@ -116,7 +116,6 @@ using Driver = DriverBase;
 #include "../temperature_sensor.h"
 #include "../peripheral/stm32g4/i2c_dma.h"
 #include "../peripheral/stm32g4/spi_dma.h"
-#include "../bmi270.h"
 #include "../peripheral/stm32g4/max31875.h"
 #include "../peripheral/stm32g4/max31889.h"
 #include "../mb85rc64.h"
