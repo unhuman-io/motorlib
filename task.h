@@ -101,13 +101,13 @@ public:
 template <typename T>
 struct PromiseReturn {
     T value_;
-    std::coroutine_handle<> continuation_ = nullptr;
+    std::coroutine_handle<> continuation_ = std::noop_coroutine();
     void return_value(T v) { value_ = v; }
 };
 
 template <>
 struct PromiseReturn<void> {
-    std::coroutine_handle<> continuation_ = nullptr;
+    std::coroutine_handle<> continuation_ = std::noop_coroutine();
     void return_void() {}
 };
 
@@ -117,10 +117,7 @@ struct FinalAwaiter {
     
     template <typename PromiseType>
     std::coroutine_handle<> await_suspend(std::coroutine_handle<PromiseType> h) noexcept {
-        if (h.promise().continuation_) {
-            return h.promise().continuation_; 
-        }
-        return std::noop_coroutine(); 
+        return h.promise().continuation_; 
     }
     
     void await_resume() noexcept {}
