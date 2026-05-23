@@ -3,6 +3,7 @@
 
 #include "stm32g474xx.h"
 #include <cstdint>
+#include "task.h"
 
 class CAN {
  public:
@@ -15,6 +16,10 @@ class CAN {
     // use buf_num to select a buffer 0-2, currently 0 for status, 1 for text_api, 2 for enum
     // returns a negative number if not able to transmit, 0 if successful
     int write(uint16_t id, uint8_t* data, uint8_t length, uint8_t buf_num = 0);
+
+    // coroutine that will block until buffer is open for transmit
+    Task<int> write_async(Scheduler &sched, uint16_t id, uint8_t* data, uint8_t length, uint8_t buf_num = 0);
+
     bool add_acceptance_filter(uint16_t id, uint8_t fifo);
 
 

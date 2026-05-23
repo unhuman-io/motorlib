@@ -93,6 +93,8 @@ public:
     }
 };
 
+using Scheduler = CycleScheduler;
+
 // ============================================================================
 // Coroutine Nesting Core
 // ============================================================================
@@ -167,6 +169,12 @@ struct Task {
     
     bool is_done() const {
         return !handle_ || handle_.done();
+    }
+
+    T get_result() {
+        if constexpr (!std::is_same_v<T, void>) {
+            return handle_.promise().value_;
+        }
     }
 
     // --- Enables `co_await child_task()` ---

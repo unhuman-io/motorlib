@@ -3,6 +3,7 @@
 #include "../communication.h"
 #include <cstring>
 #include <algorithm>
+#include "task.h"
 
 template <class CAN>
 class CANCommunication : public CommunicationBase {
@@ -94,6 +95,15 @@ class CANCommunication : public CommunicationBase {
     }
 
     bool send_string(const char* string, uint16_t length) {
+        Scheduler sched;
+        auto task = send_string_async(sched, string, length);
+        while (!task.is_done()) {
+            sched.poll();
+        }
+        return task.get_result();
+    }
+
+    Task<bool> send_string_async(Scheduler &sched, const char* string, uint16_t length) {
       CANID can_id = {.address = address_, .message_id = OBOT_ASCII_RESPONSE};
       if (length && (string[0] == 0 || length > MAX_CAN_DATA_SIZE - 1)) {
         struct {
@@ -108,11 +118,10 @@ class CANCommunication : public CommunicationBase {
         do {
           uint16_t transfer_size = std::min((uint16_t) (MAX_CAN_DATA_SIZE - sizeof(APIControlPacket)), (uint16_t) length_remaining);
           std::memcpy(long_packet.data, str, transfer_size);
-          int retval = can_.write(can_id.word, (uint8_t * const) &long_packet, 
+          int retval = co_await can_.write_async(sched, can_id.word, (uint8_t * const) &long_packet, 
                   transfer_size + sizeof(APIControlPacket), 1);
           if (retval < 0) {
-            // buffer full
-            continue;
+            co_return false;
           }
           str += transfer_size;
           long_packet.control_packet.long_packet.packet_number++;
@@ -124,9 +133,10 @@ class CANCommunication : public CommunicationBase {
         if (length > 1) {
           buf[length++] = 0;
         }
-        can_.write(can_id.word, (uint8_t*) buf, length, 1);
+        int retval = co_await can_.write_async(sched, can_id.word, (uint8_t*) buf, length, 1);
+        co_return retval >= 0;
       }
-      return true;
+      co_return true;
     }
 
     void set_send_decimation(uint16_t decimation) {

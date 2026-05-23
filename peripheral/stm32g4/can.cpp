@@ -157,6 +157,14 @@ int CAN::write(uint16_t id, uint8_t* data, uint8_t length, uint8_t buf_num) {
     return 0;
 }
 
+Task<int> CAN::write_async(Scheduler &sched, uint16_t id, uint8_t* data, uint8_t length, uint8_t buf_num) {
+    int retval = write(id, data, length, buf_num);
+    for (; retval == -3; retval = write(id, data, length, buf_num)) {
+        co_await sched.yield();
+    }
+    co_return retval;
+}
+
 bool CAN::add_acceptance_filter(uint16_t id, uint8_t fifo) {
     if (acceptance_filter_num_ >= 28) {
         return false;
