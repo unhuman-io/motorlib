@@ -321,7 +321,7 @@ class System {
         CycleScheduler sched;
 
         auto stats_task = update_stats_async(sched);
-        auto comms_task = process_communication_async(sched);
+        auto comms_task = process_communication_async(communication_, sched);
         auto maintenance_task = main_maintenance_async(sched);
 
         while(1) {
@@ -330,7 +330,8 @@ class System {
             sched.poll();
         }
     }
-    static Task<void> process_communication_async(CycleScheduler& sched) {
+    template <typename Comms>
+    static Task<void> process_communication_async(Comms &comms, CycleScheduler& sched) {
         while (1) {
             char *s = System::get_string();
             while (s[0] == 0) {
@@ -339,12 +340,16 @@ class System {
             }
 
             auto response = api.parse_string(s);
-            communication_.send_string(response.c_str(), response.length());
+            if constexpr (requires { comms.send_string_async(sched, response.c_str(), response.length()); }) {
+                co_await comms.send_string_async(sched, response.c_str(), response.length());
+            } else {
+                comms.send_string(response.c_str(), response.length());
+            }
             uint32_t t_start = get_clock();
 
-            while (communication_.send_string_active()) {
+            while (comms.send_string_active()) {
                 if (get_clock() - t_start > US_TO_CPU(current_api_timeout_us_)) {
-                    communication_.cancel_send_string();
+                    comms.cancel_send_string();
                     current_api_timeout_us_ = api_timeout_us_;
                 }
                 co_await sched.yield();
