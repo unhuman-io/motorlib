@@ -15,7 +15,7 @@ private:
         uint32_t target_time = 0; // Unified absolute target
     };
 
-    static constexpr size_t MAX_TASKS = 4;
+    static constexpr size_t MAX_TASKS = 8;
     Sleeper sleepers[MAX_TASKS];
 
 public:
@@ -93,6 +93,8 @@ public:
     }
 };
 
+using Scheduler = CycleScheduler;
+
 // ============================================================================
 // Coroutine Nesting Core
 // ============================================================================
@@ -127,7 +129,7 @@ struct FinalAwaiter {
 // Unified Task Template
 // ============================================================================
 template <typename T = void>
-struct Task {
+struct [[nodiscard]] Task {
     // Inherit the return logic (void vs T) based on the template parameter
     struct promise_type : public PromiseReturn<T> {
         
@@ -167,6 +169,12 @@ struct Task {
     
     bool is_done() const {
         return !handle_ || handle_.done();
+    }
+
+    T get_result() {
+        if constexpr (!std::is_same_v<T, void>) {
+            return handle_.promise().value_;
+        }
     }
 
     // --- Enables `co_await child_task()` ---
