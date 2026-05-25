@@ -2,6 +2,7 @@
 #define UNHUMAN_MOTORLIB_PERIPHERAL_USB_H_
 
 #include <cstdint>
+#include "task.h"
 
 // signal to exit
 extern uint32_t go_to_bootloader;
@@ -12,6 +13,7 @@ class USB1 {
     void connect();
     // limited to 64 bytes
     void send_data(uint8_t endpoint, const uint8_t * const data, uint16_t length, bool wait = true, uint32_t wait_timeout_us = 10000);
+    Task<int> send_data_async(Scheduler &sched, uint8_t endpoint, const uint8_t *data, uint16_t length);
 
     // receive up to length bytes from endpoint, return number of bytes read
     int receive_data(uint8_t endpoint, uint8_t * const data, uint8_t length);
