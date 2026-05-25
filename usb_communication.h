@@ -25,7 +25,7 @@ class USBCommunication : public CommunicationBase {
        string[count] = 0;
        return count;
     }
-    static constexpr uint32_t MAX_PACKET_TRANSFER_SIZE = 64;
+    static constexpr uint32_t MAX_PACKET_TRANSFER_SIZE = MAX_API_DATA_SIZE;
 
     Task<int> write_async(Scheduler& sched, uint8_t* data, uint16_t len) {
         co_return co_await usb_.send_data_async(sched, 1, data, len);
