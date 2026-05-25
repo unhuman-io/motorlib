@@ -24,6 +24,7 @@ class CANCommunication : public CommunicationBase {
       OBOT_ASCII_RESPONSE = 0x05,
       OBOT_ENUM = 0xF,
     };
+    static constexpr uint32_t MAX_PACKET_TRANSFER_SIZE = MAX_CAN_DATA_SIZE;
 
     CANCommunication(CAN &can, uint8_t address) : can_(can), address_(address) {
       CANID can_id = {.address = address_, .message_id = OBOT_CMD};
@@ -103,40 +104,9 @@ class CANCommunication : public CommunicationBase {
         return task.get_result();
     }
 
-    Task<bool> send_string_async(Scheduler &sched, const char* string, uint16_t length) {
-      CANID can_id = {.address = address_, .message_id = OBOT_ASCII_RESPONSE};
-      if (length && (string[0] == 0 || length > MAX_CAN_DATA_SIZE - 1)) {
-        struct {
-          APIControlPacket control_packet = {.control_packet_id = 0,
-                                             .type = LONG_PACKET,
-                                             .long_packet = {0, 1}};
-          char data[MAX_CAN_DATA_SIZE - sizeof(APIControlPacket)];
-        } long_packet;
-        long_packet.control_packet.long_packet.total_length = length;
-        int32_t length_remaining = length;
-        const char * str = string;
-        do {
-          uint16_t transfer_size = std::min((uint16_t) (MAX_CAN_DATA_SIZE - sizeof(APIControlPacket)), (uint16_t) length_remaining);
-          std::memcpy(long_packet.data, str, transfer_size);
-          int retval = co_await can_.write_async(sched, can_id.word, (uint8_t * const) &long_packet, 
-                  transfer_size + sizeof(APIControlPacket), 1);
-          if (retval < 0) {
-            co_return false;
-          }
-          str += transfer_size;
-          long_packet.control_packet.long_packet.packet_number++;
-          length_remaining -= transfer_size;
-        } while (length_remaining > 0);
-      } else {
-        char buf[64];
-        std::memcpy(buf, string, length);
-        if (length > 1) {
-          buf[length++] = 0;
-        }
-        int retval = co_await can_.write_async(sched, can_id.word, (uint8_t*) buf, length, 1);
-        co_return retval >= 0;
-      }
-      co_return true;
+    Task<int> write_async(Scheduler& sched, uint8_t* data, uint16_t len) {
+        CANID can_id = {.address = address_, .message_id = OBOT_ASCII_RESPONSE};
+        co_return co_await can_.write_async(sched, can_id.word, data, len, 1);
     }
 
     void set_send_decimation(uint16_t decimation) {
