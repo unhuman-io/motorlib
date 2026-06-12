@@ -4,6 +4,26 @@
 #include <sys/types.h>
 #include <cstring>
 
+void system_run() {
+    System::run();
+}
+
+void main_loop_interrupt() {
+    System::main_loop_interrupt();
+}
+
+void fast_loop_interrupt() {
+    System::fast_loop_interrupt();
+}
+
+void system_log(std::string s) {
+    System::log(s);
+}
+
+void system_loop_interrupt() {
+    System::system_loop();
+}
+
 #ifndef CUSTOM_MAIN_MAINTENANCE_ASYNC
 [[gnu::weak]] Task<void> main_maintenance_async(CycleScheduler& sched) {
     while (1) {

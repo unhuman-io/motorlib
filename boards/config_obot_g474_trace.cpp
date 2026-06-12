@@ -312,14 +312,17 @@ namespace config {
 };
 
 #if COMMS == COMMS_USB
+template<>
 Communication System::communication_ = {config::usb};
 #endif
 
 #if (COMMS == COMMS_SPI)
+template<>
 Communication System::communication_(config::spi, config::spi_protocol);
 #endif
 
 #if (COMMS == COMMS_UART)
+template<>
 Communication System::communication_(config::uart, config::uart_protocol);
 extern "C" void PendSV_Handler(void) {
   SET_SCOPE_PIN(C,2);
@@ -562,26 +565,6 @@ void finish_sleep() {
     NVIC_SetPriority(USB_LP_IRQn, NVIC_EncodePriority(NVIC_GetPriorityGrouping(), 2, 0));
     NVIC_EnableIRQ(TIM1_UP_TIM16_IRQn);
     NVIC_EnableIRQ(ADC5_IRQn);
-}
-
-void system_run() {
-    System::run();
-}
-
-void main_loop_interrupt() {
-    System::main_loop_interrupt();
-}
-
-void fast_loop_interrupt() {
-    System::fast_loop_interrupt();
-}
-
-void system_log(std::string s) {
-    System::log(s);
-}
-
-void system_loop_interrupt() {
-    System::system_loop();
 }
 
 #include "../../motorlib/system.cpp"

@@ -145,6 +145,7 @@ extern "C" void board_init() {
 #endif
 }
 
+using System = SystemBase<Actuator<FastLoop<config::pwm_frequency>, MainLoop<config::main_loop_frequency, FastLoop<config::pwm_frequency>>>>;
 
 namespace config {
     static_assert(((double) CPU_FREQUENCY_HZ * 8 / 2) / pwm_frequency < 65535);    // check pwm frequency
@@ -308,7 +309,7 @@ namespace config {
 
     HRPWM motor_pwm = {pwm_frequency, *HRTIM1, 3, 5, 4, false, 50, 1000, 1000};
     USB1 usb;
-    FastLoop fast_loop = {(int32_t) pwm_frequency, motor_pwm, motor_encoder, param->fast_loop_param, *calibration, &I_A_DR, &I_B_DR, &I_C_DR, &V_BUS_DR};
+    FastLoop<pwm_frequency> fast_loop = {motor_pwm, motor_encoder, param->fast_loop_param, *calibration, &I_A_DR, &I_B_DR, &I_C_DR, &V_BUS_DR};
 
 
     LED led = {const_cast<uint16_t*>(reinterpret_cast<volatile uint16_t *>(get_board_pins(board_rev).led_tim_r)), 
@@ -337,18 +338,21 @@ namespace config {
 #ifndef ADMITTANCE_CONTROLLER_OVERRIDE
     AdmittanceController admittance_controller = {1.0/main_loop_frequency};
 #endif
-    MainLoop main_loop = {main_loop_frequency, fast_loop, position_controller, torque_controller, impedance_controller, velocity_controller, state_controller, joint_position_controller, admittance_controller, System::communication_, led, output_encoder, torque_sensor, drv, param->main_loop_param, *calibration};
+    MainLoop<config::main_loop_frequency, decltype(fast_loop)>  main_loop = {fast_loop, position_controller, torque_controller, impedance_controller, velocity_controller, state_controller, joint_position_controller, admittance_controller, System::communication_, led, output_encoder, torque_sensor, drv, param->main_loop_param, *calibration};
 };
 
 #if COMMS == COMMS_USB
+template<>
 Communication System::communication_ = {config::usb};
 #endif
 
 #if (COMMS == COMMS_SPI)
+template<>
 Communication System::communication_(config::spi, config::spi_protocol);
 #endif
 
 #if (COMMS == COMMS_UART)
+template<>
 Communication System::communication_(config::uart, config::uart_protocol);
 extern "C" void PendSV_Handler(void) {
   SET_SCOPE_PIN(C,2);
@@ -358,12 +362,14 @@ extern "C" void PendSV_Handler(void) {
 #endif
 
 #if (COMMS == COMMS_CAN)
+template<>
 Communication System::communication_(config::can, param->can_id);
 #endif
 
 #if (COMMS == COMMS_CAN_USB)
 CANCommunication<CAN> can_communication(config::can, param->can_id);
 USBCommunication usb_communication(config::usb);
+template<>
 Communication System::communication_(can_communication, usb_communication);
 #endif
 
@@ -371,7 +377,8 @@ void usb_interrupt() {
     config::usb.interrupt();
 }
 
-Actuator System::actuator_ = {config::fast_loop, config::main_loop, param->startup_param, *calibration};
+template<>
+decltype(System::actuator_) System::actuator_ = {config::fast_loop, config::main_loop, param->startup_param, *calibration};
 
 float v3v3 = 3.3;
 
