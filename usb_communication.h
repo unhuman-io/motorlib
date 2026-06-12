@@ -72,7 +72,7 @@ class USBCommunication : public CommunicationBase {
     }
  private:
     USB1 &usb_;
-    friend class System;
+    template <typename T> friend class SystemBase;
 };
 
 #endif  // UNHUMAN_MOTORLIB_USB_COMMUNICATION_H_

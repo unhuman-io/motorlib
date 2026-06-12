@@ -19,8 +19,8 @@ Task<void> main_maintenance_async(CycleScheduler& sched);
 #define TOGGLE_SCOPE_PIN(X,x)
 #endif
 
-
-class System {
+template<typename ActuatorType>
+class SystemBase {
  public:
     static void run() {
         {
@@ -306,8 +306,8 @@ class System {
         api.add_api_variable("msoftlimit_min", new APIFloat(&actuator_.main_loop_.encoder_limits_.motor_controlled_min));
         api.add_api_variable("is_sbank", new const APICallbackUint8([]()->uint8_t{ return (*((uint8_t *) 0x1fff7802) & 0x40) == 0; }));
         api.add_api_variable("invalid_command_leak_rate_s", new APICallbackFloat([]{
-            return actuator_.main_loop_.invalid_command_fault_.get_leak_period_s(actuator_.main_loop_.dt_); },
-            [](float f){ actuator_.main_loop_.invalid_command_fault_.set_leak_period(f, actuator_.main_loop_.dt_); }));
+            return actuator_.main_loop_.invalid_command_fault_.get_leak_period_s(actuator_.main_loop_.dt); },
+            [](float f){ actuator_.main_loop_.invalid_command_fault_.set_leak_period(f, actuator_.main_loop_.dt); }));
         api.add_api_variable("invalid_command_limit", new APIUint32(&actuator_.main_loop_.invalid_command_limit_));
         api.add_api_variable("invalid_command_count", new APIUint32(&actuator_.main_loop_.invalid_command_fault_.count_));
         api.add_api_variable("fault", new const APICallbackHex<uint32_t>([](){ return actuator_.main_loop_.status_.error.all; }));
@@ -333,10 +333,10 @@ class System {
     template <typename Comms>
     static Task<void> process_communication_async(Comms &comms, CycleScheduler& sched) {
         while (1) {
-            char *s = System::get_string();
+            char *s = get_string();
             while (s[0] == 0) {
                 co_await sched.yield();
-                s = System::get_string();
+                s = get_string();
             }
 
             auto response = api.parse_string(s);
@@ -396,9 +396,9 @@ class System {
     }
 
     static Communication communication_;
-    static Actuator actuator_;
-    static ParameterAPI api;
-    static uint32_t count_;
+    static ActuatorType actuator_;
+    inline static ParameterAPI api {};
+    inline static uint32_t count_ = 0;
     inline static uint32_t api_timeout_us_ {10'000};
     inline static uint32_t current_api_timeout_us_ = api_timeout_us_;
     inline static AllProcessedStats interrupt_stats_ {};

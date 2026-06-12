@@ -151,7 +151,7 @@ class UARTCommunication : public CommunicationBase {
  private:
     Uart &uart_;
     UARTCommunicationProtocol &protocol_;
-    friend class System;
+    template <typename T> friend class SystemBase;
     std::atomic_bool new_obot_cmd_;
     ReceiveData obot_cmd_;
     SendData obot_status_;

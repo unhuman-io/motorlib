@@ -122,5 +122,5 @@ class SPIDMA_USART : public SPIDMABase<SPIDMA_USART> {
     uint32_t length_;
     uint32_t time_start_;
 
-    friend class System;
+    template <typename T> friend class SystemBase;
 };

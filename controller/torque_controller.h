@@ -39,7 +39,7 @@ class TorqueController : public Controller {
  private:
     PIDController controller_;
 
-    friend class System;
+    template <typename T> friend class SystemBase;
 };
 
 #endif  // UNHUMAN_MOTORLIB_CONTROLLER_TORQUE_CONTROLLER_H_

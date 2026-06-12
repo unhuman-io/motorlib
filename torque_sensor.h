@@ -20,7 +20,7 @@ class TorqueSensorBase : public SensorBase {
  //protected:
     float gain_ = 0, k_temp_ = 0;
     float torque_ = 0;
- //   friend class System;
+ //   template <typename T> friend class SystemBase;
 };
 
 #endif  // UNHUMAN_MOTORLIB_TORQUE_SENSOR_H_

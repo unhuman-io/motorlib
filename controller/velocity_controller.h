@@ -39,7 +39,7 @@ class VelocityController : public Controller {
     FirstOrderLowPassFilter velocity_filter_;
     float acceleration_limit_ = INFINITY;
 
-    friend class System;
+    template <typename T> friend class SystemBase;
 };
 
 #endif  // UNHUMAN_MOTORLIB_CONTROLLER_VELOCITY_CONTROLLER_H_

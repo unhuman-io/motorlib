@@ -9,6 +9,7 @@ extern "C" {
 void system_init();
 }
 
+template<typename FastLoop, typename MainLoop>
 class Actuator {
  public:
     Actuator(FastLoop &fast_loop, MainLoop &main_loop, const volatile StartupParam &startup_param, const volatile Calibration &calibration) : fast_loop_(fast_loop), main_loop_(main_loop), startup_param_(startup_param), calibration_(calibration) {
@@ -163,7 +164,7 @@ private:
     const volatile Calibration &calibration_;
     float startup_motor_bias_;
 
-    friend class System;
+    template <typename T> friend class SystemBase;
     friend void system_init();
     friend void config_init();
 };

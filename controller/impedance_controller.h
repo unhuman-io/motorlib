@@ -58,7 +58,7 @@ class ImpedanceController : public Controller {
     float kp_default_ = 0;
     float kd_default_ = 0;
 
-    friend class System;
+    template <typename T> friend class SystemBase;
 };
 
 #endif  // UNHUMAN_MOTORLIB_CONTROLLER_IMPEDANCE_CONTROLLER_H_

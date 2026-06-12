@@ -14,9 +14,11 @@
 
 extern "C" void system_init();
 
+template<uint32_t frequency_hz>
 class FastLoop {
  public:
-    FastLoop(int32_t frequency_hz, PWM &pwm, MotorEncoder &encoder, const FastLoopParam &param, const Calibration &calibration,
+    static constexpr float dt = 1.0/frequency_hz;
+    FastLoop(PWM &pwm, MotorEncoder &encoder, const FastLoopParam &param, const Calibration &calibration,
       volatile uint32_t *const i_a_dr, volatile uint32_t *const i_b_dr, volatile uint32_t *const i_c_dr, 
       volatile uint32_t *const v_bus_dr) 
       : motor_encoder_index_electrical_offset_pos_(calibration.motor_encoder_index_electrical_offset_pos), pwm_(pwm), encoder_(encoder), i_a_dr_(i_a_dr), i_b_dr_(i_b_dr), i_c_dr_(i_c_dr), v_bus_dr_(v_bus_dr),
@@ -71,18 +73,19 @@ class FastLoop {
       float iq_ff = param_.cogging.gain * cogging_correction_table_.table_interp(motor_x);
 
       if (mode_ == CURRENT_TUNING_MODE) {
-        TrajectoryGenerator::TrajectoryValue t = tuning_trajectory_generator_.step(dt_);
+        auto t = tuning_trajectory_generator_.step();
         iq_des = t.value + tuning_bias_;
       } else if (mode_ == VOLTAGE_TUNING_MODE) {
-        TrajectoryGenerator::TrajectoryValue t = tuning_trajectory_generator_.step(dt_);
+        auto t = tuning_trajectory_generator_.step();
         set_vq_des(t.value + tuning_bias_);
+        DAC1->DHR12R1 = (.49*t.value/tuning_trajectory_generator_.get_amplitude() + .5)*4096;
       }
 
       if (beep_) {
         if ((int32_t) (get_clock()-beep_end_) > 0) {
           beep_ = false;
         } else {
-          phi_beep_ += 2 * (float) M_PI * fabsf(param_.beep_frequency) * dt_;
+          phi_beep_ += 2 * (float) M_PI * fabsf(param_.beep_frequency) * dt;
           if (phi_beep_ > 2 * (float) M_PI) {
             phi_beep_ -= 2 * (float) M_PI;
           }
@@ -98,7 +101,7 @@ class FastLoop {
       if (mode_ == STEPPER_TUNING_MODE) {
         foc_command_.measured.motor_encoder = stepper_position_;
         motor_position_filtered_ = stepper_position_;
-        stepper_position_ += stepper_velocity_ * dt_;
+        stepper_position_ += stepper_velocity_ * dt;
         stepper_position_ = wrap1(stepper_position_, float{2*M_PI});
       }
       
@@ -106,9 +109,6 @@ class FastLoop {
 
       // output pwm
       pwm_.set_voltage(&foc_status->command.v_a);
-
-      dt_ = (timestamp_ - last_timestamp_)*(float) (1.0f/CPU_FREQUENCY_HZ);
-      last_timestamp_ = timestamp_;
 
       if (zero_current_sensors_) {
         if ((int32_t) (get_clock()-zero_current_sensors_end_) > 0) {
@@ -261,7 +261,7 @@ class FastLoop {
       s.foc_command = foc_command_;
       s.power = s.foc_status.command.v_d * s.foc_status.measured.i_d + 
                 s.foc_status.command.v_q * s.foc_status.measured.i_q;
-      int32_t energy =  s.power * dt_ * 1e6;
+      int32_t energy =  s.power * dt * 1e6;
       energy_uJ_ += (uint32_t) energy;
       s.energy_uJ = energy_uJ_;
       foc_->get_status(&s.foc_status);
@@ -378,9 +378,7 @@ class FastLoop {
     mcu_time timestamp_;
    MotorEncoder &encoder_;
    float reserved_ = 0;
-   mcu_time last_timestamp_ = 0;
-   float dt_ = 0;
-   TrajectoryGenerator tuning_trajectory_generator_;
+   TrajectoryGenerator<dt> tuning_trajectory_generator_;
    float tuning_bias_ = 0;
    float stepper_position_ = 0;
    float stepper_velocity_ = 0;
@@ -406,7 +404,7 @@ class FastLoop {
    CStack<FastLoopStatus,100> status_;
    CStack<FastLoopStatus,100> status_log_; // 24*4*100*2 = 19200 bytes
 
-   friend class System;
+   template <typename T> friend class SystemBase;
    friend void system_init();
 };
 

@@ -56,7 +56,7 @@ class ADS1235_2 : public ADS1235 {
     uint8_t error_count_ = 0;
     float last_torque1_ = 0;
 
-    friend class System;
+    template <typename T> friend class SystemBase;
     friend void system_init();
     friend void config_init();
 };

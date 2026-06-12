@@ -125,7 +125,7 @@ class SPIDMA : public SPIDMABase<SPIDMA> {
     uint32_t length_;
     uint32_t time_start_;
 
-    friend class System;
+    template <typename T> friend class SystemBase;
 };
 
 #endif  // UNHUMAN_MOTORLIB_PERIPHERAL_STM32G4_SPI_DMA_H_

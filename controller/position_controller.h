@@ -57,7 +57,7 @@ class PositionController : public Controller {
     uint32_t tracking_timeout_count_;
     float tracking_tolerance_ = INFINITY;
 
-    friend class System;
+    template <typename T> friend class SystemBase;
     friend void config_init();
 };
 

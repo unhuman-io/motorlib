@@ -69,7 +69,7 @@ class I2CTorque final : public TorqueSensorBase {
     uint8_t decimation_;
     uint32_t timeout_us_ = 5;
 
-    friend class System;
+    template <typename T> friend class SystemBase;
     friend void system_init();
     friend void config_init();
 };
