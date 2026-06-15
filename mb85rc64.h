@@ -249,8 +249,8 @@ class StandardMB85RC64 {
     float new_output_position = output_position_hyst_.step(status.output_position);
 
     accumulated_output_position_ += fabsf(new_output_position - last_output_position_);
-    if (accumulated_output_position_ > 2 * M_PI) {
-      accumulated_output_position_ -= 2 * M_PI;
+    if (accumulated_output_position_ > 2 * std::numbers::pi_v<float>) {
+      accumulated_output_position_ -= 2 * std::numbers::pi_v<float>;
       fram1_.revolution_count++;
     }
     last_output_position_ = new_output_position;

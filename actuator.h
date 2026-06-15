@@ -75,20 +75,20 @@ class Actuator {
       if (startup_param_.output_encoder_rollover > 0) {
          if (status.output_position > startup_param_.output_encoder_rollover) {
             logger.log_printf("Output pos (%2.3f) > (%2.3f), sub 2pi", (double)status.output_position, (double)startup_param_.output_encoder_rollover);
-            output_wrap_adjustment = -2*M_PI;
-         } else if (status.output_position < (startup_param_.output_encoder_rollover-2*M_PI)) {
-            logger.log_printf("Output pos (%2.3f) < (%2.3f), add 2pi", (double)status.output_position, (double)(startup_param_.output_encoder_rollover-2*M_PI));
-            output_wrap_adjustment = 2*M_PI;
+            output_wrap_adjustment = -2*std::numbers::pi_v<float>;
+         } else if (status.output_position < (startup_param_.output_encoder_rollover-2*std::numbers::pi_v<float>)) {
+            logger.log_printf("Output pos (%2.3f) < (%2.3f), add 2pi", (double)status.output_position, (double)(startup_param_.output_encoder_rollover-2*std::numbers::pi_v<float>));
+            output_wrap_adjustment = 2*std::numbers::pi_v<float>;
          } else {
             logger.log_printf("Output pos (%2.3f), rollover (%f), no adjust", (double)status.output_position, (double)startup_param_.output_encoder_rollover);
          }
       } else {
          if (status.output_position < startup_param_.output_encoder_rollover) {
             logger.log_printf("Output pos (%2.3f) < (%2.3f), add 2pi", (double)status.output_position, (double)startup_param_.output_encoder_rollover);
-            output_wrap_adjustment = 2*M_PI;
-         } else if (status.output_position > (startup_param_.output_encoder_rollover+2*M_PI)) {
-            logger.log_printf("Output pos (%2.3f) > (%2.3f), sub 2pi", (double)status.output_position, (double)(startup_param_.output_encoder_rollover+2*M_PI));
-            output_wrap_adjustment = -2*M_PI;
+            output_wrap_adjustment = 2*std::numbers::pi_v<float>;
+         } else if (status.output_position > (startup_param_.output_encoder_rollover+2*std::numbers::pi_v<float>)) {
+            logger.log_printf("Output pos (%2.3f) > (%2.3f), sub 2pi", (double)status.output_position, (double)(startup_param_.output_encoder_rollover+2*std::numbers::pi_v<float>));
+            output_wrap_adjustment = -2*std::numbers::pi_v<float>;
          } else {
             logger.log_printf("Output pos (%2.3f), rollover (%f), no adjust", (double)status.output_position, (double)startup_param_.output_encoder_rollover);
          }
@@ -115,7 +115,7 @@ class Actuator {
             break;
          }
          case StartupParam::ENCODER_BIAS_FROM_OUTPUT_WITH_MOTOR_CORRECTION: {
-            float round_by = 2*M_PI*(startup_param_.num_encoder_poles == 0 ? 1 : startup_param_.num_encoder_poles);
+            float round_by = 2*std::numbers::pi_v<float>*(startup_param_.num_encoder_poles == 0 ? 1 : startup_param_.num_encoder_poles);
             float motor_bias_from_output = output_position_to_motor_position(status.output_position) 
               - (status.fast_loop.motor_position.position);
             float motor_bias_rounded = roundf(motor_bias_from_output/round_by)*(round_by) + startup_motor_bias_;
@@ -130,7 +130,7 @@ class Actuator {
          }
          case StartupParam::ENCODER_BIAS_FROM_OUTPUT_WITH_TORQUE_AND_MOTOR_CORRECTION: {
             // todo fix as above
-            float round_by = 2*M_PI*(startup_param_.num_encoder_poles == 0 ? 1 : startup_param_.num_encoder_poles);
+            float round_by = 2*std::numbers::pi_v<float>*(startup_param_.num_encoder_poles == 0 ? 1 : startup_param_.num_encoder_poles);
             float motor_bias_from_output = output_position_to_motor_position(status.output_position - status.torque*startup_param_.transmission_stiffness) 
               - (status.fast_loop.motor_position.position + startup_motor_bias_);
             float motor_bias_rounded = roundf(motor_bias_from_output*round_by)/(round_by);

@@ -323,7 +323,7 @@ class ICPZ2DMA : public EncoderBase {
     ICPZ::Encoder24 value_ = {}, last_value_ = {}, value1_ = {}, value2_ = {}, value3_ = {};
     int32_t diff_ = 0;
     uint32_t disagreement_error_ = 0;
-    int32_t disagreement_tolerance_ = .1/2/M_PI*powf(2,24);
+    int32_t disagreement_tolerance_ = .1/2/std::numbers::pi_v<float>*powf(2,24);
     uint32_t total_error_count_ = 0;
     uint32_t total_crc_error_count_ = 0;
     ICPZ::DiagBits last_diag_bits_[2] = {};

@@ -4,13 +4,11 @@
 #include "messages.h"
 #undef _DEFAULT_SOURCE
 #include <cmath>
-#ifndef M_PI
-#define M_PI 3.141592653f
-#endif
 #include "sincos.h"
 #include <algorithm>
 #include <vector>
 #include "st_device.h"
+#include <numbers>
 
 inline float fabsf2(float f) {
     return f >= 0 ? f : -f;
@@ -147,11 +145,11 @@ public:
         if (frequency_hz == 0) {
             alpha_ = 1;
         } else { 
-            alpha_ = 2*M_PI*dt_*frequency_hz/(2*M_PI*dt_*frequency_hz + 1);
+            alpha_ = 2*std::numbers::pi_v<float>*dt_*frequency_hz/(2*std::numbers::pi_v<float>*dt_*frequency_hz + 1);
         }
     }
     float get_frequency() const {
-        return alpha_/(2*M_PI*dt_*(1-alpha_));
+        return alpha_/(2*std::numbers::pi_v<float>*dt_*(1-alpha_));
     }
     void set_dt(float dt) {
         float frequency = get_frequency();
@@ -447,7 +445,7 @@ class BandPassFilter {
         float f0 = std::sqrt(frequency_start * frequency_stop);
         float Q  = f0 / (frequency_stop - frequency_start);
 
-        float w0 = 2.0f * static_cast<float>(M_PI) * f0 * dt;
+        float w0 = 2.0f * static_cast<float>(std::numbers::pi_v<float>) * f0 * dt;
         float sin_w0 = std::sin(w0);
         float cos_w0 = std::cos(w0);
         float alpha = sin_w0 / (2.0f * Q);
@@ -489,7 +487,7 @@ private:
 public:
     void set_cutoff(float cutoff_hz) {
         // Pre-warp the frequency for the Bilinear Transform
-        float w0 = 2.0f * static_cast<float>(M_PI) * cutoff_hz * dt;
+        float w0 = 2.0f * static_cast<float>(std::numbers::pi_v<float>) * cutoff_hz * dt;
         float sin_w0 = std::sin(w0);
         float cos_w0 = std::cos(w0);
         
@@ -499,7 +497,7 @@ public:
         int num_biquads = order / 2;
         for (int k = 1; k <= num_biquads; ++k) {
             // Calculate the specific Q for this stage in the Butterworth circle
-            float theta = static_cast<float>(M_PI) * (2.0f * k - 1.0f) / (2.0f * order);
+            float theta = static_cast<float>(std::numbers::pi_v<float>) * (2.0f * k - 1.0f) / (2.0f * order);
             float Q = 1.0f / (2.0f * std::sin(theta));
             float alpha = sin_w0 / (2.0f * Q);
 
@@ -557,7 +555,7 @@ private:
 
 public:
     void set_cutoff(float cutoff_hz) {
-        float w0 = 2.0f * static_cast<float>(M_PI) * cutoff_hz * dt;
+        float w0 = 2.0f * static_cast<float>(std::numbers::pi_v<float>) * cutoff_hz * dt;
         float sin_w0 = std::sin(w0);
         float cos_w0 = std::cos(w0);
         
@@ -566,7 +564,7 @@ public:
 
         // 1. 2nd-order complex pole sections
         for (int k = 1; k <= num_biquads; ++k) {
-            float theta = static_cast<float>(M_PI) * (2.0f * k - 1.0f) / (2.0f * order);
+            float theta = static_cast<float>(std::numbers::pi_v<float>) * (2.0f * k - 1.0f) / (2.0f * order);
             float Q = 1.0f / (2.0f * std::sin(theta));
             float alpha = sin_w0 / (2.0f * Q);
 
@@ -637,7 +635,7 @@ public:
         float f0 = std::sqrt(frequency_start * frequency_stop);
 
         // 3. Pre-calculate the trig values for the magnitude equation
-        float w0 = 2.0f * static_cast<float>(M_PI) * f0 * dt;
+        float w0 = 2.0f * static_cast<float>(std::numbers::pi_v<float>) * f0 * dt;
         float cos_w = std::cos(w0);
         float cos_2w = 2.0f * cos_w * cos_w - 1.0f; // Double angle identity
 
@@ -690,7 +688,7 @@ class TrajectoryGenerator {
 
     TrajectoryValue &step() {
         if (mode_ == TuningMode::RANDOM) {
-            float raw = amplitude_ * (2 * (float) fast_rng_.next() * (1.0 / static_cast<float>(0xFFFF'FFFF)) - 1);
+            float raw = amplitude_ * (2.f * (float) fast_rng_.next() * (1.f / static_cast<float>(0xFFFF'FFFF)) - 1.f);
             float raw_scaled = raw * random_scale_;
             
             float value_last = trajectory_value_.value;
@@ -705,9 +703,9 @@ class TrajectoryGenerator {
            frequency_ = chirp_frequency_.add(chirp_rate_ * dt);
         }
         // KahanSum allows for and summing of dt allows for low frequencies without losing resolution
-        phi_.add(2 * (float) M_PI * fabsf(frequency_) * dt);
-        if (phi_.value() > 2 * (float) M_PI) {  
-            phi_.add(-2 * (float) M_PI);
+        phi_.add(2 * (float) std::numbers::pi_v<float> * fabsf(frequency_) * dt);
+        if (phi_.value() > 2 * (float) std::numbers::pi_v<float>) {  
+            phi_.add(-2 * (float) std::numbers::pi_v<float>);
         }
         Sincos sincos;
         sincos = sincos1(phi_.value());
@@ -715,20 +713,22 @@ class TrajectoryGenerator {
             case TuningMode::SINE:
             case TuningMode::CHIRP:
                 trajectory_value_.value = amplitude_ * sincos.sin;
-                trajectory_value_.value_dot = 2 * (float) M_PI * frequency_ * amplitude_ * sincos.cos;
+                trajectory_value_.value_dot = 2.f * (float) std::numbers::pi_v<float> * frequency_ * amplitude_ * sincos.cos;
                 break;
             case TuningMode::SQUARE:
                 trajectory_value_.value = amplitude_ * fsignf(sincos.sin);
                 trajectory_value_.value_dot = 0;
                 break;
             case TuningMode::TRIANGLE:
-                if (phi_.value() < M_PI) {
-                    trajectory_value_.value = amplitude_ * (2 * phi_.value() * (1/M_PI) - 1);
+                if (phi_.value() < std::numbers::pi_v<float>) {
+                    trajectory_value_.value = amplitude_ * (2.f * phi_.value() * (1.f/std::numbers::pi_v<float>) - 1.f);
                     trajectory_value_.value_dot = 4 * amplitude_ * frequency_;
                 } else {
-                    trajectory_value_.value = amplitude_ * (3 - 2 * phi_.value() * (1/M_PI));
+                    trajectory_value_.value = amplitude_ * (3.f - 2.f * phi_.value() * (1.f/std::numbers::pi_v<float>));
                     trajectory_value_.value_dot = -4 * amplitude_ * frequency_;
                 }
+                break;
+            default:
                 break;
         }
         return trajectory_value_;
@@ -813,10 +813,10 @@ class DFTResponse {
         if (desired_.count_ == 1) {
             magnitude_ = measured_.magnitude_last_ / desired_.magnitude_last_;
             phase_ = measured_.phase_last_ - desired_.phase_last_;
-            if (phase_ > M_PI) {
-                phase_ -= 2*M_PI;
-            } else if (phase_ < -M_PI) {
-                phase_ += 2*M_PI;
+            if (phase_ > std::numbers::pi_v<float>) {
+                phase_ -= 2*std::numbers::pi_v<float>;
+            } else if (phase_ < -std::numbers::pi_v<float>) {
+                phase_ += 2*std::numbers::pi_v<float>;
             }
         }
     }

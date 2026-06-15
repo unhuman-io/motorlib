@@ -3,7 +3,7 @@
 
 #include "stm32g474xx.h"
 #ifndef CPU_FREQUENCY_HZ
-#define CPU_FREQUENCY_HZ    170e6
+#define CPU_FREQUENCY_HZ    ((float) 170e6)
 #endif
 
 #define FLASH_OTP_BASE      0x1FFF7000

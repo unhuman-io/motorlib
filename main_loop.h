@@ -143,7 +143,7 @@ class MainLoop {
 
       int32_t output_encoder_raw = output_encoder_.read();
       float output_encoder_x = (output_encoder_raw % (int32_t) output_encoder_cpr_) / (float) output_encoder_cpr_;
-      float output_encoder_rad = output_encoder_raw*2.0*(float) M_PI/output_encoder_cpr_;
+      float output_encoder_rad = output_encoder_raw*2.f*(float) std::numbers::pi_v<float>/output_encoder_cpr_;
       status_.output_position = output_encoder_dir_ * output_encoder_rad + output_encoder_bias_ 
         + output_encoder_correction_table_.table_interp(output_encoder_x);
 
@@ -154,7 +154,7 @@ class MainLoop {
       //if (torque_corrected != status_.torque) {
         torque_corrected += param_.torque_correction*status_.fast_loop.foc_status.measured.i_q;
       //}
-      float torque_calibrated = torque_corrected + calibration_.torque_sensor.table_gain*torque_correction_table_.table_interp(output_encoder_x+output_encoder_bias_*(1.0/(2*M_PI)));
+      float torque_calibrated = torque_corrected + calibration_.torque_sensor.table_gain*torque_correction_table_.table_interp(output_encoder_x+output_encoder_bias_*(1.f/(2.f*std::numbers::pi_v<float>)));
       status_.torque = torque_calibrated;
 
       if (!position_limits_disable_) {
@@ -425,7 +425,7 @@ class MainLoop {
       }
 
       uint32_t current_energy = status_.fast_loop.energy_uJ;
-      status_.power = (int32_t) (current_energy - last_energy_uJ_)*1e-6/dt;
+      status_.power = (int32_t) (current_energy - last_energy_uJ_)*(float)1e-6/dt;
       last_energy_uJ_ = current_energy;
 
       SendData send_data;

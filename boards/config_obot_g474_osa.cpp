@@ -64,11 +64,13 @@ namespace config {
     StateController state_controller = {(float) (1.0/main_loop_frequency)};
     JointPositionController joint_position_controller(1.0/main_loop_frequency);
     AdmittanceController admittance_controller = {1.0/main_loop_frequency};
+};
+template<>
+Communication System::communication_ = {config::usb};
+namespace config {
     MainLoop<config::main_loop_frequency, decltype(fast_loop)> main_loop = {fast_loop, position_controller, torque_controller, impedance_controller, velocity_controller, state_controller, joint_position_controller, admittance_controller, System::communication_, led, output_encoder, torque_sensor, driver, param->main_loop_param, *calibration};
 };
 
-template<>
-Communication System::communication_ = {config::usb};
 void usb_interrupt() {
     config::usb.interrupt();
 }

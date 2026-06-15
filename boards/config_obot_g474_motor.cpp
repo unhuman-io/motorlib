@@ -338,9 +338,7 @@ namespace config {
 #ifndef ADMITTANCE_CONTROLLER_OVERRIDE
     AdmittanceController admittance_controller = {1.0/main_loop_frequency};
 #endif
-    MainLoop<config::main_loop_frequency, decltype(fast_loop)>  main_loop = {fast_loop, position_controller, torque_controller, impedance_controller, velocity_controller, state_controller, joint_position_controller, admittance_controller, System::communication_, led, output_encoder, torque_sensor, drv, param->main_loop_param, *calibration};
 };
-
 #if COMMS == COMMS_USB
 template<>
 Communication System::communication_ = {config::usb};
@@ -372,6 +370,9 @@ USBCommunication usb_communication(config::usb);
 template<>
 Communication System::communication_(can_communication, usb_communication);
 #endif
+namespace config {
+    MainLoop<config::main_loop_frequency, decltype(fast_loop)>  main_loop = {fast_loop, position_controller, torque_controller, impedance_controller, velocity_controller, state_controller, joint_position_controller, admittance_controller, System::communication_, led, output_encoder, torque_sensor, drv, param->main_loop_param, *calibration};
+};
 
 void usb_interrupt() {
     config::usb.interrupt();
@@ -485,9 +486,9 @@ void system_init() {
         System::api.add_api_variable("ax", new const APICallbackFloat([]()->float{ return config::imu.data_.acc_x*8./powf(2,15); }));
         System::api.add_api_variable("ay", new const APICallbackFloat([]()->float{ return config::imu.data_.acc_y*8./powf(2,15); }));
         System::api.add_api_variable("az", new const APICallbackFloat([]()->float{ return config::imu.data_.acc_z*8./powf(2,15); }));
-        System::api.add_api_variable("gx", new const APICallbackFloat([]()->float{ return config::imu.data_.gyr_x*2000.*M_PI/180/powf(2,15); }));
-        System::api.add_api_variable("gy", new const APICallbackFloat([]()->float{ return config::imu.data_.gyr_y*2000.*M_PI/180/powf(2,15); }));
-        System::api.add_api_variable("gz", new const APICallbackFloat([]()->float{ return config::imu.data_.gyr_z*2000.*M_PI/180/powf(2,15); }));
+        System::api.add_api_variable("gx", new const APICallbackFloat([]()->float{ return config::imu.data_.gyr_x*2000.*std::numbers::pi_v<float>/180/powf(2,15); }));
+        System::api.add_api_variable("gy", new const APICallbackFloat([]()->float{ return config::imu.data_.gyr_y*2000.*std::numbers::pi_v<float>/180/powf(2,15); }));
+        System::api.add_api_variable("gz", new const APICallbackFloat([]()->float{ return config::imu.data_.gyr_z*2000.*std::numbers::pi_v<float>/180/powf(2,15); }));
     }
 
     if (config::board_rev.has_5V_sense) {
