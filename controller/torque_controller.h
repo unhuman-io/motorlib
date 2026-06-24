@@ -14,9 +14,10 @@
     API_ADD_FILTER_WITH_API(api, t_output_filter, tc.controller_.output_filter_); \
     api.add_api_variable("tmax", new APIFloat(&tc.controller_.command_max_)); \
 
-class TorqueController : public Controller {
+template<float dt>
+class TorqueController {
  public:
-    TorqueController(float dt) : Controller(dt), controller_(dt) {}
+    TorqueController() : controller_(dt) {}
     void init(const MainLoopStatus &status) {
         controller_.init(status.torque);
     }
@@ -41,5 +42,7 @@ class TorqueController : public Controller {
 
     template <typename T> friend class SystemBase;
 };
+
+static_assert(IsController<TorqueController<.0001>>, "Torque controller fails to meet IsController interface requirement");
 
 #endif  // UNHUMAN_MOTORLIB_CONTROLLER_TORQUE_CONTROLLER_H_

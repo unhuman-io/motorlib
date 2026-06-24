@@ -44,7 +44,19 @@ extern "C" void board_init() {
     pin_config_obot_g474_motor_40();
 }
 
-using System = SystemBase<Actuator<FastLoop<config::pwm_frequency>, MainLoop<config::main_loop_frequency, FastLoop<config::pwm_frequency>>>>;
+struct MainLoopConfig {
+    static constexpr int32_t frequency_hz = config::main_loop_frequency;
+    using FastLoopType = FastLoop<config::pwm_frequency>;
+    template <float dt> using PositionControllerType = PositionController<dt>;
+    template <float dt> using TorqueControllerType = TorqueController<dt>;
+    template <float dt> using ImpedanceControllerType = ImpedanceController<dt>;
+    template <float dt> using VelocityControllerType = VelocityController<dt>;
+    template <float dt> using StateControllerType = StateController<dt>;
+    template <float dt> using JointPositionControllerType = JointPositionController<dt>;
+    template <float dt> using AdmittanceControllerType = AdmittanceController<dt>;
+};
+
+using System = SystemBase<Actuator<FastLoop<config::pwm_frequency>, MainLoop<MainLoopConfig>>>;
 
 namespace config {
     static_assert(((double) CPU_FREQUENCY_HZ * 8 / 2) / pwm_frequency < 65535);    // check pwm frequency
@@ -59,18 +71,11 @@ namespace config {
     LED led = {const_cast<uint16_t*>(reinterpret_cast<volatile uint16_t *>(&TIM_R)), 
                const_cast<uint16_t*>(reinterpret_cast<volatile uint16_t *>(&TIM_G)),
                const_cast<uint16_t*>(reinterpret_cast<volatile uint16_t *>(&TIM_B))};
-    PositionController position_controller = {(float) (1.0/main_loop_frequency)};
-    TorqueController torque_controller = {(float) (1.0/main_loop_frequency)};
-    ImpedanceController impedance_controller = {(float) (1.0/main_loop_frequency)};
-    VelocityController velocity_controller = {(float) (1.0/main_loop_frequency)};
-    StateController state_controller = {(float) (1.0/main_loop_frequency)};
-    JointPositionController joint_position_controller(1.0/main_loop_frequency);
-    AdmittanceController admittance_controller = {1.0/main_loop_frequency};
 };
 template<>
 Communication System::communication_ = {config::usb};
 namespace config {
-    MainLoop<config::main_loop_frequency, decltype(fast_loop)> main_loop(fast_loop, position_controller, torque_controller, impedance_controller, velocity_controller, state_controller, joint_position_controller, admittance_controller, System::communication_, led, output_encoder, torque_sensor, driver, param->main_loop_param, *calibration);
+    MainLoop<MainLoopConfig> main_loop(fast_loop, System::communication_, led, output_encoder, torque_sensor, driver, param->main_loop_param, *calibration);
 };
 
 void usb_interrupt() {

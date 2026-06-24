@@ -4,9 +4,10 @@
 #include "controller.h"
 #include "../control_fun.h"
 
-class PositionController : public Controller {
+template<float dt>
+class PositionController {
  public:
-    PositionController(float dt, uint32_t tracking_timeout_count=5000) : Controller(dt), controller_(dt), desired_filter_(dt),
+    PositionController(uint32_t tracking_timeout_count=5000) : controller_(dt), desired_filter_(dt),
         tracking_timeout_count_(tracking_timeout_count) {}
     void init(const MainLoopStatus &status) {
         controller_.init(status.motor_position);
@@ -60,5 +61,7 @@ class PositionController : public Controller {
     template <typename T> friend class SystemBase;
     friend void config_init();
 };
+
+static_assert(IsController<PositionController<.0001>>, "Position controller fails to meet IsController interface requirement");
 
 #endif  // UNHUMAN_MOTORLIB_CONTROLLER_POSITION_CONTROLLER_H_

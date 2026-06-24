@@ -5,9 +5,10 @@
 #include "velocity_controller.h"
 #include "../control_fun.h"
 
-class AdmittanceController : public Controller {
+template<float dt>
+class AdmittanceController {
  public:
-    AdmittanceController(float dt) : Controller(dt), velocity_controller_(dt), torque_controller_(dt) {}
+    AdmittanceController() : velocity_controller_(), torque_controller_(dt) {}
     void init(const MainLoopStatus &status) {
         torque_controller_.init(status.torque);
         velocity_controller_.init(status);
@@ -29,10 +30,12 @@ class AdmittanceController : public Controller {
         return false;
     }
  private:
-    VelocityController velocity_controller_;
+    VelocityController<dt> velocity_controller_;
     PIDController torque_controller_;
 
     template <typename T> friend class SystemBase;
 };
+
+static_assert(IsController<AdmittanceController<.0001>>, "Admittance controller fails to meet IsController interface requirement");
 
 #endif  // UNHUMAN_MOTORLIB_CONTROLLER_ADMITTANCE_CONTROLLER_H_

@@ -1,18 +1,13 @@
-#ifndef UNHUMAN_MOTORLIB_CONTROLLER_CONTROLLER_H_
-#define UNHUMAN_MOTORLIB_CONTROLLER_CONTROLLER_H_
+#pragma once
 
+#include <concepts>
 #include "../messages.h"
-typedef ReceiveData MotorCommand;
 
-class Controller {
- public:
-    Controller(float dt) : dt_(dt) {}
-    float step(const MotorCommand &command, const MainLoopStatus &status) { return 0; }
-    bool validate_command(const MotorCommand &command) const {
-      return false;
-    }
- protected:
-    float dt_;
+//typedef ReceiveData MotorCommand;
+
+template <typename T>
+concept IsController = requires(T controller, const MotorCommand& cmd, const MainLoopStatus& status) {
+  { controller.step(cmd, status) } -> std::same_as<float>;
+  { controller.validate_command(cmd) } -> std::same_as<bool>;
+  { controller.init(status) } -> std::same_as<void>;
 };
-
-#endif  // UNHUMAN_MOTORLIB_CONTROLLER_CONTROLLER_H_

@@ -286,30 +286,21 @@ namespace config {
                const_cast<uint16_t*>(reinterpret_cast<volatile uint16_t *>(get_board_pins(board_rev).led_tim_b)),
                config::main_loop_frequency};
     volatile uint32_t &V5V_DR = V_BUS_DR;
-#ifndef POSITION_CONTROLLER_OVERRIDE
-    PositionController position_controller = {(float) (1.0/main_loop_frequency)};
-#endif
-#ifndef TORQUE_CONTROLLER_OVERRIDE
-    TorqueController torque_controller = {(float) (1.0/main_loop_frequency)};
-#endif
-#ifndef IMPEDANCE_CONTROLLER_OVERRIDE
-    ImpedanceController impedance_controller = {(float) (1.0/main_loop_frequency)};
-#endif
-#ifndef VELOCITY_CONTROLLER_OVERRIDE
-    VelocityController velocity_controller = {(float) (1.0/main_loop_frequency)};
-#endif
-#ifndef STATE_CONTROLLER_OVERRIDE
-    StateController state_controller = {(float) (1.0/main_loop_frequency)};
-#endif
-#ifndef JOINT_POSITION_CONTROLLER_OVERRIDE
-    JointPositionController joint_position_controller(1.0/main_loop_frequency);
-#endif
-#ifndef ADMITTANCE_CONTROLLER_OVERRIDE
-    AdmittanceController admittance_controller = {1.0/main_loop_frequency};
-#endif
-
 };
-using System = SystemBase<Actuator<FastLoop<config::pwm_frequency>, MainLoop<config::main_loop_frequency, FastLoop<config::pwm_frequency>>>>;
+
+struct MainLoopConfig {
+    static constexpr int32_t frequency_hz = config::main_loop_frequency;
+    using FastLoopType = FastLoop<config::pwm_frequency>;
+    template <float dt> using PositionControllerType = PositionController<dt>;
+    template <float dt> using TorqueControllerType = TorqueController<dt>;
+    template <float dt> using ImpedanceControllerType = ImpedanceController<dt>;
+    template <float dt> using VelocityControllerType = VelocityController<dt>;
+    template <float dt> using StateControllerType = StateController<dt>;
+    template <float dt> using JointPositionControllerType = JointPositionController<dt>;
+    template <float dt> using AdmittanceControllerType = AdmittanceController<dt>;
+};
+
+using System = SystemBase<Actuator<FastLoop<config::pwm_frequency>, MainLoop<MainLoopConfig>>>;
 
 #if COMMS == COMMS_USB
 template<>
@@ -340,7 +331,7 @@ void usb_interrupt() {
     config::usb.interrupt();
 }
 namespace config {
-    MainLoop<config::main_loop_frequency, decltype(fast_loop)> main_loop = {fast_loop, position_controller, torque_controller, impedance_controller, velocity_controller, state_controller, joint_position_controller, admittance_controller, System::communication_, led, output_encoder, torque_sensor, drv, param->main_loop_param, *calibration};
+    MainLoop<MainLoopConfig> main_loop = {fast_loop, System::communication_, led, output_encoder, torque_sensor, drv, param->main_loop_param, *calibration};
 };
 
 template<>

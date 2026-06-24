@@ -4,9 +4,10 @@
 #include "controller.h"
 #include "../control_fun.h"
 
-class ImpedanceController : public Controller {
+template<float dt>
+class ImpedanceController {
  public:
-    ImpedanceController(float dt) : Controller(dt), impedance_controller_(dt), torque_controller_(dt) {}
+    ImpedanceController() : impedance_controller_(dt), torque_controller_(dt) {}
     void init(const MainLoopStatus &status) {
         impedance_controller_.init(status.motor_position);
         torque_controller_.init(status.torque);
@@ -25,7 +26,7 @@ class ImpedanceController : public Controller {
         }
         float torque_des = impedance_controller_.step(command.position_desired, command.velocity_desired, 0, status.motor_position) + \
                   command.torque_desired;
-        float torque_dot_des = (torque_des - last_torque_des_) / dt_ + command.torque_dot_desired;
+        float torque_dot_des = (torque_des - last_torque_des_) / dt + command.torque_dot_desired;
         last_torque_des_ = torque_des;
         float iq_des = torque_controller_.step(torque_des, torque_dot_des, status.torque) + \
                   command.current_desired;
@@ -60,5 +61,7 @@ class ImpedanceController : public Controller {
 
     template <typename T> friend class SystemBase;
 };
+
+static_assert(IsController<ImpedanceController<.0001>>, "Impedance controller fails to meet IsController interface requirement");
 
 #endif  // UNHUMAN_MOTORLIB_CONTROLLER_IMPEDANCE_CONTROLLER_H_

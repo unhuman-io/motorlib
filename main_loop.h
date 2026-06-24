@@ -32,18 +32,29 @@ void finish_sleep();
 using HardwareBrake = HardwareBrakeBase;
 #endif  // HARDWARE_BRAKE
 
-template<int32_t frequency_hz, typename FastLoop>
+template <typename C>
+concept IsMainLoopConfig = requires {
+    { C::frequency_hz } -> std::convertible_to<int32_t>;
+    typename C::FastLoopType;
+
+    requires IsController<typename C::template PositionControllerType<1.0f/C::frequency_hz>>;
+    requires IsController<typename C::template TorqueControllerType<1.0f/C::frequency_hz>>;
+    requires IsController<typename C::template ImpedanceControllerType<1.0f/C::frequency_hz>>;
+    requires IsController<typename C::template VelocityControllerType<1.0f/C::frequency_hz>>;
+    requires IsController<typename C::template StateControllerType<1.0f/C::frequency_hz>>;
+    requires IsController<typename C::template JointPositionControllerType<1.0f/C::frequency_hz>>;
+    requires IsController<typename C::template AdmittanceControllerType<1.0f/C::frequency_hz>>;
+};
+
+template<IsMainLoopConfig cfg>
 class MainLoop {
  public:
+    static constexpr int32_t frequency_hz = cfg::frequency_hz;
     static constexpr float dt = 1.0/frequency_hz;
-    MainLoop(FastLoop &fast_loop, PositionController &position_controller,  TorqueController &torque_controller, 
-        ImpedanceController &impedance_controller, VelocityController &velocity_controller, StateController &state_controller, 
-        JointPositionController &joint_position_controller, AdmittanceController &admittance_controller, Communication &communication,
+    MainLoop(cfg::FastLoopType &fast_loop, Communication &communication,
         LED &led, OutputEncoder &output_encoder, TorqueSensor &torque, Driver &driver, const MainLoopParam &param, const Calibration &calibration,
         HardwareBrake &brake=no_brake_) : 
-          param_(param), calibration_(calibration), fast_loop_(fast_loop), position_controller_(position_controller), torque_controller_(torque_controller), 
-          impedance_controller_(impedance_controller), velocity_controller_(velocity_controller), state_controller_(state_controller),  
-          joint_position_controller_(joint_position_controller), admittance_controller_(admittance_controller), 
+          param_(param), calibration_(calibration), fast_loop_(fast_loop), 
           communication_(communication), led_(led), frequency_hz_(frequency_hz), output_encoder_(output_encoder), torque_sensor_(torque),
           output_encoder_correction_table_(param_.output_encoder.table), 
           torque_correction_table_(calibration_.torque_sensor.table), driver_(driver), brake_(brake),
@@ -901,14 +912,14 @@ class MainLoop {
     LED* led() { return &led_; }
     const MainLoopParam &param_;
     const Calibration &calibration_;
-    FastLoop &fast_loop_;
-    PositionController &position_controller_;
-    TorqueController &torque_controller_;
-    ImpedanceController &impedance_controller_;
-    VelocityController &velocity_controller_;
-    StateController &state_controller_;
-    JointPositionController &joint_position_controller_;
-    AdmittanceController &admittance_controller_;
+    cfg::FastLoopType &fast_loop_;
+    typename cfg::template PositionControllerType<dt> position_controller_;
+    typename cfg::template TorqueControllerType<dt> torque_controller_;
+    typename cfg::template ImpedanceControllerType<dt> impedance_controller_;
+    typename cfg::template VelocityControllerType<dt> velocity_controller_;
+    typename cfg::template StateControllerType<dt> state_controller_;
+    typename cfg::template JointPositionControllerType<dt> joint_position_controller_;
+    typename cfg::template AdmittanceControllerType<dt> admittance_controller_;
     Communication &communication_;
     MainLoopParam::EncoderLimits encoder_limits_;
     MotorError error_mask_;
