@@ -3,35 +3,9 @@
 #include <sys/stat.h>
 #include <sys/types.h>
 #include <cstring>
-
-void system_run() {
-    System::run();
-}
-
-void main_loop_interrupt() {
-    System::main_loop_interrupt();
-}
-
-void fast_loop_interrupt() {
-    System::fast_loop_interrupt();
-}
-
-void system_log(std::string s) {
-    System::log(s);
-}
-
-void system_loop_interrupt() {
-    System::system_loop();
-}
-
-#ifndef CUSTOM_MAIN_MAINTENANCE_ASYNC
-[[gnu::weak]] Task<void> main_maintenance_async(CycleScheduler& sched) {
-    while (1) {
-        main_maintenance(); // Calls the void version
-        co_await sched.yield();
-    }
-}
-#endif
+#include "logger.h"
+#include "round_robin_logger.h"
+#include "task.h"
 
 Logger::CIndex log_index __attribute__((section(".noload")));
 char log_queue[LOGGING_MAX_SIZE] __attribute__((section(".noload")));

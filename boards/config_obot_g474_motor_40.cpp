@@ -4,6 +4,7 @@
 #include "../util.h"
 #include "../driver_mps.h"
 #include "../peripheral/stm32g4/rtc.h"
+#include "../interrupts.h"
 
 const Param * const param = (const Param * const) 0x8060000;
 const Calibration * const calibration = (const Calibration * const) 0x8070000;
@@ -196,7 +197,7 @@ void system_maintenance() {
     index_mod = config::motor_encoder.index_error(param->fast_loop_param.motor_encoder.cpr);
     config_maintenance();
 }
-void main_maintenance() {}
+Task<> main_maintenance_async(CycleScheduler &sched) { while(1) {sched.yield();} }
 
 void setup_sleep() {
     NVIC_DisableIRQ(TIM1_UP_TIM16_IRQn);
@@ -217,4 +218,35 @@ void finish_sleep() {
     NVIC_EnableIRQ(ADC5_IRQn);
 }
 
-#include "../../motorlib/system.cpp"
+extern "C" {
+
+__attribute__((section (".ccmram"))) void USB_LP_IRQHandler()
+{
+  CommHandler<usb_interrupt>();
+}
+
+__attribute__((section (".ccmram"))) void TIM1_CC_IRQHandler()
+{
+  SystemLoopHandler<System::system_loop>();
+  TIM1->SR = 0;
+  asm("dsb");
+}
+
+__attribute__((section (".ccmram"))) void ADC5_IRQHandler()
+{
+  FastLoopHandler<System::fast_loop_interrupt>();
+  ADC5->ISR = ADC_ISR_JEOS;
+  asm("dsb");
+}
+
+__attribute__((section (".ccmram"))) void HRTIM1_Master_IRQHandler()
+{
+  MainLoopHandler<System::main_loop_interrupt>();
+  HRTIM1->sMasterRegs.MICR = HRTIM_MICR_MCMP1;
+  asm("dsb");
+}
+
+void system_run() {
+    System::run();
+}
+} // extern C

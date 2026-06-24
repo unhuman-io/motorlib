@@ -9,6 +9,7 @@
 #include "../peripheral/stm32g4/rtc.h"
 #include "../driver.h"
 #include "../task.h"
+#include "../interrupts.h"
 
 #ifdef SCOPE_DEBUG
 #define SET_SCOPE_PIN(X,x) GPIO##X->BSRR = 1 << x
@@ -523,7 +524,6 @@ void system_maintenance() {
     config::main_loop.status_.error.init_failure |= init_failure;
 }
 
-#define CUSTOM_MAIN_MAINTENANCE_ASYNC
 Task<> main_maintenance_async(CycleScheduler &sched) {
     while (1) {
         co_await sched.async_delay_us(100'000);
@@ -569,4 +569,35 @@ void finish_sleep() {
     NVIC_EnableIRQ(ADC5_IRQn);
 }
 
-#include "../../motorlib/system.cpp"
+extern "C" {
+
+__attribute__((section (".ccmram"))) void USB_LP_IRQHandler()
+{
+  CommHandler<usb_interrupt>();
+}
+
+__attribute__((section (".ccmram"))) void TIM1_CC_IRQHandler()
+{
+  SystemLoopHandler<System::system_loop>();
+  TIM1->SR = 0;
+  asm("dsb");
+}
+
+__attribute__((section (".ccmram"))) void ADC5_IRQHandler()
+{
+  FastLoopHandler<System::fast_loop_interrupt>();
+  ADC5->ISR = ADC_ISR_JEOS;
+  asm("dsb");
+}
+
+__attribute__((section (".ccmram"))) void HRTIM1_Master_IRQHandler()
+{
+  MainLoopHandler<System::main_loop_interrupt>();
+  HRTIM1->sMasterRegs.MICR = HRTIM_MICR_MCMP1;
+  asm("dsb");
+}
+
+void system_run() {
+    System::run();
+}
+} // extern "C"

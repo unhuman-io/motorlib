@@ -977,7 +977,6 @@ class MainLoop {
     friend class Actuator;
     friend void system_init();
     friend void system_maintenance();
-    friend void main_maintenance();
     friend Task<void> main_maintenance_async(CycleScheduler& sched);
     friend void config_init();
     friend void config_maintenance();

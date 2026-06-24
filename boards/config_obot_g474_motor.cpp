@@ -8,6 +8,7 @@
 #include "../peripheral/protocol.h"
 #include "../peripheral/stm32g4/flash.h"
 #include "../peripheral/stm32g4/rtc.h"
+#include "../interrupts.h"
 
 #ifdef SCOPE_DEBUG
 #define SET_SCOPE_PIN(X,x) GPIO##X->BSRR = 1 << x
@@ -649,51 +650,54 @@ void system_maintenance() {
     config::main_loop.status_.error.init_failure |= init_failure;
 }
 
-void main_maintenance() {
-    if (temp_rate.run()) {
-        ADC1->CR |= ADC_CR_JADSTART;
-        while(ADC1->CR & ADC_CR_JADSTART);
-        T = microcontroller_temperature_filter.update(config::temp_sensor.read());
-        round_robin_logger.log_data(MICROCONTROLLER_TEMPERATURE_INDEX, T);
-        v3v3 =  *((uint16_t *) (0x1FFF75AA)) * 3.0 * ADC1->GCOMP / 4096.0 / ADC1->JDR2;
-        round_robin_logger.log_data(VOLTAGE_3V3_INDEX, v3v3);
-        if (T > 100) {
-            config::main_loop.status_.error.microcontroller_temperature = 1;
-        }
+Task<> main_maintenance_async(CycleScheduler &sched) {
+    while(1) {
+        if (temp_rate.run()) {
+            ADC1->CR |= ADC_CR_JADSTART;
+            while(ADC1->CR & ADC_CR_JADSTART);
+            T = microcontroller_temperature_filter.update(config::temp_sensor.read());
+            round_robin_logger.log_data(MICROCONTROLLER_TEMPERATURE_INDEX, T);
+            v3v3 =  *((uint16_t *) (0x1FFF75AA)) * 3.0 * ADC1->GCOMP / 4096.0 / ADC1->JDR2;
+            round_robin_logger.log_data(VOLTAGE_3V3_INDEX, v3v3);
+            if (T > 100) {
+                config::main_loop.status_.error.microcontroller_temperature = 1;
+            }
 
-        float Tboard = 0;
-        if (config::board_rev.has_max31875) {
-            Tboard = board_temperature_filter.update(config::board_temperature_max31875.read());
-        } else if (config::board_rev.has_max31889) {
-            Tboard = board_temperature_filter.update(config::board_temperature_max31889.read());
-        }
-        round_robin_logger.log_data(BOARD_TEMPERATURE_INDEX, Tboard);
-        if (Tboard > 120 || Tboard < -40) {
-            config::main_loop.status_.error.board_temperature = 1;
-        }
-
-        if (config::board_rev.has_bridge_thermistors) {
-            float Tmosfet = mosfet_temperature_filter.update(config::temp_bridge.read());
-            round_robin_logger.log_data(MOSFET_TEMPERATURE_INDEX, Tmosfet);
-            if (Tmosfet > 125 || Tmosfet < -40) {
+            float Tboard = 0;
+            if (config::board_rev.has_max31875) {
+                Tboard = board_temperature_filter.update(config::board_temperature_max31875.read());
+            } else if (config::board_rev.has_max31889) {
+                Tboard = board_temperature_filter.update(config::board_temperature_max31889.read());
+            }
+            round_robin_logger.log_data(BOARD_TEMPERATURE_INDEX, Tboard);
+            if (Tboard > 120 || Tboard < -40) {
                 config::main_loop.status_.error.board_temperature = 1;
             }
-            if (config::board_rev.has_bridge_thermistors >= 2) {
-                float Tmosfet2 = mosfet_temperature_filter.update(config::temp_bridge2.read());
-                round_robin_logger.log_data(MOSFET2_TEMPERATURE_INDEX, Tmosfet2);
-                config::temp_bridge2.read();
-                if (Tmosfet2 > 125 || Tmosfet2 < -40) {
+
+            if (config::board_rev.has_bridge_thermistors) {
+                float Tmosfet = mosfet_temperature_filter.update(config::temp_bridge.read());
+                round_robin_logger.log_data(MOSFET_TEMPERATURE_INDEX, Tmosfet);
+                if (Tmosfet > 125 || Tmosfet < -40) {
                     config::main_loop.status_.error.board_temperature = 1;
                 }
+                if (config::board_rev.has_bridge_thermistors >= 2) {
+                    float Tmosfet2 = mosfet_temperature_filter.update(config::temp_bridge2.read());
+                    round_robin_logger.log_data(MOSFET2_TEMPERATURE_INDEX, Tmosfet2);
+                    config::temp_bridge2.read();
+                    if (Tmosfet2 > 125 || Tmosfet2 < -40) {
+                        config::main_loop.status_.error.board_temperature = 1;
+                    }
+                }
+            }
+            if (config::board_rev.has_mb85rc64) {
+                config::i2c1.init(1000);
+                MainLoopStatus status = config::main_loop.get_status();
+                config::fram.update(status);
+
+                config::i2c1.init(400);
             }
         }
-        if (config::board_rev.has_mb85rc64) {
-            config::i2c1.init(1000);
-            MainLoopStatus status = config::main_loop.get_status();
-            config::fram.update(status);
-
-            config::i2c1.init(400);
-        }
+        sched.yield();
     }
 }
 
@@ -719,4 +723,35 @@ void finish_sleep() {
 }
 
 
-#include "../../motorlib/system.cpp"
+extern "C" {
+
+__attribute__((section (".ccmram"))) void USB_LP_IRQHandler()
+{
+  CommHandler<usb_interrupt>();
+}
+
+__attribute__((section (".ccmram"))) void TIM1_CC_IRQHandler()
+{
+  SystemLoopHandler<System::system_loop>();
+  TIM1->SR = 0;
+  asm("dsb");
+}
+
+__attribute__((section (".ccmram"))) void ADC5_IRQHandler()
+{
+  FastLoopHandler<System::fast_loop_interrupt>();
+  ADC5->ISR = ADC_ISR_JEOS;
+  asm("dsb");
+}
+
+__attribute__((section (".ccmram"))) void HRTIM1_Master_IRQHandler()
+{
+  MainLoopHandler<System::main_loop_interrupt>();
+  HRTIM1->sMasterRegs.MICR = HRTIM_MICR_MCMP1;
+  asm("dsb");
+}
+
+void system_run() {
+    System::run();
+}
+} // extern C

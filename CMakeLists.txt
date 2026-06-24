@@ -49,7 +49,6 @@ target_compile_definitions(motorlib
 target_sources(motorlib
     PRIVATE
         device/stm32g4/Src/main.c
-        device/stm32g4/Src/stm32g4xx_it.cpp
         device/stm32g4/Src/system_stm32g4xx.c
         peripheral/stm32g4/startup_stm32g474xx.s
         peripheral/stm32g4/can.cpp
@@ -77,6 +76,7 @@ target_sources(motorlib
         parameter_api.cpp
         sincos.cpp
         util.cpp
+        system.cpp
         obot-protocol/protocol_parser.cpp
         #calibration_example.c
 )

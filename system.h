@@ -11,7 +11,6 @@
 #include "interrupt_profiler.h"
 #include "task.h"
 
-void main_maintenance();
 void system_maintenance();
 Task<void> main_maintenance_async(CycleScheduler& sched);
 
