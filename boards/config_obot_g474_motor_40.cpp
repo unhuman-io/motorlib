@@ -197,7 +197,7 @@ void system_maintenance() {
     index_mod = config::motor_encoder.index_error(param->fast_loop_param.motor_encoder.cpr);
     config_maintenance();
 }
-Task<> main_maintenance_async(CycleScheduler &sched) { while(1) {sched.yield();} }
+Task<> main_maintenance_async(CycleScheduler &sched) { while(1) { co_await sched.yield(); } }
 
 void setup_sleep() {
     NVIC_DisableIRQ(TIM1_UP_TIM16_IRQn);

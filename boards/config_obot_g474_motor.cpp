@@ -697,7 +697,7 @@ Task<> main_maintenance_async(CycleScheduler &sched) {
                 config::i2c1.init(400);
             }
         }
-        sched.yield();
+        co_await sched.yield();
     }
 }
 

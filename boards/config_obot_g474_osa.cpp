@@ -184,7 +184,7 @@ void system_maintenance() {
     
     config_maintenance();
 }
-Task<> main_maintenance_async(CycleScheduler &sched) { while(1) {sched.yield();} }
+Task<> main_maintenance_async(CycleScheduler &sched) { while(1) { co_await sched.yield(); } }
 
 extern "C" {
 
