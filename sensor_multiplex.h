@@ -78,7 +78,7 @@ class TorqueSensorMultiplex : public SensorMultiplex<Sensor1, Sensor2> {
    void clear_faults() { this->primary_.clear_faults(); }
 
    float &gain_, &k_temp_, &torque_;
-   friend class System;
+   template <typename T> friend class SystemBase;
 };
 
 #endif  // UNHUMAN_MOTORLIB_SENSOR_MULTIPLEX_H_

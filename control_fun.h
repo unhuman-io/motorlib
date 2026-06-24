@@ -4,13 +4,11 @@
 #include "messages.h"
 #undef _DEFAULT_SOURCE
 #include <cmath>
-#ifndef M_PI
-#define M_PI 3.141592653f
-#endif
 #include "sincos.h"
 #include <algorithm>
 #include <vector>
 #include "st_device.h"
+#include <numbers>
 
 inline float fabsf2(float f) {
     return f >= 0 ? f : -f;
@@ -147,11 +145,11 @@ public:
         if (frequency_hz == 0) {
             alpha_ = 1;
         } else { 
-            alpha_ = 2*M_PI*dt_*frequency_hz/(2*M_PI*dt_*frequency_hz + 1);
+            alpha_ = 2*std::numbers::pi_v<float>*dt_*frequency_hz/(2*std::numbers::pi_v<float>*dt_*frequency_hz + 1);
         }
     }
     float get_frequency() const {
-        return alpha_/(2*M_PI*dt_*(1-alpha_));
+        return alpha_/(2*std::numbers::pi_v<float>*dt_*(1-alpha_));
     }
     void set_dt(float dt) {
         float frequency = get_frequency();
@@ -269,7 +267,7 @@ public:
 private:
     float kp_ = 0, ki_ = 0, ki_sum_ = 0, ki_limit_ = 0, command_max_ = 0;
 
-    friend class System;
+    template <typename T> friend class SystemBase;
 };
 
 class PI2Controller {
@@ -282,7 +280,7 @@ public:
 private:
     float kp_ = 0, ki_ = 0, ki_sum_ = 0, ki_limit_ = 0, command_max_ = 0, kp2_ = 0, ki2_ = 0, value2_ = 0, inv_value2_ = 1;
 
-    friend class System;
+    template <typename T> friend class SystemBase;
 };
 
 class RateLimiter {
@@ -339,7 +337,7 @@ protected:
     RateLimiter rate_limit_;
 
 
-    friend class System;
+    template <typename T> friend class SystemBase;
     friend void config_init();
 };
 
@@ -367,6 +365,305 @@ class PIDInterpolateController : public PIDController {
     FirstOrderLowPassFilter filt1_, filt2_;
 };
 
+class PRBSRand {
+ public:
+    // The seed can be any number except 0
+    PRBSRand(uint32_t seed = 12345678) : val_(seed) {
+        if (val_ == 0) {
+            val_ = 1; 
+        }
+    }
+
+    // Generates the next 32-bit random integer
+    uint32_t next() {
+        uint32_t x = val_;
+        x ^= x << 13;
+        x ^= x >> 17;
+        x ^= x << 5;
+        val_ = x;
+        return val_;
+    }
+ private:
+    uint32_t val_;
+};
+
+class BiquadFilter {
+ public:
+    BiquadFilter() : b0(1.0f), b1(0.0f), b2(0.0f), 
+                     a1(0.0f), a2(0.0f) { init(); }
+
+    void set_coeffs(float _b0, float _b1, float _b2, float _a0, float _a1, float _a2) {
+        b0 = _b0 / _a0;
+        b1 = _b1 / _a0;
+        b2 = _b2 / _a0;
+        a1 = _a1 / _a0;
+        a2 = _a2 / _a0;
+
+        init();
+    }
+
+    float get_gain(float cos_w, float cos_2w) const {
+        float num = (b0*b0) + (b1*b1) + (b2*b2) 
+                  + 2.0f * (b0*b1 + b1*b2) * cos_w 
+                  + 2.0f * b0*b2 * cos_2w;
+                  
+        float den = 1.0f + (a1*a1) + (a2*a2) 
+                  + 2.0f * (a1 + a1*a2) * cos_w 
+                  + 2.0f * a2 * cos_2w;
+                  
+        return std::sqrt(num / den);
+    }
+
+    void init() {
+        u1 = 0.0f; u2 = 0.0f;
+        y1 = 0.0f; y2 = 0.0f;
+    }
+
+    float update(float u) {
+        float y = (b0 * u) + (b1 * u1) + (b2 * u2) 
+                - (a1 * y1) - (a2 * y2);
+        u2 = u1;
+        u1 = u;
+        y2 = y1;
+        y1 = y;
+        return y;
+    }
+ private:
+    // Numerator
+    float b0, b1, b2;
+    // Denominator
+    float a1, a2;
+    
+    float u1, u2; // Past inputs
+    float y1, y2; // Past outputs
+};
+
+template <float dt, int order = 6>
+class BandPassFilter {
+ public:
+    void set_frequency(float frequency_start, float frequency_stop) {
+        float f0 = std::sqrt(frequency_start * frequency_stop);
+        float Q  = f0 / (frequency_stop - frequency_start);
+
+        float w0 = 2.0f * static_cast<float>(std::numbers::pi_v<float>) * f0 * dt;
+        float sin_w0 = std::sin(w0);
+        float cos_w0 = std::cos(w0);
+        float alpha = sin_w0 / (2.0f * Q);
+
+        // 3. Calculate RBJ Biquad Coefficients (Constant Peak Gain)
+        float b0 = alpha;
+        float b1 = 0.0f;
+        float b2 = -alpha;
+        float a0 = 1.0f + alpha;
+        float a1 = -2.0f * cos_w0;
+        float a2 = 1.0f - alpha;
+
+        for (int i = 0; i < order; ++i) {
+            filts_[i].set_coeffs(b0, b1, b2, a0, a1, a2);
+        }
+    }
+
+    float update(float input) {
+        float current_val = input;
+        for (int i = 0; i < order; ++i) {
+            current_val = filts_[i].update(current_val);
+        }
+        return current_val;
+    }
+ private:
+    BiquadFilter filts_[order];
+};
+
+// ---------------------------------------------------------
+// 2. N-Order Butterworth Low-Pass Filter
+// ---------------------------------------------------------
+template <float dt, int order = 4>
+class ButterworthLowPass {
+private:
+    // The number of biquads needed is (order + 1) / 2 (integer division)
+    static constexpr int num_stages = (order + 1) / 2;
+    BiquadFilter filts_[num_stages];
+
+public:
+    void set_cutoff(float cutoff_hz) {
+        // Pre-warp the frequency for the Bilinear Transform
+        float w0 = 2.0f * static_cast<float>(std::numbers::pi_v<float>) * cutoff_hz * dt;
+        float sin_w0 = std::sin(w0);
+        float cos_w0 = std::cos(w0);
+        
+        int stage = 0;
+
+        // 1. Calculate the complex conjugate pole pairs (the 2nd-order sections)
+        int num_biquads = order / 2;
+        for (int k = 1; k <= num_biquads; ++k) {
+            // Calculate the specific Q for this stage in the Butterworth circle
+            float theta = static_cast<float>(std::numbers::pi_v<float>) * (2.0f * k - 1.0f) / (2.0f * order);
+            float Q = 1.0f / (2.0f * std::sin(theta));
+            float alpha = sin_w0 / (2.0f * Q);
+
+            // Calculate RBJ Low-Pass coefficients
+            float b0 = (1.0f - cos_w0) / 2.0f;
+            float b1 = 1.0f - cos_w0;
+            float b2 = (1.0f - cos_w0) / 2.0f;
+            float a0 = 1.0f + alpha;
+            float a1 = -2.0f * cos_w0;
+            float a2 = 1.0f - alpha;
+
+            filts_[stage].set_coeffs(b0, b1, b2, a0, a1, a2);
+            stage++;
+        }
+
+        // 2. If the order is odd, we have one real pole left over (a 1st-order section)
+        if (order % 2 != 0) {
+            // Pre-warped tangent for 1st order Bilinear Transform
+            float W = std::tan(w0 / 2.0f);
+            
+            float b0 = W;
+            float b1 = W;
+            float b2 = 0.0f; // 1st order has no 2nd delay
+            
+            float a0 = W + 1.0f;
+            float a1 = W - 1.0f;
+            float a2 = 0.0f; // 1st order has no 2nd feedback
+            
+            filts_[stage].set_coeffs(b0, b1, b2, a0, a1, a2);
+        }
+    }
+
+    float get_gain(float cos_w, float cos_2w) const {
+        float gain = 1.0f;
+        for (int i = 0; i < num_stages; ++i) {
+            gain *= filts_[i].get_gain(cos_w, cos_2w);
+        }
+        return gain;
+    }
+
+    float update(float input) {
+        float current_val = input;
+        for (int i = 0; i < num_stages; ++i) {
+            current_val = filts_[i].update(current_val);
+        }
+        return current_val;
+    }
+};
+
+template <float dt, int order = 4>
+class ButterworthHighPass {
+private:
+    static constexpr int num_stages = (order + 1) / 2;
+    BiquadFilter filts_[num_stages];
+
+public:
+    void set_cutoff(float cutoff_hz) {
+        float w0 = 2.0f * static_cast<float>(std::numbers::pi_v<float>) * cutoff_hz * dt;
+        float sin_w0 = std::sin(w0);
+        float cos_w0 = std::cos(w0);
+        
+        int stage = 0;
+        int num_biquads = order / 2;
+
+        // 1. 2nd-order complex pole sections
+        for (int k = 1; k <= num_biquads; ++k) {
+            float theta = static_cast<float>(std::numbers::pi_v<float>) * (2.0f * k - 1.0f) / (2.0f * order);
+            float Q = 1.0f / (2.0f * std::sin(theta));
+            float alpha = sin_w0 / (2.0f * Q);
+
+            // RBJ High-Pass coefficients (Zeros change, Poles/Denominator stay same as LP)
+            float b0 = (1.0f + cos_w0) / 2.0f;
+            float b1 = -(1.0f + cos_w0);
+            float b2 = (1.0f + cos_w0) / 2.0f;
+            
+            float a0 = 1.0f + alpha;
+            float a1 = -2.0f * cos_w0;
+            float a2 = 1.0f - alpha;
+
+            filts_[stage].set_coeffs(b0, b1, b2, a0, a1, a2);
+            stage++;
+        }
+
+        // 2. 1st-order real pole section (if order is odd)
+        if (order % 2 != 0) {
+            float W = std::tan(w0 / 2.0f);
+            
+            float b0 = 1.0f;
+            float b1 = -1.0f;
+            float b2 = 0.0f;
+            
+            float a0 = W + 1.0f;
+            float a1 = W - 1.0f;
+            float a2 = 0.0f;
+            
+            filts_[stage].set_coeffs(b0, b1, b2, a0, a1, a2);
+        }
+    }
+
+    float get_gain(float cos_w, float cos_2w) const {
+        float gain = 1.0f;
+        for (int i = 0; i < num_stages; ++i) {
+            gain *= filts_[i].get_gain(cos_w, cos_2w);
+        }
+        return gain;
+    }
+
+    float update(float input) {
+        float current_val = input;
+        for (int i = 0; i < num_stages; ++i) {
+            current_val = filts_[i].update(current_val);
+        }
+        return current_val;
+    }
+};
+
+// ---------------------------------------------------------
+// 2. Butterworth Band-Pass (The Cascade Wrapper)
+// ---------------------------------------------------------
+template <float dt, int order = 8>
+class ButterworthBandPass {
+private:
+    ButterworthHighPass<dt, order> hp_;
+    // NOTE: Requires the ButterworthLowPass class from the previous response
+    ButterworthLowPass<dt, order> lp_;
+    float norm_factor_;
+
+public:
+
+    // Safe runtime update
+    void set_frequency(float frequency_start, float frequency_stop) {
+        hp_.set_cutoff(frequency_start); // Cut off everything BELOW start
+        lp_.set_cutoff(frequency_stop);  // Cut off everything ABOVE stop
+
+        float f0 = std::sqrt(frequency_start * frequency_stop);
+
+        // 3. Pre-calculate the trig values for the magnitude equation
+        float w0 = 2.0f * static_cast<float>(std::numbers::pi_v<float>) * f0 * dt;
+        float cos_w = std::cos(w0);
+        float cos_2w = 2.0f * cos_w * cos_w - 1.0f; // Double angle identity
+
+        // 4. Ask the cascade what its attenuation is at the center frequency
+        float total_gain = hp_.get_gain(cos_w, cos_2w) * lp_.get_gain(cos_w, cos_2w);
+        float center_comp = (total_gain > 0.00001f) ? (1.0f / total_gain) : 1.0f;
+
+        // 4. Noise Energy compensation (fixes the bandwidth slicing)
+        float f_nyq = 0.5f / dt; // Nyquist frequency
+        float bw = frequency_stop - frequency_start;
+        
+        // Prevent division by zero if start and stop are accidentally equal
+        float energy_comp = 1.0f;
+        if (bw > 0.1f) {
+            energy_comp = std::sqrt(f_nyq / bw);
+        }
+
+        // 5. Combine them into the final normalization factor
+        norm_factor_ = center_comp * energy_comp;
+    }
+
+    float update(float input) {
+        // Signal flows through High-Pass, then Low-Pass
+        return lp_.update(hp_.update(input))*norm_factor_;
+    }
+};
+
+template <float dt>
 class TrajectoryGenerator {
  public:
     struct TrajectoryValue {
@@ -374,7 +671,7 @@ class TrajectoryGenerator {
     };
     void set_frequency(float frequency) {
         frequency_ = frequency;
-        low_pass_filter_.set_frequency(frequency);
+        filter_.set_frequency(frequency, frequency*2);
     }
     void set_amplitude(float amplitude) { amplitude_ = amplitude; }
     void set_mode(TuningMode mode) {
@@ -389,15 +686,26 @@ class TrajectoryGenerator {
     }
     void init(float phi=0) { phi_.init(phi); }
 
-    TrajectoryValue &step(float dt) {
+    TrajectoryValue &step() {
+        if (mode_ == TuningMode::RANDOM) {
+            float raw = amplitude_ * (2.f * (float) fast_rng_.next() * (1.f / static_cast<float>(0xFFFF'FFFF)) - 1.f);
+            float raw_scaled = raw * random_scale_;
+            
+            float value_last = trajectory_value_.value;
+            float new_value = filter_.update(raw_scaled);
+            trajectory_value_.value = fsat(new_value, amplitude_);
+            trajectory_value_.value_dot = (trajectory_value_.value - value_last) / dt;
+            return trajectory_value_;
+        }
+
         // phi_ is a radian counter at the command frequency doesn't get larger than 2*pi
         if (mode_ == TuningMode::CHIRP) {
            frequency_ = chirp_frequency_.add(chirp_rate_ * dt);
         }
         // KahanSum allows for and summing of dt allows for low frequencies without losing resolution
-        phi_.add(2 * (float) M_PI * fabsf(frequency_) * dt);
-        if (phi_.value() > 2 * (float) M_PI) {  
-            phi_.add(-2 * (float) M_PI);
+        phi_.add(2 * (float) std::numbers::pi_v<float> * fabsf(frequency_) * dt);
+        if (phi_.value() > 2 * (float) std::numbers::pi_v<float>) {  
+            phi_.add(-2 * (float) std::numbers::pi_v<float>);
         }
         Sincos sincos;
         sincos = sincos1(phi_.value());
@@ -405,31 +713,22 @@ class TrajectoryGenerator {
             case TuningMode::SINE:
             case TuningMode::CHIRP:
                 trajectory_value_.value = amplitude_ * sincos.sin;
-                trajectory_value_.value_dot = 2 * (float) M_PI * frequency_ * amplitude_ * sincos.cos;
+                trajectory_value_.value_dot = 2.f * (float) std::numbers::pi_v<float> * frequency_ * amplitude_ * sincos.cos;
                 break;
             case TuningMode::SQUARE:
                 trajectory_value_.value = amplitude_ * fsignf(sincos.sin);
                 trajectory_value_.value_dot = 0;
                 break;
             case TuningMode::TRIANGLE:
-                if (phi_.value() < M_PI) {
-                    trajectory_value_.value = amplitude_ * (2 * phi_.value() * (1/M_PI) - 1);
+                if (phi_.value() < std::numbers::pi_v<float>) {
+                    trajectory_value_.value = amplitude_ * (2.f * phi_.value() * (1.f/std::numbers::pi_v<float>) - 1.f);
                     trajectory_value_.value_dot = 4 * amplitude_ * frequency_;
                 } else {
-                    trajectory_value_.value = amplitude_ * (3 - 2 * phi_.value() * (1/M_PI));
+                    trajectory_value_.value = amplitude_ * (3.f - 2.f * phi_.value() * (1.f/std::numbers::pi_v<float>));
                     trajectory_value_.value_dot = -4 * amplitude_ * frequency_;
                 }
                 break;
-            case TuningMode::RANDOM: {
-                    low_pass_filter_.set_dt(dt);
-                    float raw = amplitude_ * (2 * (float) rand() * (1.0 / static_cast<float>(RAND_MAX)) - 1);
-                    float raw_scaled = raw * random_scale_;
-                    
-                    float value_last = trajectory_value_.value;
-                    float new_value = low_pass_filter_.update(raw_scaled);
-                    trajectory_value_.value = fsat(new_value, amplitude_);
-                    trajectory_value_.value_dot = (trajectory_value_.value - value_last) / dt;
-                }
+            default:
                 break;
         }
         return trajectory_value_;
@@ -439,13 +738,15 @@ class TrajectoryGenerator {
     float get_frequency() const { return frequency_; }
  private:
     TuningMode mode_ = TuningMode::SINE;
-    float random_scale_ = 1;
+    static constexpr float random_scale_ = .5;
     float frequency_, amplitude_;
     TrajectoryValue trajectory_value_;
     KahanSum phi_, chirp_frequency_;
     float chirp_rate_;
-    FirstOrderLowPassFilter low_pass_filter_;
-    friend class System;
+    PRBSRand fast_rng_{123456789};
+    ButterworthBandPass<dt> filter_;
+
+    template <typename T> friend class SystemBase;
 };
 
 template<class T>
@@ -512,10 +813,10 @@ class DFTResponse {
         if (desired_.count_ == 1) {
             magnitude_ = measured_.magnitude_last_ / desired_.magnitude_last_;
             phase_ = measured_.phase_last_ - desired_.phase_last_;
-            if (phase_ > M_PI) {
-                phase_ -= 2*M_PI;
-            } else if (phase_ < -M_PI) {
-                phase_ += 2*M_PI;
+            if (phase_ > std::numbers::pi_v<float>) {
+                phase_ -= 2*std::numbers::pi_v<float>;
+            } else if (phase_ < -std::numbers::pi_v<float>) {
+                phase_ += 2*std::numbers::pi_v<float>;
             }
         }
     }

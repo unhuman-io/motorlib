@@ -9,6 +9,7 @@
 #include "../peripheral/stm32g4/rtc.h"
 #include "../driver.h"
 #include "../task.h"
+#include "../interrupts.h"
 
 #ifdef SCOPE_DEBUG
 #define SET_SCOPE_PIN(X,x) GPIO##X->BSRR = 1 << x
@@ -141,7 +142,6 @@ extern "C" void board_init() {
     GPIO_SETL(B, 6, GPIO_MODE::ALT_FUN, GPIO_SPEED::MEDIUM, 9); // can2 tx
 #endif
 }
-
 
 namespace config {
     static_assert(((double) CPU_FREQUENCY_HZ * 8 / 2) / pwm_frequency < 65535);    // check pwm frequency
@@ -278,7 +278,7 @@ namespace config {
 
     HRPWM motor_pwm = {pwm_frequency, *HRTIM1, 3, 5, 4, false, 50, 1000, 1000};
     USB1 usb;
-    FastLoop fast_loop = {(int32_t) pwm_frequency, motor_pwm, motor_encoder, param->fast_loop_param, *calibration, &I_A_DR, &I_B_DR, &I_C_DR, &V_BUS_DR};
+    FastLoop<pwm_frequency> fast_loop = {motor_pwm, motor_encoder, param->fast_loop_param, *calibration, &I_A_DR, &I_B_DR, &I_C_DR, &V_BUS_DR};
 
 
     LED led = {const_cast<uint16_t*>(reinterpret_cast<volatile uint16_t *>(get_board_pins(board_rev).led_tim_r)), 
@@ -307,18 +307,22 @@ namespace config {
 #ifndef ADMITTANCE_CONTROLLER_OVERRIDE
     AdmittanceController admittance_controller = {1.0/main_loop_frequency};
 #endif
-    MainLoop main_loop = {main_loop_frequency, fast_loop, position_controller, torque_controller, impedance_controller, velocity_controller, state_controller, joint_position_controller, admittance_controller, System::communication_, led, output_encoder, torque_sensor, drv, param->main_loop_param, *calibration};
+
 };
+using System = SystemBase<Actuator<FastLoop<config::pwm_frequency>, MainLoop<config::main_loop_frequency, FastLoop<config::pwm_frequency>>>>;
 
 #if COMMS == COMMS_USB
+template<>
 Communication System::communication_ = {config::usb};
 #endif
 
 #if (COMMS == COMMS_SPI)
+template<>
 Communication System::communication_(config::spi, config::spi_protocol);
 #endif
 
 #if (COMMS == COMMS_UART)
+template<>
 Communication System::communication_(config::uart, config::uart_protocol);
 extern "C" void PendSV_Handler(void) {
   SET_SCOPE_PIN(C,2);
@@ -328,14 +332,19 @@ extern "C" void PendSV_Handler(void) {
 #endif
 
 #if (COMMS == COMMS_CAN)
+template<>
 Communication System::communication_(config::can, param->can_id);
 #endif
 
 void usb_interrupt() {
     config::usb.interrupt();
 }
+namespace config {
+    MainLoop<config::main_loop_frequency, decltype(fast_loop)> main_loop = {fast_loop, position_controller, torque_controller, impedance_controller, velocity_controller, state_controller, joint_position_controller, admittance_controller, System::communication_, led, output_encoder, torque_sensor, drv, param->main_loop_param, *calibration};
+};
 
-Actuator System::actuator_ = {config::fast_loop, config::main_loop, param->startup_param, *calibration};
+template<>
+decltype(System::actuator_) System::actuator_ = {config::fast_loop, config::main_loop, param->startup_param, *calibration};
 
 float v3v3 = 3.3;
 
@@ -515,7 +524,6 @@ void system_maintenance() {
     config::main_loop.status_.error.init_failure |= init_failure;
 }
 
-#define CUSTOM_MAIN_MAINTENANCE_ASYNC
 Task<> main_maintenance_async(CycleScheduler &sched) {
     while (1) {
         co_await sched.async_delay_us(100'000);
@@ -561,5 +569,35 @@ void finish_sleep() {
     NVIC_EnableIRQ(ADC5_IRQn);
 }
 
+extern "C" {
 
-#include "../../motorlib/system.cpp"
+__attribute__((section (".ccmram"))) void USB_LP_IRQHandler()
+{
+  CommHandler<usb_interrupt>();
+}
+
+__attribute__((section (".ccmram"))) void TIM1_CC_IRQHandler()
+{
+  SystemLoopHandler<System::system_loop>();
+  TIM1->SR = 0;
+  asm("dsb");
+}
+
+__attribute__((section (".ccmram"))) void ADC5_IRQHandler()
+{
+  FastLoopHandler<System::fast_loop_interrupt>();
+  ADC5->ISR = ADC_ISR_JEOS;
+  asm("dsb");
+}
+
+__attribute__((section (".ccmram"))) void HRTIM1_Master_IRQHandler()
+{
+  MainLoopHandler<System::main_loop_interrupt>();
+  HRTIM1->sMasterRegs.MICR = HRTIM_MICR_MCMP1;
+  asm("dsb");
+}
+
+void system_run() {
+    System::run();
+}
+} // extern "C"

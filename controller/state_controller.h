@@ -77,7 +77,7 @@ class StateController : public Controller {
     FirstOrderLowPassFilter output_filter_;
     SecondOrderLowPassFilter position_desired_filter_;
     StateControllerParam param_ = {};
-    friend class System;
+    template <typename T> friend class SystemBase;
     friend void config_init();
 };
 

@@ -14,9 +14,11 @@
 
 extern "C" void system_init();
 
+template<uint32_t frequency_hz>
 class FastLoop {
  public:
-    FastLoop(int32_t frequency_hz, PWM &pwm, MotorEncoder &encoder, const FastLoopParam &param, const Calibration &calibration,
+    static constexpr float dt = 1.0/frequency_hz;
+    FastLoop(PWM &pwm, MotorEncoder &encoder, const FastLoopParam &param, const Calibration &calibration,
       volatile uint32_t *const i_a_dr, volatile uint32_t *const i_b_dr, volatile uint32_t *const i_c_dr, 
       volatile uint32_t *const v_bus_dr) 
       : motor_encoder_index_electrical_offset_pos_(calibration.motor_encoder_index_electrical_offset_pos), pwm_(pwm), encoder_(encoder), i_a_dr_(i_a_dr), i_b_dr_(i_b_dr), i_c_dr_(i_c_dr), v_bus_dr_(v_bus_dr),
@@ -63,7 +65,7 @@ class FastLoop {
       float motor_x;
       motor_position_ = motor_enc_to_position(motor_enc, motor_enc_diff, motor_x);
       motor_position_filtered_ = motor_position_filter_.update(motor_position_);//(1-alpha10)*motor_position_filtered_ + alpha10*motor_position_;
-      motor_velocity_ =  motor_encoder_dir_ * (motor_enc_diff)*(2*(float) M_PI * inv_motor_encoder_cpr_ * frequency_hz_);
+      motor_velocity_ =  motor_encoder_dir_ * (motor_enc_diff)*(2*(float) std::numbers::pi_v<float> * inv_motor_encoder_cpr_ * frequency_hz_);
       motor_velocity_filtered_ = motor_velocity_filter_.update(motor_velocity_);
       
 
@@ -71,20 +73,21 @@ class FastLoop {
       float iq_ff = param_.cogging.gain * cogging_correction_table_.table_interp(motor_x);
 
       if (mode_ == CURRENT_TUNING_MODE) {
-        TrajectoryGenerator::TrajectoryValue t = tuning_trajectory_generator_.step(dt_);
+        auto t = tuning_trajectory_generator_.step();
         iq_des = t.value + tuning_bias_;
       } else if (mode_ == VOLTAGE_TUNING_MODE) {
-        TrajectoryGenerator::TrajectoryValue t = tuning_trajectory_generator_.step(dt_);
+        auto t = tuning_trajectory_generator_.step();
         set_vq_des(t.value + tuning_bias_);
+        DAC1->DHR12R1 = (.49f*t.value/tuning_trajectory_generator_.get_amplitude() + .5f)*4096;
       }
 
       if (beep_) {
         if ((int32_t) (get_clock()-beep_end_) > 0) {
           beep_ = false;
         } else {
-          phi_beep_ += 2 * (float) M_PI * fabsf(param_.beep_frequency) * dt_;
-          if (phi_beep_ > 2 * (float) M_PI) {
-            phi_beep_ -= 2 * (float) M_PI;
+          phi_beep_ += 2 * (float) std::numbers::pi_v<float> * fabsf(param_.beep_frequency) * dt;
+          if (phi_beep_ > 2 * (float) std::numbers::pi_v<float>) {
+            phi_beep_ -= 2 * (float) std::numbers::pi_v<float>;
           }
           Sincos sincos = sincos1(phi_beep_);
           iq_ff += param_.beep_amplitude*fsignf(sincos.sin);
@@ -92,23 +95,20 @@ class FastLoop {
       }
 
       // update FOC
-      foc_command_.measured.motor_encoder = phase_mode_*(motor_enc_wrap_ - motor_electrical_zero_dir_pos_)*(2*(float) M_PI  * inv_motor_encoder_cpr_);
+      foc_command_.measured.motor_encoder = phase_mode_*(motor_enc_wrap_ - motor_electrical_zero_dir_pos_)*(2*(float) std::numbers::pi_v<float>  * inv_motor_encoder_cpr_);
       foc_command_.desired.i_q = iq_des_gain_ * (iq_des + iq_ff);
 
       if (mode_ == STEPPER_TUNING_MODE) {
         foc_command_.measured.motor_encoder = stepper_position_;
         motor_position_filtered_ = stepper_position_;
-        stepper_position_ += stepper_velocity_ * dt_;
-        stepper_position_ = wrap1(stepper_position_, float{2*M_PI});
+        stepper_position_ += stepper_velocity_ * dt;
+        stepper_position_ = wrap1(stepper_position_, float{2*std::numbers::pi_v<float>});
       }
       
       FOCStatus *foc_status = foc_->step(foc_command_);
 
       // output pwm
       pwm_.set_voltage(&foc_status->command.v_a);
-
-      dt_ = (timestamp_ - last_timestamp_)*(float) (1.0f/CPU_FREQUENCY_HZ);
-      last_timestamp_ = timestamp_;
 
       if (zero_current_sensors_) {
         if ((int32_t) (get_clock()-zero_current_sensors_end_) > 0) {
@@ -130,7 +130,7 @@ class FastLoop {
       motor_mechanical_position_ = (motor_enc_wrap_ - motor_index_pos_);
       motor_x = motor_mechanical_position_*inv_motor_encoder_cpr_;
 
-      motor_position_ = motor_encoder_dir_ * (2 * (float) M_PI * inv_motor_encoder_cpr_ * motor_enc_wrap_ 
+      motor_position_ = motor_encoder_dir_ * (2 * (float) std::numbers::pi_v<float> * inv_motor_encoder_cpr_ * motor_enc_wrap_ 
                           + motor_index_pos_set_*motor_correction_table_.table_interp(motor_x));
       last_motor_enc = motor_enc;
       return motor_position_;
@@ -261,7 +261,7 @@ class FastLoop {
       s.foc_command = foc_command_;
       s.power = s.foc_status.command.v_d * s.foc_status.measured.i_d + 
                 s.foc_status.command.v_q * s.foc_status.measured.i_q;
-      int32_t energy =  s.power * dt_ * 1e6;
+      int32_t energy =  s.power * dt * (float) 1e6;
       energy_uJ_ += (uint32_t) energy;
       s.energy_uJ = energy_uJ_;
       foc_->get_status(&s.foc_status);
@@ -297,7 +297,7 @@ class FastLoop {
       return phase_mode_desired_ == 1 ? 0 : 1;
     }
 
-    float get_rollover() const { return 2*M_PI*inv_motor_encoder_cpr_*param_.motor_encoder.rollover; }
+    float get_rollover() const { return 2*std::numbers::pi_v<float>*inv_motor_encoder_cpr_*param_.motor_encoder.rollover; }
     void beep_on(float t_seconds = 1) {
       beep_ = true;
       beep_end_ = get_clock() + t_seconds*CPU_FREQUENCY_HZ;
@@ -378,9 +378,7 @@ class FastLoop {
     mcu_time timestamp_;
    MotorEncoder &encoder_;
    float reserved_ = 0;
-   mcu_time last_timestamp_ = 0;
-   float dt_ = 0;
-   TrajectoryGenerator tuning_trajectory_generator_;
+   TrajectoryGenerator<dt> tuning_trajectory_generator_;
    float tuning_bias_ = 0;
    float stepper_position_ = 0;
    float stepper_velocity_ = 0;
@@ -406,7 +404,7 @@ class FastLoop {
    CStack<FastLoopStatus,100> status_;
    CStack<FastLoopStatus,100> status_log_; // 24*4*100*2 = 19200 bytes
 
-   friend class System;
+   template <typename T> friend class SystemBase;
    friend void system_init();
 };
 

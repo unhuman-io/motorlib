@@ -73,7 +73,7 @@ class SPICommunication : public CommunicationBase {
 
  private:
     Protocol& protocol_;
-    friend class System;
+    template <typename T> friend class SystemBase;
 };
 
 #endif  // UNHUMAN_MOTORLIB_SPI_COMMUNICATION_H_

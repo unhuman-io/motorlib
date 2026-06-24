@@ -194,7 +194,7 @@ float PIDDeadbandController::step(float desired, float velocity_desired, float d
 
 void DFT::step(float value, float frequency_hz, mcu_time time) {
     float t_seconds = (time - time_start_)*(1.0/CPU_FREQUENCY_HZ);
-    Sincos sc = sincos1(-2*M_PI*frequency_hz*t_seconds);
+    Sincos sc = sincos1(-2*std::numbers::pi_v<float>*frequency_hz*t_seconds);
     real_ += value * sc.cos/num_points_;
     imag_ += value * sc.sin/num_points_;
     frequency_ += frequency_hz/num_points_;

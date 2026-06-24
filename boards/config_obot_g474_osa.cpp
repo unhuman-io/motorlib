@@ -4,6 +4,7 @@
 #include "../util.h"
 #include "../driver.h"
 #include "../peripheral/stm32g4/rtc.h"
+#include "../interrupts.h"
 
 const Param * const param = (const Param * const) 0x8060000;
 const Calibration * const calibration = (const Calibration * const) 0x8070000;
@@ -43,6 +44,8 @@ extern "C" void board_init() {
     pin_config_obot_g474_osa();
 }
 
+using System = SystemBase<Actuator<FastLoop<config::pwm_frequency>, MainLoop<config::main_loop_frequency, FastLoop<config::pwm_frequency>>>>;
+
 namespace config {
     static_assert(((double) CPU_FREQUENCY_HZ * 8 / 2) / pwm_frequency < 65535);    // check pwm frequency
     TempSensor temp_sensor;
@@ -51,7 +54,7 @@ namespace config {
     MAX31875 i2c_temp_sensor(i2c1);
     HRPWM motor_pwm = {pwm_frequency, *HRTIM1, 4, 5, 3, true, 200, 1000, 0};
     USB1 usb;
-    FastLoop fast_loop = {(int32_t) pwm_frequency, motor_pwm, motor_encoder, param->fast_loop_param, *calibration, &I_A_DR, &I_B_DR, &I_C_DR, &V_BUS_DR};
+    FastLoop<pwm_frequency> fast_loop = {motor_pwm, motor_encoder, param->fast_loop_param, *calibration, &I_A_DR, &I_B_DR, &I_C_DR, &V_BUS_DR};
     LED led = {const_cast<uint16_t*>(reinterpret_cast<volatile uint16_t *>(&TIM_R)), 
                const_cast<uint16_t*>(reinterpret_cast<volatile uint16_t *>(&TIM_G)),
                const_cast<uint16_t*>(reinterpret_cast<volatile uint16_t *>(&TIM_B))};
@@ -62,14 +65,18 @@ namespace config {
     StateController state_controller = {(float) (1.0/main_loop_frequency)};
     JointPositionController joint_position_controller(1.0/main_loop_frequency);
     AdmittanceController admittance_controller = {1.0/main_loop_frequency};
-    MainLoop main_loop = {main_loop_frequency, fast_loop, position_controller, torque_controller, impedance_controller, velocity_controller, state_controller, joint_position_controller, admittance_controller, System::communication_, led, output_encoder, torque_sensor, driver, param->main_loop_param, *calibration};
+};
+template<>
+Communication System::communication_ = {config::usb};
+namespace config {
+    MainLoop<config::main_loop_frequency, decltype(fast_loop)> main_loop = {fast_loop, position_controller, torque_controller, impedance_controller, velocity_controller, state_controller, joint_position_controller, admittance_controller, System::communication_, led, output_encoder, torque_sensor, driver, param->main_loop_param, *calibration};
 };
 
-Communication System::communication_ = {config::usb};
 void usb_interrupt() {
     config::usb.interrupt();
 }
-Actuator System::actuator_ = {config::fast_loop, config::main_loop, param->startup_param, *calibration};
+template<>
+decltype(System::actuator_) System::actuator_ = {config::fast_loop, config::main_loop, param->startup_param, *calibration};
 
 float v_ref = 3.0;
 float t_i2c = 0;
@@ -177,6 +184,37 @@ void system_maintenance() {
     
     config_maintenance();
 }
-void main_maintenance() {}
+Task<> main_maintenance_async(CycleScheduler &sched) { while(1) { co_await sched.yield(); } }
 
-#include "../../motorlib/system.cpp"
+extern "C" {
+
+__attribute__((section (".ccmram"))) void USB_LP_IRQHandler()
+{
+  CommHandler<usb_interrupt>();
+}
+
+__attribute__((section (".ccmram"))) void TIM1_CC_IRQHandler()
+{
+  SystemLoopHandler<System::system_loop>();
+  TIM1->SR = 0;
+  asm("dsb");
+}
+
+__attribute__((section (".ccmram"))) void ADC5_IRQHandler()
+{
+  FastLoopHandler<System::fast_loop_interrupt>();
+  ADC5->ISR = ADC_ISR_JEOS;
+  asm("dsb");
+}
+
+__attribute__((section (".ccmram"))) void HRTIM1_Master_IRQHandler()
+{
+  MainLoopHandler<System::main_loop_interrupt>();
+  HRTIM1->sMasterRegs.MICR = HRTIM_MICR_MCMP1;
+  asm("dsb");
+}
+
+void system_run() {
+    System::run();
+}
+} // extern C
