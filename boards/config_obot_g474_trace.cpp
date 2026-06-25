@@ -10,6 +10,7 @@
 #include "../driver.h"
 #include "../task.h"
 #include "../interrupts.h"
+#include "param_obot_g474_trace.h"
 
 #ifdef SCOPE_DEBUG
 #define SET_SCOPE_PIN(X,x) GPIO##X->BSRR = 1 << x
@@ -299,12 +300,6 @@ struct MainLoopConfig {
     template <float dt> using JointPositionControllerType = JointPositionController<dt>;
     template <float dt> using AdmittanceControllerType = AdmittanceController<dt>;
 };
-
-struct MainLoopParam2 {
-    PositionControllerParam position_controller {};
-};
-
-constexpr MainLoopParam2 param2;
 
 using System = SystemBase<Actuator<FastLoop<config::pwm_frequency>, MainLoop<MainLoopConfig, param2>>>;
 
