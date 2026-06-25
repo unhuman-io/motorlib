@@ -202,7 +202,7 @@ function(add_obot_firmware_target obot_config)
     set(tgz_file ${CMAKE_CURRENT_BINARY_DIR}/${obot_config}.tgz)
 
     # Define the target FIRST
-    add_executable(${tgt} EXCLUDE_FROM_ALL config_obot_g474_${obot_config}.cpp ../param/param_obot_g474_${obot_config}.c ${CALIBRATION_FILE})
+    add_executable(${tgt} EXCLUDE_FROM_ALL config_obot_g474_${obot_config}.cpp ../param/param_obot_g474_${obot_config}.cpp ${CALIBRATION_FILE})
     target_link_libraries(${tgt} PRIVATE motorlib)
     target_compile_definitions(${tgt} PRIVATE CONFIG=\"${obot_config}\")
 
@@ -211,7 +211,7 @@ function(add_obot_firmware_target obot_config)
         ${CALIBRATION_FILE}
         PROPERTIES COMPILE_OPTIONS "-fno-lto;$<$<OR:$<C_COMPILER_ID:Clang>,$<CXX_COMPILER_ID:Clang>>:-Wno-initializer-overrides>"
     )
-    add_obot_param_target(../param/param_obot_g474_${obot_config}.c)
+    add_obot_param_target(../param/param_obot_g474_${obot_config}.cpp)
 
     # Generate binary variations
     add_custom_command(OUTPUT ${bin_full} ${bin_no_param} ${bin_calibration}

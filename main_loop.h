@@ -37,7 +37,7 @@ concept IsMainLoopConfig = requires {
     { C::frequency_hz } -> std::convertible_to<int32_t>;
     typename C::FastLoopType;
 
-    requires IsController<typename C::template PositionControllerType<1.0f/C::frequency_hz>>;
+    //requires IsController<typename C::template PositionControllerType<1.0f/C::frequency_hz>>;
     requires IsController<typename C::template TorqueControllerType<1.0f/C::frequency_hz>>;
     requires IsController<typename C::template ImpedanceControllerType<1.0f/C::frequency_hz>>;
     requires IsController<typename C::template VelocityControllerType<1.0f/C::frequency_hz>>;
@@ -46,12 +46,12 @@ concept IsMainLoopConfig = requires {
     requires IsController<typename C::template AdmittanceControllerType<1.0f/C::frequency_hz>>;
 };
 
-template<IsMainLoopConfig cfg>
+template<IsMainLoopConfig cfg, auto Param>
 class MainLoop {
  public:
     static constexpr int32_t frequency_hz = cfg::frequency_hz;
     static constexpr float dt = 1.0/frequency_hz;
-    MainLoop(cfg::FastLoopType &fast_loop, Communication &communication,
+    constexpr MainLoop(cfg::FastLoopType &fast_loop, Communication &communication,
         LED &led, OutputEncoder &output_encoder, TorqueSensor &torque, Driver &driver, const MainLoopParam &param, const Calibration &calibration,
         HardwareBrake &brake=no_brake_) : 
           param_(param), calibration_(calibration), fast_loop_(fast_loop), 
@@ -913,7 +913,7 @@ class MainLoop {
     const MainLoopParam &param_;
     const Calibration &calibration_;
     cfg::FastLoopType &fast_loop_;
-    typename cfg::template PositionControllerType<dt> position_controller_;
+    typename cfg::template PositionControllerType<dt, Param.position_controller> position_controller_;
     typename cfg::template TorqueControllerType<dt> torque_controller_;
     typename cfg::template ImpedanceControllerType<dt> impedance_controller_;
     typename cfg::template VelocityControllerType<dt> velocity_controller_;
