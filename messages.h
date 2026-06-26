@@ -32,15 +32,7 @@ typedef struct {
     float command_max;      // Output saturation, units of V for current control, A for position control
 } PI2Param;
 
-typedef struct {
-    float kp;               // proportional gain, units of A/rad for position control
-    float ki;               // \sa PIParam.ki 
-    float ki_limit;         // \sa PIParam.ki_limit
-    float kd;               // derivative gain, implemented on error units same as kp * seconds
-    float command_max;      // \sa PIParam.command_max
-    float velocity_filter_frequency_hz; // First order filter on velocity feedback
-    float output_filter_frequency_hz; // First order filter on output
-} PIDParam;
+#include "control_fun_param.h"
 
 typedef struct {
     PIParam pi_d;           // PIParam for d axis current - often make the same as pi_q
@@ -104,15 +96,6 @@ typedef struct {
     float dir;
 } TorqueSensorParam;
 
-#ifndef POSITION_CONTROLLER_OVERRIDE
-typedef struct {
-    PIDParam position;
-    float velocity_limit;
-    float desired_filter_hz;
-    float tracking_tolerance;
-} PositionControllerParam;
-#endif
-
 #ifndef TORQUE_CONTROLLER_OVERRIDE
 typedef struct {
     PIDParam torque;
@@ -164,6 +147,7 @@ typedef struct {
 } FindLimitsControllerParam;                // note uses the velocity_controller_param of the velocity controller
                                             // and position_controller_param of the position controller
 
+#include "controller/position_controller_param.h"
 typedef struct {
     PositionControllerParam position_controller_param;
     TorqueControllerParam torque_controller_param;

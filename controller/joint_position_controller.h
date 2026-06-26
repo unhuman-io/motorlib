@@ -5,9 +5,10 @@
 #include "../control_fun.h"
 #include "velocity_controller.h"
 
-class JointPositionController : public Controller {
+template<float dt>
+class JointPositionController {
  public:
-    JointPositionController(float dt) : Controller(dt), velocity_controller_(dt) {}
+    JointPositionController() : velocity_controller_() {}
     void init(const MainLoopStatus &status) {
         velocity_controller_.init(status);
     }
@@ -30,10 +31,12 @@ class JointPositionController : public Controller {
         return false;
     }
  private:
-    VelocityController velocity_controller_;
+    VelocityController<dt> velocity_controller_;
     JointPositionControllerParam param_ = {};
 
     template <typename T> friend class SystemBase;
 };
+
+static_assert(IsController<JointPositionController<.0001>>, "Joint position controller fails to meet IsController interface requirement");
 
 #endif  // UNHUMAN_MOTORLIB_CONTROLLER_JOINT_POSITION_CONTROLLER_H_

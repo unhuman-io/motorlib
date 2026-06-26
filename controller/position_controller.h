@@ -4,10 +4,14 @@
 #include "controller.h"
 #include "../control_fun.h"
 
-class PositionController : public Controller {
+template<float dt, PositionControllerParam Param>
+class PositionController {
  public:
-    PositionController(float dt, uint32_t tracking_timeout_count=5000) : Controller(dt), controller_(dt), desired_filter_(dt),
-        tracking_timeout_count_(tracking_timeout_count) {}
+    // todo, change to consteval
+    constexpr PositionController(uint32_t tracking_timeout_count=5000) : controller_(dt), desired_filter_(dt),
+        tracking_timeout_count_(tracking_timeout_count) {
+            set_param(Param);
+        }
     void init(const MainLoopStatus &status) {
         controller_.init(status.motor_position);
         desired_filter_.init(status.motor_position);
@@ -29,7 +33,7 @@ class PositionController : public Controller {
         return iq_des;
     }
     void set_rollover(float rollover) { controller_.set_rollover(rollover); }
-    void set_param(const PositionControllerParam &param) {
+    constexpr void set_param(const PositionControllerParam &param) {
         controller_.set_param(param.position);
         velocity_limit_ = param.velocity_limit;
         desired_filter_.set_frequency(param.desired_filter_hz);
@@ -60,5 +64,7 @@ class PositionController : public Controller {
     template <typename T> friend class SystemBase;
     friend void config_init();
 };
+
+//static_assert(IsController<PositionController<.0001>>, "Position controller fails to meet IsController interface requirement");
 
 #endif  // UNHUMAN_MOTORLIB_CONTROLLER_POSITION_CONTROLLER_H_

@@ -14,9 +14,10 @@
     API_ADD_FILTER_WITH_API(api, state_torque_dot_error_filter, sc.torque_dot_error_filter_);\
     API_ADD_FILTER_WITH_API(api, state_position_desired_filter, sc.position_desired_filter_);\
 
-class StateController : public Controller {
+template<float dt>
+class StateController {
  public:
-    StateController(float dt) : Controller(dt), velocity_error_filter_(dt), torque_error_filter_(dt), 
+    StateController() : velocity_error_filter_(dt), torque_error_filter_(dt), 
         torque_dot_error_filter_(dt), output_filter_(dt), position_desired_filter_(dt) {}
     void init(const MainLoopStatus &status) {
         position_last_ = status.motor_position;
@@ -30,12 +31,12 @@ class StateController : public Controller {
     float step(const MotorCommand &command, const MainLoopStatus &status) {
         const StateControllerCommand &c = command.state;
         position_error_ = c.position_desired - status.motor_position;
-        float velocity = (status.motor_position - position_last_)/dt_;
+        float velocity = (status.motor_position - position_last_)/dt;
         velocity_error_ = velocity_error_filter_.update(c.velocity_desired - velocity);
         position_last_ = status.motor_position;
 
         torque_error_ = torque_error_filter_.update(c.torque_desired - status.torque);
-        float torque_dot = (status.torque - torque_last_)/dt_;
+        float torque_dot = (status.torque - torque_last_)/dt;
         torque_dot_error_ = torque_dot_error_filter_.update(c.torque_dot_desired - torque_dot);
         torque_last_ = status.torque;
 
@@ -80,5 +81,7 @@ class StateController : public Controller {
     template <typename T> friend class SystemBase;
     friend void config_init();
 };
+
+static_assert(IsController<StateController<.0001>>, "State controller fails to meet IsController interface requirement");
 
 #endif  // UNHUMAN_MOTORLIB_CONTROLLER_STATE_CONTROLLER_H_

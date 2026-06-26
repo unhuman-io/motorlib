@@ -49,13 +49,13 @@ inline T qadd(T a, T b) {
 
 class Hysteresis {
  public:  
-    Hysteresis(float hysteresis = 0, float value = 0) {
+    constexpr Hysteresis(float hysteresis = 0, float value = 0) {
         set_hysteresis(hysteresis);
         set_value(value);
     }
     float step(float);
-    void set_hysteresis(float);
-    void set_value(float value) { value_ = value; }
+    constexpr void set_hysteresis(float value) { hysteresis_ = value; }
+    constexpr void set_value(float value) { value_ = value; }
  private:
     float value_ = 0;
     float hysteresis_ = 0;
@@ -127,7 +127,7 @@ class KahanSum {
 
 class FirstOrderLowPassFilter {
 public:
-    FirstOrderLowPassFilter(float dt=1, float frequency_hz=0) {
+    constexpr FirstOrderLowPassFilter(float dt=1, float frequency_hz=0) {
         dt_ = dt;
         set_frequency(frequency_hz);
     }
@@ -141,7 +141,7 @@ public:
         return get_value();
     }
     float get_value() const { return value_; }
-    void set_frequency(float frequency_hz) {
+    constexpr void set_frequency(float frequency_hz) {
         if (frequency_hz == 0) {
             alpha_ = 1;
         } else { 
@@ -166,7 +166,7 @@ private:
 
 class SecondOrderLowPassFilter {
  public:
-    SecondOrderLowPassFilter(float dt, float frequency_hz=0) :
+    constexpr SecondOrderLowPassFilter(float dt, float frequency_hz=0) :
         low_pass_1_(dt, frequency_hz), low_pass_2_(dt, frequency_hz) {}
     void init(float value) {
         low_pass_1_.init(value);
@@ -176,7 +176,7 @@ class SecondOrderLowPassFilter {
         return low_pass_2_.update(low_pass_1_.update(value));
     }
     float get_value() const { return low_pass_2_.get_value(); }
-    void set_frequency(float frequency_hz) {
+    constexpr void set_frequency(float frequency_hz) {
         low_pass_1_.set_frequency(frequency_hz);
         low_pass_2_.set_frequency(frequency_hz);
     }
@@ -314,11 +314,20 @@ class RateLimiter {
 
 class PIDController {
 public:
-    PIDController(float dt) : velocity_filter_(dt), output_filter_(dt), dt_(dt) {}
+    constexpr PIDController(float dt) : velocity_filter_(dt), output_filter_(dt), dt_(dt) {}
     ~PIDController() {}
     void init(float measured) { rate_limit_.init(measured), ki_sum_ = 0; measured_last_ = measured; velocity_filter_.init(0); output_filter_.init(0); } // todo init to current output 
     float step(float desired, float velocity_desired, float measured, float velocity_limit = INFINITY);
-    void set_param(const PIDParam &param);
+    constexpr void set_param(const PIDParam &param) {
+        ki_ = param.ki;
+        kp_ = param.kp;
+        ki_limit_ = param.ki_limit;
+        kd_ = param.kd;
+        command_max_ = param.command_max;
+        velocity_filter_.set_frequency(param.velocity_filter_frequency_hz);
+        output_filter_.set_frequency(param.output_filter_frequency_hz);
+        hysteresis_.set_hysteresis(command_max_/kp_);
+    }
     float get_error() const { return error_last_; }
     void set_rollover(float rollover) { rollover_ = rollover; }
     

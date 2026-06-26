@@ -52,10 +52,6 @@ float fsignf(float a) {
     return a>=0 ? 1 : -1;
 }
 
-void Hysteresis::set_hysteresis(float value) {
-    hysteresis_ = value;
-}
-
 float Hysteresis::step(float value) {
     if (value - value_ > hysteresis_) {
         value_ = value - hysteresis_;
@@ -117,17 +113,6 @@ float PI2Controller::step(float desired, float measured) {
     ki_sum_ += ki * error;
     ki_sum_ = fsat(ki_sum_, ki_limit_);
     return fsat(kp*error + ki_sum_, command_max_);
-}
-
-void PIDController::set_param(const PIDParam &param) {
-    ki_ = param.ki;
-    kp_ = param.kp;
-    ki_limit_ = param.ki_limit;
-    kd_ = param.kd;
-    command_max_ = param.command_max;
-    velocity_filter_.set_frequency(param.velocity_filter_frequency_hz);
-    output_filter_.set_frequency(param.output_filter_frequency_hz);
-    hysteresis_.set_hysteresis(command_max_/kp_);
 }
 
 float PIDController::step(float desired, float velocity_desired, float measured, float velocity_limit) {

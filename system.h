@@ -105,8 +105,8 @@ class SystemBase {
                 actuator_.fast_loop_.foc_->pi_id_.command_max_ = actuator_.fast_loop_.foc_->pi_iq_.command_max_;
                 actuator_.fast_loop_.foc_->set_id_limit(actuator_.fast_loop_.foc_->get_iq_limit());
                 return std::string("ok"); }));
-        TORQUE_CONTROLLER_DEBUG_VARIABLES(api, actuator_.main_loop_.torque_controller_);
-        STATE_CONTROLLER_DEBUG_VARIABLES(api, actuator_.main_loop_.state_controller_);
+        // TORQUE_CONTROLLER_DEBUG_VARIABLES(api, actuator_.main_loop_.torque_controller_);
+        // STATE_CONTROLLER_DEBUG_VARIABLES(api, actuator_.main_loop_.state_controller_);
         api.add_api_variable("tgain", new APIFloat(&actuator_.main_loop_.torque_sensor_.gain_));
         api.add_api_variable("tbias", new APIFloat(&actuator_.main_loop_.torque_sensor_bias_));
         api.add_api_variable("torque", new const APIFloat(&actuator_.main_loop_.status_.torque));

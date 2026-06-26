@@ -1,132 +1,105 @@
+#pragma once
 #include "../peripheral/usb.h"
 #include "../usb_communication.h"
 #include "../peripheral/stm32g4/hrpwm.h"
 #include "../util.h"
-#include "../driver_mps.h"
+#include "../peripheral/stm32g4/pin_config.h"
+#include "../peripheral/stm32g4/uart.h"
+#include "../peripheral/protocol.h"
+#include "../peripheral/stm32g4/flash.h"
 #include "../peripheral/stm32g4/rtc.h"
+#include "../driver.h"
+#include "../task.h"
 #include "../interrupts.h"
+#include "param_obot_g474_trace.h"
+
+#include "../communication.h"
+
+
 
 const Param * const param = (const Param * const) 0x8060000;
 const Calibration * const calibration = (const Calibration * const) 0x8070000;
 extern const char * const name = param->name;
 
-namespace config {
-    const uint32_t system_loop_frequency =  1000;
-};
-
 using PWM = HRPWM;
-using Communication = USBCommunication;
-using Driver = DriverMPS;
-
 #include "../led.h"
-#include "../controller/position_controller.h"
-#include "../controller/torque_controller.h"
-#include "../controller/impedance_controller.h"
-#include "../controller/velocity_controller.h"
-#include "../controller/state_controller.h"
-#include "../controller/joint_position_controller.h"
-#include "../controller/admittance_controller.h"
 #include "../fast_loop.h"
+#include "config_trace.h"
+
+using Communication = USBCommunication;
+using Driver = DriverBase;
+
 #include "../main_loop.h"
 #include "../actuator.h"
 #include "../system.h"
-#include "pin_config_obot_g474_motor_40.h"
+#include "pin_config_obot_g474_trace.h"
 #include "../peripheral/stm32g4/temp_sensor.h"
-#include "../peripheral/stm32g4/max31875.h"
-#include "../peripheral/stm32_serial.h"
+#include "../messages.h"
 
 extern "C" void SystemClock_Config();
-void pin_config_obot_g474_motor_40();
+void pin_config_obot_g474_trace(const BoardRev&);
 
 extern "C" void board_init() {
-    init_serial_number();
+    const BoardRev board_rev = get_board_rev();
     SystemClock_Config();
-    pin_config_obot_g474_motor_40();
+    pin_config_obot_g474_trace(board_rev);
 }
 
-struct MainLoopConfig {
-    static constexpr int32_t frequency_hz = config::main_loop_frequency;
-    using FastLoopType = FastLoop<config::pwm_frequency>;
-    template <float dt> using PositionControllerType = PositionController<dt>;
-    template <float dt> using TorqueControllerType = TorqueController<dt>;
-    template <float dt> using ImpedanceControllerType = ImpedanceController<dt>;
-    template <float dt> using VelocityControllerType = VelocityController<dt>;
-    template <float dt> using StateControllerType = StateController<dt>;
-    template <float dt> using JointPositionControllerType = JointPositionController<dt>;
-    template <float dt> using AdmittanceControllerType = AdmittanceController<dt>;
-};
-
-using System = SystemBase<Actuator<FastLoop<config::pwm_frequency>, MainLoop<MainLoopConfig>>>;
-
-namespace config {
+template <typename TraceConfig>
+struct TraceBoard {
     static_assert(((double) CPU_FREQUENCY_HZ * 8 / 2) / pwm_frequency < 65535);    // check pwm frequency
+    Driver drv;
     TempSensor temp_sensor;
-    I2C_DMA i2c1(*I2C1, *DMA1_Channel7, *DMA1_Channel8, 1000);
-    MAX31875 board_temperature(i2c1);
-    DriverMPS driver;
+    Flash flash(*FLASH);
 
-    HRPWM motor_pwm(pwm_frequency, *HRTIM1, 3, 5, 4, true, 50, 1000, 0);
+    const BoardRev board_rev = get_board_rev();
+
+
+
+    HRPWM motor_pwm = {pwm_frequency, *HRTIM1, 3, 5, 4, false, 50, 1000, 1000};
     USB1 usb;
     FastLoop<pwm_frequency> fast_loop = {motor_pwm, motor_encoder, param->fast_loop_param, *calibration, &I_A_DR, &I_B_DR, &I_C_DR, &V_BUS_DR};
-    LED led = {const_cast<uint16_t*>(reinterpret_cast<volatile uint16_t *>(&TIM_R)), 
-               const_cast<uint16_t*>(reinterpret_cast<volatile uint16_t *>(&TIM_G)),
-               const_cast<uint16_t*>(reinterpret_cast<volatile uint16_t *>(&TIM_B))};
+
+
+    LED led = {const_cast<uint16_t*>(reinterpret_cast<volatile uint16_t *>(get_board_pins(board_rev).led_tim_r)), 
+               const_cast<uint16_t*>(reinterpret_cast<volatile uint16_t *>(get_board_pins(board_rev).led_tim_g)),
+               const_cast<uint16_t*>(reinterpret_cast<volatile uint16_t *>(get_board_pins(board_rev).led_tim_b)),
+               config::main_loop_frequency};
 };
+
+
+
+using MainLoopConfig = TraceConfig::MainLoopConfig;
+
+constexpr TraceParam<MainLoopConfig> active_param;
+using System = SystemBase<Actuator<FastLoop<config::pwm_frequency>, MainLoop<MainLoopConfig, active_param.main_loop>>>;
+
 template<>
 Communication System::communication_ = {config::usb};
-namespace config {
-    MainLoop<MainLoopConfig> main_loop(fast_loop, System::communication_, led, output_encoder, torque_sensor, driver, param->main_loop_param, *calibration);
-};
+
+
 
 void usb_interrupt() {
     config::usb.interrupt();
 }
+namespace config {
+    MainLoop<MainLoopConfig, active_param.main_loop> main_loop = {fast_loop, System::communication_, led, output_encoder, torque_sensor, drv, param->main_loop_param, *calibration};
+};
+
 template<>
 decltype(System::actuator_) System::actuator_ = {config::fast_loop, config::main_loop, param->startup_param, *calibration};
 
 float v3v3 = 3.3;
 
-int32_t index_mod = 0;
-
 void config_init();
 
+extern uint32_t _eccmram[];
+
 void system_init() {
-    DMAMUX1_Channel6->CCR =  DMA_REQUEST_I2C1_TX;
-    DMAMUX1_Channel7->CCR =  DMA_REQUEST_I2C1_RX;
-    if (config::motor_encoder.init()) {
-        System::log("Motor encoder init success");
-    } else {
-        System::log("Motor encoder init failure");
-    }
-    if (config::output_encoder.init()) {
-        System::log("Output encoder init success");
-    } else {
-        System::log("Output encoder init failure");
-    }
-    if (config::torque_sensor.init()) {
-        System::log("Torque sensor init success");
-    } else {
-        System::log("Torque sensor init failure");
-    }
 
     System::api.add_api_variable("3v3", new APIFloat(&v3v3));
     System::api.add_api_variable("Tmicro", new APICallbackFloat([]{ return config::temp_sensor.get_value(); },
         [](float f){ config::temp_sensor.set_value(f); }));
-    System::api.add_api_variable("Tboard", new const APICallbackFloat([](){ return config::board_temperature.get_temperature(); }));
-    System::api.add_api_variable("index_mod", new APIInt32(&index_mod));
-    System::api.add_api_variable("drv_reset", new const APICallback([](){ return config::driver.reset(); }));
-    System::api.add_api_variable("usb_err", new APIUint32(&config::usb.error_count_));
-    System::api.add_api_variable("usb_reset_count", new APIUint32(&config::usb.reset_count_));
-    System::api.add_api_variable("shutdown", new const APICallback([](){
-        // requires power cycle to return 
-        setup_sleep();
-        SCB->SCR |= SCB_SCR_SLEEPDEEP_Msk;
-        PWR->CR1 |= 0b100 << PWR_CR1_LPMS_Pos;
-        __WFI();
-        return std::string();
-    }));
-    System::api.add_api_variable("deadtime", new APICallbackUint16([](){ 
-        return config::motor_pwm.deadtime_ns_; }, [](uint16_t u) {config::motor_pwm.set_deadtime(u); }));
 
     for (auto regs : std::vector<ADC_TypeDef*>{ADC1, ADC2, ADC3, ADC4, ADC5}) {
         regs->CR = ADC_CR_ADVREGEN;
@@ -154,14 +127,16 @@ void system_init() {
     ADC1->CFGR2 |= ADC_CFGR2_GCOMP;
     ADC1->CR |= ADC_CR_ADSTART;
     ADC2->CR |= ADC_CR_JADSTART;
-    ADC5->CR |= ADC_CR_JADSTART;
-    ADC5->IER |= ADC_IER_JEOCIE;
-    ADC4->CR |= ADC_CR_JADSTART;
-    ADC3->CR |= ADC_CR_JADSTART;
+    ADC5->CR |= ADC_CR_JADSTART | ADC_CR_ADSTART;
+    ADC5->IER |= ADC_IER_JEOSIE;
+    ADC4->CR |= ADC_CR_JADSTART | ADC_CR_ADSTART;
+    ADC3->CR |= ADC_CR_JADSTART | ADC_CR_ADSTART;
 
     config_init();
 
     config::main_loop.init();
+
+//          regs_.sTimerxRegs[ch].TIMxCR |= HRTIM_TIMCR_PREEN | HRTIM_TIMCR_TRSTU | HRTIM_TIMCR_CONT;
 
     NVIC_SetPriority(HRTIM1_Master_IRQn, NVIC_EncodePriority(NVIC_GetPriorityGrouping(), 1, 0));
     NVIC_EnableIRQ(HRTIM1_Master_IRQn);
@@ -176,38 +151,35 @@ void system_init() {
     HRTIM1->sMasterRegs.MCR |= HRTIM_MCR_MCEN + HRTIM_MCR_TACEN + HRTIM_MCR_TDCEN + HRTIM_MCR_TECEN + HRTIM_MCR_TFCEN; // start high res timer, also triggers TIM1
 }
 
-FrequencyLimiter temp_rate = {10};
 float T = 0;
 
 void config_maintenance();
 void system_maintenance() {
-    static bool driver_fault = false;
-    if (temp_rate.run()) {
+    round_robin_logger.log_data(USB_ERROR_COUNT_INDEX, config::usb.error_count_);    // maybe latch driver fault until reset
+    config_maintenance();
+}
+
+Task<> main_maintenance_async(CycleScheduler &sched) {
+    while (1) {
+        co_await sched.async_delay_us(100'000);
         ADC1->CR |= ADC_CR_JADSTART;
-        while(ADC1->CR & ADC_CR_JADSTART);
+        while(ADC1->CR & ADC_CR_JADSTART) {
+            co_await sched.yield();
+        }
         T = config::temp_sensor.read();
+        round_robin_logger.log_data(MICROCONTROLLER_TEMPERATURE_INDEX, T);
         v3v3 =  *((uint16_t *) (0x1FFF75AA)) * 3.0 * ADC1->GCOMP / 4096.0 / ADC1->JDR2;
+        round_robin_logger.log_data(VOLTAGE_3V3_INDEX, v3v3);
         if (T > 100) {
             config::main_loop.status_.error.microcontroller_temperature = 1;
         }
-        config::board_temperature.read();
-        if (config::board_temperature.get_temperature() > 100) {
-            config::main_loop.status_.error.board_temperature = 1;
-        }
     }
-    if (!(GPIOC->IDR & 1<<14)) {
-        driver_fault = true;
-    }
-    config::main_loop.status_.error.driver_fault = driver_fault;    // latch driver fault until reset
-    index_mod = config::motor_encoder.index_error(param->fast_loop_param.motor_encoder.cpr);
-    config_maintenance();
 }
-Task<> main_maintenance_async(CycleScheduler &sched) { while(1) { co_await sched.yield(); } }
 
 void setup_sleep() {
     NVIC_DisableIRQ(TIM1_UP_TIM16_IRQn);
     NVIC_DisableIRQ(ADC5_IRQn);
-    config::driver.disable();
+    config::drv.disable();
     NVIC_SetPriority(USB_LP_IRQn, NVIC_EncodePriority(NVIC_GetPriorityGrouping(), 0, 1));
     NVIC_EnableIRQ(RTC_WKUP_IRQn);
     MASK_SET(RCC->CFGR, RCC_CFGR_SW, 2); // HSE is system clock source
@@ -216,7 +188,9 @@ void setup_sleep() {
 
 void finish_sleep() {
     MASK_SET(RCC->CFGR, RCC_CFGR_SW, 3); // PLL is system clock source
-    config::driver.enable();
+    if (!param->main_loop_param.safe_mode_driver_disable) {
+        config::drv.enable();
+    }
     NVIC_DisableIRQ(RTC_WKUP_IRQn);
     NVIC_SetPriority(USB_LP_IRQn, NVIC_EncodePriority(NVIC_GetPriorityGrouping(), 2, 0));
     NVIC_EnableIRQ(TIM1_UP_TIM16_IRQn);
@@ -254,4 +228,4 @@ __attribute__((section (".ccmram"))) void HRTIM1_Master_IRQHandler()
 void system_run() {
     System::run();
 }
-} // extern C
+} // extern "C"
