@@ -1,6 +1,6 @@
 #pragma once
 
-#include "../main_loop_config.h"
+#include "../config/main_loop_config.h"
 
 struct TraceConfigDefault {
     struct MainLoopConfig : MainLoopConfigDefault {};
