@@ -14,6 +14,7 @@
 #include "temperature_model.h"
 #include <cstring>
 #include "task.h"
+#include "controller/controller.h"
 
 static const char *error_bit_strings[32] = ERROR_BIT_STRINGS;
 

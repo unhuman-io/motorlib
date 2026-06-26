@@ -151,7 +151,6 @@ target_compile_definitions(motorlib
         SPIDMA_INIT_PRIORITY=201
 )
 
-
 function(add_obot_param_target SOURCE_FILE)
     # Get the filename without extension (e.g., "motor_resolute")
     get_filename_component(FILE_BASE ${SOURCE_FILE} NAME_WLE)
@@ -192,7 +191,16 @@ function(add_obot_param_target SOURCE_FILE)
 endfunction()
 
 function(add_obot_firmware_target obot_config)
-    set(tgt ${obot_config}.elf)
+    # Optional param file
+    set(param_file "${ARGV1}")
+    if(param_file)
+        get_filename_component(param_base ${param_file} NAME_WLE)
+        set(tgt ${obot_config}_${param_base}.elf)
+    else()
+        set(param_file ${obot_config}_param_default.h)
+        file(WRITE ${param_file} "constexpr auto active_param = param_default;\n")
+        set(tgt ${obot_config}.elf)
+    endif()
     
     # Use standard variables for the OUTPUT paths
     set(bin_full ${CMAKE_CURRENT_BINARY_DIR}/${obot_config}.bin)

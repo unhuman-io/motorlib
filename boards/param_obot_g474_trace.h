@@ -1,6 +1,6 @@
 #pragma once
 
-#include "../main_loop_param.h"
+#include "../config/main_loop_param.h"
 
 template<typename Config>
 struct TraceParam {
