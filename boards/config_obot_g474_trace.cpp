@@ -292,6 +292,7 @@ namespace config {
 struct MainLoopConfig {
     static constexpr int32_t frequency_hz = config::main_loop_frequency;
     using FastLoopType = FastLoop<config::pwm_frequency>;
+    using PositionControllerParamType = PositionControllerParam;
     template <float dt, auto p> using PositionControllerType = PositionController<dt, p>;
     template <float dt> using TorqueControllerType = TorqueController<dt>;
     template <float dt> using ImpedanceControllerType = ImpedanceController<dt>;
@@ -301,7 +302,8 @@ struct MainLoopConfig {
     template <float dt> using AdmittanceControllerType = AdmittanceController<dt>;
 };
 
-using System = SystemBase<Actuator<FastLoop<config::pwm_frequency>, MainLoop<MainLoopConfig, param2>>>;
+constexpr TraceParam<MainLoopConfig> active_param;
+using System = SystemBase<Actuator<FastLoop<config::pwm_frequency>, MainLoop<MainLoopConfig, active_param.main_loop>>>;
 
 #if COMMS == COMMS_USB
 template<>
@@ -332,7 +334,7 @@ void usb_interrupt() {
     config::usb.interrupt();
 }
 namespace config {
-    MainLoop<MainLoopConfig, param2> main_loop = {fast_loop, System::communication_, led, output_encoder, torque_sensor, drv, param->main_loop_param, *calibration};
+    MainLoop<MainLoopConfig, active_param.main_loop> main_loop = {fast_loop, System::communication_, led, output_encoder, torque_sensor, drv, param->main_loop_param, *calibration};
 };
 
 template<>
