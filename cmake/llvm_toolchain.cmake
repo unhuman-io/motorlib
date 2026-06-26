@@ -10,6 +10,7 @@ set(MCU_FLAGS "--target=${TARGET_TRIPLE}" "-mcpu=cortex-m4" "-mfpu=fpv4-sp-d16" 
 set(CMAKE_C_COMPILER "${BIN_DIR}/clang")
 set(CMAKE_CXX_COMPILER "${BIN_DIR}/clang++")
 set(CMAKE_ASM_COMPILER "${BIN_DIR}/clang")
+set(CMAKE_CXX_COMPILER_CLANG_SCAN_DEPS "${BIN_DIR}/clang-scan-deps")
 
 # set(CLANG_CONFIG "--config=newlib.cfg")
 # set(CMAKE_C_FLAGS_INIT "${CLANG_CONFIG}")

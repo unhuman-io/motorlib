@@ -55,7 +55,7 @@ class PositionController {
  private:
     PIDController controller_;
     float velocity_limit_ = INFINITY;
-    SecondOrderLowPassFilter desired_filter_{};
+    SecondOrderLowPassFilter desired_filter_;
     bool tracking_fault_;
     uint32_t tracking_count_;
     uint32_t tracking_timeout_count_;
