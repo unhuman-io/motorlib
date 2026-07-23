@@ -7,9 +7,9 @@ set(LLVM_BIN_DIR "${LLVM_ROOT}/bin")
 set(TARGET_TRIPLE "armv7em-none-eabihf")
 set(MCU_FLAGS "--target=${TARGET_TRIPLE}" "-mcpu=cortex-m4" "-mfpu=fpv4-sp-d16" "-mfloat-abi=hard")
 
-set(CMAKE_C_COMPILER "${LLVM_BIN_DIR}/clang")
-set(CMAKE_CXX_COMPILER "${LLVM_BIN_DIR}/clang++")
-set(CMAKE_ASM_COMPILER "${LLVM_BIN_DIR}/clang")
+set(CMAKE_C_COMPILER "clang")
+set(CMAKE_CXX_COMPILER "clang++")
+set(CMAKE_ASM_COMPILER "clang")
 
 # set(CLANG_CONFIG "--config=newlib.cfg")
 # set(CMAKE_C_FLAGS_INIT "${CLANG_CONFIG}")
