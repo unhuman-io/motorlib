@@ -201,3 +201,41 @@ struct [[nodiscard]] Task {
         return TaskAwaiter{handle_};
     }
 };
+
+template <typename T = void>
+struct [[nodiscard]] GlobalTask : public Task<T> {
+
+    // 1. We must define a promise_type specific to GlobalTask
+    struct promise_type : public Task<T>::promise_type {
+
+        static constexpr std::size_t MAX_FRAME_SIZE = 256;
+        alignas(std::max_align_t) static inline std::byte global_frame[MAX_FRAME_SIZE];
+        static inline bool is_in_use = false;
+
+        // 2. Override get_return_object to return a GlobalTask, not a Task
+        GlobalTask get_return_object() {
+            return GlobalTask{std::coroutine_handle<promise_type>::from_promise(*this)};
+        }
+
+        // 3. Allocator goes HERE, inside the promise_type
+        void* operator new(std::size_t size) {
+            if (size > MAX_FRAME_SIZE) {
+                while(1); // Frame too large
+            }
+            if (is_in_use) {
+                while(1); // Coroutine already active
+            }
+
+            is_in_use = true;
+            return global_frame;
+        }
+
+        void operator delete(void*, std::size_t) {
+            is_in_use = false;
+        }
+    };
+
+    // 4. Constructor safely casts the derived handle to the base handle expected by Task<T>
+    explicit GlobalTask(std::coroutine_handle<promise_type> h)
+        : Task<T>(std::coroutine_handle<typename Task<T>::promise_type>::from_address(h.address())) {}
+};
