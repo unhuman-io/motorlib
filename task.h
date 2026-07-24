@@ -202,14 +202,12 @@ struct [[nodiscard]] Task {
     }
 };
 
-template <typename T = void>
+template <typename T = void, int instance_id = 0, int size = 64>
 struct [[nodiscard]] GlobalTask : public Task<T> {
 
     // 1. We must define a promise_type specific to GlobalTask
     struct promise_type : public Task<T>::promise_type {
-
-        static constexpr std::size_t MAX_FRAME_SIZE = 256;
-        alignas(std::max_align_t) static inline std::byte global_frame[MAX_FRAME_SIZE];
+        alignas(std::max_align_t) static inline std::byte global_frame[size];
         static inline bool is_in_use = false;
 
         // 2. Override get_return_object to return a GlobalTask, not a Task
@@ -218,8 +216,8 @@ struct [[nodiscard]] GlobalTask : public Task<T> {
         }
 
         // 3. Allocator goes HERE, inside the promise_type
-        void* operator new(std::size_t size) {
-            if (size > MAX_FRAME_SIZE) {
+        void* operator new(std::size_t size_desired) {
+            if (size_desired > size) {
                 while(1); // Frame too large
             }
             if (is_in_use) {
