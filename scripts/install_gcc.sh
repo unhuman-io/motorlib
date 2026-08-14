@@ -37,13 +37,17 @@ cd $gcc_dir
 # declare -A sha=( [x86_64]=8f6903f8ceb084d9227b9ef991490413014d991874a1e34074443c2a72b14dbd \
 #                  [aarch64]=ebaf2d47f2e7f7b645864c5c8cf839e526daed83a2e675a3525d03f5ba3d2be9 )
 
-version=15.2.rel1
-declare -A sha=( [x86_64]=597893282ac8c6ab1a4073977f2362990184599643b4c5ee34870a8215783a16 \
-                 [aarch64]=d061559d814b205ed30c5b7c577c03317ec447ca51cd5a159d26b12a5bbeb20c )
+# version=15.2.rel1
+# declare -A sha=( [x86_64]=597893282ac8c6ab1a4073977f2362990184599643b4c5ee34870a8215783a16 \
+#                  [aarch64]=d061559d814b205ed30c5b7c577c03317ec447ca51cd5a159d26b12a5bbeb20c )
+
+version=15.3.rel1
+declare -A sha=( [x86_64]=563bebb2b97d53382b956d6ee1fe61e2cae26699901417234a37df505ef9b5fa \
+                 [aarch64]=06979e0c8171de58e5dc2a2b2019330a290f30930f27728af98a83e1a7369b3a )
 
 arch=$(uname -m)
 fname=arm-gnu-toolchain-$version-$arch-arm-none-eabi
-url=https://developer.arm.com/-/media/Files/downloads/gnu/$version/binrel/$fname.tar.xz
+url=https://gitlab.arm.com/api/v4/projects/tooling%2Fgnu-toolchains-for-arm/packages/generic/gnu-toolchain/$version/$fname.tar.xz
 wget $quiet $url -O $fname.tar.xz
 cat <(printf "${sha[$arch]} $fname.tar.xz\n")
 sha256sum -c <(printf "${sha[$arch]} $fname.tar.xz\n")
