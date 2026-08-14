@@ -18,4 +18,4 @@ set(CMAKE_FIND_ROOT_PATH_MODE_INCLUDE ONLY)
 set(CMAKE_FIND_ROOT_PATH_MODE_PACKAGE ONLY)
 
 # Force CMake to look in specific folder first for objcopy, size, ar, etc.
-set(CMAKE_FIND_ROOT_PATH "${CMAKE_CURRENT_LIST_DIR}/motorlib/gcc")
+list(APPEND CMAKE_PROGRAM_PATH "${CMAKE_CURRENT_LIST_DIR}/../gcc/bin")
