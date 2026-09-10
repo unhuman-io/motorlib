@@ -54,3 +54,8 @@ const std::array<uint8_t, 512> Crc5Engine::seq9_table = generate_sequential_tabl
 
 [[gnu::section(".data.crc_seq8")]] 
 const std::array<uint8_t, 256> Crc5Engine::seq8_table = generate_sequential_table<8>();
+
+// generate assembly just for manually checking generated code
+template uint8_t Crc5Engine::calculate<Crc5Strategy::Parallel>(uint32_t);
+template uint8_t Crc5Engine::calculate<Crc5Strategy::Seq9>(uint32_t);
+template uint8_t Crc5Engine::calculate<Crc5Strategy::Seq8>(uint32_t);
