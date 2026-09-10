@@ -89,11 +89,6 @@ set_source_files_properties(
 )
 
 set_source_files_properties(
-    crc5.cpp 
-    PROPERTIES COMPILE_FLAGS "-save-temps"
-)
-
-set_source_files_properties(
     peripheral/stm32g4/startup_stm32g474xx.s
     PROPERTIES COMPILE_OPTIONS "-x;assembler-with-cpp"
 )
