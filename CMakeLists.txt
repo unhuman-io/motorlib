@@ -79,6 +79,7 @@ target_sources(motorlib
         system.cpp
         obot-protocol/protocol_parser.cpp
         #calibration_example.c
+        crc5.cpp
 )
 
 set_source_files_properties(
