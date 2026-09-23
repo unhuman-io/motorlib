@@ -42,7 +42,7 @@ class FastLoop {
     ~FastLoop() {
        delete foc_;
     }
-    void update()  __attribute__((section (".ccmram"))) {
+    void update(FastLoopCommand command)  __attribute__((section (".ccmram"))) {
          // trigger encoder read
 #ifndef END_TRIGGER_MOTOR_ENCODER
       // probably don't use end trigger on a shared spi bus
@@ -77,7 +77,7 @@ class FastLoop {
         iq_des = t.value + tuning_bias_;
       } else if (mode_ == VOLTAGE_TUNING_MODE) {
         auto t = tuning_trajectory_generator_.step();
-        set_vq_des(t.value + tuning_bias_);
+        foc_command_.desired.v_q = t.value + tuning_bias_;
         DAC1->DHR12R1 = (.49f*t.value/tuning_trajectory_generator_.get_amplitude() + .5f)*4096;
       }
 
@@ -96,7 +96,7 @@ class FastLoop {
 
       // update FOC
       foc_command_.measured.motor_encoder = phase_mode_*(motor_enc_wrap_ - motor_electrical_zero_dir_pos_)*(2*(float) std::numbers::pi_v<float>  * inv_motor_encoder_cpr_);
-      foc_command_.desired.i_q = iq_des_gain_ * (iq_des + iq_ff);
+      foc_command_.desired.i_q = iq_des_gain_ * (command.iq + iq_ff);
 
       if (mode_ == STEPPER_TUNING_MODE) {
         foc_command_.measured.motor_encoder = stepper_position_;
@@ -168,9 +168,9 @@ class FastLoop {
       v_bus_ = *v_bus_dr_*param_.vbus_gain;
       pwm_.set_vbus(fmaxf(7, v_bus_));
     }
-    void set_id_des(float id) { foc_command_.desired.i_d = id; }
-    void set_iq_des(float iq) { if (mode_ == CURRENT_MODE || mode_ == STEPPER_TUNING_MODE) iq_des = iq; }
-    void set_vq_des(float vq) { foc_command_.desired.v_q = vq; }
+    //void set_id_des(float id) { foc_command_.desired.i_d = id; }
+    //void set_iq_des(float iq) { if (mode_ == CURRENT_MODE || mode_ == STEPPER_TUNING_MODE) iq_des = iq; }
+    //void set_vq_des(float vq) { foc_command_.desired.v_q = vq; }
     void set_tuning_amplitude(float amplitude) { tuning_trajectory_generator_.set_amplitude(amplitude); }
     void set_tuning_frequency(float frequency) { tuning_trajectory_generator_.set_frequency(frequency); }
     void set_tuning_mode(TuningMode mode) { tuning_trajectory_generator_.set_mode(mode); }
@@ -180,9 +180,8 @@ class FastLoop {
     void set_stepper_position(float position) { stepper_position_ = position; }
     void set_stepper_velocity(float velocity) { stepper_velocity_ = velocity; }
     void set_reserved(float reserved) { reserved_ = reserved; }
-    void phase_lock_mode(float id) {
+    void phase_lock_mode() {
       phase_mode_ = 0;
-      set_id_des(id);
       iq_des_gain_ = 0;
       pwm_.voltage_mode();
       foc_->current_mode();
@@ -190,7 +189,6 @@ class FastLoop {
     }
     void current_mode() {
       phase_mode_ = phase_mode_desired_;
-      set_id_des(0);
       iq_des_gain_ = 1;
       pwm_.voltage_mode();
       foc_->current_mode();

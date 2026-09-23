@@ -11,12 +11,12 @@ class VelocityController : public Controller {
         controller_.init(0);    // can only switch into this mode at zero velocity without glitch
         last_motor_position_ = status.motor_position;
     }
-    float step(const MotorCommand &command, const MainLoopStatus &status) {
+    MainLoopControllerCommand step(const MotorCommand &command, const MainLoopStatus &status) {
         float velocity_measured = wrap1_diff(status.motor_position, last_motor_position_, rollover_)/dt_;
         last_motor_position_ = status.motor_position;
         velocity_measured_filt_ = velocity_filter_.update(velocity_measured);
         float iq_des = controller_.step(command.velocity_desired, 0, velocity_measured_filt_, acceleration_limit_) + command.current_desired;
-        return iq_des;
+        return MainLoopControllerCommand{ .iq = iq_des };
     }
     void set_param(const VelocityControllerParam &param) {
         controller_.set_param(param.velocity);

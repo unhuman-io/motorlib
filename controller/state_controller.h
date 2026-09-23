@@ -27,7 +27,7 @@ class StateController : public Controller {
         output_filter_.init(0);
         position_desired_filter_.init(0);
     }
-    float step(const MotorCommand &command, const MainLoopStatus &status) {
+    MainLoopControllerCommand step(const MotorCommand &command, const MainLoopStatus &status) {
         const StateControllerCommand &c = command.state;
         position_error_ = c.position_desired - status.motor_position;
         float velocity = (status.motor_position - position_last_)/dt_;
@@ -43,7 +43,7 @@ class StateController : public Controller {
             c.ks*torque_dot_error_ + param_.ff_tau*command.torque_desired + command.current_desired;
         float iq_filtered = output_filter_.update(iq_des);
         float iq_sat = fsat(iq_filtered, param_.command_max);
-        return iq_sat;
+        return MainLoopControllerCommand{ .iq = iq_sat };
     }
     void set_param(const StateControllerParam &param) {
         velocity_error_filter_.set_frequency(param.velocity_filter_frequency_hz);

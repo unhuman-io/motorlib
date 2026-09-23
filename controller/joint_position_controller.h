@@ -11,12 +11,12 @@ class JointPositionController : public Controller {
     void init(const MainLoopStatus &status) {
         velocity_controller_.init(status);
     }
-    float step(const MotorCommand &command, const MainLoopStatus &status) {
+    MainLoopControllerCommand step(const MotorCommand &command, const MainLoopStatus &status) {
         float joint_error = command.position_desired - status.output_position;
         MotorCommand command_velocity = {};
         command_velocity.velocity_desired = param_.kpj*joint_error;
-        float iq_des = velocity_controller_.step(command_velocity, status); 
-        return iq_des;
+        MainLoopControllerCommand controller_command = velocity_controller_.step(command_velocity, status); 
+        return controller_command;
     }
     void set_param(const JointPositionControllerParam &param) {
         velocity_controller_.set_param(param.velocity);

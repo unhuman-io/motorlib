@@ -374,7 +374,7 @@ class SystemBase {
         actuator_.main_loop_.update();
     }
     static void fast_loop_interrupt() {
-        actuator_.fast_loop_.update();
+        actuator_.fast_loop_.update(actuator_.main_loop_.fast_loop_command_.top());
     }
     static void system_loop() {
         system_maintenance();

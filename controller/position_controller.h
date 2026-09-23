@@ -14,7 +14,7 @@ class PositionController : public Controller {
         tracking_fault_ = false;
         tracking_count_ = 0;
     }
-    float step(const MotorCommand &command, const MainLoopStatus &status) {
+    MainLoopControllerCommand step(const MotorCommand &command, const MainLoopStatus &status) {
         float position_desired = desired_filter_.update(command.position_desired);
         float iq_des = controller_.step(position_desired, command.velocity_desired, status.motor_position, velocity_limit_) + \
                   command.current_desired;
@@ -26,7 +26,7 @@ class PositionController : public Controller {
                 tracking_fault_ = true;
             }
         }
-        return iq_des;
+        return MainLoopControllerCommand{ .iq = iq_des };
     }
     void set_rollover(float rollover) { controller_.set_rollover(rollover); }
     void set_param(const PositionControllerParam &param) {

@@ -219,6 +219,7 @@ typedef struct {
     float torque_sensor_dir;
     uint8_t position_limits_disable;
     MotorError error_mask;
+    float kt; // motor torque constant
 } MainLoopParam;
 
 typedef struct {
@@ -267,6 +268,20 @@ typedef struct{
     TorqueSensorParam torque_sensor;
     MotorError error_mask;      // can set to ERROR_MASK_ALL or ERROR_MASK_NONE or others
 } Calibration;
+
+#ifdef __cplusplus
+enum class FastLoopMode {
+    OPEN, DAMPED, VOLTAGE, CURRENT, PHASE_LOCK
+};
+
+typedef struct {
+    float iq, id, vq, vd;
+} FastLoopCommand;
+
+typedef struct {
+    float motor_torque, iq, id, vq, vd;
+} MainLoopControllerCommand;
+#endif // __cplusplus
 
 typedef struct {
     struct { float i_d, i_q, v_q; } desired;         // desired current in A, i_d typically 0, i_q creates torque, v_q in V is a feedforward

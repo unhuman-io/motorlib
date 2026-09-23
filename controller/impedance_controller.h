@@ -11,7 +11,7 @@ class ImpedanceController : public Controller {
         impedance_controller_.init(status.motor_position);
         torque_controller_.init(status.torque);
     }
-    float step(const MotorCommand &command_raw, const MainLoopStatus &status) {
+    MainLoopControllerCommand step(const MotorCommand &command_raw, const MainLoopStatus &status) {
         const ImpedanceCommand &command = command_raw.impedance;
         if (command.stiffness == 0) {
             impedance_controller_.kp_ = kp_default_;
@@ -29,7 +29,7 @@ class ImpedanceController : public Controller {
         last_torque_des_ = torque_des;
         float iq_des = torque_controller_.step(torque_des, torque_dot_des, status.torque) + \
                   command.current_desired;
-        return iq_des;
+        return MainLoopControllerCommand{ .iq = iq_des };
     }
     void set_param(const ImpedanceControllerParam &param) {
         impedance_controller_.set_param(param.impedance);

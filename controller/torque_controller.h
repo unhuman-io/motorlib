@@ -20,10 +20,10 @@ class TorqueController : public Controller {
     void init(const MainLoopStatus &status) {
         controller_.init(status.torque);
     }
-    float step(const MotorCommand &command, const MainLoopStatus &status) {
+    MainLoopControllerCommand step(const MotorCommand &command, const MainLoopStatus &status) {
         float iq_des = controller_.step(command.torque_desired, 0, status.torque) + \
                   command.current_desired;
-        return iq_des;
+        return MainLoopControllerCommand{ .iq = iq_des };
     }
     void set_param(const TorqueControllerParam &param) {
         controller_.set_param(param.torque);

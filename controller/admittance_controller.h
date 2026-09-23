@@ -12,11 +12,11 @@ class AdmittanceController : public Controller {
         torque_controller_.init(status.torque);
         velocity_controller_.init(status);
     }
-    float step(const MotorCommand &command, const MainLoopStatus &status) {
+    MainLoopControllerCommand step(const MotorCommand &command, const MainLoopStatus &status) {
         float velocity_des = torque_controller_.step(command.torque_desired, 0, status.torque);
         MotorCommand velocity_command = {.current_desired = command.current_desired, .velocity_desired = velocity_des};
-        float iq_des = velocity_controller_.step(velocity_command, status);
-        return iq_des;
+        MainLoopControllerCommand controller_command =  velocity_controller_.step(velocity_command, status);
+        return controller_command;
     }
     void set_param(const AdmittanceControllerParam &param) {
         torque_controller_.set_param(param.torque);
