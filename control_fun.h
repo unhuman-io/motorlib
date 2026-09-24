@@ -289,16 +289,20 @@ class RateLimiter {
     void init(float value, float velocity = 0) { last_value_ = value; velocity_ = velocity;}
     float step(float value) {
         float out_value = value;
-        if (value > (last_value_ + limit_)) {
-            out_value = last_value_ + limit_;
-            velocity_ = limit_;
-        } else if (value < (last_value_ - limit_)) {
-            out_value = last_value_ - limit_;
-            velocity_ = -limit_;
-        } else {
-            out_value = value;
-            velocity_ = value - last_value_;
-        }
+        float high_limit = last_value_ + limit_;
+        float low_limit = last_value_ - limit_;
+        out_value = fsat2(value, high_limit, low_limit);
+        //out_value = value > high_limit ? high_limit : value < low_limit ? low_limit : value;
+        // if (value > (high_limit)) {
+        //     out_value = high_limit;
+        //     //velocity_ = limit_;
+        // } else if (value < (low_limit)) {
+        //     out_value = low_limit;
+        //     //velocity_ = -limit_;
+        // } else {
+        //     out_value = value;
+        //     //velocity_ = value - last_value_;
+        // }
 
         last_value_ = out_value;
         return out_value;
