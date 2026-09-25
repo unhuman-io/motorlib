@@ -3,6 +3,7 @@
 set -e
 
 gcc_dir=$(dirname $0)/../gcc
+rf -rf $gcc_dir
 mkdir -p $gcc_dir
 cd $gcc_dir
 
