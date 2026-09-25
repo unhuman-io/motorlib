@@ -3,6 +3,7 @@
 #include <sys/stat.h>
 #include <sys/types.h>
 #include <cstring>
+#include <cerrno>
 #include "logger.h"
 #include "round_robin_logger.h"
 #include "task.h"
