@@ -9,6 +9,7 @@
 #include "../../messages.h"
 #include "../../logger.h"
 #include "../stm32_serial.h"
+#include "task.h"
 
 extern const char * const name;
 
@@ -239,6 +240,17 @@ bool USB1::cancel_transfer(uint8_t endpoint, uint32_t timeout_ns) {
     return false;
     // after making it through the endpoint may still be active (NAK was set, but a completed 
     // tranfer will toggle a bit to thus reenable TX_VALID) so return to while(tx_active(endpoint)) 
+}
+
+Task<int> USB1::send_data_async(Scheduler &sched, uint8_t endpoint, const uint8_t *data, uint16_t length) {
+    while(tx_active(endpoint)) {
+        co_await sched.yield();
+    }
+    _send_data(endpoint, data, length);
+    while(tx_active(endpoint)) {
+        co_await sched.yield();
+    }
+    co_return 0;
 }
 
 // Wait will pause until last packet has been received, If wait is false, then a buffered packet

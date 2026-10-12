@@ -4,6 +4,7 @@
 #include "communication.h"
 #include <cstring>
 #include <algorithm>
+#include "task.h"
 
 class USBCommunication : public CommunicationBase {
  public:
@@ -24,37 +25,12 @@ class USBCommunication : public CommunicationBase {
        string[count] = 0;
        return count;
     }
-    bool send_string(const char * const string, uint16_t length) {
-       // blocks until entire string has been sent
-       if (length > 0 && (string[0] == 0 || length > MAX_API_DATA_SIZE)) {
-          // binary that starts with 0, need to send as long packet
-          struct LongPacket{
-             APIControlPacket control_packet = {.control_packet_id = 0,
-                                                .type = LONG_PACKET,
-                                                .long_packet = {0, 1}};
-             char data[MAX_API_DATA_SIZE - sizeof(APIControlPacket)];
-          };
-          LongPacket *long_packet_ptr = new LongPacket(); // prevent large allocation on stack
-          LongPacket &long_packet = *long_packet_ptr;
-          long_packet.control_packet.long_packet.total_length = length;
-          int32_t length_remaining = length;
-          const char * str = string;
-          do {
-             uint16_t transfer_size = std::min((uint16_t) (MAX_API_DATA_SIZE - sizeof(APIControlPacket)), (uint16_t) length_remaining);
-             std::memcpy(long_packet.data, str, transfer_size);
-             usb_.send_data(1, (const uint8_t * const) &long_packet, 
-                     transfer_size + sizeof(APIControlPacket), true);
-             str += transfer_size;
-             long_packet.control_packet.long_packet.packet_number++;
-             length_remaining -= transfer_size;
-          } while (length_remaining > 0);
-         delete long_packet_ptr;
-       } else {
-         usb_.send_data(1, (const uint8_t * const) string, 
-               std::min((uint16_t) MAX_API_DATA_SIZE, length), true);
-       }
-       return true;
+    static constexpr uint32_t MAX_PACKET_TRANSFER_SIZE = MAX_API_DATA_SIZE;
+
+    Task<int> write_async(Scheduler& sched, uint8_t* data, uint16_t len) {
+        co_return co_await usb_.send_data_async(sched, 1, data, len);
     }
+    
     bool send_string_active() const { return usb_.tx_active(1); }
     void cancel_send_string() { usb_.cancel_transfer(1); }
     bool new_rx_data() { return usb_.new_rx_data(2); }
