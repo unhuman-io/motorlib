@@ -4,6 +4,7 @@
 #include <cstring>
 #include <algorithm>
 #include "task.h"
+#include "obot_enum.h"
 
 template <class CAN>
 class CANCommunication : public CommunicationBase {
@@ -36,6 +37,8 @@ class CANCommunication : public CommunicationBase {
       can_id.message_id = OBOT_ASCII;
       can_.add_acceptance_filter(can_id.word, 1);
       can_id.message_id = OBOT_ENUM;
+      can_.add_acceptance_filter(can_id.word, 0);
+      can_id.message_id = OBOT_ENUM;
       can_id.address = 0x7f;
       can_.add_acceptance_filter(can_id.word, 0);
     };
@@ -58,6 +61,13 @@ class CANCommunication : public CommunicationBase {
         if (int recv_len = can_.read(0, can_id.word, (uint8_t*)nullptr);
             recv_len == 0) {
             send_data_trigger_ = true;
+            return 0;
+        }
+
+        can_id.message_id = OBOT_ENUM;
+        if (int recv_len = can_.read(0, can_id.word, (uint8_t*)nullptr);
+            recv_len == 0) {
+            send_enum_response();
             return 0;
         }
 
@@ -84,6 +94,12 @@ class CANCommunication : public CommunicationBase {
         send_data_trigger_ = false;
         send_data_counter_ = 0;
       }
+    }
+
+    void send_enum_response() {
+        CANID can_id = {.address = address_, .message_id = OBOT_ENUM};
+        EnumResponse response = get_enum_response();
+        can_.write(can_id.word, (uint8_t *) &response, sizeof(response), 2);
     }
 
     int receive_string(char* const string) {
