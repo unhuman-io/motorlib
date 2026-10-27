@@ -1,10 +1,12 @@
-#pragma once
-
+module;
 #include <string_view>
 #include <cstdint>
 #include <concepts>
 #include "stm32g474xx.h"
 
+export module device.gpio_init;
+
+export {
 enum class GPIOMode : unsigned int {
   INPUT = 0,
   OUTPUT = 1,
@@ -206,6 +208,19 @@ inline constexpr void device_pin_config() {
     init_gpio<get_gpio_regs_init(gpio_init)>();
 }
 
+// GPIOx by port letter, for config code that can't see the device macros
+template<char port>
+inline auto* gpio_port() {
+    if constexpr (port == 'A') return GPIOA;
+    else if constexpr (port == 'B') return GPIOB;
+    else if constexpr (port == 'C') return GPIOC;
+    else if constexpr (port == 'D') return GPIOD;
+    else if constexpr (port == 'E') return GPIOE;
+    else if constexpr (port == 'F') return GPIOF;
+    else if constexpr (port == 'G') return GPIOG;
+}
+
 inline void gpio_toggle(auto* port, int pin) {
     port->ODR ^= 1u << pin;
+}
 }

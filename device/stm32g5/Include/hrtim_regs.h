@@ -25,9 +25,9 @@ struct HRTIMCommonRegs {
         BDMADR, BDTFUPR, ADCER, ADCUR, ADCPS1, ADCPS2, FLTINR3, FLTINR4, FLTINR5;
 };
 
-constexpr uint32_t hrtim_timer_offset = offsetof(HRTIM1_Type, HRTIM_TIMACR);
-constexpr uint32_t hrtim_timer_stride = offsetof(HRTIM1_Type, HRTIM_TIMBCR) - hrtim_timer_offset;
-constexpr uint32_t hrtim_common_offset = offsetof(HRTIM1_Type, HRTIM_CR1);
+inline constexpr uint32_t hrtim_timer_offset = offsetof(HRTIM1_Type, HRTIM_TIMACR);
+inline constexpr uint32_t hrtim_timer_stride = offsetof(HRTIM1_Type, HRTIM_TIMBCR) - hrtim_timer_offset;
+inline constexpr uint32_t hrtim_common_offset = offsetof(HRTIM1_Type, HRTIM_CR1);
 
 // Tie the overlays to the header
 static_assert(offsetof(HRTIM1_Type, HRTIM_MCR) == 0);
@@ -56,36 +56,36 @@ inline HRTIMCommonRegs& hrtim_common() {
     return *reinterpret_cast<HRTIMCommonRegs*>(HRTIM1_BASE + hrtim_common_offset);
 }
 
-constexpr float hrtim_clock_hz = CPU_FREQUENCY_HZ;
+inline constexpr float hrtim_clock_hz = CPU_FREQUENCY_HZ;
 
 // Bit layout is the same for timers A-F; timer A's macros are used.
 namespace hrtim_bits {
-constexpr uint32_t TIMCR_CKPSC_Pos  = HRTIM1_HRTIM_TIMACR_CKPSCA_Pos;
-constexpr uint32_t TIMCR_CONT       = HRTIM1_HRTIM_TIMACR_CONT_Msk;
-constexpr uint32_t TIMCR_TRSTU      = HRTIM1_HRTIM_TIMACR_TARSTU_Msk;
-constexpr uint32_t TIMCR_PREEN      = HRTIM1_HRTIM_TIMACR_PREEN_Msk;
-constexpr uint32_t TIMCR2_UDM       = HRTIM1_HRTIM_TIMACR2_UDM_Msk;
-constexpr uint32_t TIMCR2_ADROM_Pos = HRTIM1_HRTIM_TIMACR2_ADROM_Pos;
-constexpr uint32_t TIMCR2_GTCMP1    = HRTIM1_HRTIM_TIMACR2_GTCMP1_Msk;
-constexpr uint32_t TIMCR2_GTCMP3    = HRTIM1_HRTIM_TIMACR2_GTCMP3_Msk;
-constexpr uint32_t MCR_CKPSC_Pos    = HRTIM1_HRTIM_MCR_CKPSC_Pos;
-constexpr uint32_t MCR_CONT         = HRTIM1_HRTIM_MCR_CONT_Msk;
-constexpr uint32_t MCR_PREEN        = HRTIM1_HRTIM_MCR_PREEN_Msk;
-constexpr uint32_t MCR_MCEN         = HRTIM1_HRTIM_MCR_MCEN_Msk;
-constexpr uint32_t RSTR_MSTPER      = HRTIM1_HRTIM_RSTAR_MSTPER_Msk;
-constexpr uint32_t MCR_TACEN_Pos    = HRTIM1_HRTIM_MCR_TACEN_Pos;
-constexpr uint32_t CR1_AD1USRC_Pos  = HRTIM1_HRTIM_CR1_AD1USRC_Pos;
-constexpr uint32_t CR1_AD3USRC_Pos  = HRTIM1_HRTIM_CR1_AD3USRC_Pos;
-constexpr uint32_t DLLCR_CALEN      = HRTIM1_HRTIM_DLLCR_CALEN_Msk;
-constexpr uint32_t DLLCR_CALRTE_Pos = HRTIM1_HRTIM_DLLCR_CALRTE_Pos;
+inline constexpr uint32_t TIMCR_CKPSC_Pos  = HRTIM1_HRTIM_TIMACR_CKPSCA_Pos;
+inline constexpr uint32_t TIMCR_CONT       = HRTIM1_HRTIM_TIMACR_CONT_Msk;
+inline constexpr uint32_t TIMCR_TRSTU      = HRTIM1_HRTIM_TIMACR_TARSTU_Msk;
+inline constexpr uint32_t TIMCR_PREEN      = HRTIM1_HRTIM_TIMACR_PREEN_Msk;
+inline constexpr uint32_t TIMCR2_UDM       = HRTIM1_HRTIM_TIMACR2_UDM_Msk;
+inline constexpr uint32_t TIMCR2_ADROM_Pos = HRTIM1_HRTIM_TIMACR2_ADROM_Pos;
+inline constexpr uint32_t TIMCR2_GTCMP1    = HRTIM1_HRTIM_TIMACR2_GTCMP1_Msk;
+inline constexpr uint32_t TIMCR2_GTCMP3    = HRTIM1_HRTIM_TIMACR2_GTCMP3_Msk;
+inline constexpr uint32_t MCR_CKPSC_Pos    = HRTIM1_HRTIM_MCR_CKPSC_Pos;
+inline constexpr uint32_t MCR_CONT         = HRTIM1_HRTIM_MCR_CONT_Msk;
+inline constexpr uint32_t MCR_PREEN        = HRTIM1_HRTIM_MCR_PREEN_Msk;
+inline constexpr uint32_t MCR_MCEN         = HRTIM1_HRTIM_MCR_MCEN_Msk;
+inline constexpr uint32_t RSTR_MSTPER      = HRTIM1_HRTIM_RSTAR_MSTPER_Msk;
+inline constexpr uint32_t MCR_TACEN_Pos    = HRTIM1_HRTIM_MCR_TACEN_Pos;
+inline constexpr uint32_t CR1_AD1USRC_Pos  = HRTIM1_HRTIM_CR1_AD1USRC_Pos;
+inline constexpr uint32_t CR1_AD3USRC_Pos  = HRTIM1_HRTIM_CR1_AD3USRC_Pos;
+inline constexpr uint32_t DLLCR_CALEN      = HRTIM1_HRTIM_DLLCR_CALEN_Msk;
+inline constexpr uint32_t DLLCR_CALRTE_Pos = HRTIM1_HRTIM_DLLCR_CALRTE_Pos;
 // checked against the shared enums
-constexpr uint32_t SET1R_SST        = HRTIM1_HRTIM_SETA1R_SST_Msk;
-constexpr uint32_t SET1R_PER        = HRTIM1_HRTIM_SETA1R_PER_Msk;
-constexpr uint32_t SET1R_CMP1       = HRTIM1_HRTIM_SETA1R_CMP1_Msk;
-constexpr uint32_t SET1R_CMP4       = HRTIM1_HRTIM_SETA1R_CMP4_Msk;
-constexpr uint32_t SET1R_MSTCMP4    = HRTIM1_HRTIM_SETA1R_MSTCMP4_Msk;
-constexpr uint32_t ADC1R_AD1TAC3    = HRTIM1_HRTIM_ADC1R_ADC1TAC3_Msk;
-constexpr uint32_t ADC1R_AD1TFC3    = HRTIM1_HRTIM_ADC1R_ADC1TFC3_Msk;
-constexpr uint32_t ADC1R_AD1TFC4    = HRTIM1_HRTIM_ADC1R_ADC1TFC4_Msk;
-constexpr uint32_t ADC1R_AD1TEPER   = HRTIM1_HRTIM_ADC1R_ADC1TEPER_Msk;
+inline constexpr uint32_t SET1R_SST        = HRTIM1_HRTIM_SETA1R_SST_Msk;
+inline constexpr uint32_t SET1R_PER        = HRTIM1_HRTIM_SETA1R_PER_Msk;
+inline constexpr uint32_t SET1R_CMP1       = HRTIM1_HRTIM_SETA1R_CMP1_Msk;
+inline constexpr uint32_t SET1R_CMP4       = HRTIM1_HRTIM_SETA1R_CMP4_Msk;
+inline constexpr uint32_t SET1R_MSTCMP4    = HRTIM1_HRTIM_SETA1R_MSTCMP4_Msk;
+inline constexpr uint32_t ADC1R_AD1TAC3    = HRTIM1_HRTIM_ADC1R_ADC1TAC3_Msk;
+inline constexpr uint32_t ADC1R_AD1TFC3    = HRTIM1_HRTIM_ADC1R_ADC1TFC3_Msk;
+inline constexpr uint32_t ADC1R_AD1TFC4    = HRTIM1_HRTIM_ADC1R_ADC1TFC4_Msk;
+inline constexpr uint32_t ADC1R_AD1TEPER   = HRTIM1_HRTIM_ADC1R_ADC1TEPER_Msk;
 }

@@ -1,10 +1,14 @@
-#pragma once
+module;
+#include <cstdint>
+#include "hrtim_regs.h"
+
+export module device.hrtim_init;
+
+export {
 // Compile-time HRTIM configuration, shared between devices. Register values
 // are built at compile time and only registers that differ from reset are
 // written. Device specifics (register map, bit names, clock) come from the
 // device's hrtim_regs.h.
-#include <cstdint>
-#include "hrtim_regs.h"
 
 enum class HRTIMEnable : bool {
     DISABLED,
@@ -82,6 +86,7 @@ enum class HRTIMTimer : uint8_t {
     MASTER, A, B, C, D, E, F
 };
 
+}
 static_assert(static_cast<uint32_t>(HRTIMEvent::SOFTWARE) == hrtim_bits::SET1R_SST);
 static_assert(static_cast<uint32_t>(HRTIMEvent::PERIOD) == hrtim_bits::SET1R_PER);
 static_assert(static_cast<uint32_t>(HRTIMEvent::CMP1) == hrtim_bits::SET1R_CMP1);
@@ -91,6 +96,7 @@ static_assert(static_cast<uint32_t>(HRTIMADCTrigger::TIMA_CMP3) == hrtim_bits::A
 static_assert(static_cast<uint32_t>(HRTIMADCTrigger::TIMF_CMP3) == hrtim_bits::ADC1R_AD1TFC3);
 static_assert(static_cast<uint32_t>(HRTIMADCTrigger::TIMF_CMP4) == hrtim_bits::ADC1R_AD1TFC4);
 static_assert(static_cast<uint32_t>(HRTIMADCTrigger::TIME_PERIOD) == hrtim_bits::ADC1R_AD1TEPER);
+export {
 
 // Defaults are the register reset values
 struct HRTIMTimerInit {
@@ -246,4 +252,5 @@ inline void init_hrtim() {
 template<HRTIMInit hrtim_init>
 inline void device_hrtim_config() {
     init_hrtim<hrtim_init>();
+}
 }

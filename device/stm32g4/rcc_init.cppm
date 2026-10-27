@@ -1,6 +1,9 @@
-#pragma once
+module;
 #include "stm32g474xx.h"
 
+export module device.rcc_init;
+
+export {
 enum class RCCEnable : bool {
     DISABLED,
     ENABLED
@@ -233,4 +236,5 @@ inline constexpr void device_rcc_config() {
 template<RCCClockInit rcc_clock_init>
 inline constexpr void device_rcc_clock_config() {
     init_rcc_clock<rcc_clock_init>();
+}
 }

@@ -1,4 +1,11 @@
-#pragma once
+module;
+#include <cstddef>
+#include <utility>
+#include "st_device.h"
+
+export module device.play_init;
+
+export {
 // Compile-time configuration of the PLAY (programmable logic array): 16 input
 // filters, 16 four-input look-up-table logic elements, 16 outputs. Defaults
 // are the register reset values; only registers that differ are written.
@@ -7,9 +14,6 @@
 // to LSE (RCCClockInit::play_clock).
 // The pre-multiplexer sources (FILTxCFG PREMUXSEL) are a per-mux table that
 // isn't in the SVD, so those stay raw numbers.
-#include <cstddef>
-#include <utility>
-#include "st_device.h"
 
 enum class PLAYEnable : bool {
     DISABLED,
@@ -28,12 +32,12 @@ consteval uint8_t play_in_le_direct(int le) { return 0x00 + le; }
 consteval uint8_t play_in_le_registered(int le) { return 0x10 + le; }
 consteval uint8_t play_in_filter(int filter) { return 0x20 + filter; }
 consteval uint8_t play_in_sw(int sw_input) { return 0x30 + sw_input; }
-constexpr uint8_t play_in_none = 0x3F;   // software input 15, the reset value
+inline constexpr uint8_t play_in_none = 0x3F;   // software input 15, the reset value
 
 // Registered output clock gate (LExCFG2 CK_SEL): off, always on, or any play_in_* select
-constexpr uint8_t play_clock_off = 0x00;
-constexpr uint8_t play_clock_on = 0x01;
-constexpr uint8_t play_clock_sw_write = 0x02;
+inline constexpr uint8_t play_clock_off = 0x00;
+inline constexpr uint8_t play_clock_on = 0x01;
+inline constexpr uint8_t play_clock_sw_write = 0x02;
 
 // Output selects (OUTxCFG SEL), the OSR bit number of the source
 consteval uint8_t play_out_le_direct(int le) { return PLAY_PLAY_OSR_LEOUTD0_Pos + le; }
@@ -131,10 +135,12 @@ inline consteval PLAYRegsInit get_play_regs_init(const PLAYInit& p) {
 }
 
 // The per-filter/element/output registers are contiguous in the header
+}
 static_assert(offsetof(PLAY_Type, PLAY_FILT15CFG) - offsetof(PLAY_Type, PLAY_FILT0CFG) == 15 * 4);
 static_assert(offsetof(PLAY_Type, PLAY_LE15CFG1) - offsetof(PLAY_Type, PLAY_LE0CFG1) == 15 * 4);
 static_assert(offsetof(PLAY_Type, PLAY_LE15CFG2) - offsetof(PLAY_Type, PLAY_LE0CFG2) == 15 * 4);
 static_assert(offsetof(PLAY_Type, PLAY_OUT15CFG) - offsetof(PLAY_Type, PLAY_OUT0CFG) == 15 * 4);
+export {
 
 template<uint32_t v, uint32_t v_default>
 inline void play_write_if_changed(volatile uint32_t& reg) {
@@ -178,3 +184,4 @@ inline void device_play_config() {
 inline void play_set_inputs(uint16_t mask) { PLAY->PLAY_SWINSET = mask; }
 inline void play_clear_inputs(uint16_t mask) { PLAY->PLAY_SWINCLR = mask; }
 inline uint32_t play_outputs() { return PLAY->PLAY_OSR; }
+}
