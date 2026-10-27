@@ -115,6 +115,12 @@ enum class RCCPLLSource : uint8_t {   // PLL1CFGR PLL1SRC encodings
     HSE,
 };
 
+enum class RCCFDCANClock : uint8_t {   // CCIPR5 FDCANSEL encodings
+    HSE,
+    PLL1Q,
+    PLL2Q,
+};
+
 enum class RCCVoltageScale : uint8_t {   // PWR_VOSCR VOS encodings
     SCALE2 = 1,
     SCALE1 = 2,
@@ -126,6 +132,8 @@ struct RCCClockInit {
     RCCPLLSource pll_source = RCCPLLSource::NONE;      // with a PLL source, sysclk = PLL1 P output at cpu_frequency_hz
     uint32_t hse_frequency_hz = 0;
     uint32_t pll2_frequency_hz = 0;                    // PLL2 P output from the same source, 0 = off; kernel clock for the PLAY etc.
+    uint32_t pll1_q_frequency_hz = 0;                  // PLL1 Q output, 0 = off; must divide the VCO (2 * cpu_frequency_hz) exactly
+    RCCFDCANClock fdcan_clock = RCCFDCANClock::HSE;    // fdcan kernel clock, reset selects the HSE
     RCCVoltageScale voltage_scale = RCCVoltageScale::SCALE0;
     uint8_t ahb_div_log2 = 0;                          // CFGR2 HPRE, divide by 2^n
     uint8_t apb1_div_log2 = 0;                         // CFGR2 PPRE1
@@ -342,14 +350,19 @@ inline void init_rcc_clock() {
             RCC->RCC_CR |= RCC_RCC_CR_HSEON_Msk;
             while (!(RCC->RCC_CR & RCC_RCC_CR_HSERDY_Msk));
         }
+        constexpr uint32_t vco_hz = 2 * c.cpu_frequency_hz;
+        static_assert(c.pll1_q_frequency_hz == 0 || (vco_hz % c.pll1_q_frequency_hz == 0 && vco_hz / c.pll1_q_frequency_hz <= 128),
+                      "pll1_q_frequency_hz must be the VCO (2 * cpu_frequency_hz) divided by 1..128");
+        constexpr uint32_t q_div = c.pll1_q_frequency_hz ? vco_hz / c.pll1_q_frequency_hz : 2;
         RCC->RCC_PLL1CFGR = static_cast<uint32_t>(c.pll_source) << RCC_RCC_PLL1CFGR_PLL1SRC_Pos |
             pll.range << RCC_RCC_PLL1CFGR_PLL1RGE_Pos |
             0 << RCC_RCC_PLL1CFGR_PLL1VCOSEL_Pos |      // wide VCO range
             pll.m << RCC_RCC_PLL1CFGR_PLL1M_Pos |
-            RCC_RCC_PLL1CFGR_PLL1PEN_Msk;
+            RCC_RCC_PLL1CFGR_PLL1PEN_Msk |
+            (c.pll1_q_frequency_hz ? RCC_RCC_PLL1CFGR_PLL1QEN_Msk : 0);
         RCC->RCC_PLL1DIVR = (pll.n - 1) << RCC_RCC_PLL1DIVR_PLL1N_Pos |
             (2 - 1) << RCC_RCC_PLL1DIVR_PLL1P_Pos |
-            (2 - 1) << RCC_RCC_PLL1DIVR_PLL1Q_Pos |
+            (q_div - 1) << RCC_RCC_PLL1DIVR_PLL1Q_Pos |
             (2 - 1) << RCC_RCC_PLL1DIVR_PLL1R_Pos;
         RCC->RCC_CR |= RCC_RCC_CR_PLL1ON_Msk;
         while (!(RCC->RCC_CR & RCC_RCC_CR_PLL1RDY_Msk));
@@ -375,6 +388,10 @@ inline void init_rcc_clock() {
         }
     }
     static_assert(c.play_clock != RCCKernelClock::PLL2P || c.pll2_frequency_hz != 0, "PLL2 must be configured to clock the PLAY from it");
+    static_assert(c.fdcan_clock != RCCFDCANClock::PLL1Q || c.pll1_q_frequency_hz != 0, "PLL1 Q must be configured to clock the FDCAN from it");
+    if constexpr (c.fdcan_clock != RCCFDCANClock::HSE) {
+        RCC->RCC_CCIPR5 = (RCC->RCC_CCIPR5 & ~RCC_RCC_CCIPR5_FDCANSEL_Msk) | static_cast<uint32_t>(c.fdcan_clock) << RCC_RCC_CCIPR5_FDCANSEL_Pos;
+    }
 
     constexpr uint32_t ccipr3 = static_cast<uint32_t>(c.play_clock) << RCC_RCC_CCIPR3_PLAYSEL_Pos |
         c.play_clock_div << RCC_RCC_CCIPR3_PLAYDIV_Pos;

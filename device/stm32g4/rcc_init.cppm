@@ -83,8 +83,15 @@ struct RCCInit {
     RCCEnable syscfg    = RCCEnable::DISABLED; 
 };
 
+enum class RCCFDCANClock : uint8_t {   // CCIPR FDCANSEL encodings
+    HSE,
+    PLLQ,
+    PCLK1,
+};
+
 struct RCCClockInit {
     uint32_t cpu_frequency_hz = 170'000'000;
+    RCCFDCANClock fdcan_clock = RCCFDCANClock::HSE;   // fdcan kernel clock, reset selects the HSE
 };
 
 template<const RCCInit r>
@@ -225,6 +232,10 @@ inline constexpr void init_rcc_clock() {
   while(!(RCC->CR & RCC_CR_PLLRDY));
 
   RCC->CFGR = 3 << RCC_CFGR_SW_Pos; // (3) // PLL clock
+
+    if constexpr (c.fdcan_clock != RCCFDCANClock::HSE) {
+        RCC->CCIPR = (RCC->CCIPR & ~RCC_CCIPR_FDCANSEL_Msk) | static_cast<uint32_t>(c.fdcan_clock) << RCC_CCIPR_FDCANSEL_Pos;
+    }
 }
 
 

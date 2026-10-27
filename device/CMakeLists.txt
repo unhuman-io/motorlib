@@ -22,7 +22,7 @@ function(add_device_target name arch ld include_dir)
     target_sources(${name} PUBLIC
         FILE_SET CXX_MODULES
         BASE_DIRS ${CMAKE_CURRENT_LIST_DIR}
-        FILES ${ARGN} common/hrtim_init.cppm
+        FILES ${ARGN} common/hrtim_init.cppm common/can_init.cppm
     )
 endfunction()
 
