@@ -2,6 +2,9 @@
 // Compile-time configuration of the PLAY (programmable logic array): 16 input
 // filters, 16 four-input look-up-table logic elements, 16 outputs. Defaults
 // are the register reset values; only registers that differ are written.
+// The combinational path works from the bus clock alone; registered outputs,
+// filters, software inputs and edge flags need the kernel clock, which resets
+// to LSE (RCCClockInit::play_clock).
 // The pre-multiplexer sources (FILTxCFG PREMUXSEL) are a per-mux table that
 // isn't in the SVD, so those stay raw numbers.
 #include <cstddef>
@@ -35,6 +38,15 @@ constexpr uint8_t play_clock_sw_write = 0x02;
 // Output selects (OUTxCFG SEL), the OSR bit number of the source
 consteval uint8_t play_out_le_direct(int le) { return PLAY_PLAY_OSR_LEOUTD0_Pos + le; }
 consteval uint8_t play_out_le_registered(int le) { return PLAY_PLAY_OSR_LEOUTR0_Pos + le; }
+
+// LUT value for the inverse of one input (in0..in3)
+consteval uint16_t play_lut_invert(int input) {
+    uint16_t lut = 0;
+    for (int i = 0; i < 16; i++) {
+        if (!(i & 1 << input)) lut |= 1 << i;
+    }
+    return lut;
+}
 
 // LUT value for a plain copy of one input (in0..in3) to the output
 consteval uint16_t play_lut_passthrough(int input) {
@@ -141,6 +153,9 @@ template<const PLAYInit p>
 inline void init_play() {
     constexpr PLAYRegsInit r = get_play_regs_init(p);
     constexpr PLAYRegsInit d = get_play_regs_init(PLAYInit{});
+    // Configuration and lock survive a system reset, and config writes are
+    // ignored while locked, so always unlock first.
+    PLAY->PLAY_CFGCR = PLAY_PLAY_CFGCR_UNLOCK_Msk;
     init_play_regs<r, d>(std::make_index_sequence<16>{});
     play_write_if_changed<r.flctl, d.flctl>(PLAY->PLAY_FLCTL);
     play_write_if_changed<r.flier, d.flier>(PLAY->PLAY_FLIER);

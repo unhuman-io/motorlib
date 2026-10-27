@@ -97,8 +97,19 @@ struct RCCInit {
     RCCEnable sbs       = RCCEnable::DISABLED;
 };
 
+enum class RCCKernelClock : uint8_t {   // CCIPRx xxxSEL encodings
+    LSE,
+    LSI,
+    PLL2P,
+    HSE,
+    HSI,
+    HSI48,
+};
+
 struct RCCClockInit {
     uint32_t cpu_frequency_hz = 64'000'000;
+    RCCKernelClock play_clock = RCCKernelClock::LSE;   // CCIPR3 PLAYSEL, reset selects the (usually absent) LSE
+    uint8_t play_clock_div = 0;                        // CCIPR3 PLAYDIV, divide by 2^n
 };
 
 // Positions come from the svdconv --fields=macro output in STM32G564.h.
@@ -243,6 +254,12 @@ inline void init_rcc_clock() {
     DWT->CTRL |= DWT_CTRL_CYCCNTENA_Msk;
 
     // TODO: PLL1 from HSE, flash latency, VOS
+
+    constexpr uint32_t ccipr3 = static_cast<uint32_t>(c.play_clock) << RCC_RCC_CCIPR3_PLAYSEL_Pos |
+        c.play_clock_div << RCC_RCC_CCIPR3_PLAYDIV_Pos;
+    if constexpr (ccipr3 != 0) {
+        RCC->RCC_CCIPR3 = ccipr3;
+    }
 }
 
 template<RCCInit rcc_init>
