@@ -4,8 +4,8 @@ set(CMAKE_SYSTEM_PROCESSOR arm)
 set(LLVM_ROOT "${CMAKE_CURRENT_LIST_DIR}/../llvm")
 set(LLVM_BIN_DIR "${LLVM_ROOT}/bin")
 
-set(TARGET_TRIPLE "armv7em-none-eabihf")
-set(MCU_FLAGS "--target=${TARGET_TRIPLE}" "-mcpu=cortex-m4" "-mfpu=fpv4-sp-d16" "-mfloat-abi=hard")
+# --target and core-specific flags live in arch.cmake (arch_cortex_m4f etc.);
+# link each target against the arch library it needs.
 
 set(CMAKE_C_COMPILER "clang")
 set(CMAKE_CXX_COMPILER "clang++")
