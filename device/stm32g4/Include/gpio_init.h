@@ -205,3 +205,7 @@ template<GPIOInit gpio_init>
 inline constexpr void device_pin_config() { 
     init_gpio<get_gpio_regs_init(gpio_init)>();
 }
+
+inline void gpio_toggle(auto* port, int pin) {
+    port->ODR ^= 1u << pin;
+}
