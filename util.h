@@ -2,7 +2,6 @@
 #define UNHUMAN_MOTORLIB_UTIL_H_
 
 #include "st_device.h"
-#include "core_cm4.h"
 #ifdef __clang__
 #include <stdlib.h>
 #define _calloc_r __hide_calloc_r
