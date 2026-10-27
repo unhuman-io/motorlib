@@ -75,6 +75,8 @@ struct RCCInit {
     RCCEnable tim8      = RCCEnable::DISABLED;
     RCCEnable spi1      = RCCEnable::DISABLED;
     RCCEnable tim1      = RCCEnable::DISABLED;
+    RCCEnable playapb   = RCCEnable::DISABLED;
+    RCCEnable play      = RCCEnable::DISABLED;
     RCCEnable hrtim1    = RCCEnable::DISABLED;
 
     // APB3
@@ -181,6 +183,8 @@ inline consteval uint32_t get_apb2enr() {
         static_cast<uint32_t>(r.tim8) << RCC_RCC_APB2ENR_TIM8EN_Pos |
         static_cast<uint32_t>(r.spi1) << RCC_RCC_APB2ENR_SPI1EN_Pos |
         static_cast<uint32_t>(r.tim1) << RCC_RCC_APB2ENR_TIM1EN_Pos |
+        static_cast<uint32_t>(r.playapb) << RCC_RCC_APB2ENR_PLAYAPBEN_Pos |
+        static_cast<uint32_t>(r.play) << RCC_RCC_APB2ENR_PLAYEN_Pos |
         static_cast<uint32_t>(r.hrtim1) << RCC_RCC_APB2ENR_HRTIM1EN_Pos;
 }
 

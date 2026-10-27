@@ -20,6 +20,8 @@ constexpr uint32_t TIMCR_TRSTU      = HRTIM_TIMCR_TRSTU;
 constexpr uint32_t TIMCR_PREEN      = HRTIM_TIMCR_PREEN;
 constexpr uint32_t TIMCR2_UDM       = HRTIM_TIMCR2_UDM;
 constexpr uint32_t MCR_TACEN_Pos    = HRTIM_MCR_TACEN_Pos;
+constexpr uint32_t CR1_AD1USRC_Pos  = HRTIM_CR1_ADC1USRC_Pos;
+constexpr uint32_t CR1_AD3USRC_Pos  = HRTIM_CR1_ADC3USRC_Pos;
 constexpr uint32_t DLLCR_CALEN      = HRTIM_DLLCR_CALEN;
 constexpr uint32_t DLLCR_CALRTE_Pos = HRTIM_DLLCR_CALRTE_Pos;
 // checked against the shared enums

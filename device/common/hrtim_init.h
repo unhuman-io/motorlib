@@ -72,6 +72,10 @@ constexpr HRTIMADCTrigger operator|(HRTIMADCTrigger a, HRTIMADCTrigger b) {
     return static_cast<HRTIMADCTrigger>(static_cast<uint32_t>(a) | static_cast<uint32_t>(b));
 }
 
+enum class HRTIMTimer : uint8_t {
+    MASTER, A, B, C, D, E, F
+};
+
 static_assert(static_cast<uint32_t>(HRTIMEvent::SOFTWARE) == hrtim_bits::SET1R_SST);
 static_assert(static_cast<uint32_t>(HRTIMEvent::PERIOD) == hrtim_bits::SET1R_PER);
 static_assert(static_cast<uint32_t>(HRTIMEvent::CMP1) == hrtim_bits::SET1R_CMP1);
@@ -107,6 +111,10 @@ struct HRTIMInit {
     HRTIMTimerInit a, b, c, d, e, f;
     HRTIMADCTrigger adc_trigger1 = HRTIMADCTrigger::NONE;  // ADC1R
     HRTIMADCTrigger adc_trigger3 = HRTIMADCTrigger::NONE;  // ADC3R
+    // ADCxR are preloaded; the active register is only loaded on the update
+    // event of this timer, so it must be one that runs and updates.
+    HRTIMTimer adc_trigger1_update = HRTIMTimer::MASTER;   // CR1 AD1USRC
+    HRTIMTimer adc_trigger3_update = HRTIMTimer::MASTER;   // CR1 AD3USRC
     HRTIMEnable dll_calibration = HRTIMEnable::ENABLED;    // DLLCR periodic calibration, required for the x32 clock
 };
 
@@ -193,6 +201,9 @@ inline void init_hrtim() {
     init_hrtim_timer_regs<get_hrtim_timer_regs_init(h.f), d>(hrtim_timer(5));
 
     auto& common = hrtim_common();
+    constexpr uint32_t cr1 = static_cast<uint32_t>(h.adc_trigger1_update) << CR1_AD1USRC_Pos |
+        static_cast<uint32_t>(h.adc_trigger3_update) << CR1_AD3USRC_Pos;
+    if constexpr (cr1 != 0) common.CR1 = cr1;
     if constexpr (h.adc_trigger1 != HRTIMADCTrigger::NONE) common.ADC1R = static_cast<uint32_t>(h.adc_trigger1);
     if constexpr (h.adc_trigger3 != HRTIMADCTrigger::NONE) common.ADC3R = static_cast<uint32_t>(h.adc_trigger3);
     if constexpr (h.dll_calibration == HRTIMEnable::ENABLED) common.DLLCR = DLLCR_CALEN | 3 << DLLCR_CALRTE_Pos;  // every 2048 hrtim clocks
