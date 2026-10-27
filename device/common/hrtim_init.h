@@ -16,6 +16,12 @@ enum class HRTIMMode : uint8_t {
     CENTER_ALIGNED,   // counts up to period then down; set/reset events swap on the way down
 };
 
+enum class HRTIMRollover : uint8_t {   // which roll-over of a center aligned counter generates the event
+    BOTH,                              // counter = 0 and counter = period
+    VALLEY,                            // counter = 0
+    CREST,                             // counter = period, the middle of the pwm pulse
+};
+
 // Output set/reset sources (SETxyR / RSTxyR bits), combinable with |
 enum class HRTIMEvent : uint32_t {
     NONE          = 0,
@@ -90,6 +96,9 @@ static_assert(static_cast<uint32_t>(HRTIMADCTrigger::TIME_PERIOD) == hrtim_bits:
 struct HRTIMTimerInit {
     HRTIMEnable enable = HRTIMEnable::DISABLED;            // MCR TxCEN, set last
     HRTIMMode mode = HRTIMMode::EDGE_ALIGNED;              // TIMxCR2 UDM
+    HRTIMRollover adc_rollover = HRTIMRollover::BOTH;      // TIMxCR2 ADROM, for the TIMx_PERIOD adc triggers
+    HRTIMEnable cmp1_greater_than = HRTIMEnable::DISABLED; // TIMxCR2 GTCMP1: event when counter > cmp1, once per period when center aligned
+    HRTIMEnable cmp3_greater_than = HRTIMEnable::DISABLED; // TIMxCR2 GTCMP3
     uint8_t prescaler = 0;                                 // TIMxCR CKPSC: timer clock = 32 * hrtim_clock_hz >> prescaler
     HRTIMEnable continuous = HRTIMEnable::DISABLED;        // TIMxCR CONT
     HRTIMEnable preload = HRTIMEnable::DISABLED;           // TIMxCR PREEN
@@ -105,9 +114,19 @@ struct HRTIMTimerInit {
     HRTIMEvent out2_reset = HRTIMEvent::NONE;              // RSTx2R
     HRTIMEnable out1 = HRTIMEnable::DISABLED;              // OENR
     HRTIMEnable out2 = HRTIMEnable::DISABLED;
+    HRTIMEnable reset_on_master_period = HRTIMEnable::DISABLED;   // RSTxR MSTPER: counter restarts from 0 on the master period, keeps timers in phase
+};
+
+struct HRTIMMasterInit {
+    HRTIMEnable enable = HRTIMEnable::DISABLED;            // MCR MCEN
+    uint8_t prescaler = 0;                                 // MCR CKPSC
+    HRTIMEnable continuous = HRTIMEnable::DISABLED;        // MCR CONT
+    HRTIMEnable preload = HRTIMEnable::DISABLED;           // MCR PREEN
+    uint16_t period = 0xFFDF;                              // MPER
 };
 
 struct HRTIMInit {
+    HRTIMMasterInit master;
     HRTIMTimerInit a, b, c, d, e, f;
     HRTIMADCTrigger adc_trigger1 = HRTIMADCTrigger::NONE;  // ADC1R
     HRTIMADCTrigger adc_trigger3 = HRTIMADCTrigger::NONE;  // ADC3R
@@ -130,7 +149,7 @@ consteval uint16_t hrtim_period(uint32_t pwm_frequency_hz, uint8_t prescaler = 0
 }
 
 struct HRTIMTimerRegsInit {
-    uint32_t cr, cr2, per, cmp1, cmp2, cmp3, cmp4, set1, rst1, set2, rst2;
+    uint32_t cr, cr2, per, cmp1, cmp2, cmp3, cmp4, set1, rst1, set2, rst2, rst;
 };
 
 inline consteval HRTIMTimerRegsInit get_hrtim_timer_regs_init(const HRTIMTimerInit& t) {
@@ -140,7 +159,10 @@ inline consteval HRTIMTimerRegsInit get_hrtim_timer_regs_init(const HRTIMTimerIn
         (t.continuous == HRTIMEnable::ENABLED ? TIMCR_CONT : 0) |
         (t.preload == HRTIMEnable::ENABLED ? TIMCR_PREEN : 0) |
         (t.update_on_reset == HRTIMEnable::ENABLED ? TIMCR_TRSTU : 0);
-    r.cr2 = t.mode == HRTIMMode::CENTER_ALIGNED ? TIMCR2_UDM : 0;
+    r.cr2 = (t.mode == HRTIMMode::CENTER_ALIGNED ? TIMCR2_UDM : 0) |
+        static_cast<uint32_t>(t.adc_rollover) << TIMCR2_ADROM_Pos |
+        (t.cmp1_greater_than == HRTIMEnable::ENABLED ? TIMCR2_GTCMP1 : 0) |
+        (t.cmp3_greater_than == HRTIMEnable::ENABLED ? TIMCR2_GTCMP3 : 0);
     r.per = t.period;
     r.cmp1 = t.cmp1;
     r.cmp2 = t.cmp2;
@@ -150,13 +172,16 @@ inline consteval HRTIMTimerRegsInit get_hrtim_timer_regs_init(const HRTIMTimerIn
     r.rst1 = static_cast<uint32_t>(t.out1_reset);
     r.set2 = static_cast<uint32_t>(t.out2_set);
     r.rst2 = static_cast<uint32_t>(t.out2_reset);
+    r.rst = t.reset_on_master_period == HRTIMEnable::ENABLED ? RSTR_MSTPER : 0;
     return r;
 }
 
+// TIMxCR (with the preload enable) is written last so that period, compares
+// and output events take effect immediately instead of at the timer's first
+// roll-over of the reset period, which would leave the timers out of phase.
 template<const HRTIMTimerRegsInit r, const HRTIMTimerRegsInit r_default>
 inline void init_hrtim_timer_regs(HRTIMTimerRegs& regs) {
     if constexpr (r.cr2 != r_default.cr2) regs.TIMxCR2 = r.cr2;
-    if constexpr (r.cr != r_default.cr) regs.TIMxCR = r.cr;
     if constexpr (r.per != r_default.per) regs.PERxR = r.per;
     if constexpr (r.cmp1 != r_default.cmp1) regs.CMP1xR = r.cmp1;
     if constexpr (r.cmp2 != r_default.cmp2) regs.CMP2xR = r.cmp2;
@@ -166,6 +191,8 @@ inline void init_hrtim_timer_regs(HRTIMTimerRegs& regs) {
     if constexpr (r.rst1 != r_default.rst1) regs.RSTx1R = r.rst1;
     if constexpr (r.set2 != r_default.set2) regs.SETx2R = r.set2;
     if constexpr (r.rst2 != r_default.rst2) regs.RSTx2R = r.rst2;
+    if constexpr (r.rst != r_default.rst) regs.RSTxR = r.rst;
+    if constexpr (r.cr != r_default.cr) regs.TIMxCR = r.cr;
 }
 
 template<const HRTIMInit h>
@@ -181,7 +208,11 @@ inline consteval uint32_t get_hrtim_oenr() {
 
 template<const HRTIMInit h>
 inline consteval uint32_t get_hrtim_mcr() {
-    uint32_t v = 0;
+    using namespace hrtim_bits;
+    uint32_t v = h.master.prescaler << MCR_CKPSC_Pos |
+        (h.master.continuous == HRTIMEnable::ENABLED ? MCR_CONT : 0) |
+        (h.master.preload == HRTIMEnable::ENABLED ? MCR_PREEN : 0) |
+        (h.master.enable == HRTIMEnable::ENABLED ? MCR_MCEN : 0);
     const HRTIMTimerInit timers[] = {h.a, h.b, h.c, h.d, h.e, h.f};
     for (int ch = 0; ch < 6; ch++) {
         v |= static_cast<uint32_t>(timers[ch].enable) << (hrtim_bits::MCR_TACEN_Pos + ch);
@@ -208,6 +239,7 @@ inline void init_hrtim() {
     if constexpr (h.adc_trigger3 != HRTIMADCTrigger::NONE) common.ADC3R = static_cast<uint32_t>(h.adc_trigger3);
     if constexpr (h.dll_calibration == HRTIMEnable::ENABLED) common.DLLCR = DLLCR_CALEN | 3 << DLLCR_CALRTE_Pos;  // every 2048 hrtim clocks
     if constexpr (get_hrtim_oenr<h>() != 0) common.OENR = get_hrtim_oenr<h>();
+    if constexpr (h.master.period != HRTIMMasterInit{}.period) hrtim_master().MPER = h.master.period;
     if constexpr (get_hrtim_mcr<h>() != 0) hrtim_master().MCR = get_hrtim_mcr<h>();
 }
 

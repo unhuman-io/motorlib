@@ -106,11 +106,83 @@ enum class RCCKernelClock : uint8_t {   // CCIPRx xxxSEL encodings
     HSI48,
 };
 
+enum class RCCPLLSource : uint8_t {   // PLL1CFGR PLL1SRC encodings
+    NONE,                             // stay on the 64 MHz HSI
+    HSI,
+    HSE,
+};
+
+enum class RCCVoltageScale : uint8_t {   // PWR_VOSCR VOS encodings
+    SCALE2 = 1,
+    SCALE1 = 2,
+    SCALE0 = 3,                          // up to 280 MHz
+};
+
 struct RCCClockInit {
-    uint32_t cpu_frequency_hz = 64'000'000;
+    uint32_t cpu_frequency_hz = 64'000'000;            // must match CPU_FREQUENCY_HZ
+    RCCPLLSource pll_source = RCCPLLSource::NONE;      // with a PLL source, sysclk = PLL1 P output at cpu_frequency_hz
+    uint32_t hse_frequency_hz = 0;
+    uint32_t pll2_frequency_hz = 0;                    // PLL2 P output from the same source, 0 = off; kernel clock for the PLAY etc.
+    RCCVoltageScale voltage_scale = RCCVoltageScale::SCALE0;
+    uint8_t ahb_div_log2 = 0;                          // CFGR2 HPRE, divide by 2^n
+    uint8_t apb1_div_log2 = 0;                         // CFGR2 PPRE1
+    uint8_t apb2_div_log2 = 0;                         // CFGR2 PPRE2, HRTIM clock
+    uint8_t apb3_div_log2 = 0;                         // CFGR2 PPRE3
     RCCKernelClock play_clock = RCCKernelClock::LSE;   // CCIPR3 PLAYSEL, reset selects the (usually absent) LSE
     uint8_t play_clock_div = 0;                        // CCIPR3 PLAYDIV, divide by 2^n
 };
+
+void rcc_pll_config_not_possible();   // not constexpr: calling it fails the constant evaluation
+
+struct RCCPLLConfig {
+    uint32_t m, n, input_hz, range;
+};
+
+// PLL1: source / M -> 2..16 MHz (4..8 preferred) -> x N -> VCO 128..560 MHz
+// (wide range) -> / 2 -> sysclk. Q and R outputs stay off.
+inline consteval RCCPLLConfig get_rcc_pll_config(uint32_t source_hz, uint32_t sysclk_hz) {
+    const uint32_t vco_hz = 2 * sysclk_hz;
+    if (vco_hz < 128'000'000 || vco_hz > 560'000'000) rcc_pll_config_not_possible();
+    RCCPLLConfig best{};
+    int best_score = 0;
+    for (uint32_t m = 1; m <= 63; m++) {
+        if (source_hz % m) continue;
+        const uint32_t in = source_hz / m;
+        if (in < 2'000'000 || in > 16'000'000 || vco_hz % in) continue;
+        const uint32_t n = vco_hz / in;
+        if (n < 4 || n > 512) continue;
+        const int score = (in >= 4'000'000 && in <= 8'000'000 ? 3'000 : in > 8'000'000 ? 2'000 : 1'000) + in / 100'000;
+        if (score > best_score) {
+            best_score = score;
+            best = {m, n, in, in < 4'000'000 ? 1u : in < 8'000'000 ? 2u : 3u};
+        }
+    }
+    if (best_score == 0) rcc_pll_config_not_possible();
+    return best;
+}
+
+// Flash read latency, assumed 42 MHz per wait state at scale 0 as on the
+// STM32H5 (250 MHz needs 5), and the programming delay ranges from the LL
+// driver (<=68 MHz: 0, <=136: 1, above: 2).
+inline consteval uint32_t get_flash_acr(uint32_t hclk_hz) {
+    const uint32_t latency = (hclk_hz + 42'000'000 - 1) / 42'000'000 - 1;
+    const uint32_t wrhighfreq = hclk_hz <= 68'000'000 ? 0 : hclk_hz <= 136'000'000 ? 1 : 2;
+    return latency << FLASH_FLASH_ACR_LATENCY_Pos | wrhighfreq << FLASH_FLASH_ACR_WRHIGHFREQ_Pos | FLASH_FLASH_ACR_PRFTEN_Msk;
+}
+
+// CFGR2 prescaler encodings: 0 = /1, otherwise base | (log2 - 1)
+inline consteval uint32_t rcc_prescaler(uint8_t div_log2, uint32_t base) {
+    return div_log2 ? base | (div_log2 - 1) : 0;
+}
+
+template<const RCCClockInit c>
+inline consteval uint32_t get_rcc_cfgr2() {
+    return rcc_prescaler(c.ahb_div_log2, 0x8) << RCC_RCC_CFGR2_HPRE_Pos |
+        rcc_prescaler(c.apb1_div_log2, 0x4) << RCC_RCC_CFGR2_PPRE1_Pos |
+        rcc_prescaler(c.apb2_div_log2, 0x4) << RCC_RCC_CFGR2_PPRE2_Pos |
+        rcc_prescaler(c.apb3_div_log2, 0x4) << RCC_RCC_CFGR2_PPRE3_Pos;
+}
+
 
 // Positions come from the svdconv --fields=macro output in STM32G564.h.
 template<const RCCInit r>
@@ -246,14 +318,60 @@ inline void init_rcc() {
 
 template<const RCCClockInit c>
 inline void init_rcc_clock() {
-    static_assert(c.cpu_frequency_hz == 64'000'000, "only the 64 MHz HSI reset clock is supported so far");
+    static_assert(c.cpu_frequency_hz == static_cast<uint32_t>(CPU_FREQUENCY_HZ), "CPU_FREQUENCY_HZ in st_device.h must match the clock configuration");
+    static_assert(c.pll_source != RCCPLLSource::NONE || c.cpu_frequency_hz == 64'000'000, "without a PLL the cpu runs on the 64 MHz HSI");
+    static_assert(c.pll_source != RCCPLLSource::HSE || c.hse_frequency_hz != 0, "hse_frequency_hz is needed with an HSE PLL source");
 
     // ensure cpu clock is started for us_delay
     CoreDebug->DEMCR |= CoreDebug_DEMCR_TRCENA_Msk;
     DWT->CYCCNT = 0;
     DWT->CTRL |= DWT_CTRL_CYCCNTENA_Msk;
 
-    // TODO: PLL1 from HSE, flash latency, VOS
+    if constexpr (c.pll_source != RCCPLLSource::NONE) {
+        constexpr uint32_t source_hz = c.pll_source == RCCPLLSource::HSE ? c.hse_frequency_hz : 64'000'000;
+        constexpr RCCPLLConfig pll = get_rcc_pll_config(source_hz, c.cpu_frequency_hz);
+        constexpr uint32_t hclk_hz = c.cpu_frequency_hz >> c.ahb_div_log2;
+
+        PWR->PWR_VOSCR = static_cast<uint32_t>(c.voltage_scale) << PWR_PWR_VOSCR_VOS_Pos;
+        while (!(PWR->PWR_VOSSR & PWR_PWR_VOSSR_VOSRDY_Msk));
+
+        if constexpr (c.pll_source == RCCPLLSource::HSE) {
+            RCC->RCC_CR |= RCC_RCC_CR_HSEON_Msk;
+            while (!(RCC->RCC_CR & RCC_RCC_CR_HSERDY_Msk));
+        }
+        RCC->RCC_PLL1CFGR = static_cast<uint32_t>(c.pll_source) << RCC_RCC_PLL1CFGR_PLL1SRC_Pos |
+            pll.range << RCC_RCC_PLL1CFGR_PLL1RGE_Pos |
+            0 << RCC_RCC_PLL1CFGR_PLL1VCOSEL_Pos |      // wide VCO range
+            pll.m << RCC_RCC_PLL1CFGR_PLL1M_Pos |
+            RCC_RCC_PLL1CFGR_PLL1PEN_Msk;
+        RCC->RCC_PLL1DIVR = (pll.n - 1) << RCC_RCC_PLL1DIVR_PLL1N_Pos |
+            (2 - 1) << RCC_RCC_PLL1DIVR_PLL1P_Pos |
+            (2 - 1) << RCC_RCC_PLL1DIVR_PLL1Q_Pos |
+            (2 - 1) << RCC_RCC_PLL1DIVR_PLL1R_Pos;
+        RCC->RCC_CR |= RCC_RCC_CR_PLL1ON_Msk;
+        while (!(RCC->RCC_CR & RCC_RCC_CR_PLL1RDY_Msk));
+
+        FLASH->FLASH_ACR = get_flash_acr(hclk_hz);
+        RCC->RCC_CFGR2 = get_rcc_cfgr2<c>();
+        RCC->RCC_CFGR1 = 2 << RCC_RCC_CFGR1_SYSSW_Pos;   // PLL1
+        while ((RCC->RCC_CFGR1 & RCC_RCC_CFGR1_SYSSWS_Msk) != 2 << RCC_RCC_CFGR1_SYSSWS_Pos);
+
+        if constexpr (c.pll2_frequency_hz != 0) {
+            constexpr RCCPLLConfig pll2 = get_rcc_pll_config(source_hz, c.pll2_frequency_hz);
+            RCC->RCC_PLL2CFGR = static_cast<uint32_t>(c.pll_source) << RCC_RCC_PLL2CFGR_PLL2SRC_Pos |
+                pll2.range << RCC_RCC_PLL2CFGR_PLL2RGE_Pos |
+                0 << RCC_RCC_PLL2CFGR_PLL2VCOSEL_Pos |
+                pll2.m << RCC_RCC_PLL2CFGR_PLL2M_Pos |
+                1 << RCC_RCC_PLL2CFGR_PLL2PEN_Pos;
+            RCC->RCC_PLL2DIVR = (pll2.n - 1) << RCC_RCC_PLL2DIVR_PLL2N_Pos |
+                (2 - 1) << RCC_RCC_PLL2DIVR_PLL2P_Pos |
+                (2 - 1) << RCC_RCC_PLL2DIVR_PLL2Q_Pos |
+                (2 - 1) << RCC_RCC_PLL2DIVR_PLL2R_Pos;
+            RCC->RCC_CR |= RCC_RCC_CR_PLL2ON_Msk;
+            while (!(RCC->RCC_CR & RCC_RCC_CR_PLL2RDY_Msk));
+        }
+    }
+    static_assert(c.play_clock != RCCKernelClock::PLL2P || c.pll2_frequency_hz != 0, "PLL2 must be configured to clock the PLAY from it");
 
     constexpr uint32_t ccipr3 = static_cast<uint32_t>(c.play_clock) << RCC_RCC_CCIPR3_PLAYSEL_Pos |
         c.play_clock_div << RCC_RCC_CCIPR3_PLAYDIV_Pos;
