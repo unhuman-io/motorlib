@@ -4,7 +4,7 @@
 function(add_device_target name arch ld)
     add_library(${name} INTERFACE)
     target_link_libraries(${name} INTERFACE ${arch})
-    target_include_directories(${name} INTERFACE ${ARGN} ${CMAKE_CURRENT_LIST_DIR}/../CMSIS/Include)
+    target_include_directories(${name} INTERFACE ${ARGN} ${CMAKE_CURRENT_LIST_DIR}/common ${CMAKE_CURRENT_LIST_DIR}/../CMSIS/Include)
     target_link_options(${name} INTERFACE
         $<$<CXX_COMPILER_ID:GNU>:-Wl,--no-warn-rwx-segments>
         -T${ld}
