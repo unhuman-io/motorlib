@@ -1,5 +1,6 @@
 add_library(motorlib OBJECT)
 set_target_properties(motorlib PROPERTIES LINKER_LANGUAGE CXX)
+target_link_libraries(motorlib PUBLIC arch_cortex_m4f)
 
 target_sources(motorlib
     PUBLIC
