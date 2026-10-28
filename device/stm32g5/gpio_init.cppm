@@ -1,6 +1,7 @@
 module;
 #include <string_view>
 #include <cstdint>
+#include <cstddef>
 #include <concepts>
 #include "st_device.h"
 
@@ -62,12 +63,27 @@ enum class GPIOAF : unsigned int {
   AF15 = 15,
 };
 
+// Fixed-capacity label held by value so that GPIOInit remains usable as a
+// template argument: a pointer to a string literal is not a valid template
+// argument, but the characters themselves are.
+struct GPIOLabel {
+  static constexpr std::size_t capacity = 32;
+  char text[capacity] = {};
+  constexpr GPIOLabel() = default;
+  template <std::size_t N>
+  consteval GPIOLabel(const char (&s)[N]) {
+    static_assert(N <= capacity, "GPIO label too long");
+    for (std::size_t i = 0; i < N; i++) text[i] = s[i];
+  }
+  constexpr const char* c_str() const { return text; }
+};
+
 struct GPIOInit {
   struct {
-    const char* name;
-    const char* net;
-    const char* function;
-    const char* pin;
+    GPIOLabel name;
+    GPIOLabel net;
+    GPIOLabel function;
+    GPIOLabel pin;
     GPIOMode mode = GPIOMode::ANALOG;
     GPIOOType otype = GPIOOType::PUSH_PULL;
     GPIOSpeed speed = GPIOSpeed::LOW;
