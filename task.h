@@ -3,6 +3,7 @@
 #include <coroutine>
 #include <cstdint>
 #include <cstddef>
+#include <type_traits>
 #include "util.h"
 
 // Provided by your hardware/HAL
@@ -128,7 +129,11 @@ struct FinalAwaiter {
 // ============================================================================
 // Unified Task Template
 // ============================================================================
-template <typename T = void>
+// owning: the Task destroys its frame in its destructor. GlobalTask sets this
+// false so it is trivially destructible: a global of that type then needs no
+// atexit registration (which otherwise pulls newlib's 384 byte on_exits table
+// into .bss) and its frame lives in static storage anyway.
+template <typename T = void, bool owning = true>
 struct [[nodiscard]] Task {
     // Inherit the return logic (void vs T) based on the template parameter
     struct promise_type : public PromiseReturn<T> {
@@ -147,9 +152,10 @@ struct [[nodiscard]] Task {
 
     explicit Task(std::coroutine_handle<promise_type> h) : handle_(h) {}
     
-    ~Task() {
-        if (handle_) { handle_.destroy(); } 
+    ~Task() requires owning {
+        if (handle_) { handle_.destroy(); }
     }
+    ~Task() = default;
 
     Task(const Task&) = delete;
     Task& operator=(const Task&) = delete;
@@ -203,10 +209,11 @@ struct [[nodiscard]] Task {
 };
 
 template <typename T = void, int instance_id = 0, int size = 64>
-struct [[nodiscard]] GlobalTask : public Task<T> {
+struct [[nodiscard]] GlobalTask : public Task<T, false> {
+    static_assert(std::is_trivially_destructible_v<Task<T, false>>);
 
     // 1. We must define a promise_type specific to GlobalTask
-    struct promise_type : public Task<T>::promise_type {
+    struct promise_type : public Task<T, false>::promise_type {
         alignas(std::max_align_t) static inline std::byte global_frame[size];
         static inline bool is_in_use = false;
 
@@ -235,5 +242,5 @@ struct [[nodiscard]] GlobalTask : public Task<T> {
 
     // 4. Constructor safely casts the derived handle to the base handle expected by Task<T>
     explicit GlobalTask(std::coroutine_handle<promise_type> h)
-        : Task<T>(std::coroutine_handle<typename Task<T>::promise_type>::from_address(h.address())) {}
+        : Task<T, false>(std::coroutine_handle<typename Task<T, false>::promise_type>::from_address(h.address())) {}
 };
