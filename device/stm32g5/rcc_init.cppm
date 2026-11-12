@@ -31,6 +31,12 @@ struct RCCInit {
     RCCEnable adc3      = RCCEnable::DISABLED;
     RCCEnable adc12     = RCCEnable::DISABLED;
     RCCEnable fmac2     = RCCEnable::DISABLED;
+    RCCEnable dac10     = RCCEnable::DISABLED;
+    RCCEnable dac9      = RCCEnable::DISABLED;
+    RCCEnable dac8      = RCCEnable::DISABLED;
+    RCCEnable dac7      = RCCEnable::DISABLED;
+    RCCEnable dac6      = RCCEnable::DISABLED;
+    RCCEnable dac5      = RCCEnable::DISABLED;
     RCCEnable dac2      = RCCEnable::DISABLED;
     RCCEnable dac1      = RCCEnable::DISABLED;
 
@@ -235,6 +241,12 @@ inline consteval uint32_t get_ahb2enr() {
         static_cast<uint32_t>(r.adc3) << RCC_RCC_AHB2ENR_ADC3EN_Pos |
         static_cast<uint32_t>(r.adc12) << RCC_RCC_AHB2ENR_ADC12EN_Pos |
         static_cast<uint32_t>(r.fmac2) << RCC_RCC_AHB2ENR_FMAC2EN_Pos |
+        static_cast<uint32_t>(r.dac10) << RCC_RCC_AHB2ENR_DAC10EN_Pos |
+        static_cast<uint32_t>(r.dac9) << RCC_RCC_AHB2ENR_DAC9EN_Pos |
+        static_cast<uint32_t>(r.dac8) << RCC_RCC_AHB2ENR_DAC8EN_Pos |
+        static_cast<uint32_t>(r.dac7) << RCC_RCC_AHB2ENR_DAC7EN_Pos |
+        static_cast<uint32_t>(r.dac6) << RCC_RCC_AHB2ENR_DAC6EN_Pos |
+        static_cast<uint32_t>(r.dac5) << RCC_RCC_AHB2ENR_DAC5EN_Pos |
         static_cast<uint32_t>(r.dac2) << RCC_RCC_AHB2ENR_DAC2EN_Pos |
         static_cast<uint32_t>(r.dac1) << RCC_RCC_AHB2ENR_DAC1EN_Pos;
 }

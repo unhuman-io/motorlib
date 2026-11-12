@@ -1,6 +1,7 @@
 module;
 #include <cstdint>
 #include "opamp_regs.h"
+#include "../../task.h"
 
 export module device.opamp_init;
 
@@ -72,11 +73,16 @@ inline volatile uint32_t& opamp_csr() {
 void opamp_gain_not_available();   // not constexpr: calling it fails the constant evaluation
 
 // Same bit positions on both devices, checked against the device header.
-// The factory offset trim is used: USERTRIM stays 0.
+// The init leaves the factory offset trim in use (USERTRIM 0):
+// opamp_calibrate_async replaces it.
 namespace opamp_bit {
-inline constexpr uint32_t CSR_OPAEN = 1u << 0, CSR_VP_SEL_Pos = 2, CSR_VM_SEL_Pos = 5, CSR_OPAHSM = 1u << 7,
-    CSR_OPAINTOEN = 1u << 8, CSR_PGA_GAIN_Pos = 14, CSR_PGA_INPUT_Pos = 17, CSR_LOCK = 1u << 31;
+inline constexpr uint32_t CSR_OPAEN = 1u << 0, CSR_VP_SEL_Pos = 2, CSR_USERTRIM = 1u << 4, CSR_VM_SEL_Pos = 5, CSR_OPAHSM = 1u << 7,
+    CSR_OPAINTOEN = 1u << 8, CSR_CALON = 1u << 11, CSR_CALSEL_Pos = 12, CSR_PGA_GAIN_Pos = 14, CSR_PGA_INPUT_Pos = 17,
+    CSR_TRIMOFFSETP_Pos = 19, CSR_TRIMOFFSETN_Pos = 24, CSR_TRIMOFFSET_Width = 5, CSR_CALOUT = 1u << 30, CSR_LOCK = 1u << 31;
 }
+static_assert(opamp_bit::CSR_USERTRIM == opamp_bits::CSR_USERTRIM && opamp_bit::CSR_CALON == opamp_bits::CSR_CALON &&
+    opamp_bit::CSR_CALSEL_Pos == opamp_bits::CSR_CALSEL_Pos && opamp_bit::CSR_TRIMOFFSETP_Pos == opamp_bits::CSR_TRIMOFFSETP_Pos &&
+    opamp_bit::CSR_TRIMOFFSETN_Pos == opamp_bits::CSR_TRIMOFFSETN_Pos && opamp_bit::CSR_CALOUT == opamp_bits::CSR_CALOUT);
 static_assert(opamp_bit::CSR_OPAEN == opamp_bits::CSR_OPAEN && opamp_bit::CSR_VP_SEL_Pos == opamp_bits::CSR_VP_SEL_Pos &&
     opamp_bit::CSR_VM_SEL_Pos == opamp_bits::CSR_VM_SEL_Pos && opamp_bit::CSR_OPAHSM == opamp_bits::CSR_OPAHSM &&
     opamp_bit::CSR_OPAINTOEN == opamp_bits::CSR_OPAINTOEN && opamp_bit::CSR_PGA_GAIN_Pos == opamp_bits::CSR_PGA_GAIN_Pos &&
@@ -116,5 +122,55 @@ inline void init_opamp() {
 template<OPAMPInit opamp_init>
 inline void device_opamp_config() {
     init_opamp<opamp_init>();
+}
+
+// GlobalTask of the calibration of an amplifier: instance opamp_task_id +
+// opamp. The frame is static and the first call hangs if it does not fit:
+// gcc needs 100 bytes, clang 56.
+inline constexpr int opamp_task_id = 110;
+inline constexpr int opamp_task_size = 128;
+
+// Offset trim of an amplifier set up by init_opamp, in place of the factory
+// trim: opamp_calibrate_async<3>(sched) is OPAMP3. In calibration mode both
+// inputs are on an internal reference and CALOUT tells which way the output
+// goes. Each input pair has a 5 bit trim: the N pair is trimmed with the
+// reference at 0.9 VDDA, the P pair at 0.1 VDDA. A binary search finds the
+// first trim value at which CALOUT differs from that at trim 0, with the
+// settling time between steps (12 steps in all).
+//
+// The calibration needs the output on the VOUT pin: the amplifier does not
+// work and drives VOUT to either rail meanwhile, also when its configuration
+// uses the internal output. The result is false, and the factory trim stays,
+// if a pair has no such trim value. A locked CSR ignores all of this.
+template<int opamp>
+[[gnu::cold]] inline GlobalTask<bool, opamp_task_id + opamp, opamp_task_size> opamp_calibrate_async(CycleScheduler& sched) {
+    using namespace opamp_bit;
+    constexpr uint32_t trim_count = 1u << CSR_TRIMOFFSET_Width;
+    constexpr uint32_t trim_mask = (trim_count - 1) << CSR_TRIMOFFSETN_Pos | (trim_count - 1) << CSR_TRIMOFFSETP_Pos;
+    volatile uint32_t& csr = opamp_csr<opamp>();
+    const uint32_t functional = csr & ~(CSR_USERTRIM | trim_mask);
+    const uint32_t calibration = (functional & CSR_OPAHSM) | CSR_OPAEN | CSR_USERTRIM | CSR_CALON;
+    uint32_t trim = 0;
+    bool found = true;
+    for (int pair = 0; pair < 2; pair++) {
+        const uint32_t select = (pair == 0 ? 3u : 1u) << CSR_CALSEL_Pos;
+        const uint32_t pos = pair == 0 ? CSR_TRIMOFFSETN_Pos : CSR_TRIMOFFSETP_Pos;
+        // CALOUT at low is that at trim 0, at high it differs. trim_count stands for not seen.
+        uint32_t low = 0, high = trim_count, value = 0, at_zero = 0;
+        while (true) {
+            csr = calibration | select | value << pos;
+            co_await sched.async_delay_us(opamp_trim_delay_us);
+            const uint32_t out = csr & CSR_CALOUT;
+            if (value == 0) at_zero = out;
+            else if (out == at_zero) low = value;
+            else high = value;
+            if (high - low == 1) break;
+            value = (low + high) / 2;
+        }
+        if (high == trim_count) found = false;
+        trim |= high << pos;
+    }
+    csr = found ? functional | CSR_USERTRIM | trim : functional;
+    co_return found;
 }
 }

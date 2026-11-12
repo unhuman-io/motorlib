@@ -2,6 +2,7 @@ module;
 #include <cstddef>
 #include <cstdint>
 #include "adc_regs.h"
+#include "../../task.h"
 
 export module device.adc_init;
 
@@ -102,7 +103,9 @@ inline ADCCommonRegs& adc_common_regs() {
 // Bit positions that are the same on both devices, checked against the device header
 namespace adc_bit {
 inline constexpr uint32_t ISR_ADRDY = 1u << 0;
-inline constexpr uint32_t CR_ADEN = 1u << 0, CR_ADSTART = 1u << 2, CR_JADSTART = 1u << 3, CR_ADVREGEN = 1u << 28, CR_ADCAL = 1u << 31;
+inline constexpr uint32_t CR_ADEN = 1u << 0, CR_ADDIS = 1u << 1, CR_ADSTART = 1u << 2, CR_JADSTART = 1u << 3,
+    CR_STOP_Shift = 2,   // ADSTP and JADSTP sit this far above ADSTART and JADSTART
+    CR_ADVREGEN = 1u << 28, CR_ADCAL = 1u << 31;
 inline constexpr uint32_t CFGR_EXTSEL_Pos = 5, CFGR_EXTEN_Pos = 10, CFGR_OVRMOD = 1u << 12, CFGR_CONT = 1u << 13, CFGR_JQDIS = 1u << 31;
 inline constexpr uint32_t SQR1_SQ1_Pos = 6, SQR_SQ_Width = 6, SMPR_SMP_Width = 3;
 inline constexpr uint32_t JSQR_JEXTSEL_Pos = 2, JSQR_JEXTEN_Pos = 7, JSQR_JSQ1_Pos = 9, JSQR_JSQ_Width = 6;
@@ -110,7 +113,8 @@ inline constexpr uint32_t CCR_VREFEN = 1u << 22, CCR_TSEN = 1u << 23;
 }
 static_assert(adc_bit::ISR_ADRDY == adc_bits::ISR_ADRDY && adc_bit::CR_ADSTART == adc_bits::CR_ADSTART &&
     adc_bit::CR_JADSTART == adc_bits::CR_JADSTART && adc_bit::CR_ADVREGEN == adc_bits::CR_ADVREGEN &&
-    adc_bit::CR_ADCAL == adc_bits::CR_ADCAL);
+    adc_bit::CR_ADCAL == adc_bits::CR_ADCAL && adc_bit::CR_ADDIS == adc_bits::CR_ADDIS &&
+    adc_bit::CR_ADSTART << adc_bit::CR_STOP_Shift == adc_bits::CR_ADSTP && adc_bit::CR_JADSTART << adc_bit::CR_STOP_Shift == adc_bits::CR_JADSTP);
 static_assert(adc_bit::CFGR_EXTSEL_Pos == adc_bits::CFGR_EXTSEL_Pos && adc_bit::CFGR_EXTEN_Pos == adc_bits::CFGR_EXTEN_Pos &&
     adc_bit::CFGR_OVRMOD == adc_bits::CFGR_OVRMOD && adc_bit::CFGR_CONT == adc_bits::CFGR_CONT &&
     adc_bit::CFGR_JQDIS == adc_bits::CFGR_JQDIS);
@@ -236,11 +240,8 @@ inline void init_adc_converter() {
     regs.CR = 0;                          // out of deep power down, the reset state
     regs.CR = CR_ADVREGEN;
     adc_delay_us(adc_regulator_startup_us);
-    regs.CR = CR_ADVREGEN | CR_ADCAL;     // single ended calibration
-    while (regs.CR & CR_ADCAL);
-    do {
-        regs.CR = CR_ADVREGEN | CR_ADEN;  // ignored for 4 adc clocks after the calibration: repeat until it takes
-    } while (!(regs.ISR & ISR_ADRDY));
+    regs.CR = CR_ADVREGEN | CR_ADEN;
+    while (!(regs.ISR & ISR_ADRDY));
 
     regs.CFGR = get_adc_cfgr<c>();
     if constexpr (get_adc_smpr<c>(0) != 0) regs.SMPR1 = get_adc_smpr<c>(0);
@@ -255,7 +256,8 @@ inline void init_adc_converter() {
 }
 
 // The converters' clocks (RCC enable, and the kernel clock where the device
-// selects it there) must be running: the calibration waits on the ADC.
+// selects it there) must be running: the enable waits on the ADC. The
+// converters are not calibrated here: adc_calibrate_async does that.
 template<const ADCInit h>
 inline void init_adc() {
     static_assert(adc_count >= 5 || (h.adc4.enable == ADCEnable::DISABLED && h.adc5.enable == ADCEnable::DISABLED), "no adc4 or adc5 on this device");
@@ -272,6 +274,39 @@ inline void init_adc() {
 template<ADCInit adc_init>
 inline void device_adc_config() {
     init_adc<adc_init>();
+}
+
+// GlobalTask of the calibration of a converter: instance adc_task_id + adc. The
+// frame is static and the first call hangs if it does not fit: gcc needs 56
+// bytes, clang 40.
+inline constexpr int adc_task_id = 100;
+inline constexpr int adc_task_size = 80;
+
+// Offset calibration of a converter set up by init_adc, single ended inputs:
+// adc_calibrate_async<3>(sched) is ADC3. The calibration only runs on a
+// disabled converter, so one that is enabled or converting is stopped and
+// disabled first and put back afterwards. Its results are stale meanwhile.
+template<int adc>
+[[gnu::cold]] inline GlobalTask<void, adc_task_id + adc, adc_task_size> adc_calibrate_async(CycleScheduler& sched) {
+    using namespace adc_bit;
+    ADCRegs& regs = adc_regs<adc>();
+    const uint32_t enabled = regs.CR & CR_ADEN;
+    const uint32_t started = regs.CR & (CR_ADSTART | CR_JADSTART);
+    // Stop, disable, calibrate: the converter clears each command bit when it is done
+    for (int step = 0; step < 3; step++) {
+        const uint32_t command = step == 0 ? started << CR_STOP_Shift : step == 1 ? (enabled != 0 ? CR_ADDIS : 0) : CR_ADCAL;
+        if (command == 0) continue;
+        regs.CR = CR_ADVREGEN | command;
+        while ((regs.CR & command) != 0) co_await sched.yield();
+    }
+    if (enabled != 0) {
+        regs.ISR = ISR_ADRDY;                   // clear the flag of the previous enable
+        do {
+            regs.CR = CR_ADVREGEN | CR_ADEN;    // ignored for 4 adc clocks after the calibration: repeat until it takes
+            co_await sched.yield();
+        } while ((regs.ISR & ISR_ADRDY) == 0);
+        if (started != 0) regs.CR = CR_ADVREGEN | started;
+    }
 }
 
 // Last regular conversion of a converter: adc_read<3>() is ADC3
