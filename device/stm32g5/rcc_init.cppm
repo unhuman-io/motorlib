@@ -121,6 +121,21 @@ enum class RCCFDCANClock : uint8_t {   // CCIPR5 FDCANSEL encodings
     PLL2Q,
 };
 
+enum class RCCADCClock : uint8_t {   // CCIPR5 ADCSEL encodings
+    BUS,                              // AHB clock
+    HRTIM,
+    HSI,
+    HSE,
+    PLL1Q,
+    IC1,
+    PLL2P,
+    IC2,
+};
+
+enum class RCCADCDiv : uint8_t {   // CCIPR5 ADCDIV encodings
+    DIV1, DIV2, DIV4, DIV6, DIV8, DIV10, DIV12, DIV16, DIV32, DIV64, DIV128, DIV256,
+};
+
 enum class RCCVoltageScale : uint8_t {   // PWR_VOSCR VOS encodings
     SCALE2 = 1,
     SCALE1 = 2,
@@ -134,6 +149,8 @@ struct RCCClockInit {
     uint32_t pll2_frequency_hz = 0;                    // PLL2 P output from the same source, 0 = off; kernel clock for the PLAY etc.
     uint32_t pll1_q_frequency_hz = 0;                  // PLL1 Q output, 0 = off; must divide the VCO (2 * cpu_frequency_hz) exactly
     RCCFDCANClock fdcan_clock = RCCFDCANClock::HSE;    // fdcan kernel clock, reset selects the HSE
+    RCCADCClock adc_clock = RCCADCClock::BUS;          // adc kernel clock, all instances
+    RCCADCDiv adc_clock_div = RCCADCDiv::DIV1;         // divide it down to what the adc takes
     RCCVoltageScale voltage_scale = RCCVoltageScale::SCALE0;
     uint8_t ahb_div_log2 = 0;                          // CFGR2 HPRE, divide by 2^n
     uint8_t apb1_div_log2 = 0;                         // CFGR2 PPRE1
@@ -391,6 +408,14 @@ inline void init_rcc_clock() {
     static_assert(c.fdcan_clock != RCCFDCANClock::PLL1Q || c.pll1_q_frequency_hz != 0, "PLL1 Q must be configured to clock the FDCAN from it");
     if constexpr (c.fdcan_clock != RCCFDCANClock::HSE) {
         RCC->RCC_CCIPR5 = (RCC->RCC_CCIPR5 & ~RCC_RCC_CCIPR5_FDCANSEL_Msk) | static_cast<uint32_t>(c.fdcan_clock) << RCC_RCC_CCIPR5_FDCANSEL_Pos;
+    }
+
+    static_assert(c.adc_clock != RCCADCClock::PLL1Q || c.pll1_q_frequency_hz != 0, "PLL1 Q must be configured to clock the ADC from it");
+    static_assert(c.adc_clock != RCCADCClock::PLL2P || c.pll2_frequency_hz != 0, "PLL2 must be configured to clock the ADC from it");
+    constexpr uint32_t ccipr5_adc = static_cast<uint32_t>(c.adc_clock) << RCC_RCC_CCIPR5_ADCSEL_Pos |
+        static_cast<uint32_t>(c.adc_clock_div) << RCC_RCC_CCIPR5_ADCDIV_Pos;
+    if constexpr (ccipr5_adc != 0) {
+        RCC->RCC_CCIPR5 = (RCC->RCC_CCIPR5 & ~(RCC_RCC_CCIPR5_ADCSEL_Msk | RCC_RCC_CCIPR5_ADCDIV_Msk)) | ccipr5_adc;
     }
 
     constexpr uint32_t ccipr3 = static_cast<uint32_t>(c.play_clock) << RCC_RCC_CCIPR3_PLAYSEL_Pos |
