@@ -145,6 +145,7 @@ namespace adc_bits {
 inline constexpr uint32_t CFGR_RES_Pos     = ADC_CFGR_RES_Pos;
 // checked against the shared bit positions
 inline constexpr uint32_t ISR_ADRDY        = ADC_ISR_ADRDY;
+inline constexpr uint32_t IER_EOCIE        = ADC_IER_EOCIE;
 inline constexpr uint32_t CR_ADSTART       = ADC_CR_ADSTART;
 inline constexpr uint32_t CR_JADSTART      = ADC_CR_JADSTART;
 inline constexpr uint32_t CR_ADVREGEN      = ADC_CR_ADVREGEN;

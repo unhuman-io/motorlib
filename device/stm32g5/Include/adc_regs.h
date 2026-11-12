@@ -92,6 +92,7 @@ namespace adc_bits {
 inline constexpr uint32_t CFGR_RES_Pos     = ADC1_ADC_CFGR1_RES_Pos;
 // checked against the shared bit positions
 inline constexpr uint32_t ISR_ADRDY        = ADC1_ADC_ISR_ADRDY_Msk;
+inline constexpr uint32_t IER_EOCIE        = ADC1_ADC_IER_EOCIE_Msk;
 inline constexpr uint32_t CR_ADSTART       = ADC1_ADC_CR_ADSTART_Msk;
 inline constexpr uint32_t CR_JADSTART      = ADC1_ADC_CR_JADSTART_Msk;
 inline constexpr uint32_t CR_ADVREGEN      = ADC1_ADC_CR_ADVREGEN_Msk;

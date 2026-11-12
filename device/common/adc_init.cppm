@@ -56,6 +56,7 @@ struct ADCConverterInit {
     ADCTriggerEdge trigger_edge = ADCTriggerEdge::SOFTWARE;         // CFGR EXTEN
     ADCEnable continuous = ADCEnable::DISABLED;                     // CFGR CONT
     ADCEnable overwrite = ADCEnable::DISABLED;                      // CFGR OVRMOD: an unread DR is replaced by the newer conversion instead of kept
+    ADCEnable end_of_conversion_interrupt = ADCEnable::DISABLED;    // IER EOCIE: interrupt after every regular conversion, cleared by reading DR
     uint8_t sequence_length = 1;                                    // SQR1 L + 1: conversions per trigger
     uint8_t sequence[16] = {};                                      // SQRx: channel numbers in conversion order
 
@@ -102,7 +103,7 @@ inline ADCCommonRegs& adc_common_regs() {
 
 // Bit positions that are the same on both devices, checked against the device header
 namespace adc_bit {
-inline constexpr uint32_t ISR_ADRDY = 1u << 0;
+inline constexpr uint32_t ISR_ADRDY = 1u << 0, IER_EOCIE = 1u << 2;
 inline constexpr uint32_t CR_ADEN = 1u << 0, CR_ADDIS = 1u << 1, CR_ADSTART = 1u << 2, CR_JADSTART = 1u << 3,
     CR_STOP_Shift = 2,   // ADSTP and JADSTP sit this far above ADSTART and JADSTART
     CR_ADVREGEN = 1u << 28, CR_ADCAL = 1u << 31;
@@ -111,7 +112,7 @@ inline constexpr uint32_t SQR1_SQ1_Pos = 6, SQR_SQ_Width = 6, SMPR_SMP_Width = 3
 inline constexpr uint32_t JSQR_JEXTSEL_Pos = 2, JSQR_JEXTEN_Pos = 7, JSQR_JSQ1_Pos = 9, JSQR_JSQ_Width = 6;
 inline constexpr uint32_t CCR_VREFEN = 1u << 22, CCR_TSEN = 1u << 23;
 }
-static_assert(adc_bit::ISR_ADRDY == adc_bits::ISR_ADRDY && adc_bit::CR_ADSTART == adc_bits::CR_ADSTART &&
+static_assert(adc_bit::ISR_ADRDY == adc_bits::ISR_ADRDY && adc_bit::IER_EOCIE == adc_bits::IER_EOCIE && adc_bit::CR_ADSTART == adc_bits::CR_ADSTART &&
     adc_bit::CR_JADSTART == adc_bits::CR_JADSTART && adc_bit::CR_ADVREGEN == adc_bits::CR_ADVREGEN &&
     adc_bit::CR_ADCAL == adc_bits::CR_ADCAL && adc_bit::CR_ADDIS == adc_bits::CR_ADDIS &&
     adc_bit::CR_ADSTART << adc_bit::CR_STOP_Shift == adc_bits::CR_ADSTP && adc_bit::CR_JADSTART << adc_bit::CR_STOP_Shift == adc_bits::CR_JADSTP);
@@ -244,6 +245,7 @@ inline void init_adc_converter() {
     while (!(regs.ISR & ISR_ADRDY));
 
     regs.CFGR = get_adc_cfgr<c>();
+    if constexpr (c.end_of_conversion_interrupt == ADCEnable::ENABLED) regs.IER = IER_EOCIE;
     if constexpr (get_adc_smpr<c>(0) != 0) regs.SMPR1 = get_adc_smpr<c>(0);
     if constexpr (get_adc_smpr<c>(1) != 0) regs.SMPR2 = get_adc_smpr<c>(1);
     if constexpr (adc_channel_preselect) regs.PCSEL = get_adc_pcsel<c>();
