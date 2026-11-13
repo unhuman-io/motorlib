@@ -27,6 +27,6 @@ function(add_device_target name arch ld include_dir)
 endfunction()
 
 add_device_target(device_stm32g474 arch_cortex_m4f ${CMAKE_CURRENT_LIST_DIR}/stm32g4/stm32g474.ld ${CMAKE_CURRENT_LIST_DIR}/stm32g4/Include
-    stm32g4/rcc_init.cppm stm32g4/gpio_init.cppm)
+    stm32g4/rcc_init.cppm stm32g4/gpio_init.cppm stm32g4/spi_init.cppm stm32g4/system.cppm)
 add_device_target(device_stm32g564 arch_cortex_m33f ${CMAKE_CURRENT_LIST_DIR}/stm32g5/stm32g564.ld ${CMAKE_CURRENT_LIST_DIR}/stm32g5/Include
     stm32g5/rcc_init.cppm stm32g5/gpio_init.cppm stm32g5/play_init.cppm)

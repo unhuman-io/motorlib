@@ -28,6 +28,7 @@ struct CANInit {
     CANEnable bit_rate_switch = CANEnable::ENABLED;         // CCCR BRSE
     CANEnable transmitter_delay_compensation = CANEnable::ENABLED;   // DBTP TDC, needed above ~2 Mbps
     uint16_t transmitter_delay_filter_ns = 150;             // TDCR TDCF
+    uint8_t standard_filter_count = 0;                      // RXGFC LSS: filter elements in use, set with can_filter(). Other frames are rejected.
 };
 
 // Same register layout on every ST FDCAN; names follow the stm32g4 header
@@ -73,6 +74,9 @@ inline constexpr uint32_t NBTP_NTSEG2_Pos = 0, NBTP_NTSEG1_Pos = 8, NBTP_NBRP_Po
 inline constexpr uint32_t DBTP_DSJW_Pos = 0, DBTP_DTSEG2_Pos = 4, DBTP_DTSEG1_Pos = 8, DBTP_DBRP_Pos = 16, DBTP_TDC = 1u << 23;
 inline constexpr uint32_t TDCR_TDCF_Pos = 0, TDCR_TDCO_Pos = 8;
 inline constexpr uint32_t RXGFC_RRFE = 1u << 0, RXGFC_ANFE = 1u << 2, RXGFC_ANFS = 1u << 4;
+inline constexpr uint32_t RXGFC_ANFE_REJECT = 3u << 2, RXGFC_ANFS_REJECT = 3u << 4, RXGFC_LSS_Pos = 16;
+inline constexpr uint32_t FILTER_CLASSIC = 2u << 30, FILTER_FIFO_Pos = 27, FILTER_ID_Pos = 16, FILTER_MASK_ALL = 0x7FF;
+inline constexpr uint32_t RXFS_FILL_Msk = 0xF, RXFS_GET_Pos = 8, RX_STDID_Pos = 18, RX_DLC_Pos = 16;
 inline constexpr uint32_t TXFQS_TFQPI_Pos = 16, TXFQS_TFQF = 1u << 21;
 inline constexpr uint32_t TX_DLC_Pos = 16, TX_BRS = 1u << 20, TX_FDF = 1u << 21, TX_XTD = 1u << 30, TX_STDID_Pos = 18;
 }
@@ -140,7 +144,9 @@ inline void init_can() {
     if constexpr (c.fd == CANEnable::ENABLED) regs.CCCR |= CCCR_FDOE;
     if constexpr (c.bit_rate_switch == CANEnable::ENABLED) regs.CCCR |= CCCR_BRSE;
 
-    regs.RXGFC = RXGFC_ANFS | RXGFC_ANFE | RXGFC_RRFE;   // no filters: reject everything received
+    static_assert(c.standard_filter_count <= 28, "there are 28 standard id filters");
+    regs.RXGFC = static_cast<uint32_t>(c.standard_filter_count) << RXGFC_LSS_Pos |
+        RXGFC_ANFS_REJECT | RXGFC_ANFE_REJECT | RXGFC_RRFE;   // frames that match no filter are rejected
     regs.TXBC = 0;                                        // tx fifo
     regs.CCCR &= ~CCCR_INIT;
 }
@@ -199,6 +205,36 @@ inline bool can_write(uint32_t id, const T& payload) {
     for (uint32_t i = 0; i < words; i++) e.data32[i] = w[i];   // message ram wants word writes
     can_regs(c.instance).TXBAR = 1u << index;
     return true;
+}
+
+// Standard id filter number index (below standard_filter_count): frames with
+// exactly this id go to rx fifo 0 or 1. Each fifo holds 3 frames; newer ones
+// are dropped while it is full.
+template<const CANInit c>
+inline void can_filter(int index, uint32_t id, int fifo) {
+    using namespace can_bit;
+    can_ram(c.instance).std_filter[index] = FILTER_CLASSIC | static_cast<uint32_t>(fifo + 1) << FILTER_FIFO_Pos |
+        (id & 0x7FF) << FILTER_ID_Pos | FILTER_MASK_ALL;
+}
+
+// Oldest frame of an rx fifo, standard ids. Returns its length and takes it
+// out of the fifo, or -1 if the fifo is empty. data must have room for 64 bytes.
+template<const CANInit c>
+inline int can_read(int fifo, uint32_t& id, void* data) {
+    using namespace can_bit;
+    auto& regs = can_regs(c.instance);
+    const uint32_t status = fifo == 0 ? regs.RXF0S : regs.RXF1S;
+    if ((status & RXFS_FILL_Msk) == 0) return -1;
+    const uint32_t index = (status >> RXFS_GET_Pos) & 3;
+    const uint32_t* element = fifo == 0 ? can_ram(c.instance).rx_fifo0[index] : can_ram(c.instance).rx_fifo1[index];
+    id = (element[0] >> RX_STDID_Pos) & 0x7FF;
+    const uint32_t length = can_dlc_length((element[1] >> RX_DLC_Pos) & 0xF);
+    uint32_t w[16];
+    for (uint32_t i = 0; i < (length + 3) / 4; i++) w[i] = element[2 + i];   // message ram wants word reads
+    std::memcpy(data, w, length);
+    if (fifo == 0) regs.RXF0A = index;
+    else regs.RXF1A = index;
+    return length;
 }
 
 // Runtime length variant

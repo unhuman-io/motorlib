@@ -247,6 +247,14 @@ inline void gpio_toggle(auto* port, int pin) {
     port->GPIO_ODR ^= 1u << pin;
 }
 
+// Atomic: no read of the port
+inline void gpio_set(auto* port, int pin) {
+    port->GPIO_BSRR = 1u << pin;
+}
+inline void gpio_clear(auto* port, int pin) {
+    port->GPIO_BSRR = 1u << (16 + pin);
+}
+
 // Mode of one pin after the init, for a pin that must change hands
 inline void gpio_mode(auto* port, int pin, GPIOMode mode) {
     port->GPIO_MODER = (port->GPIO_MODER & ~(3u << 2 * pin)) | static_cast<uint32_t>(mode) << 2 * pin;

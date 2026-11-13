@@ -117,6 +117,7 @@ export {
 struct HRTIMTimerInit {
     HRTIMEnable enable = HRTIMEnable::DISABLED;            // MCR TxCEN, set last
     HRTIMMode mode = HRTIMMode::EDGE_ALIGNED;              // TIMxCR2 UDM
+    HRTIMRollover rollover = HRTIMRollover::BOTH;          // TIMxCR2 ROM: the roll-over event itself, and with update_on_reset the preload update
     HRTIMRollover adc_rollover = HRTIMRollover::BOTH;      // TIMxCR2 ADROM, for the TIMx_PERIOD adc triggers
     HRTIMEnable cmp1_greater_than = HRTIMEnable::DISABLED; // TIMxCR2 GTCMP1: event when counter > cmp1, once per period when center aligned
     HRTIMEnable cmp3_greater_than = HRTIMEnable::DISABLED; // TIMxCR2 GTCMP3
@@ -136,6 +137,11 @@ struct HRTIMTimerInit {
     HRTIMEnable out1 = HRTIMEnable::DISABLED;              // OENR
     HRTIMEnable out2 = HRTIMEnable::DISABLED;
     HRTIMEnable reset_on_master_period = HRTIMEnable::DISABLED;   // RSTxR MSTPER: counter restarts from 0 on the master period, keeps timers in phase
+    // Complementary outputs: output 2 is the inverse of output 1, and each
+    // waits its dead time before going active. The out2 events are unused.
+    HRTIMEnable deadtime = HRTIMEnable::DISABLED;          // OUTxR DTEN
+    uint16_t deadtime_rising = 0;                          // DTxR DTR, 0..511 dead time ticks (prescaler 0): output 1 going active
+    uint16_t deadtime_falling = 0;                         // DTxR DTF: output 2 going active
 };
 
 struct HRTIMMasterInit {
@@ -144,6 +150,7 @@ struct HRTIMMasterInit {
     HRTIMEnable continuous = HRTIMEnable::DISABLED;        // MCR CONT
     HRTIMEnable preload = HRTIMEnable::DISABLED;           // MCR PREEN
     HRTIMEnable update_on_period = HRTIMEnable::DISABLED;  // MCR MREPU: preloaded values load at every roll-over (repetition counter 0)
+    HRTIMEnable cmp1_interrupt = HRTIMEnable::DISABLED;    // MDIER MCMP1IE, cleared by hrtim_master_cmp1_interrupt_clear()
     uint16_t period = 0xFFDF;                              // MPER
     uint16_t cmp1 = 0;                                     // MCMP1R
     uint16_t cmp2 = 0;
@@ -166,6 +173,7 @@ struct HRTIMInit {
 };
 
 void hrtim_period_out_of_range();   // not constexpr: calling it fails the constant evaluation
+void hrtim_deadtime_out_of_range();
 
 // Period register value for a pwm frequency. Center aligned counts up and
 // down, so the register holds half the pwm period.
@@ -177,7 +185,7 @@ consteval uint16_t hrtim_period(uint32_t pwm_frequency_hz, uint8_t prescaler = 0
 }
 
 struct HRTIMTimerRegsInit {
-    uint32_t cr, cr2, per, cmp1, cmp2, cmp3, cmp4, set1, rst1, set2, rst2, rst;
+    uint32_t cr, cr2, per, cmp1, cmp2, cmp3, cmp4, set1, rst1, set2, rst2, rst, dt, out;
 };
 
 inline consteval HRTIMTimerRegsInit get_hrtim_timer_regs_init(const HRTIMTimerInit& t) {
@@ -188,6 +196,7 @@ inline consteval HRTIMTimerRegsInit get_hrtim_timer_regs_init(const HRTIMTimerIn
         (t.preload == HRTIMEnable::ENABLED ? TIMCR_PREEN : 0) |
         (t.update_on_reset == HRTIMEnable::ENABLED ? TIMCR_TRSTU : 0);
     r.cr2 = (t.mode == HRTIMMode::CENTER_ALIGNED ? TIMCR2_UDM : 0) |
+        static_cast<uint32_t>(t.rollover) << TIMCR2_ROM_Pos |
         static_cast<uint32_t>(t.adc_rollover) << TIMCR2_ADROM_Pos |
         (t.cmp1_greater_than == HRTIMEnable::ENABLED ? TIMCR2_GTCMP1 : 0) |
         (t.cmp3_greater_than == HRTIMEnable::ENABLED ? TIMCR2_GTCMP3 : 0);
@@ -201,6 +210,9 @@ inline consteval HRTIMTimerRegsInit get_hrtim_timer_regs_init(const HRTIMTimerIn
     r.set2 = static_cast<uint32_t>(t.out2_set);
     r.rst2 = static_cast<uint32_t>(t.out2_reset);
     r.rst = t.reset_on_master_period == HRTIMEnable::ENABLED ? RSTR_MSTPER : 0;
+    if (t.deadtime_rising > 511 || t.deadtime_falling > 511) hrtim_deadtime_out_of_range();
+    r.dt = static_cast<uint32_t>(t.deadtime_rising) << DTR_DTR_Pos | static_cast<uint32_t>(t.deadtime_falling) << DTR_DTF_Pos;
+    r.out = t.deadtime == HRTIMEnable::ENABLED ? OUTR_DTEN : 0;
     return r;
 }
 
@@ -220,6 +232,8 @@ inline void init_hrtim_timer_regs(HRTIMTimerRegs& regs) {
     if constexpr (r.set2 != r_default.set2) regs.SETx2R = r.set2;
     if constexpr (r.rst2 != r_default.rst2) regs.RSTx2R = r.rst2;
     if constexpr (r.rst != r_default.rst) regs.RSTxR = r.rst;
+    if constexpr (r.dt != r_default.dt) regs.DTxR = r.dt;
+    if constexpr (r.out != r_default.out) regs.OUTxR = r.out;
     if constexpr (r.cr != r_default.cr) regs.TIMxCR = r.cr;
 }
 
@@ -275,6 +289,7 @@ inline void init_hrtim() {
     if constexpr (h.master.cmp2 != 0) hrtim_master().MCMP2R = h.master.cmp2;
     if constexpr (h.master.cmp3 != 0) hrtim_master().MCMP3R = h.master.cmp3;
     if constexpr (h.master.cmp4 != 0) hrtim_master().MCMP4R = h.master.cmp4;
+    if constexpr (h.master.cmp1_interrupt == HRTIMEnable::ENABLED) hrtim_master().MDIER = MDIER_MCMP1IE;
     if constexpr (get_hrtim_mcr<h>() != 0) hrtim_master().MCR = get_hrtim_mcr<h>();
 }
 
@@ -287,5 +302,12 @@ inline void device_hrtim_config() {
 // the next update
 inline void hrtim_master_compare1(uint16_t value) {
     hrtim_master().MCMP1R = value;
+}
+
+// For the handler of the master cmp1 interrupt. The barrier lets the write
+// land before the return: without it the handler can run a second time.
+inline void hrtim_master_cmp1_interrupt_clear() {
+    hrtim_master().MICR = hrtim_bits::MICR_MCMP1;
+    __asm__ volatile("dsb");
 }
 }

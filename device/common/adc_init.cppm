@@ -65,6 +65,7 @@ struct ADCConverterInit {
     ADCTriggerEdge injected_trigger_edge = ADCTriggerEdge::SOFTWARE;   // JSQR JEXTEN
     uint8_t injected_sequence_length = 0;                           // JSQR JL + 1
     uint8_t injected_sequence[4] = {};                              // JSQR JSQ1..4
+    ADCEnable injected_end_of_sequence_interrupt = ADCEnable::DISABLED;   // IER JEOSIE, cleared by adc_injected_end_of_sequence_clear()
 
     ADCSampleTime sample_time[adc_channel_count] = {};              // SMPRx, indexed by channel number
 };
@@ -103,7 +104,7 @@ inline ADCCommonRegs& adc_common_regs() {
 
 // Bit positions that are the same on both devices, checked against the device header
 namespace adc_bit {
-inline constexpr uint32_t ISR_ADRDY = 1u << 0, IER_EOCIE = 1u << 2;
+inline constexpr uint32_t ISR_ADRDY = 1u << 0, ISR_JEOS = 1u << 6, IER_EOCIE = 1u << 2, IER_JEOSIE = 1u << 6;
 inline constexpr uint32_t CR_ADEN = 1u << 0, CR_ADDIS = 1u << 1, CR_ADSTART = 1u << 2, CR_JADSTART = 1u << 3,
     CR_STOP_Shift = 2,   // ADSTP and JADSTP sit this far above ADSTART and JADSTART
     CR_ADVREGEN = 1u << 28, CR_ADCAL = 1u << 31;
@@ -116,6 +117,7 @@ static_assert(adc_bit::ISR_ADRDY == adc_bits::ISR_ADRDY && adc_bit::IER_EOCIE ==
     adc_bit::CR_JADSTART == adc_bits::CR_JADSTART && adc_bit::CR_ADVREGEN == adc_bits::CR_ADVREGEN &&
     adc_bit::CR_ADCAL == adc_bits::CR_ADCAL && adc_bit::CR_ADDIS == adc_bits::CR_ADDIS &&
     adc_bit::CR_ADSTART << adc_bit::CR_STOP_Shift == adc_bits::CR_ADSTP && adc_bit::CR_JADSTART << adc_bit::CR_STOP_Shift == adc_bits::CR_JADSTP);
+static_assert(adc_bit::ISR_JEOS == adc_bits::ISR_JEOS && adc_bit::IER_JEOSIE == adc_bits::IER_JEOSIE);
 static_assert(adc_bit::CFGR_EXTSEL_Pos == adc_bits::CFGR_EXTSEL_Pos && adc_bit::CFGR_EXTEN_Pos == adc_bits::CFGR_EXTEN_Pos &&
     adc_bit::CFGR_OVRMOD == adc_bits::CFGR_OVRMOD && adc_bit::CFGR_CONT == adc_bits::CFGR_CONT &&
     adc_bit::CFGR_JQDIS == adc_bits::CFGR_JQDIS);
@@ -163,6 +165,13 @@ inline consteval uint32_t get_adc_cfgr() {
         (c.overwrite == ADCEnable::ENABLED ? CFGR_OVRMOD : 0) |
         (c.continuous == ADCEnable::ENABLED ? CFGR_CONT : 0) |
         CFGR_JQDIS;
+}
+
+template<const ADCConverterInit c>
+inline consteval uint32_t get_adc_ier() {
+    using namespace adc_bit;
+    return (c.end_of_conversion_interrupt == ADCEnable::ENABLED ? IER_EOCIE : 0) |
+        (c.injected_end_of_sequence_interrupt == ADCEnable::ENABLED ? IER_JEOSIE : 0);
 }
 
 // SMPR1 (n = 0) holds channels 0..9, SMPR2 (n = 1) the rest
@@ -245,7 +254,7 @@ inline void init_adc_converter() {
     while (!(regs.ISR & ISR_ADRDY));
 
     regs.CFGR = get_adc_cfgr<c>();
-    if constexpr (c.end_of_conversion_interrupt == ADCEnable::ENABLED) regs.IER = IER_EOCIE;
+    if constexpr (get_adc_ier<c>() != 0) regs.IER = get_adc_ier<c>();
     if constexpr (get_adc_smpr<c>(0) != 0) regs.SMPR1 = get_adc_smpr<c>(0);
     if constexpr (get_adc_smpr<c>(1) != 0) regs.SMPR2 = get_adc_smpr<c>(1);
     if constexpr (adc_channel_preselect) regs.PCSEL = get_adc_pcsel<c>();
@@ -321,6 +330,14 @@ inline uint32_t adc_read() {
 template<int adc>
 inline uint32_t adc_read_injected(int rank) {
     return (&adc_regs<adc>().JDR1)[rank];
+}
+
+// For the handler of the injected end of sequence interrupt. The barrier lets
+// the write land before the return: without it the handler can run a second time.
+template<int adc>
+inline void adc_injected_end_of_sequence_clear() {
+    adc_regs<adc>().ISR = adc_bit::ISR_JEOS;
+    __asm__ volatile("dsb");
 }
 
 // Software trigger of the regular / injected group. The start bits are set

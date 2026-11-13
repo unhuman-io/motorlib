@@ -2,7 +2,9 @@ ENTRY(Reset_Handler)
 
 MEMORY
 {
-    FLASH (rx) : ORIGIN = 0x08000000, LENGTH = 512K
+    /* -Wl,--defsym=CUSTOM_BOOTLOADER=1 links the application behind the 8K
+       can bootloader (motorlib/bootloader/stm32g4), which jumps to 0x08002000 */
+    FLASH (rx) : ORIGIN = DEFINED(CUSTOM_BOOTLOADER) ? 0x08002000 : 0x08000000, LENGTH = DEFINED(CUSTOM_BOOTLOADER) ? 504K : 512K
     RAM (xrw)  : ORIGIN = 0x20000000, LENGTH = 96K
 }
 
