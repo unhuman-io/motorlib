@@ -255,6 +255,10 @@ inline void gpio_clear(auto* port, int pin) {
     port->GPIO_BSRR = 1u << (16 + pin);
 }
 
+inline bool gpio_read(auto* port, int pin) {
+    return (port->GPIO_IDR >> pin & 1) != 0;
+}
+
 // Mode of one pin after the init, for a pin that must change hands
 inline void gpio_mode(auto* port, int pin, GPIOMode mode) {
     port->GPIO_MODER = (port->GPIO_MODER & ~(3u << 2 * pin)) | static_cast<uint32_t>(mode) << 2 * pin;
