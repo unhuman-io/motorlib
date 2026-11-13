@@ -87,6 +87,7 @@ inline constexpr uint32_t CR1_AD1USRC_Pos  = HRTIM1_HRTIM_CR1_AD1USRC_Pos;
 inline constexpr uint32_t CR1_AD3USRC_Pos  = HRTIM1_HRTIM_CR1_AD3USRC_Pos;
 inline constexpr uint32_t DLLCR_CALEN      = HRTIM1_HRTIM_DLLCR_CALEN_Msk;
 inline constexpr uint32_t DLLCR_CALRTE_Pos = HRTIM1_HRTIM_DLLCR_CALRTE_Pos;
+inline constexpr uint32_t CR1_UDIS_ALL     = 0x7F;   // MUDIS, TAUDIS..TFUDIS
 // checked against the shared enums
 inline constexpr uint32_t SET1R_SST        = HRTIM1_HRTIM_SETA1R_SST_Msk;
 inline constexpr uint32_t SET1R_PER        = HRTIM1_HRTIM_SETA1R_PER_Msk;

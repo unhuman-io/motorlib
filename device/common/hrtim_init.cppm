@@ -304,6 +304,46 @@ inline void hrtim_master_compare1(uint16_t value) {
     hrtim_master().MCMP1R = value;
 }
 
+// Run time control of the outputs, for a power stage that switches between
+// off, braking and pwm. Timers by HRTIMTimer::A..F.
+inline HRTIMTimerRegs& hrtim_timer(HRTIMTimer timer) {
+    return hrtim_timer(static_cast<int>(timer) - 1);
+}
+
+// OENR / ODISR bits of a timer's outputs
+constexpr uint32_t hrtim_output_mask(HRTIMTimer timer, bool out1, bool out2) {
+    return (out1 ? 1u : 0u) << 2 * (static_cast<int>(timer) - 1) | (out2 ? 2u : 0u) << 2 * (static_cast<int>(timer) - 1);
+}
+// A disabled output is in its idle (inactive) state
+inline void hrtim_output_enable(uint32_t mask) {
+    hrtim_common().OENR = mask;
+}
+inline void hrtim_output_disable(uint32_t mask) {
+    hrtim_common().ODISR = mask;
+}
+
+// New set and reset events of output 1. HRTIMEvent::SOFTWARE as the reset
+// forces the output inactive once, and with dead time output 2 active.
+inline void hrtim_output1_events(HRTIMTimer timer, HRTIMEvent set, HRTIMEvent reset) {
+    hrtim_timer(timer).SETx1R = static_cast<uint32_t>(set);
+    hrtim_timer(timer).RSTx1R = static_cast<uint32_t>(reset);
+}
+
+// Holds the preload updates of all timers, so that registers written in
+// between take effect together
+inline void hrtim_update_disable() {
+    hrtim_common().CR1 = hrtim_common().CR1 | hrtim_bits::CR1_UDIS_ALL;
+}
+inline void hrtim_update_enable() {
+    hrtim_common().CR1 = hrtim_common().CR1 & ~hrtim_bits::CR1_UDIS_ALL;
+}
+
+// New value of a timer's compare 1: with the preload it takes effect at the
+// timer's next update
+inline void hrtim_compare1(HRTIMTimer timer, uint32_t value) {
+    hrtim_timer(timer).CMP1xR = value;
+}
+
 // For the handler of the master cmp1 interrupt. The barrier lets the write
 // land before the return: without it the handler can run a second time.
 inline void hrtim_master_cmp1_interrupt_clear() {
