@@ -86,6 +86,21 @@ enum class HRTIMTimer : uint8_t {
     MASTER, A, B, C, D, E, F
 };
 
+// Pulse on the SCOUT pin, 16 hrtim clocks long. Its position has the
+// resolution of the hrtim clock: the x32 part of a compare value is ignored.
+enum class HRTIMSyncOut : uint8_t {    // MCR SYNC_OUT
+    DISABLED = 0,
+    POSITIVE_PULSE = 2,
+    NEGATIVE_PULSE = 3,
+};
+
+enum class HRTIMSyncSource : uint8_t { // MCR SYNC_SRC: the event that makes the pulse
+    MASTER_START,
+    MASTER_CMP1,
+    TIMA_START,
+    TIMA_CMP1,
+};
+
 }
 static_assert(static_cast<uint32_t>(HRTIMEvent::SOFTWARE) == hrtim_bits::SET1R_SST);
 static_assert(static_cast<uint32_t>(HRTIMEvent::PERIOD) == hrtim_bits::SET1R_PER);
@@ -128,7 +143,14 @@ struct HRTIMMasterInit {
     uint8_t prescaler = 0;                                 // MCR CKPSC
     HRTIMEnable continuous = HRTIMEnable::DISABLED;        // MCR CONT
     HRTIMEnable preload = HRTIMEnable::DISABLED;           // MCR PREEN
+    HRTIMEnable update_on_period = HRTIMEnable::DISABLED;  // MCR MREPU: preloaded values load at every roll-over (repetition counter 0)
     uint16_t period = 0xFFDF;                              // MPER
+    uint16_t cmp1 = 0;                                     // MCMP1R
+    uint16_t cmp2 = 0;
+    uint16_t cmp3 = 0;
+    uint16_t cmp4 = 0;
+    HRTIMSyncOut sync_out = HRTIMSyncOut::DISABLED;
+    HRTIMSyncSource sync_source = HRTIMSyncSource::MASTER_START;
 };
 
 struct HRTIMInit {
@@ -218,6 +240,9 @@ inline consteval uint32_t get_hrtim_mcr() {
     uint32_t v = h.master.prescaler << MCR_CKPSC_Pos |
         (h.master.continuous == HRTIMEnable::ENABLED ? MCR_CONT : 0) |
         (h.master.preload == HRTIMEnable::ENABLED ? MCR_PREEN : 0) |
+        (h.master.update_on_period == HRTIMEnable::ENABLED ? MCR_MREPU : 0) |
+        static_cast<uint32_t>(h.master.sync_out) << MCR_SYNC_OUT_Pos |
+        static_cast<uint32_t>(h.master.sync_source) << MCR_SYNC_SRC_Pos |
         (h.master.enable == HRTIMEnable::ENABLED ? MCR_MCEN : 0);
     const HRTIMTimerInit timers[] = {h.a, h.b, h.c, h.d, h.e, h.f};
     for (int ch = 0; ch < 6; ch++) {
@@ -246,11 +271,21 @@ inline void init_hrtim() {
     if constexpr (h.dll_calibration == HRTIMEnable::ENABLED) common.DLLCR = DLLCR_CALEN | 3 << DLLCR_CALRTE_Pos;  // every 2048 hrtim clocks
     if constexpr (get_hrtim_oenr<h>() != 0) common.OENR = get_hrtim_oenr<h>();
     if constexpr (h.master.period != HRTIMMasterInit{}.period) hrtim_master().MPER = h.master.period;
+    if constexpr (h.master.cmp1 != 0) hrtim_master().MCMP1R = h.master.cmp1;
+    if constexpr (h.master.cmp2 != 0) hrtim_master().MCMP2R = h.master.cmp2;
+    if constexpr (h.master.cmp3 != 0) hrtim_master().MCMP3R = h.master.cmp3;
+    if constexpr (h.master.cmp4 != 0) hrtim_master().MCMP4R = h.master.cmp4;
     if constexpr (get_hrtim_mcr<h>() != 0) hrtim_master().MCR = get_hrtim_mcr<h>();
 }
 
 template<HRTIMInit hrtim_init>
 inline void device_hrtim_config() {
     init_hrtim<hrtim_init>();
+}
+
+// New value of master compare 1: with the master preload it takes effect at
+// the next update
+inline void hrtim_master_compare1(uint16_t value) {
+    hrtim_master().MCMP1R = value;
 }
 }
