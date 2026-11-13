@@ -1,7 +1,7 @@
 module;
 #include <concepts>
 #include <cstdint>
-#include <utility>
+#include "../../task.h"
 
 export module device.drv8323_init;
 
@@ -10,8 +10,10 @@ export {
 // current sense amplifiers, the SPI variant. It is not part of the
 // microcontroller: the access to it comes from an IO type of the
 // configuration that uses it, see DRV8323IO. One DRV8323Init holds the five
-// control registers by field; drv8323_config<init, IO>() enables the driver,
-// writes them and reads them back.
+// control registers by field; drv8323_config_async<init, IO>(sched) enables
+// the driver, writes them and reads them back, as a coroutine: the wake up
+// time and the frames are waited for on the scheduler, next to whatever else
+// is starting.
 //
 // SPI: 16 bit frames, clock idle low, data sampled on the falling edge
 // (SPIClockPhase::SECOND_EDGE), 10 MHz at most, chip select high for 400 ns
@@ -149,28 +151,44 @@ inline constexpr float drv8323_csa_gain(const DRV8323Init& c) {
     return 5 << static_cast<int>(c.csa_gain);
 }
 
-// What a configuration supplies to reach its driver, as static functions:
-//   transfer(word): one 16 bit SPI frame with its chip select, returns the
-//                   word received. The 400 ns of chip select high between
-//                   frames are the IO's to keep.
-//   enable(on):     the enable pin
-//   delay_us(us):   at least us microseconds
+// What a configuration supplies to reach its driver, as static functions. A
+// frame is in three steps so that the wait can be spent elsewhere:
+//   transfer_start(word): chip select low and one 16 bit SPI frame started
+//   transfer_ready():     the frame is in
+//   transfer_end():       returns the word received, chip select high
+//   enable(on):           the enable pin
+// The 400 ns of chip select high between frames are the IO's to keep.
 template<typename IO>
-concept DRV8323IO = requires(uint16_t word, bool on, uint32_t us) {
-    { IO::transfer(word) } -> std::convertible_to<uint16_t>;
+concept DRV8323IO = requires(uint16_t word, bool on) {
+    IO::transfer_start(word);
+    { IO::transfer_ready() } -> std::convertible_to<bool>;
+    { IO::transfer_end() } -> std::convertible_to<uint16_t>;
     IO::enable(on);
-    IO::delay_us(us);
 };
+
+// One frame, waiting for it: 16 bit times
+template<DRV8323IO IO>
+inline uint16_t drv8323_transfer(uint16_t word) {
+    IO::transfer_start(word);
+    while (!IO::transfer_ready());
+    return IO::transfer_end();
+}
 
 // Frames: bit 15 read, bits 14..11 address, bits 10..0 data. The reply to a
 // write is the register's previous value.
+inline constexpr uint16_t drv8323_read_frame(uint8_t address) {
+    return 1u << 15 | address << 11;
+}
+inline constexpr uint16_t drv8323_write_frame(uint8_t address, uint16_t value) {
+    return address << 11 | (value & drv8323_data_mask);
+}
 template<DRV8323IO IO>
 inline uint16_t drv8323_read(uint8_t address) {
-    return IO::transfer(1u << 15 | address << 11) & drv8323_data_mask;
+    return drv8323_transfer<IO>(drv8323_read_frame(address)) & drv8323_data_mask;
 }
 template<DRV8323IO IO>
 inline void drv8323_write(uint8_t address, uint16_t value) {
-    IO::transfer(address << 11 | (value & drv8323_data_mask));
+    drv8323_transfer<IO>(drv8323_write_frame(address, value));
 }
 
 // Fault status 2 << 16 | fault status 1. Status 1 bit 10 is FAULT, the state
@@ -193,22 +211,34 @@ inline void drv8323_disable() {
     IO::enable(false);
 }
 
-// Enables the driver and writes the control registers. Returns 0 when every
-// register reads back as written, else a bit per register that does not
+// GlobalTask of the configuration: one driver. The frame is static and the
+// call hangs if it does not fit.
+inline constexpr int drv8323_task_id = 110;
+inline constexpr int drv8323_task_size = 96;
+
+// Enables the driver and writes the control registers. The result is 0 when
+// every register reads back as written, else a bit per register that does not
 // (bit 0: driver control, ... bit 4: CSA control): no driver, no supply, or
 // a broken SPI connection. The driver is left enabled either way: disabling
 // it on a failure is the caller's decision. The inputs should hold the
-// gates off while this runs.
+// gates off while this runs, and nothing else may use the IO.
 template<DRV8323Init init, DRV8323IO IO>
-inline uint32_t drv8323_config() {
+[[gnu::cold]] inline GlobalTask<uint32_t, drv8323_task_id, drv8323_task_size> drv8323_config_async(CycleScheduler& sched) {
     constexpr uint32_t wake_up_us = 10'000;     // 1 ms in the datasheet, the obot_g474 waits 10
+    static constexpr uint16_t regs[drv8323_control_register_count] = {get_drv8323_reg(init, 0), get_drv8323_reg(init, 1),
+        get_drv8323_reg(init, 2), get_drv8323_reg(init, 3), get_drv8323_reg(init, 4)};
     IO::enable(true);
-    IO::delay_us(wake_up_us);
+    co_await sched.async_delay_us(wake_up_us);
     uint32_t errors = 0;
-    [&]<int... n>(std::integer_sequence<int, n...>) {
-        ((drv8323_write<IO>(drv8323_driver_control + n, get_drv8323_reg(init, n)),
-          errors |= drv8323_read<IO>(drv8323_driver_control + n) != get_drv8323_reg(init, n) ? 1u << n : 0), ...);
-    }(std::make_integer_sequence<int, drv8323_control_register_count>{});
-    return errors;
+    // per register a write frame, then a read frame
+    for (int frame = 0; frame < 2 * drv8323_control_register_count; frame++) {
+        const int n = frame / 2;
+        const bool read = frame & 1;
+        IO::transfer_start(read ? drv8323_read_frame(drv8323_driver_control + n) : drv8323_write_frame(drv8323_driver_control + n, regs[n]));
+        while (!IO::transfer_ready()) co_await sched.yield();
+        const uint16_t reply = IO::transfer_end() & drv8323_data_mask;
+        if (read && reply != regs[n]) errors |= 1u << n;
+    }
+    co_return errors;
 }
 }
