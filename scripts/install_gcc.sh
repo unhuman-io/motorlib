@@ -3,7 +3,7 @@
 set -e
 
 gcc_dir=$(dirname $0)/../gcc
-rf -rf $gcc_dir
+rm -rf $gcc_dir
 mkdir -p $gcc_dir
 cd $gcc_dir
 
@@ -42,9 +42,13 @@ cd $gcc_dir
 # declare -A sha=( [x86_64]=597893282ac8c6ab1a4073977f2362990184599643b4c5ee34870a8215783a16 \
 #                  [aarch64]=d061559d814b205ed30c5b7c577c03317ec447ca51cd5a159d26b12a5bbeb20c )
 
-version=15.3.rel1
-declare -A sha=( [x86_64]=563bebb2b97d53382b956d6ee1fe61e2cae26699901417234a37df505ef9b5fa \
-                 [aarch64]=06979e0c8171de58e5dc2a2b2019330a290f30930f27728af98a83e1a7369b3a )
+# version=15.3.rel1
+# declare -A sha=( [x86_64]=563bebb2b97d53382b956d6ee1fe61e2cae26699901417234a37df505ef9b5fa \
+#                  [aarch64]=06979e0c8171de58e5dc2a2b2019330a290f30930f27728af98a83e1a7369b3a )
+
+version=15.3.rel2
+declare -A sha=( [x86_64]=463df9665c246fa13bab2102115bbf83440661b6eb70b44f3dfd4712ca30037a \
+                 [aarch64]=a0dc18893171d39dec82fd8d57eeab3da836fd3df4b61978db3eccbf4a6bb948 )
 
 arch=$(uname -m)
 fname=arm-gnu-toolchain-$version-$arch-arm-none-eabi
