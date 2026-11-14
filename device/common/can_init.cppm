@@ -179,6 +179,12 @@ inline int can_tx_slot() {
     return (fqs >> TXFQS_TFQPI_Pos) & 3;
 }
 
+// True once every queued frame has gone out
+template<const CANInit c>
+inline bool can_tx_idle() {
+    return can_regs(c.instance).TXBRP == 0;
+}
+
 // Queue one CAN FD frame with bit rate switching. Standard id unless
 // extended; the payload type fixes the length at compile time (<= 64 bytes,
 // lengths above 8 are padded to the next FD size). Returns false if the tx

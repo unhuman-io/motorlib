@@ -6,13 +6,24 @@ export module device.system;
 
 export {
 // Resets, the watchdog and the hand over to the can bootloader
-// (motorlib/bootloader/stm32g4) for an stm32g4 application.
+// (obot3/bootloader, or the earlier motorlib/bootloader/stm32g4) for an stm32g4
+// application.
 //
 // That bootloader starts the independent watchdog before it jumps to the
 // application: 0.5 s until the reset, and a watchdog reset stays in the
 // bootloader. An application behind it has to call watchdog_kick() more often
 // than that; one that stops, on purpose or not, ends up in the bootloader.
 // Without the bootloader the watchdog does not run and the kick does nothing.
+
+// Where that bootloader ends and the application's vector table starts
+inline constexpr uint32_t application_address = 0x08002000;
+
+// What the bootloader does first: the independent watchdog at its reset
+// prescaler and reload, 0.5 s, and stopped while a debugger has the cpu halted
+inline void watchdog_start() {
+    DBGMCU->APB1FZR1 |= DBGMCU_APB1FZR1_DBG_IWDG_STOP | DBGMCU_APB1FZR1_DBG_WWDG_STOP;
+    IWDG->KR = 0xCCCC;
+}
 
 inline void watchdog_kick() {
     IWDG->KR = 0xAAAA;
