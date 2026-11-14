@@ -45,6 +45,59 @@ inline constexpr uint32_t bootloader_flag_value = 0xB007;
     system_reset();
 }
 
+// A load or store at an address that may have nothing behind it, for a
+// debugger's memory access. Bus faults of data accesses are ignored for its
+// duration, which needs the faults and with them every interrupt masked: about
+// 30 cpu cycles. False if the access faulted.
+template<typename Access>
+inline bool memory_access(Access access) {
+    constexpr uint32_t bus_faults = SCB_CFSR_BUSFAULTSR_Msk;
+    __asm__ volatile("cpsid f");
+    SCB->CFSR = bus_faults;                         // flags of the past
+    SCB->CCR |= SCB_CCR_BFHFNMIGN_Msk;
+    access();
+    __asm__ volatile("dsb\nisb");                   // a fault of a buffered write arrives here
+    const bool fault = (SCB->CFSR & bus_faults) != 0;
+    SCB->CFSR = bus_faults;
+    SCB->CCR &= ~SCB_CCR_BFHFNMIGN_Msk;
+    __asm__ volatile("cpsie f");
+    return !fault;
+}
+
+// Blocks, in the widest accesses that address and length are multiples of: a
+// word that is read or written as one stays whole next to an interrupt, and
+// peripheral registers get the access they expect. Both return the bytes done
+// before a fault.
+template<typename T>
+inline uint32_t memory_read_as(uint32_t address, uint8_t* data, uint32_t length) {
+    for (uint32_t i = 0; i < length; i += sizeof(T)) {
+        T value{};
+        if (!memory_access([&] { value = *reinterpret_cast<const volatile T*>(address + i); })) return i;
+        for (uint32_t byte = 0; byte < sizeof(T); byte++) data[i + byte] = static_cast<uint8_t>(value >> (8 * byte));
+    }
+    return length;
+}
+inline uint32_t memory_read(uint32_t address, uint8_t* data, uint32_t length) {
+    if (((address | length) & 3) == 0) return memory_read_as<uint32_t>(address, data, length);
+    if (((address | length) & 1) == 0) return memory_read_as<uint16_t>(address, data, length);
+    return memory_read_as<uint8_t>(address, data, length);
+}
+
+template<typename T>
+inline uint32_t memory_write_as(uint32_t address, const uint8_t* data, uint32_t length) {
+    for (uint32_t i = 0; i < length; i += sizeof(T)) {
+        T value = 0;
+        for (uint32_t byte = 0; byte < sizeof(T); byte++) value |= static_cast<T>(data[i + byte]) << (8 * byte);
+        if (!memory_access([&] { *reinterpret_cast<volatile T*>(address + i) = value; })) return i;
+    }
+    return length;
+}
+inline uint32_t memory_write(uint32_t address, const uint8_t* data, uint32_t length) {
+    if (((address | length) & 3) == 0) return memory_write_as<uint32_t>(address, data, length);
+    if (((address | length) & 1) == 0) return memory_write_as<uint16_t>(address, data, length);
+    return memory_write_as<uint8_t>(address, data, length);
+}
+
 // The 96 bit unique device id as the 12 hex digits the bootloader and the
 // obot_g474 firmware report as the serial number
 inline void system_serial_number(char serial[13]) {
