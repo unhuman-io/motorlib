@@ -235,7 +235,10 @@ inline bool can_write(uint32_t id, const T& payload) {
     const Payload copy = payload;
     uint32_t w[words] = {};
     std::memcpy(w, &copy, sizeof(Payload));
-    for (uint32_t i = 0; i < words; i++) e.data32[i] = w[i];   // message ram wants word writes
+    // The message ram takes word writes only. Volatile, or the compiler is free
+    // to make the loop a copy by bytes, and clang does.
+    volatile uint32_t* const data32 = e.data32;
+    for (uint32_t i = 0; i < words; i++) data32[i] = w[i];
     can_regs(c.instance).TXBAR = 1u << index;
     return true;
 }
@@ -286,7 +289,8 @@ inline bool can_write(uint32_t id, const void* data, uint8_t length) {
     e.control = dlc << TX_DLC_Pos | TX_FDF | TX_BRS;
     uint32_t w[16] = {};
     std::memcpy(w, data, length < 64 ? length : 64);
-    for (uint32_t i = 0; i < (can_dlc_length(dlc) + 3) / 4; i++) e.data32[i] = w[i];
+    volatile uint32_t* const data32 = e.data32;    // word writes, as above
+    for (uint32_t i = 0; i < (can_dlc_length(dlc) + 3) / 4; i++) data32[i] = w[i];
     can_regs(c.instance).TXBAR = 1u << index;
     return true;
 }
