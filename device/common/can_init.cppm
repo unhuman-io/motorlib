@@ -79,6 +79,9 @@ inline constexpr uint32_t FILTER_CLASSIC = 2u << 30, FILTER_FIFO_Pos = 27, FILTE
 inline constexpr uint32_t RXFS_FILL_Msk = 0xF, RXFS_GET_Pos = 8, RX_STDID_Pos = 18, RX_DLC_Pos = 16;
 inline constexpr uint32_t TXFQS_TFQPI_Pos = 16, TXFQS_TFQF = 1u << 21;
 inline constexpr uint32_t TX_DLC_Pos = 16, TX_BRS = 1u << 20, TX_FDF = 1u << 21, TX_XTD = 1u << 30, TX_STDID_Pos = 18;
+// IR and IE as the ST FDCAN has them, which is not the M_CAN order
+inline constexpr uint32_t IR_RF0N = 1u << 0, IR_RF1N = 1u << 3, IR_TFE = 1u << 9;
+inline constexpr uint32_t ILE_EINT0 = 1u << 0;
 }
 
 struct CANBitTiming {
@@ -183,6 +186,30 @@ inline int can_tx_slot() {
 template<const CANInit c>
 inline bool can_tx_idle() {
     return can_regs(c.instance).TXBRP == 0;
+}
+
+// Interrupts, on line 0 of the instance: a new frame in rx fifo 0 or 1, and
+// the tx fifo empty. can_interrupt_flags() returns those that are set and
+// clears them.
+inline constexpr uint32_t can_interrupt_rx_fifo[] = {can_bit::IR_RF0N, can_bit::IR_RF1N};
+inline constexpr uint32_t can_interrupt_tx_empty = can_bit::IR_TFE;
+
+template<const CANInit c>
+inline void can_interrupt_enable(uint32_t flags) {
+    auto& regs = can_regs(c.instance);
+    regs.IE |= flags;
+    regs.ILE |= can_bit::ILE_EINT0;
+}
+template<const CANInit c>
+inline void can_interrupt_disable(uint32_t flags) {
+    can_regs(c.instance).IE &= ~flags;
+}
+template<const CANInit c>
+inline uint32_t can_interrupt_flags() {
+    auto& regs = can_regs(c.instance);
+    const uint32_t flags = regs.IR & regs.IE;
+    regs.IR = flags;
+    return flags;
 }
 
 // Queue one CAN FD frame with bit rate switching. Standard id unless
