@@ -98,15 +98,24 @@ inline uint32_t memory_write(uint32_t address, const uint8_t* data, uint32_t len
     return memory_write_as<uint8_t>(address, data, length);
 }
 
-// The 96 bit unique device id as the 12 hex digits the bootloader and the
-// obot_g474 firmware report as the serial number
-inline void system_serial_number(char serial[13]) {
-    constexpr char hex[] = "0123456789abcdef";
+// The 96 bit unique device id as the 6 bytes that are the serial number:
+// printed in this order as 12 hex digits it is what the bootloader and the
+// obot_g474 firmware report
+inline void system_serial_bytes(uint8_t serial[6]) {
     const uint32_t* uid = reinterpret_cast<const uint32_t*>(UID_BASE);
     const uint32_t word0 = uid[0] + uid[2];
     const uint32_t word1 = uid[1];
-    for (int i = 0; i < 8; i++) serial[i] = hex[(word0 >> (28 - 4 * i)) & 0xF];
-    for (int i = 0; i < 4; i++) serial[8 + i] = hex[(word1 >> (28 - 4 * i)) & 0xF];
+    for (int i = 0; i < 4; i++) serial[i] = word0 >> (24 - 8 * i);
+    for (int i = 0; i < 2; i++) serial[4 + i] = word1 >> (24 - 8 * i);
+}
+inline void system_serial_number(char serial[13]) {
+    constexpr char hex[] = "0123456789abcdef";
+    uint8_t bytes[6];
+    system_serial_bytes(bytes);
+    for (int i = 0; i < 6; i++) {
+        serial[2 * i] = hex[bytes[i] >> 4];
+        serial[2 * i + 1] = hex[bytes[i] & 0xF];
+    }
     serial[12] = 0;
 }
 }
