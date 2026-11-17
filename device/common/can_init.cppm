@@ -17,6 +17,14 @@ enum class CANEnable : bool {
     ENABLED
 };
 
+// What a frame's time of arrival is counted in: a 16 bit count at the start
+// of the frame, see can_read() and can_timestamp()
+enum class CANTimestamp : uint8_t {
+    NONE,       // TSCC TSS 0: always 0
+    BIT_TIMES,  // 1: bit times of the arbitration phase. Not with bit rate switching on the bus: the bits of a data phase are shorter
+    EXTERNAL,   // 2: a timer's counter, TIM3 on the stm32g4, which has to be running
+};
+
 struct CANInit {
     uint8_t instance = 0;                                   // FDCAN1 = 0
     uint32_t kernel_clock_hz = 0;                           // fdcan_ker_ck, see the RCC clock init
@@ -29,6 +37,8 @@ struct CANInit {
     CANEnable transmitter_delay_compensation = CANEnable::ENABLED;   // DBTP TDC, needed above ~2 Mbps
     uint16_t transmitter_delay_filter_ns = 150;             // TDCR TDCF
     uint8_t standard_filter_count = 0;                      // RXGFC LSS: filter elements in use, set with can_filter(). Other frames are rejected.
+    CANTimestamp timestamp = CANTimestamp::NONE;            // TSCC TSS
+    uint8_t timestamp_bit_times = 1;                        // TSCC TCP: bit times per count with BIT_TIMES, 1 to 16
 };
 
 // Same register layout on every ST FDCAN; names follow the stm32g4 header
@@ -76,7 +86,8 @@ inline constexpr uint32_t TDCR_TDCF_Pos = 0, TDCR_TDCO_Pos = 8;
 inline constexpr uint32_t RXGFC_RRFE = 1u << 0, RXGFC_ANFE = 1u << 2, RXGFC_ANFS = 1u << 4;
 inline constexpr uint32_t RXGFC_ANFE_REJECT = 3u << 2, RXGFC_ANFS_REJECT = 3u << 4, RXGFC_LSS_Pos = 16;
 inline constexpr uint32_t FILTER_CLASSIC = 2u << 30, FILTER_FIFO_Pos = 27, FILTER_ID_Pos = 16, FILTER_MASK_ALL = 0x7FF;
-inline constexpr uint32_t RXFS_FILL_Msk = 0xF, RXFS_GET_Pos = 8, RX_STDID_Pos = 18, RX_DLC_Pos = 16;
+inline constexpr uint32_t RXFS_FILL_Msk = 0xF, RXFS_GET_Pos = 8, RX_STDID_Pos = 18, RX_DLC_Pos = 16, RX_RXTS_Msk = 0xFFFF;
+inline constexpr uint32_t TSCC_TCP_Pos = 16;
 inline constexpr uint32_t TXFQS_TFQPI_Pos = 16, TXFQS_TFQF = 1u << 21;
 inline constexpr uint32_t TX_DLC_Pos = 16, TX_BRS = 1u << 20, TX_FDF = 1u << 21, TX_XTD = 1u << 30, TX_STDID_Pos = 18;
 // IR and IE as the ST FDCAN has them, which is not the M_CAN order
@@ -151,6 +162,10 @@ inline void init_can() {
     regs.RXGFC = static_cast<uint32_t>(c.standard_filter_count) << RXGFC_LSS_Pos |
         RXGFC_ANFS_REJECT | RXGFC_ANFE_REJECT | RXGFC_RRFE;   // frames that match no filter are rejected
     regs.TXBC = 0;                                        // tx fifo
+    if constexpr (c.timestamp != CANTimestamp::NONE) {
+        static_assert(c.timestamp_bit_times >= 1 && c.timestamp_bit_times <= 16, "1 to 16 bit times per count");
+        regs.TSCC = static_cast<uint32_t>(c.timestamp) | static_cast<uint32_t>(c.timestamp_bit_times - 1) << TSCC_TCP_Pos;
+    }
     regs.CCCR &= ~CCCR_INIT;
 }
 
@@ -253,10 +268,19 @@ inline void can_filter(int index, uint32_t id, int fifo) {
         (id & 0x7FF) << FILTER_ID_Pos | FILTER_MASK_ALL;
 }
 
+// The count of CANInit::timestamp now: how long ago a frame started is this
+// minus the frame's, in 16 bits
+template<const CANInit c>
+inline uint16_t can_timestamp() {
+    return static_cast<uint16_t>(can_regs(c.instance).TSCV);
+}
+
 // Oldest frame of an rx fifo, standard ids. Returns its length and takes it
 // out of the fifo, or -1 if the fifo is empty. data must have room for 64 bytes.
+// timestamp, if given, gets the count of CANInit::timestamp at the start of
+// the frame.
 template<const CANInit c>
-inline int can_read(int fifo, uint32_t& id, void* data) {
+inline int can_read(int fifo, uint32_t& id, void* data, uint16_t* timestamp = nullptr) {
     using namespace can_bit;
     auto& regs = can_regs(c.instance);
     const uint32_t status = fifo == 0 ? regs.RXF0S : regs.RXF1S;
@@ -265,6 +289,7 @@ inline int can_read(int fifo, uint32_t& id, void* data) {
     const uint32_t* element = fifo == 0 ? can_ram(c.instance).rx_fifo0[index] : can_ram(c.instance).rx_fifo1[index];
     id = (element[0] >> RX_STDID_Pos) & 0x7FF;
     const uint32_t length = can_dlc_length((element[1] >> RX_DLC_Pos) & 0xF);
+    if (timestamp != nullptr) *timestamp = static_cast<uint16_t>(element[1] & RX_RXTS_Msk);
     uint32_t w[16];
     for (uint32_t i = 0; i < (length + 3) / 4; i++) w[i] = element[2 + i];   // message ram wants word reads
     std::memcpy(data, w, length);
