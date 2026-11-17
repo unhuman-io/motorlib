@@ -336,6 +336,18 @@ struct [[nodiscard]] GlobalCall : public Task<T, false> {
         return CallAwaiter{own_};
     }
 
+    // The same for code that is no coroutine and has waited for is_done() in
+    // some other way: the result, and the frame is free
+    T result() {
+        if constexpr (std::is_same_v<T, void>) {
+            own_.destroy();
+        } else {
+            T value = own_.promise().value_;
+            own_.destroy();
+            return value;
+        }
+    }
+
  private:
     std::coroutine_handle<promise_type> own_;
 };
