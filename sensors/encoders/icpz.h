@@ -214,6 +214,12 @@ class ICPZBase : public EncoderBase {
     uint32_t read_raw_buf(uint8_t buf[4], bool &crc_error) {
       uint32_t data = ((buf[1] << 16) | (buf[2] << 8) | buf[3]) << 8;
       raw_value_ = data >> 8;
+      if (type_ == MU) {
+        // The iC-MU position frame is the position only: it has no error / warning bits
+        // and no CRC after it (its status is a separate SPI command).
+        crc_error = false;
+        return raw_value_;
+      }
       uint32_t word = data | buf[4];
       Diag diag = {.word = buf[4]};
       uint8_t crc6_calc = ~CRC_BiSS_43_30bit(word >> 6) & 0x3f;
@@ -301,7 +307,7 @@ class ICPZBase : public EncoderBase {
     std::vector<uint8_t> read_register(uint8_t address, uint8_t length) {
         spidma_.claim();
         std::vector<uint8_t> data_out(length+3, 0);
-        data_out[0] = Opcode::READ_REG;
+        data_out[0] = read_register_opcode_;
         data_out[1] = address;
         uint8_t data_in[length+3];
         
@@ -323,7 +329,7 @@ class ICPZBase : public EncoderBase {
         if (bank != bank_) {
           spidma_.claim();
           uint8_t data_in[3];
-          uint8_t data_out[] = {Opcode::WRITE_REG, 0x40, bank};
+          uint8_t data_out[] = {write_register_opcode_, 0x40, bank};
           spidma_.readwrite(data_out, data_in, 3);
           if (read_register(0x40, 1) != std::vector<uint8_t>{bank}) {
             logger.log("ichaus bank " + std::to_string(read_register(0x40, 1)[0]) + " not " + std::to_string(bank));
@@ -339,7 +345,7 @@ class ICPZBase : public EncoderBase {
     std::vector<uint8_t> read_register(uint8_t bank, uint8_t address, uint8_t length) {
         spidma_.claim();
         std::vector<uint8_t> data_out(length+3, 0);
-        data_out[0] = Opcode::READ_REG;
+        data_out[0] = read_register_opcode_;
         data_out[1] = address;
         uint8_t data_in[length+3];
         if (!set_bank(bank)) {
@@ -376,7 +382,7 @@ class ICPZBase : public EncoderBase {
           spidma_.release();
           return false;
         }
-        std::vector<uint8_t> data_out = {Opcode::WRITE_REG, address};
+        std::vector<uint8_t> data_out = {write_register_opcode_, address};
         data_out.insert(data_out.end(), value.begin(), value.end());
         spidma_.readwrite(data_out.data(), data_in, data_out.size());
         if (!set_only) {
@@ -827,6 +833,9 @@ class ICPZBase : public EncoderBase {
     int32_t pos_ = 0;
     Encoder24 last_enc_ = {};
     uint8_t bank_ = 255;
+    // Register access opcodes differ between the iC-PZ (default) and the iC-MU (see icmu.h).
+    uint8_t read_register_opcode_ = Opcode::READ_REG;
+    uint8_t write_register_opcode_ = Opcode::WRITE_REG;
     enum {PZ, MU} type_ = PZ;
 
     uint32_t error_count_ = 0;
