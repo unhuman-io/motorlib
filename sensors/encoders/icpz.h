@@ -37,7 +37,7 @@ static uint8_t CRC_BiSS_43_30bit (uint32_t w_InputData);
     api.add_api_variable(prefix "rawh", new const APICallback([](){ return u32_to_hex(icpz.raw_value_); }));\
     api.add_api_variable(prefix "value", new const APIInt32(&icpz.pos_));\
     api.add_api_variable(prefix "diag", new const APICallback([](){ return icpz.read_diagnosis(); }));\
-    api.add_api_variable(prefix "conf_write", new const APICallback([](){ System::set_one_time_api_timeout_us(20000); return icpz.write_conf(); }));\
+    api.add_api_variable(prefix "conf_write", new const APICallback([](){ System::set_one_time_api_timeout_us(icpz.conf_write_timeout_us + 20000); return icpz.write_conf(); }));\
     api.add_api_variable(prefix "conf_write_no_check", new const APICallback([](){ return icpz.write_conf_no_check(); }));\
     api.add_api_variable(prefix "auto_ana", new const APICallback([](){ icpz.start_auto_adj_ana(); return std::string("ok"); }));\
     api.add_api_variable(prefix "auto_dig", new const APICallback([](){ icpz.start_auto_adj_dig(); return std::string("ok"); }));\
@@ -214,6 +214,12 @@ class ICPZBase : public EncoderBase {
     uint32_t read_raw_buf(uint8_t buf[4], bool &crc_error) {
       uint32_t data = ((buf[1] << 16) | (buf[2] << 8) | buf[3]) << 8;
       raw_value_ = data >> 8;
+      if (type_ == MU) {
+        // The iC-MU position frame is the position only: it has no error / warning bits
+        // and no CRC after it (its status is a separate SPI command).
+        crc_error = false;
+        return raw_value_;
+      }
       uint32_t word = data | buf[4];
       Diag diag = {.word = buf[4]};
       uint8_t crc6_calc = ~CRC_BiSS_43_30bit(word >> 6) & 0x3f;
@@ -301,7 +307,7 @@ class ICPZBase : public EncoderBase {
     std::vector<uint8_t> read_register(uint8_t address, uint8_t length) {
         spidma_.claim();
         std::vector<uint8_t> data_out(length+3, 0);
-        data_out[0] = Opcode::READ_REG;
+        data_out[0] = read_register_opcode_;
         data_out[1] = address;
         uint8_t data_in[length+3];
         
@@ -323,7 +329,7 @@ class ICPZBase : public EncoderBase {
         if (bank != bank_) {
           spidma_.claim();
           uint8_t data_in[3];
-          uint8_t data_out[] = {Opcode::WRITE_REG, 0x40, bank};
+          uint8_t data_out[] = {write_register_opcode_, 0x40, bank};
           spidma_.readwrite(data_out, data_in, 3);
           if (read_register(0x40, 1) != std::vector<uint8_t>{bank}) {
             logger.log("ichaus bank " + std::to_string(read_register(0x40, 1)[0]) + " not " + std::to_string(bank));
@@ -339,7 +345,7 @@ class ICPZBase : public EncoderBase {
     std::vector<uint8_t> read_register(uint8_t bank, uint8_t address, uint8_t length) {
         spidma_.claim();
         std::vector<uint8_t> data_out(length+3, 0);
-        data_out[0] = Opcode::READ_REG;
+        data_out[0] = read_register_opcode_;
         data_out[1] = address;
         uint8_t data_in[length+3];
         if (!set_bank(bank)) {
@@ -376,7 +382,7 @@ class ICPZBase : public EncoderBase {
           spidma_.release();
           return false;
         }
-        std::vector<uint8_t> data_out = {Opcode::WRITE_REG, address};
+        std::vector<uint8_t> data_out = {write_register_opcode_, address};
         data_out.insert(data_out.end(), value.begin(), value.end());
         spidma_.readwrite(data_out.data(), data_in, data_out.size());
         if (!set_only) {
@@ -439,8 +445,11 @@ class ICPZBase : public EncoderBase {
         }
     }
 
+    // How long write_conf waits for the encoder, found experimentally. The
+    // host has to be given at least this long for the reply.
+    static constexpr uint32_t conf_write_timeout_us = 200000;
     std::string write_conf() {
-        return "conf write " + send_command_with_result(CMD::CONF_WRITE_ALL, 200000);
+        return "conf write " + send_command_with_result(CMD::CONF_WRITE_ALL, conf_write_timeout_us);
     }
 
     std::string write_conf_no_check() {
@@ -827,6 +836,9 @@ class ICPZBase : public EncoderBase {
     int32_t pos_ = 0;
     Encoder24 last_enc_ = {};
     uint8_t bank_ = 255;
+    // Register access opcodes differ between the iC-PZ (default) and the iC-MU (see icmu.h).
+    uint8_t read_register_opcode_ = Opcode::READ_REG;
+    uint8_t write_register_opcode_ = Opcode::WRITE_REG;
     enum {PZ, MU} type_ = PZ;
 
     uint32_t error_count_ = 0;
