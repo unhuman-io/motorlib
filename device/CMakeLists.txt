@@ -1,6 +1,8 @@
 # One OBJECT library per device: core flags, headers, linker script and the
 # device.* C++ modules (rcc_init, gpio_init, hrtim_init, ...). Link a
 # bare-metal executable against exactly one of these and import the modules.
+# The drivers.* modules of ../drivers, for chips outside the microcontroller,
+# are built with it: they need the same flags.
 
 function(add_device_target name arch ld include_dir)
     add_library(${name} OBJECT)
@@ -19,10 +21,12 @@ function(add_device_target name arch ld include_dir)
         -T${ld}
     )
     set_target_properties(${name} PROPERTIES INTERFACE_LINK_DEPENDS ${ld})
+    get_filename_component(drivers_dir ${CMAKE_CURRENT_LIST_DIR}/../drivers ABSOLUTE)   # no ".." left in it: cmake 3.28 needs that
     target_sources(${name} PUBLIC
         FILE_SET CXX_MODULES
-        BASE_DIRS ${CMAKE_CURRENT_LIST_DIR}
-        FILES ${ARGN} common/hrtim_init.cppm common/can_init.cppm common/adc_init.cppm common/dac_init.cppm common/opamp_init.cppm common/irq_init.cppm common/tim_init.cppm common/drv8323_init.cppm
+        BASE_DIRS ${CMAKE_CURRENT_LIST_DIR} ${drivers_dir}
+        FILES ${ARGN} common/hrtim_init.cppm common/can_init.cppm common/adc_init.cppm common/dac_init.cppm common/opamp_init.cppm common/irq_init.cppm common/tim_init.cppm
+            ${drivers_dir}/drv8323.cppm
     )
 endfunction()
 
