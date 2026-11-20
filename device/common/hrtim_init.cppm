@@ -174,6 +174,7 @@ struct HRTIMInit {
 
 void hrtim_period_out_of_range();   // not constexpr: calling it fails the constant evaluation
 void hrtim_deadtime_out_of_range();
+void hrtim_master_has_no_outputs();
 
 // Period register value for a pwm frequency. Center aligned counts up and
 // down, so the register holds half the pwm period.
@@ -305,13 +306,16 @@ inline void hrtim_master_compare1(uint16_t value) {
 }
 
 // Run time control of the outputs, for a power stage that switches between
-// off, braking and pwm. Timers by HRTIMTimer::A..F.
+// off, braking and pwm. Timers by HRTIMTimer::A..F: the master has no outputs
+// and none of these registers, and asking for it is a trap.
 inline HRTIMTimerRegs& hrtim_timer(HRTIMTimer timer) {
+    if (timer == HRTIMTimer::MASTER) __builtin_trap();
     return hrtim_timer(static_cast<int>(timer) - 1);
 }
 
 // OENR / ODISR bits of a timer's outputs
-constexpr uint32_t hrtim_output_mask(HRTIMTimer timer, bool out1, bool out2) {
+consteval uint32_t hrtim_output_mask(HRTIMTimer timer, bool out1, bool out2) {
+    if (timer == HRTIMTimer::MASTER) hrtim_master_has_no_outputs();
     return (out1 ? 1u : 0u) << 2 * (static_cast<int>(timer) - 1) | (out2 ? 2u : 0u) << 2 * (static_cast<int>(timer) - 1);
 }
 // A disabled output is in its idle (inactive) state

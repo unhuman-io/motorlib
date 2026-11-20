@@ -238,42 +238,44 @@ struct [[nodiscard]] Task {
     }
 };
 
+// The promise of a task whose frame is static storage: no heap, and one such
+// coroutine at a time. Owner is the task type that uses it, which gives every
+// task its own frame; the allocator has to be here, in the promise.
+template <typename T, typename Owner, int size>
+struct StaticFramePromise : public Task<T, false>::promise_type {
+    alignas(std::max_align_t) static inline std::byte global_frame[size];
+    static inline bool is_in_use = false;
+    [[gnu::used]] static inline volatile std::size_t frame_size = 0;   // what the compiler made of it, for choosing size
+
+    void* operator new(std::size_t size_desired) {
+        frame_size = size_desired;
+        if (size_desired > size) {
+            while(1); // Frame too large
+        }
+        if (is_in_use) {
+            while(1); // Coroutine already active
+        }
+        is_in_use = true;
+        return global_frame;
+    }
+
+    void operator delete(void*, std::size_t) {
+        is_in_use = false;
+    }
+};
+
 template <typename T = void, int instance_id = 0, int size = 64>
 struct [[nodiscard]] GlobalTask : public Task<T, false> {
     static_assert(std::is_trivially_destructible_v<Task<T, false>>);
 
-    // 1. We must define a promise_type specific to GlobalTask
-    struct promise_type : public Task<T, false>::promise_type {
-        alignas(std::max_align_t) static inline std::byte global_frame[size];
-        static inline bool is_in_use = false;
-
-        // 2. Override get_return_object to return a GlobalTask, not a Task
+    // The return object is a GlobalTask, not a Task
+    struct promise_type : public StaticFramePromise<T, GlobalTask, size> {
         GlobalTask get_return_object() {
             return GlobalTask{std::coroutine_handle<promise_type>::from_promise(*this)};
         }
-
-        // 3. Allocator goes HERE, inside the promise_type
-        [[gnu::used]] static inline volatile std::size_t frame_size = 0;   // what the compiler made of it, for choosing size
-
-        void* operator new(std::size_t size_desired) {
-            frame_size = size_desired;
-            if (size_desired > size) {
-                while(1); // Frame too large
-            }
-            if (is_in_use) {
-                while(1); // Coroutine already active
-            }
-
-            is_in_use = true;
-            return global_frame;
-        }
-
-        void operator delete(void*, std::size_t) {
-            is_in_use = false;
-        }
     };
 
-    // 4. Constructor safely casts the derived handle to the base handle expected by Task<T>
+    // Constructor safely casts the derived handle to the base handle expected by Task<T>
     explicit GlobalTask(std::coroutine_handle<promise_type> h)
         : Task<T, false>(std::coroutine_handle<typename Task<T, false>::promise_type>::from_address(h.address())) {}
 };
@@ -285,30 +287,9 @@ struct [[nodiscard]] GlobalTask : public Task<T, false> {
 // first is through is the "already active" trap.
 template <typename T = void, int instance_id = 0, int size = 64>
 struct [[nodiscard]] GlobalCall : public Task<T, false> {
-    struct promise_type : public Task<T, false>::promise_type {
-        alignas(std::max_align_t) static inline std::byte global_frame[size];
-        static inline bool is_in_use = false;
-
+    struct promise_type : public StaticFramePromise<T, GlobalCall, size> {
         GlobalCall get_return_object() {
             return GlobalCall{std::coroutine_handle<promise_type>::from_promise(*this)};
-        }
-
-        [[gnu::used]] static inline volatile std::size_t frame_size = 0;   // what the compiler made of it, for choosing size
-
-        void* operator new(std::size_t size_desired) {
-            frame_size = size_desired;
-            if (size_desired > size) {
-                while(1); // Frame too large
-            }
-            if (is_in_use) {
-                while(1); // Coroutine already active
-            }
-            is_in_use = true;
-            return global_frame;
-        }
-
-        void operator delete(void*, std::size_t) {
-            is_in_use = false;
         }
     };
 
