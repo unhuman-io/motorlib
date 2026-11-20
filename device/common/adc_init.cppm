@@ -332,12 +332,12 @@ inline uint32_t adc_read_injected(int rank) {
     return (&adc_regs<adc>().JDR1)[rank];
 }
 
-// For the handler of the injected end of sequence interrupt. The barrier lets
-// the write land before the return: without it the handler can run a second time.
+// For the handler of the injected end of sequence interrupt, ahead of its last
+// instructions: the request has to be gone before the return, or the handler
+// runs a second time.
 template<int adc>
 inline void adc_injected_end_of_sequence_clear() {
     adc_regs<adc>().ISR = adc_bit::ISR_JEOS;
-    __asm__ volatile("dsb");
 }
 
 // Software trigger of the regular / injected group. The start bits are set

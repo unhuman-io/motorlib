@@ -344,10 +344,10 @@ inline void hrtim_compare1(HRTIMTimer timer, uint32_t value) {
     hrtim_timer(timer).CMP1xR = value;
 }
 
-// For the handler of the master cmp1 interrupt. The barrier lets the write
-// land before the return: without it the handler can run a second time.
+// For the handler of the master cmp1 interrupt, ahead of its last
+// instructions: the request has to be gone before the return, or the handler
+// runs a second time.
 inline void hrtim_master_cmp1_interrupt_clear() {
     hrtim_master().MICR = hrtim_bits::MICR_MCMP1;
-    __asm__ volatile("dsb");
 }
 }
