@@ -29,3 +29,13 @@ jobs:
         ./test_logger
         make test_crc5
         ./test_crc5
+
+  format:
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@main
+    - name: clang-format
+      # The version that .clang-format is written for; .clang-format-ignore
+      # names what is not ours to format. To format: the same with -i in place
+      # of --dry-run --Werror.
+      run: pipx run clang-format==23.1.5 --dry-run --Werror $(git ls-files '*.h' '*.hpp' '*.c' '*.cc' '*.cpp' '*.cppm')

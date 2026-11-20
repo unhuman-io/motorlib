@@ -1,0 +1,8 @@
+# Not ours to format: vendor headers and sources, and tables of data
+CMSIS/**
+device/stm32g4/Include/stm32g4xx.h
+device/stm32g4/Include/stm32g474xx.h
+device/stm32g4/Include/system_stm32g4xx.h
+device/stm32g4/Src/system_stm32g4xx.c
+device/stm32g5/Include/STM32G564.h
+bmi270_data.c
