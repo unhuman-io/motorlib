@@ -57,7 +57,7 @@ class MAX11270 : public TorqueSensorBase {
             }
             int32_t s32 = raw_value_ << 8;
             signed_value_ = s32 >> 8;
-            torque_ = signed_value_ * (2.5 / pow(2,23)) / .02085;
+            torque_ = signed_value_ * (2.5 / powf(2,23)) / .02085;
             uint8_t data_in;
             conversion conv = {.rate=0b1111, .start=1};
             spi_dma_.readwrite(&conv.word, &data_in, 1);

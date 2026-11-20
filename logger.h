@@ -9,6 +9,7 @@
 #include "messages.h"
 #include <atomic>
 #include <string_view>
+#include <cinttypes>
 
 #define LOGGING_MAX_SIZE 4096
 class Logger {
@@ -46,7 +47,7 @@ class Logger {
     }
     void log(std::string_view str) {
         char header[50];
-        snprintf(header, sizeof(header), "(%lu %lu) ", get_uptime(), get_clock());
+        snprintf(header, sizeof(header), "(%" PRIu32 ", %" PRIu32 ") ", get_uptime(), get_clock());
         front_log_.set_value(front_atomic_.load(std::memory_order_acquire));
         read_front_.set_value(read_front_atomic_.load(std::memory_order_acquire));
         log_raw(header);
@@ -112,7 +113,7 @@ class Logger {
         return str;
     }
     bool empty() const {
-        return read_front_atomic_.load(std::memory_order_acquire) == back_;
+        return read_front_atomic_.load(std::memory_order_acquire) == (uint32_t) back_;
     }
     void log_printf(const char *s, ...) {
         va_list args;

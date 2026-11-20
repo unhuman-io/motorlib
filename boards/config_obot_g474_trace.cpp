@@ -3,11 +3,13 @@
 #include "../peripheral/stm32g4/hrpwm.h"
 #include "../util.h"
 #include "../peripheral/stm32g4/pin_config.h"
-#include "../peripheral/stm32g4/drv8323s.h"
 #include "../peripheral/stm32g4/uart.h"
 #include "../peripheral/protocol.h"
 #include "../peripheral/stm32g4/flash.h"
 #include "../peripheral/stm32g4/rtc.h"
+#include "../driver.h"
+#include "../task.h"
+#include "../interrupts.h"
 
 #ifdef SCOPE_DEBUG
 #define SET_SCOPE_PIN(X,x) GPIO##X->BSRR = 1 << x
@@ -73,8 +75,8 @@ using PWM = HRPWM;
     using Communication = CANCommunication<CAN>;
 #endif
 
-using Driver = DRV8323S;
-uint16_t drv_regs_error = 0;
+using Driver = DriverBase;
+
 
 #ifndef GPIO_OUT
 #define GPIO_OUT (reinterpret_cast<volatile gpio_bits*>(&GPIOA->ODR)->bit1)
@@ -115,7 +117,6 @@ uint16_t drv_regs_error = 0;
 #include "../temperature_sensor.h"
 #include "../peripheral/stm32g4/i2c_dma.h"
 #include "../peripheral/stm32g4/spi_dma.h"
-#include "../bmi270.h"
 #include "../peripheral/stm32g4/max31875.h"
 #include "../peripheral/stm32g4/max31889.h"
 #include "../mb85rc64.h"
@@ -135,35 +136,17 @@ extern "C" void board_init() {
     GPIO_SETL(C, 4, GPIO_MODE::OUTPUT, GPIO_SPEED::HIGH, 0); // main() scope
     GPIO_SETL(A, 0, GPIO_MODE::OUTPUT, GPIO_SPEED::HIGH, 0); // system loop scope
 #endif
+#if COMMS == COMMS_CAN
+    RCC->APB1ENR1 |= RCC_APB1ENR1_FDCANEN;
+    GPIO_SETL(B, 5, GPIO_MODE::ALT_FUN, GPIO_SPEED::MEDIUM, 9); // can2 rx
+    GPIO_SETL(B, 6, GPIO_MODE::ALT_FUN, GPIO_SPEED::MEDIUM, 9); // can2 tx
+#endif
 }
-
 
 namespace config {
     static_assert(((double) CPU_FREQUENCY_HZ * 8 / 2) / pwm_frequency < 65535);    // check pwm frequency
-    DRV8323S drv(*SPI1, SPIDMA::spi_pause[SPIDMA::SP1]);
-
+    Driver drv;
     TempSensor temp_sensor;
-    I2C_DMA i2c1(*I2C1, *DMA1_Channel7, *DMA1_Channel8, 400);
-    
-    // has_max31875
-    MAX31875 board_temperature_max31875(i2c1);
-
-    // has_max31889
-    MAX31889 board_temperature_max31889(i2c1);
-
-    // has_bridge_thermistors
-    NTC temp_bridge(TSENSE);
-    NTC temp_bridge2(TSENSE2);
-
-    // has_bmi270
-    GPIO imu_cs(*GPIOC, 4, GPIO::OUTPUT);
-    SPIDMA spi1_dma_bmi270(SPIDMA::SP1, imu_cs, DMA1_CH3, DMA1_CH4, 1000, 40, 40,
-        SPI_CR1_MSTR | (4 << SPI_CR1_BR_Pos) | SPI_CR1_SSI | SPI_CR1_SSM);    // baud = clock/32
-    BMI270 imu(spi1_dma_bmi270);
-
-    // has_mb85rc64
-    MB85RC64 mb85rc64(i2c1, 4);
-
     Flash flash(*FLASH);
 
     const BoardRev board_rev = get_board_rev();
@@ -286,7 +269,7 @@ namespace config {
 #endif // COMMS_UART
 
 #if COMMS == COMMS_CAN
-    CAN can(CAN_NUM);
+    CAN can(CAN::CAN2);
 #endif
 
 #if COMMS == COMMS_SPI
@@ -295,12 +278,13 @@ namespace config {
 
     HRPWM motor_pwm = {pwm_frequency, *HRTIM1, 3, 5, 4, false, 50, 1000, 1000};
     USB1 usb;
-    FastLoop fast_loop = {(int32_t) pwm_frequency, motor_pwm, motor_encoder, param->fast_loop_param, *calibration, &I_A_DR, &I_B_DR, &I_C_DR, &V_BUS_DR};
+    FastLoop<pwm_frequency> fast_loop = {motor_pwm, motor_encoder, param->fast_loop_param, *calibration, &I_A_DR, &I_B_DR, &I_C_DR, &V_BUS_DR};
 
 
     LED led = {const_cast<uint16_t*>(reinterpret_cast<volatile uint16_t *>(get_board_pins(board_rev).led_tim_r)), 
                const_cast<uint16_t*>(reinterpret_cast<volatile uint16_t *>(get_board_pins(board_rev).led_tim_g)),
-               const_cast<uint16_t*>(reinterpret_cast<volatile uint16_t *>(get_board_pins(board_rev).led_tim_b))};
+               const_cast<uint16_t*>(reinterpret_cast<volatile uint16_t *>(get_board_pins(board_rev).led_tim_b)),
+               config::main_loop_frequency};
     volatile uint32_t &V5V_DR = V_BUS_DR;
 #ifndef POSITION_CONTROLLER_OVERRIDE
     PositionController position_controller = {(float) (1.0/main_loop_frequency)};
@@ -323,18 +307,22 @@ namespace config {
 #ifndef ADMITTANCE_CONTROLLER_OVERRIDE
     AdmittanceController admittance_controller = {1.0/main_loop_frequency};
 #endif
-    MainLoop main_loop = {main_loop_frequency, fast_loop, position_controller, torque_controller, impedance_controller, velocity_controller, state_controller, joint_position_controller, admittance_controller, System::communication_, led, output_encoder, torque_sensor, drv, param->main_loop_param, *calibration};
+
 };
+using System = SystemBase<Actuator<FastLoop<config::pwm_frequency>, MainLoop<config::main_loop_frequency, FastLoop<config::pwm_frequency>>>>;
 
 #if COMMS == COMMS_USB
+template<>
 Communication System::communication_ = {config::usb};
 #endif
 
 #if (COMMS == COMMS_SPI)
+template<>
 Communication System::communication_(config::spi, config::spi_protocol);
 #endif
 
 #if (COMMS == COMMS_UART)
+template<>
 Communication System::communication_(config::uart, config::uart_protocol);
 extern "C" void PendSV_Handler(void) {
   SET_SCOPE_PIN(C,2);
@@ -344,23 +332,24 @@ extern "C" void PendSV_Handler(void) {
 #endif
 
 #if (COMMS == COMMS_CAN)
+template<>
 Communication System::communication_(config::can, param->can_id);
 #endif
 
 void usb_interrupt() {
     config::usb.interrupt();
 }
+namespace config {
+    MainLoop<config::main_loop_frequency, decltype(fast_loop)> main_loop = {fast_loop, position_controller, torque_controller, impedance_controller, velocity_controller, state_controller, joint_position_controller, admittance_controller, System::communication_, led, output_encoder, torque_sensor, drv, param->main_loop_param, *calibration};
+};
 
-Actuator System::actuator_ = {config::fast_loop, config::main_loop, param->startup_param, *calibration};
+template<>
+decltype(System::actuator_) System::actuator_ = {config::fast_loop, config::main_loop, param->startup_param, *calibration};
 
 float v3v3 = 3.3;
 
 // has_5V,i5V,i48V_sense
 float v5v, i5v, i48v;
-
-// has_mb85rc64
-uint32_t total_uptime_start;
-uint32_t total_uptime;
 
 int32_t index_mod = 0;
 
@@ -375,11 +364,11 @@ void system_init() {
 #if COMMS == COMMS_UART
     config::uart.init();
 #endif
+#if COMMS == COMMS_CAN
+    System::api.add_api_variable("can_send_decimation", new APICallbackUint16([]{ return System::communication_.get_send_decimation(); },
+        [](uint16_t u){ System::communication_.set_send_decimation(u); }));
+#endif
 
-    DMAMUX1_Channel6->CCR =  DMA_REQUEST_I2C1_TX;
-    DMAMUX1_Channel7->CCR =  DMA_REQUEST_I2C1_RX;
-    DMAMUX1_Channel2->CCR =  DMA_REQUEST_SPI1_TX;
-    DMAMUX1_Channel3->CCR =  DMA_REQUEST_SPI1_RX;
     if (config::motor_encoder.init()) {
         System::log("Motor encoder init success");
     } else {
@@ -392,12 +381,6 @@ void system_init() {
         System::log("Output encoder init failure");
         init_failure |= 1;
     }
-    if (drv_regs_error) {
-        System::log("drv configure failure");
-        init_failure |= 1;
-    } else {
-        System::log("drv configure success");
-    }
     if (config::torque_sensor.init()) {
         System::log("torque sensor init success");
     } else {
@@ -405,18 +388,11 @@ void system_init() {
         init_failure |= 1;
     }
 
-
-    DRV8323S_SET_DEBUG_API(System::api, config::drv);
-
     System::api.add_api_variable("3v3", new APIFloat(&v3v3));
     System::api.add_api_variable("Tmicro", new APICallbackFloat([]{ return config::temp_sensor.get_value(); },
         [](float f){ config::temp_sensor.set_value(f); }));
     System::api.add_api_variable("index_mod", new APIInt32(&index_mod));
     System::api.add_api_variable("pwm_mult", new APICallbackUint8([](){return config::motor_pwm.get_frequency_multiplier();}, [](uint8_t mult){ config::motor_pwm.set_frequency_multiplier(mult);}));
-    System::api.add_api_variable("drv_err", new const APICallbackUint32([](){ return config::drv.get_drv_status(); }));
-    System::api.add_api_variable("drv_reset", new const APICallback([](){
-        System::set_one_time_api_timeout_us(30 * 1000);
-        return config::drv.drv_reset(); }));
     System::api.add_api_variable("A1", new const APICallbackUint32([](){ return A1_DR; }));
     System::api.add_api_variable("A2", new const APICallbackUint32([](){ return A2_DR; }));
     System::api.add_api_variable("A3", new const APICallbackUint32([](){ return A3_DR; }));
@@ -439,7 +415,8 @@ void system_init() {
     }));
     System::api.add_api_variable("deadtime", new APICallbackUint16([](){ 
         return config::motor_pwm.deadtime_ns_; }, [](uint16_t u) {config::motor_pwm.set_deadtime(u); }));
-
+        System::api.add_api_variable("idelay", new APICallbackUint16([](){ 
+            return config::motor_pwm.get_current_sample_delay(); }, [](uint16_t u) {config::motor_pwm.set_current_sample_delay(u); }));
 
     System::api.add_api_variable("mcmp", new APIUint32(&HRTIM1->sMasterRegs.MCMP1R));
     System::api.add_api_variable("t1cmp", new APIUint32(&TIM1->CCR1));
@@ -517,7 +494,6 @@ void system_init() {
     HRTIM1->sMasterRegs.MCR |= HRTIM_MCR_MCEN + HRTIM_MCR_TACEN + HRTIM_MCR_TDCEN + HRTIM_MCR_TECEN + HRTIM_MCR_TFCEN; // start high res timer, also triggers TIM1
 }
 
-FrequencyLimiter temp_rate = {10};
 float T = 0;
 MedianFilter<> board_temperature_filter;
 MedianFilter<> microcontroller_temperature_filter;
@@ -548,10 +524,13 @@ void system_maintenance() {
     config::main_loop.status_.error.init_failure |= init_failure;
 }
 
-void main_maintenance() {
-    if (temp_rate.run()) {
+Task<> main_maintenance_async(CycleScheduler &sched) {
+    while (1) {
+        co_await sched.async_delay_us(100'000);
         ADC1->CR |= ADC_CR_JADSTART;
-        while(ADC1->CR & ADC_CR_JADSTART);
+        while(ADC1->CR & ADC_CR_JADSTART) {
+            co_await sched.yield();
+        }
         T = microcontroller_temperature_filter.update(config::temp_sensor.read());
         round_robin_logger.log_data(MICROCONTROLLER_TEMPERATURE_INDEX, T);
         v3v3 =  *((uint16_t *) (0x1FFF75AA)) * 3.0 * ADC1->GCOMP / 4096.0 / ADC1->JDR2;
@@ -566,7 +545,6 @@ void main_maintenance() {
         if (Tboard > 120 || Tboard < -40) {
             config::main_loop.status_.error.board_temperature = 1;
         }
-
     }
 }
 
@@ -591,5 +569,35 @@ void finish_sleep() {
     NVIC_EnableIRQ(ADC5_IRQn);
 }
 
+extern "C" {
 
-#include "../../motorlib/system.cpp"
+__attribute__((section (".ccmram"))) void USB_LP_IRQHandler()
+{
+  CommHandler<usb_interrupt>();
+}
+
+__attribute__((section (".ccmram"))) void TIM1_CC_IRQHandler()
+{
+  SystemLoopHandler<System::system_loop>();
+  TIM1->SR = 0;
+  asm("dsb");
+}
+
+__attribute__((section (".ccmram"))) void ADC5_IRQHandler()
+{
+  FastLoopHandler<System::fast_loop_interrupt>();
+  ADC5->ISR = ADC_ISR_JEOS;
+  asm("dsb");
+}
+
+__attribute__((section (".ccmram"))) void HRTIM1_Master_IRQHandler()
+{
+  MainLoopHandler<System::main_loop_interrupt>();
+  HRTIM1->sMasterRegs.MICR = HRTIM_MICR_MCMP1;
+  asm("dsb");
+}
+
+void system_run() {
+    System::run();
+}
+} // extern "C"

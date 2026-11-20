@@ -13,8 +13,10 @@ void us_delay(uint16_t us) {
 }
 
 void ns_delay(uint16_t ns) {
-    uint32_t t_start = get_clock();
-    while((get_clock() - t_start) < ns/(uint16_t) (1e9/CPU_FREQUENCY_HZ));
+    if (ns > 0) {
+        uint32_t t_start = get_clock();
+        while((get_clock() - t_start) < ns/(uint16_t) (1e9/CPU_FREQUENCY_HZ));
+    }
 }
 
 std::vector<char> hex_to_bytes(const std::string& hex) {

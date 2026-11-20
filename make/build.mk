@@ -14,7 +14,7 @@ all:: $(BUILD_DIR)/$(TARGET).elf $(BUILD_DIR)/$(TARGET).hex $(BUILD_DIR)/$(TARGE
 
 FORCE:
 
-.PHONY: FORCE clean all clean_build
+.PHONY: FORCE clean all clean_build scan_build
 
 # always build the config since C_DEFS may be different
 $(BUILD_DIR)/$(notdir $(CONFIG_FILE:cpp=o)): FORCE
@@ -32,16 +32,20 @@ vpath %.s $(sort $(dir $(ASM_SOURCES)))
 
 $(BUILD_DIR)/%.o: %.c | $(BUILD_DIR) 
 	@echo "  CC    " $<
-	$(CC) -c $(CFLAGS) -Wa,-a,-ad,-alms=$(BUILD_DIR)/lto.lst $< -o $@
+	$(CC) -c $(CFLAGS) $< -o $@
 
 $(BUILD_DIR)/%.o: %.cpp | $(BUILD_DIR) 
 	@echo "  CXX    " $<
-	$(CXX) -c $(CPPFLAGS) -std=c++17 -Wa,-a,-ad,-alms=$(BUILD_DIR)/lto.lst $< -o $@
+	$(CXX) -c $(CPPFLAGS) $(CXXFLAGS) $< -o $@
+
+gcm.cache/%.gcm $(BUILD_DIR)/%.pcm $(BUILD_DIR)/%.o: %.cppm | $(BUILD_DIR)
+	@echo "  CXXM  $<"
+	$(CXX) -c $(C_INCLUDES) $(CPPFLAGS) $(CFLAGS) $(CXXFLAGS) $(CXXMFLAGS) $< -o $@
 
 # ensure flash commands stay in allocated section
 $(BUILD_DIR)/flash.o: flash.cpp | $(BUILD_DIR)
 	@echo "  CXX NO LTO" $<
-	$(CXX) -c $(filter-out $(LTO), $(CPPFLAGS)) -std=c++17 -Wa,-a,-ad,-alms=$(BUILD_DIR)/lto.lst $< -o $@
+	$(CXX) -c $(filter-out $(LTO), $(CPPFLAGS)) $< -o $@
 
 $(BUILD_DIR)/%.o: %.s | $(BUILD_DIR)
 	@echo "  AS     " $<
@@ -60,13 +64,16 @@ $(BUILD_DIR)/%.hex: $(BUILD_DIR)/%.elf | $(BUILD_DIR)
 $(BUILD_DIR):
 	$(MKDIR) $@
 
+scan_build:
+	scan-build --use-cc $(CC) --use-c++ $(CXX) --use-analyzer $(SELF_DIR)../llvm/bin/clang --analyzer-target=armv7m-none-eabi $(MAKE)
+
 $(VERBOSE).SILENT:
 
 #######################################
 # clean up
 #######################################
 clean:
-	-$(RM) $(BUILD_DIR)
+	-$(RM) $(BUILD_DIR) gcm.cache *.o
 
 #######################################
 # dependencies

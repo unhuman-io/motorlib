@@ -63,7 +63,7 @@ class QIA128 : public TorqueSensorBase {
     uint32_t offset_ = 0;
     uint32_t full_scale_ = 0;    
 
-    friend class System;
+    template <typename T> friend class SystemBase;
 };
 
 

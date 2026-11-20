@@ -21,7 +21,7 @@
         DMA2_CH8,
         NUM_DMA_CHANNELS,
 };
-static constexpr DMA_Channel_TypeDef *dma_ch_regs[NUM_DMA_CHANNELS] = {
+static DMA_Channel_TypeDef *dma_ch_regs[NUM_DMA_CHANNELS] = {
     DMA1_Channel1, DMA1_Channel2, DMA1_Channel3, DMA1_Channel4,
     DMA1_Channel5, DMA1_Channel6, DMA1_Channel7, DMA1_Channel8,
     DMA2_Channel1, DMA2_Channel2, DMA2_Channel3, DMA2_Channel4, 

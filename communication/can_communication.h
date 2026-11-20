@@ -2,6 +2,8 @@
 
 #include "../communication.h"
 #include <cstring>
+#include <algorithm>
+#include "task.h"
 
 template <class CAN>
 class CANCommunication : public CommunicationBase {
@@ -22,39 +24,52 @@ class CANCommunication : public CommunicationBase {
       OBOT_ASCII_RESPONSE = 0x05,
       OBOT_ENUM = 0xF,
     };
+    static constexpr uint32_t MAX_PACKET_TRANSFER_SIZE = MAX_CAN_DATA_SIZE;
 
     CANCommunication(CAN &can, uint8_t address) : can_(can), address_(address) {
       CANID can_id = {.address = address_, .message_id = OBOT_CMD};
       can_.add_acceptance_filter(can_id.word, 0);
       can_id.message_id = OBOT_CMD_STATUS;
       can_.add_acceptance_filter(can_id.word, 0);
+      can_id.message_id = OBOT_STATUS;
+      can_.add_acceptance_filter(can_id.word, 0);
       can_id.message_id = OBOT_ASCII;
       can_.add_acceptance_filter(can_id.word, 1);
       can_id.message_id = OBOT_ENUM;
-      can_id.address = 0;
+      can_id.address = 0x7f;
       can_.add_acceptance_filter(can_id.word, 0);
     };
 
     int receive_data(ReceiveData* const data) {
-      CANID can_id = {.address = address_, .message_id = OBOT_CMD};
-      int recv_len = can_.read(0, can_id.word, (uint8_t*) data);
+        CANID can_id = {.address = address_, .message_id = OBOT_CMD};
+        if (int recv_len = can_.read(0, can_id.word, (uint8_t*)data);
+            recv_len > 0) {
+            return recv_len;
+        }
 
-      if (recv_len < 0) {
         can_id.message_id = OBOT_CMD_STATUS;
-        recv_len = can_.read(0, can_id.word, (uint8_t*) data);
-        if (recv_len < 0) {
-          CANID can_id_enum = {.message_id = OBOT_ENUM};
-          recv_len = can_.read(0, can_id_enum.word, (uint8_t*) nullptr);
-          if (recv_len >= 0) {
-            //logger.log("recv enum");
+        if (int recv_len = can_.read(0, can_id.word, (uint8_t*)data);
+            recv_len > 0) {
+            send_data_trigger_ = true;
+            return recv_len;
+        }
+
+        can_id.message_id = OBOT_STATUS;
+        if (int recv_len = can_.read(0, can_id.word, (uint8_t*)nullptr);
+            recv_len == 0) {
+            send_data_trigger_ = true;
+            return 0;
+        }
+
+        CANID can_id_enum = {.address = 0x7f, .message_id = OBOT_ENUM};
+        if (int recv_len = can_.read(0, can_id_enum.word, (uint8_t*)nullptr);
+            recv_len == 0) {
             can_id.message_id = OBOT_ENUM;
             can_.write(can_id.word, nullptr, 0, 2);
-          }
-        } else if (recv_len > 0) {
-          send_data_trigger_ = true;
+            return 0;
         }
-      }
-      return recv_len;
+
+        return 0;
     }
 
     void send_data(const SendData& data) {
@@ -74,44 +89,24 @@ class CANCommunication : public CommunicationBase {
     int receive_string(char* const string) {
       CANID can_id = {.address = address_, .message_id = OBOT_ASCII};
       int recv_len = can_.read(1, can_id.word, (uint8_t*) string);
-      if (recv_len == 0) {
+      if (recv_len < 0) {
         string[0] = 0;
       }
       return recv_len;
     }
 
     bool send_string(const char* string, uint16_t length) {
-      CANID can_id = {.address = address_, .message_id = OBOT_ASCII_RESPONSE};
-      if (string[0] == 0 || length > MAX_CAN_DATA_SIZE) {
-        struct {
-          APIControlPacket control_packet = {0, LONG_PACKET, .long_packet = {0, 1}};
-          char data[MAX_CAN_DATA_SIZE - sizeof(APIControlPacket)];
-        } long_packet;
-        long_packet.control_packet.long_packet.total_length = length;
-        int32_t length_remaining = length;
-        const char * str = string;
-        do {
-          uint16_t transfer_size = std::min((uint16_t) (MAX_CAN_DATA_SIZE - sizeof(APIControlPacket)), (uint16_t) length_remaining);
-          std::memcpy(long_packet.data, str, transfer_size);
-          int retval = can_.write(can_id.word, (uint8_t * const) &long_packet, 
-                  transfer_size + sizeof(APIControlPacket), 1);
-          if (retval < 0) {
-            // buffer full
-            continue;
-          }
-          str += transfer_size;
-          long_packet.control_packet.long_packet.packet_number++;
-          length_remaining -= transfer_size;
-        } while (length_remaining > 0);
-      } else {
-        char buf[64];
-        std::memcpy(buf, string, length);
-        if (length > 1) {
-          buf[length++] = 0;
+        Scheduler sched;
+        auto task = send_string_async(sched, string, length);
+        while (!task.is_done()) {
+            sched.poll();
         }
-        can_.write(can_id.word, (uint8_t*) buf, length, 1);
-      }
-      return true;
+        return task.get_result();
+    }
+
+    Task<int> write_async(Scheduler& sched, uint8_t* data, uint16_t len) {
+        CANID can_id = {.address = address_, .message_id = OBOT_ASCII_RESPONSE};
+        co_return co_await can_.write_async(sched, can_id.word, data, len, 1);
     }
 
     void set_send_decimation(uint16_t decimation) {
@@ -123,7 +118,9 @@ class CANCommunication : public CommunicationBase {
     }
 
     void send_one_time_api_timeout_request(uint32_t us) {
-       APIControlPacket timeout_request = {0, TIMEOUT_REQUEST, .timeout_request = {us}};
+       APIControlPacket timeout_request = {.control_packet_id = 0,
+                                           .type = TIMEOUT_REQUEST,
+                                           .timeout_request = {us}};
        CANID can_id = {.address = address_, .message_id = OBOT_ASCII_RESPONSE};
        can_.write(can_id.word, (uint8_t * const) &timeout_request, sizeof(timeout_request));
     }

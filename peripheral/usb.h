@@ -39,7 +39,7 @@ class USB1 {
     uint8_t count_rx_[3] = {};
     uint8_t rx_buffer_[3][64] = {};
     uint32_t error_count_ = 0;
-    friend class System;
+    template <typename T> friend class SystemBase;
     uint32_t reset_count_ = 0;
 };
 

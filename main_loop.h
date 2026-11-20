@@ -13,6 +13,7 @@
 #include "round_robin_logger.h"
 #include "temperature_model.h"
 #include <cstring>
+#include "task.h"
 
 static const char *error_bit_strings[32] = ERROR_BIT_STRINGS;
 
@@ -24,16 +25,18 @@ extern volatile uint32_t uptime;
 void setup_sleep();
 void finish_sleep();
 
-class MainLoop;
-void load_send_data(const MainLoop &main_loop, SendData * const data);
+// class MainLoop;
+// void load_send_data(const MainLoop &main_loop, SendData * const data);
 
 #ifndef HARDWARE_BRAKE
 using HardwareBrake = HardwareBrakeBase;
 #endif  // HARDWARE_BRAKE
 
+template<int32_t frequency_hz, typename FastLoop>
 class MainLoop {
  public:
-    MainLoop(int32_t frequency_hz, FastLoop &fast_loop, PositionController &position_controller,  TorqueController &torque_controller, 
+    static constexpr float dt = 1.0/frequency_hz;
+    MainLoop(FastLoop &fast_loop, PositionController &position_controller,  TorqueController &torque_controller, 
         ImpedanceController &impedance_controller, VelocityController &velocity_controller, StateController &state_controller, 
         JointPositionController &joint_position_controller, AdmittanceController &admittance_controller, Communication &communication,
         LED &led, OutputEncoder &output_encoder, TorqueSensor &torque, Driver &driver, const MainLoopParam &param, const Calibration &calibration,
@@ -54,7 +57,11 @@ class MainLoop {
           torque_sensor_.trigger();
 #endif
     } // todo: init filters with first status
+#ifdef __clang__
+    void update() __attribute__((section (".ccmram"))) {
+#else
     void update() __attribute__((section (".ccmram"), externally_visible)) {
+#endif
       count_++;
 #if !defined(END_TRIGGER_MAIN_SENSORS) && !defined(EXT_TRIGGER_MAIN_SENSORS)
       output_encoder_.trigger();
@@ -64,12 +71,10 @@ class MainLoop {
 
       if (count_ >= frequency_hz_) {
         count_ = 0;
-        uptime++;
+        uptime += 1;
       }
       
-      last_timestamp_ = timestamp_;
       timestamp_ = get_clock();
-      dt_ = (timestamp_ - last_timestamp_) * (1.0f/CPU_FREQUENCY_HZ);
 
       status_.fast_loop = fast_loop_.get_status();
       if (!driver_.is_enabled()) {
@@ -110,9 +115,7 @@ class MainLoop {
             invalid_command_fault_.add();
           }
         } else { // !count_received
-          no_command_++;
-          if (no_command_ > 16000)
-            no_command_ = 16000;
+          no_command_ = qadd(no_command_, (uint16_t) 1);
         }
       }
         
@@ -140,7 +143,7 @@ class MainLoop {
 
       int32_t output_encoder_raw = output_encoder_.read();
       float output_encoder_x = (output_encoder_raw % (int32_t) output_encoder_cpr_) / (float) output_encoder_cpr_;
-      float output_encoder_rad = output_encoder_raw*2.0*(float) M_PI/output_encoder_cpr_;
+      float output_encoder_rad = output_encoder_raw*2.f*(float) std::numbers::pi_v<float>/output_encoder_cpr_;
       status_.output_position = output_encoder_dir_ * output_encoder_rad + output_encoder_bias_ 
         + output_encoder_correction_table_.table_interp(output_encoder_x);
 
@@ -151,7 +154,7 @@ class MainLoop {
       //if (torque_corrected != status_.torque) {
         torque_corrected += param_.torque_correction*status_.fast_loop.foc_status.measured.i_q;
       //}
-      float torque_calibrated = torque_corrected + calibration_.torque_sensor.table_gain*torque_correction_table_.table_interp(output_encoder_x+output_encoder_bias_*(1.0/(2*M_PI)));
+      float torque_calibrated = torque_corrected + calibration_.torque_sensor.table_gain*torque_correction_table_.table_interp(output_encoder_x+output_encoder_bias_*(1.f/(2.f*std::numbers::pi_v<float>)));
       status_.torque = torque_calibrated;
 
       if (!position_limits_disable_) {
@@ -170,7 +173,7 @@ class MainLoop {
       status_.error.driver_not_enabled |= !driver_.is_enabled();
       status_.error.driver_fault |= driver_.is_faulted();
 
-      float __attribute((unused)) output_velocity = (status_.output_position - output_position_last_)/dt_;
+      float __attribute((unused)) output_velocity = (status_.output_position - output_position_last_)/dt;
       output_position_last_ = status_.output_position;
       iq_find_limits_filter_.update(status_.fast_loop.foc_status.measured.i_q);
       status_.motor_velocity_filtered = motor_velocity_filter_.update(status_.motor_position);//(status_.fast_loop.motor_velocity.velocity_filtered);
@@ -272,7 +275,7 @@ class MainLoop {
               position_trajectory_generator_.set_frequency(command_current_.stepper_tuning.frequency);
               position_trajectory_generator_.set_mode((TuningMode) command_current_.stepper_tuning.mode);
             }
-            TrajectoryGenerator::TrajectoryValue traj = position_trajectory_generator_.step(dt_);
+            auto traj = position_trajectory_generator_.step();
             fast_loop_.set_stepper_position(traj.value);
             fast_loop_.set_stepper_velocity(traj.value_dot);
             vq_des = command_current_.stepper_tuning.kv*traj.value_dot;
@@ -285,7 +288,7 @@ class MainLoop {
               position_trajectory_generator_.set_frequency(command_current_.position_tuning.frequency);
               position_trajectory_generator_.set_mode((TuningMode) command_current_.position_tuning.mode);
             }
-            TrajectoryGenerator::TrajectoryValue traj = position_trajectory_generator_.step(dt_);
+            auto traj = position_trajectory_generator_.step();
             ReceiveData trajectory = {};
             float position_desired = traj.value;
             float velocity_desired = traj.value_dot;
@@ -422,11 +425,11 @@ class MainLoop {
       }
 
       uint32_t current_energy = status_.fast_loop.energy_uJ;
-      status_.power = (int32_t) (current_energy - last_energy_uJ_)*1e-6/dt_;
+      status_.power = (int32_t) (current_energy - last_energy_uJ_)*(float)1e-6/dt;
       last_energy_uJ_ = current_energy;
 
       SendData send_data;
-      load_send_data(*this, &send_data);
+      load_send_data(&send_data);
       if (started_) { // this will prevent sending bad values before calibration
         communication_.send_data(send_data);
       }
@@ -440,6 +443,26 @@ class MainLoop {
 #endif
     }
 
+    void load_send_data(this const MainLoop &main_loop, SendData * const data) {
+        data->iq = main_loop.status_.fast_loop.iq_filtered;
+        data->host_timestamp_received = main_loop.host_timestamp_;
+        data->mcu_timestamp = main_loop.status_.fast_loop.timestamp;
+        data->motor_encoder = main_loop.status_.fast_loop.motor_position.raw;
+        data->motor_position = main_loop.status_.motor_position_filtered;
+        data->joint_position = main_loop.status_.output_position_filtered;
+        data->motor_velocity = main_loop.status_.motor_velocity_filtered;
+        data->joint_velocity = main_loop.status_.output_velocity_filtered;
+        data->torque = main_loop.status_.torque_filtered;
+        data->rr_data = main_loop.status_.rr_data;
+        data->reserved = *main_loop.reserved0_;
+        data->iq_desired = main_loop.status_.fast_loop.foc_status.command.i_q;
+        data->flags.mode = main_loop.status_.mode;
+        data->flags.error = main_loop.status_.error;
+        data->flags.misc.byte = 0;
+#ifdef GPIO_IN
+        data->flags.misc.gpio = GPIO_IN;
+#endif  // GPIO_IN
+    }
 
     void set_param() {
       position_controller_.set_param(param_.position_controller_param);
@@ -450,7 +473,7 @@ class MainLoop {
       joint_position_controller_.set_param(param_.joint_position_controller_param);
       admittance_controller_.set_param(param_.admittance_controller_param);
       torque_sensor_.set_param(calibration_.torque_sensor);
-      invalid_command_fault_.set_leak_period(param_.invalid_command_fault_leak_period_s, dt_);
+      invalid_command_fault_.set_leak_period(param_.invalid_command_fault_leak_period_s, dt);
       invalid_command_limit_ = param_.invalid_command_limit;
       position_limits_disable_ = param_.position_limits_disable;
       position_limits_disable_last_ = position_limits_disable_;
@@ -515,7 +538,11 @@ class MainLoop {
     void adjust_motor_encoder(float adjustment) { motor_encoder_bias_ += adjustment; }
     const MainLoopStatus & get_status() const { return status_stack_.top(); }
     void set_started() { started_ = true; }
+#ifdef __clang__
+    void set_mode(MainControlMode mode) __attribute__((section (".ccmram"))) {
+#else
     void set_mode(MainControlMode mode) __attribute__((section (".ccmram"), externally_visible)) {
+#endif
       if (mode != mode_ || safe_mode_ != last_safe_mode_) {
         if(mode_ == HARDWARE_BRAKE && mode != HARDWARE_BRAKE) {
           brake_.off();
@@ -808,7 +835,7 @@ class MainLoop {
           tuning_trajectory_generator_.set_frequency(receive_data.tuning_command.frequency);
           tuning_trajectory_generator_.set_mode(static_cast<TuningMode>(receive_data.tuning_command.tuning_mode));
         }
-        TrajectoryGenerator::TrajectoryValue traj = tuning_trajectory_generator_.step(dt_);
+        auto traj = tuning_trajectory_generator_.step();
         switch (receive_data.tuning_command.mode) {
           case POSITION:
             command.position_desired = traj.value + receive_data.tuning_command.bias;
@@ -893,7 +920,7 @@ class MainLoop {
     ReceiveData receive_data_ = {};
     MotorCommand command_current_ = {};
     mcu_time host_timestamp_ = {};
-    ReceiveData last_receive_data_ = {};
+    //ReceiveData last_receive_data_ = {};
     MotorCommand internal_command_;
     bool internal_command_received_ = false;
     uint32_t frequency_hz_;
@@ -911,11 +938,9 @@ class MainLoop {
     TorqueSensor &torque_sensor_;
     FrequencyLimiter current_tuning_rate_limiter_ = {10};
     bool fast_log_ready_ = true;
-    float dt_ = 0;
-    TrajectoryGenerator position_trajectory_generator_;
-    TrajectoryGenerator tuning_trajectory_generator_;
+    TrajectoryGenerator<dt> position_trajectory_generator_;
+    TrajectoryGenerator<dt> tuning_trajectory_generator_;
     uint32_t timestamp_ = 0;
-    uint32_t last_timestamp_ = 0;
     float *reserved0_ = &status_.fast_loop.vbus;
     PChipTable<OUTPUT_ENCODER_TABLE_LENGTH> output_encoder_correction_table_;
     PChipTable<TORQUE_TABLE_LENGTH> torque_correction_table_;
@@ -923,7 +948,7 @@ class MainLoop {
     bool first_command_received_ = false;
     Driver &driver_;
     HardwareBrake brake_;
-    static HardwareBrakeBase no_brake_;
+    inline static HardwareBrakeBase no_brake_{};
     volatile bool driver_enable_triggered_ = false;
     volatile bool driver_disable_triggered_ = false;
     uint32_t last_energy_uJ_ = 0;
@@ -947,37 +972,38 @@ class MainLoop {
     TemperatureModel motor_temperature_model_;
     float motor_temperature_limit_;
 
-    friend class System;
+    template <typename T> friend class SystemBase;
+    template<typename T, typename T2>
     friend class Actuator;
     friend void system_init();
     friend void system_maintenance();
-    friend void main_maintenance();
+    friend Task<void> main_maintenance_async(CycleScheduler& sched);
     friend void config_init();
     friend void config_maintenance();
-    friend void load_send_data(const MainLoop &main_loop, SendData *const data);
+//    friend void load_send_data(const MainLoop &main_loop, SendData *const data);
 };
 
-#ifndef CUSTOM_SENDDATA
-void load_send_data(const MainLoop &main_loop, SendData * const data) {
-    data->iq = main_loop.status_.fast_loop.iq_filtered;
-    data->host_timestamp_received = main_loop.host_timestamp_;
-    data->mcu_timestamp = main_loop.status_.fast_loop.timestamp;
-    data->motor_encoder = main_loop.status_.fast_loop.motor_position.raw;
-    data->motor_position = main_loop.status_.motor_position_filtered;
-    data->joint_position = main_loop.status_.output_position_filtered;
-    data->motor_velocity = main_loop.status_.motor_velocity_filtered;
-    data->joint_velocity = main_loop.status_.output_velocity_filtered;
-    data->torque = main_loop.status_.torque_filtered;
-    data->rr_data = main_loop.status_.rr_data;
-    data->reserved = *main_loop.reserved0_;
-    data->iq_desired = main_loop.status_.fast_loop.foc_status.command.i_q;
-    data->flags.mode = main_loop.status_.mode;
-    data->flags.error = main_loop.status_.error;
-    data->flags.misc.byte = 0;
-#ifdef GPIO_IN
-    data->flags.misc.gpio = GPIO_IN;
-#endif  // GPIO_IN
-}
-#endif  // CUSTOM_SENDDATA
+// #ifndef CUSTOM_SENDDATA
+// void load_send_data(const MainLoop &main_loop, SendData * const data) {
+//     data->iq = main_loop.status_.fast_loop.iq_filtered;
+//     data->host_timestamp_received = main_loop.host_timestamp_;
+//     data->mcu_timestamp = main_loop.status_.fast_loop.timestamp;
+//     data->motor_encoder = main_loop.status_.fast_loop.motor_position.raw;
+//     data->motor_position = main_loop.status_.motor_position_filtered;
+//     data->joint_position = main_loop.status_.output_position_filtered;
+//     data->motor_velocity = main_loop.status_.motor_velocity_filtered;
+//     data->joint_velocity = main_loop.status_.output_velocity_filtered;
+//     data->torque = main_loop.status_.torque_filtered;
+//     data->rr_data = main_loop.status_.rr_data;
+//     data->reserved = *main_loop.reserved0_;
+//     data->iq_desired = main_loop.status_.fast_loop.foc_status.command.i_q;
+//     data->flags.mode = main_loop.status_.mode;
+//     data->flags.error = main_loop.status_.error;
+//     data->flags.misc.byte = 0;
+// #ifdef GPIO_IN
+//     data->flags.misc.gpio = GPIO_IN;
+// #endif  // GPIO_IN
+// }
+// #endif  // CUSTOM_SENDDATA
 
 #endif  // UNHUMAN_MOTORLIB_MAIN_LOOP_H_

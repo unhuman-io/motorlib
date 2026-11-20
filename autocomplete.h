@@ -4,6 +4,7 @@
 #include <string_view>
 #include <vector>
 #include <algorithm>
+#include <iterator>
 
 // return longest common string starting at the beginning 
 inline std::string max_string_match(std::string_view s1, std::string_view s2) {

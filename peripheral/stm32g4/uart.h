@@ -5,7 +5,7 @@
 #include "stm32g4xx.h"
 #include "../macro.h"
 #include "../comms.h"
-#include "../messages.h"
+#include "messages.h"
 
 #define TX_BUFFER_SIZE (MAX_API_DATA_SIZE+10) // 10 for some packet overhead
 #define RX_BUFFER_SIZE 2048

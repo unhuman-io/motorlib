@@ -1,27 +1,18 @@
-#ifndef UNHUMAN_MOTORLIB_MA7XX_ENCODER_H_
-#define UNHUMAN_MOTORLIB_MA7XX_ENCODER_H_
+module;
 
 #include "../../peripheral/spi_encoder.h"
 #include "../../util.h"
 #include "../../logger.h"
 #include "../../peripheral/spi_dma.h"
+#include "../../parameter_api.h"
+#include <type_traits>
 
-#define MA7XX_SET_DEBUG_VARIABLES(prefix, api, ma7xx) \
-    api.add_api_variable(prefix "err", new APIUint32(&ma7xx.error_count_));\
-    api.add_api_variable(prefix "filt", new APICallbackUint8([]{ return ma7xx.get_filt(); }, \
-        [](uint8_t u){ ma7xx.set_filt(u); }));\
-    api.add_api_variable(prefix "bct", new APICallbackUint8([]{ return ma7xx.get_bct(); }, \
-        [](uint8_t u){ ma7xx.set_bct(u); }));\
-    api.add_api_variable(prefix "et", new APICallbackUint8([]{ return ma7xx.get_et(); }, \
-        [](uint8_t u){ ma7xx.set_et(u); }));\
-    api.add_api_variable(prefix "mgt", new APICallbackHex<uint16_t>([]{ return ma7xx.get_magnetic_field_strength(); }, \
-        [](uint16_t u){ ma7xx.set_mgt(u); }));\
-    api.add_api_variable(prefix "raw", new const APIUint16(&ma7xx.data_));\
+export module ma7xx_encoder;
 
 // Note MA7XX encoder expects cpol 1, cpha 1, max 25 mbit
 // 80 ns cs start to sclk, 25 ns sclk end to cs end
-template <class T>
-class MA7XXEncoderBase : public SPIEncoder {
+export template <class T, class SPI>
+class MA7XXEncoderBase : public SPIEncoder<SPI> {
  public:
     union MA7XXreg {
         struct {
@@ -31,32 +22,34 @@ class MA7XXEncoderBase : public SPIEncoder {
         } bits;
         uint16_t word;
     };
-    MA7XXEncoderBase(SPI_TypeDef &regs, GPIO &gpio_cs, SPIPause &spi_pause, uint8_t filter = 119) : SPIEncoder(regs, gpio_cs), 
-        filter_(filter), regs_(regs), spi_pause_(spi_pause) {
+    MA7XXEncoderBase(SPI &spi, GPIO &gpio_cs, SPIPause &spi_pause, uint8_t filter = 119) : SPIEncoder<SPI>(spi, gpio_cs), 
+        filter_(filter), spi_pause_(spi_pause) {
         reinit();
     }
 
     void reinit() {
+        if constexpr (std::is_same_v<std::decay_t<decltype(SPI::regs_)>, SPI_TypeDef>) {
 #ifdef STM32F446xx
-        regs_.CR1 = SPI_CR1_MSTR | (3 << SPI_CR1_BR_Pos) | SPI_CR1_SSI | SPI_CR1_SSM | SPI_CR1_SPE | SPI_CR1_DFF;    // baud = clock/16, 16 bit
+            this->spi_.regs_.CR1 = SPI_CR1_MSTR | (3 << SPI_CR1_BR_Pos) | SPI_CR1_SSI | SPI_CR1_SSM | SPI_CR1_SPE | SPI_CR1_DFF;    // baud = clock/16, 16 bit
 #else    
-        regs_.CR2 = (15 << SPI_CR2_DS_Pos);   // 16 bit
-        regs_.CR1 = SPI_CR1_MSTR | (3 << SPI_CR1_BR_Pos) | SPI_CR1_SSI | SPI_CR1_SSM | SPI_CR1_SPE;    // baud = clock/16
+            this->spi_.regs_.CR2 = (15 << SPI_CR2_DS_Pos);   // 16 bit
+            this->spi_.regs_.CR1 = SPI_CR1_MSTR | (3 << SPI_CR1_BR_Pos) | SPI_CR1_SSI | SPI_CR1_SSM | SPI_CR1_SPE;    // baud = clock/16
 #endif
+        }
     }
 
     // interrupt context
     void trigger() {
         if (!spi_pause_.is_paused()) {
-            SPIEncoder::trigger();
+            SPIEncoder<SPI>::trigger();
         }
     }
 
     // interrupt context   
     int32_t read() {
         if (!spi_pause_.is_paused()) {
-            SPIEncoder::read();
-            if (data_ == last_data_) {
+            SPIEncoder<SPI>::read();
+            if (this->data_ == last_data_) {
                 stall_count_++;
                 if (stall_count_ > stall_count_max_) {
                     error_count_++;
@@ -66,8 +59,8 @@ class MA7XXEncoderBase : public SPIEncoder {
                 stall_count_ = 0;
             }
 
-            count_ += (int16_t) (data_ - last_data_); // rollover summing
-            last_data_ = data_;
+            count_ += (int16_t) (this->data_ - last_data_); // rollover summing
+            last_data_ = this->data_;
         }
         return count_;
     }
@@ -85,9 +78,9 @@ class MA7XXEncoderBase : public SPIEncoder {
         MA7XXreg reg = {};
         reg.bits.address = address;
         reg.bits.command = 0b010; // read register
-        send_and_read(reg.word);
+        this->send_and_read(reg.word);
         ns_delay(750); // read register delay
-        return send_and_read(0) >> 8;
+        return this->send_and_read(0) >> 8;
     }
 
 
@@ -101,7 +94,7 @@ class MA7XXEncoderBase : public SPIEncoder {
             reg.bits.address = address;
             reg.bits.command = 0b100; // write register
             reg.bits.value = value;
-            send_and_read(reg.word);
+            this->send_and_read(reg.word);
             ms_delay(20); 
             uint8_t read_value = read_register(address);
             retval = read_value == value;
@@ -213,8 +206,25 @@ class MA7XXEncoderBase : public SPIEncoder {
         error_count_ = 0;
     }
 
+    template<FixedString prefix, typename Comms>
+    void add_debug_variables(ParameterAPI &api, Comms &comms) {
+        api.add_api_variable(StaticString<prefix + "err">, new APIUint32(&error_count_));
+        static T& instance = static_cast<T&>(*this); 
+        static Comms& comms2 = comms;
+        api.add_api_variable(StaticString<prefix + "filt">, new APICallbackUint8([]{ return instance.get_filt(); },
+            [](uint8_t u){ instance.set_filt(u); }));
+        api.add_api_variable(StaticString<prefix + "bct">, new APICallbackUint8([]{ return instance.get_bct(); },
+            [](uint8_t u){ instance.set_bct(u); }));
+        api.add_api_variable(StaticString<prefix + "et">, new APICallbackUint8([]{ return instance.get_et(); },
+            [](uint8_t u){ instance.set_et(u); }));
+        api.add_api_variable(StaticString<prefix + "mgt">, new APICallbackHex<uint16_t>([]{
+            comms2.send_one_time_api_timeout_request(200000);
+            return instance.get_magnetic_field_strength(); },
+            [](uint16_t u){ instance.set_mgt(u); }));
+        api.add_api_variable(StaticString<prefix + "raw">, new const APIUint16(&instance.data_));
+    }
+
     uint8_t filter_;
-    SPI_TypeDef &regs_;
     uint16_t last_data_ = 0;
     int32_t count_ = 0;
     SPIPause &spi_pause_;
@@ -223,21 +233,20 @@ class MA7XXEncoderBase : public SPIEncoder {
     uint32_t stall_count_max_ = 50;
 };
 
-class MA732Encoder : public MA7XXEncoderBase<MA732Encoder> {
+export template<typename SPI>
+class MA732Encoder : public MA7XXEncoderBase<MA732Encoder<SPI>, SPI> {
  public:
-    MA732Encoder(SPI_TypeDef &regs, GPIO &gpio_cs, SPIPause &spi_pause, uint8_t filter = 119)
-        : MA7XXEncoderBase(regs, gpio_cs, spi_pause, filter) {}
+    MA732Encoder(SPI &s, GPIO &gpio_cs, SPIPause &spi_pause, uint8_t filter = 119)
+        : MA7XXEncoderBase<MA732Encoder<SPI>, SPI>(s, gpio_cs, spi_pause, filter) {}
 };
 
-class MA730Encoder : public MA732Encoder {
+export template<typename SPI>
+class MA730Encoder : public MA732Encoder<SPI> {
  public:
-    MA730Encoder(SPI_TypeDef& s, GPIO& g, SPIPause &sp) : MA732Encoder(s, g, sp) {
+    MA730Encoder(SPI &s, GPIO& g, SPIPause &sp) : MA732Encoder<SPI>(s, g, sp) {
         // 23 Hz filter has lots of repeated values
-        stall_count_max_ = 1000;
+        this->stall_count_max_ = 1000;
     }
     // don't set filter, it is fixed at 23 Hz
-    bool init() { return check_magnetic_field_strength(); }
+    bool init() { return this->check_magnetic_field_strength(); }
 };
-
-
-#endif  // UNHUMAN_MOTORLIB_MA7XX_ENCODER_H_

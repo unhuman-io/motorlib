@@ -16,9 +16,9 @@ class QEPEncoder final : public EncoderBase {
      regs_.CCER = TIM_CCER_CC1E | TIM_CCER_CC2E | TIM_CCER_CC3E;  // enable
      regs_.CR1 |= TIM_CR1_CEN;
    }
-   int32_t read() { value_ = regs_.CNT; return value_; } __attribute__((section (".ccmram")));
-   int32_t get_value() const { return value_; } __attribute__((section (".ccmram")));
-   void trigger() {} __attribute__((section (".ccmram")));
+   int32_t read() { value_ = regs_.CNT; return value_; }
+   int32_t get_value() const { return value_; }
+   void trigger() {}
    int32_t get_index_pos() { check_index(); return regs_.CCR3; }
    bool index_received() { check_index(); return index_received_; }
    int32_t first_index() const { return first_index_; }

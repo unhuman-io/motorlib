@@ -2,8 +2,23 @@
 #define UNHUMAN_MOTORLIB_UTIL_H_
 
 #include "st_device.h"
-#include "core_cm4.h"
-#include <malloc.h>
+#ifdef __clang__
+#include <stdlib.h>
+#define _calloc_r __hide_calloc_r
+#define _free_r __hide_free_r
+#define _realloc_r __hide_realloc_r
+#define _malloc_r __hide_malloc_r
+#endif
+
+#include <malloc.h> // Now safely grabs `struct mallinfo` and `mallinfo()`
+
+#ifdef __clang__
+// Clean up the macros so we don't poison the rest of the codebase
+#undef _calloc_r
+#undef _free_r
+#undef _realloc_r
+#undef _malloc_r
+#endif
 
 
 #define US_TO_CPU(t_us) (t_us*((uint32_t) CPU_FREQUENCY_HZ/1000000))
@@ -11,10 +26,10 @@
 extern volatile uint32_t * const cpu_clock;
 extern volatile uint32_t uptime;
 
-static inline uint32_t get_clock() { return *cpu_clock; }
-static inline uint8_t get_cpi_count() { return DWT->CPICNT; }
-static inline uint8_t get_lsu_count() { return DWT->LSUCNT; }
-static inline uint32_t get_uptime() { return uptime; }
+inline uint32_t get_clock() { return *cpu_clock; }
+inline uint8_t get_cpi_count() { return DWT->CPICNT; }
+inline uint8_t get_lsu_count() { return DWT->LSUCNT; }
+inline uint32_t get_uptime() { return uptime; }
 
 void ms_delay(uint16_t ms);
 void us_delay(uint16_t us);
@@ -76,10 +91,12 @@ inline uint32_t get_current_heap_free() {
 #ifdef __cplusplus
 #include <string>
 #include <vector>
+#include <string_view>
+#include <algorithm>
 class FrequencyLimiter {
  public:
     FrequencyLimiter(float rate_seconds) {
-        t_diff_ = CPU_FREQUENCY_HZ/rate_seconds;
+        t_diff_ = (float) CPU_FREQUENCY_HZ/rate_seconds;
         last_time_ = get_clock();
     }
     // returns true once for each time it is allowed to run
@@ -118,8 +135,8 @@ class LeakyBucket {
 
     void set_leak_period(float leak_period_s, float dt) {
         float leak_period = leak_period_s/dt;
-        if (leak_period > UINT32_MAX) {
-            leak_period_ = UINT32_MAX;
+        if (leak_period > static_cast<float>(INT32_MAX)) {
+            leak_period_ = INT32_MAX;
         } else {
             leak_period_ = leak_period;
         }
@@ -161,7 +178,7 @@ class LeakyBucket {
     uint32_t leak_count_;
     uint32_t leak_period_;
 
-    friend class System;
+    template <typename T> friend class SystemBase;
 };
 
 template <typename T, unsigned B>
@@ -178,6 +195,37 @@ std::string u32_to_hex(const uint32_t w);
 std::string bytes_to_hex(const std::vector<char>& bytes);
 std::string bytes_to_hex(const std::vector<uint8_t>& bytes);
 std::string bytes_to_hex(const uint8_t bytes[], const uint8_t length);
+
+template <size_t N>
+struct FixedString {
+    char buf[N + 1] = {};
+    size_t size = N;
+
+    consteval FixedString(const char (&str)[N + 1]) {
+        std::copy_n(str, N, buf);
+    }
+
+    consteval FixedString() : size(0) {}
+template <size_t M>
+consteval auto operator+(const char (&other)[M]) const {
+    FixedString<N + M - 1> result;
+    for (size_t i = 0; i < N; ++i) result.buf[i] = buf[i];
+    for (size_t i = 0; i < M; ++i) result.buf[N + i] = other[i];
+    
+    result.size = N + M - 1; 
+    return result;
+}
+
+    consteval operator std::string_view() const {
+        return {buf, N};
+    }
+};
+
+template<unsigned int N>
+FixedString(const char (&)[N]) -> FixedString<N - 1>;
+
+template<auto FS>
+constexpr auto StaticString = std::string_view{FS.buf, FS.size};
 
 #endif  // __cplusplus
 #endif  // UNHUMAN_MOTORLIB_UTIL_H_

@@ -1,4 +1,4 @@
-#include <protocol.h>
+#include "protocol.h"
 
 const Protocol::StateTableEntry Protocol::state_table_spi_[kStateCount] =
 {

@@ -215,7 +215,7 @@ private:
     uint32_t error_count_ = 0;
     uint32_t reset_count_ = 0;
 
-    friend class System;
+    template <typename T> friend class SystemBase;
 };
 
 #endif  // UNHUMAN_MOTORLIB_PERIPHERAL_STM32F4_OTG_USB_H_

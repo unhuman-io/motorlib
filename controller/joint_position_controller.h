@@ -33,7 +33,7 @@ class JointPositionController : public Controller {
     VelocityController velocity_controller_;
     JointPositionControllerParam param_ = {};
 
-    friend class System;
+    template <typename T> friend class SystemBase;
 };
 
 #endif  // UNHUMAN_MOTORLIB_CONTROLLER_JOINT_POSITION_CONTROLLER_H_

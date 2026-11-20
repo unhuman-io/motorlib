@@ -1,34 +1,17 @@
 #include <string>
 #include <fcntl.h>
+#include <sys/stat.h>
+#include <sys/types.h>
 #include <cstring>
-
-void system_run() {
-    System::run();
-}
-
-void main_loop_interrupt() {
-    System::main_loop_interrupt();
-}
-
-void fast_loop_interrupt() {
-    System::fast_loop_interrupt();
-}
-
-void system_log(std::string s) {
-    System::log(s);
-}
-
-void system_loop_interrupt() {
-    System::system_loop();
-}
+#include <cerrno>
+#include "logger.h"
+#include "round_robin_logger.h"
+#include "task.h"
 
 Logger::CIndex log_index __attribute__((section(".noload")));
 char log_queue[LOGGING_MAX_SIZE] __attribute__((section(".noload")));
 __attribute__ ((init_priority(LOGGER_INIT_PRIORITY))) Logger logger(log_index, log_queue);
 RoundRobinLogger round_robin_logger;
-uint32_t System::count_ = 0;
-ParameterAPI System::api = {};
-uint32_t System::current_api_timeout_us_ = 0;
 
 // send printf and other stdout/err to the logger
 extern "C" void _write(int fd, const char *buf, size_t count) {
@@ -71,4 +54,9 @@ extern "C" caddr_t _sbrk (int incr)
   heap += incr;
 
   return (caddr_t) prev_heap;
+}
+
+extern "C" void _exit(int status) {
+    logger.log("Exiting with status: " + std::to_string(status));
+    while (1);
 }

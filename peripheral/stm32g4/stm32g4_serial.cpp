@@ -1,5 +1,6 @@
 #include "../stm32_serial.h"
 #include <stm32g474xx.h>
+#include <cinttypes>
 
 #define         DEVICE_ID1          (UID_BASE) //(0x1FFF7A10)
 #define         DEVICE_ID2          (UID_BASE + 4) 
@@ -17,7 +18,7 @@ void init_serial_number() {
 
   deviceserial0 += deviceserial2;
   
-  std::sprintf(serial_number,"%lX%X",deviceserial0, (uint16_t) (deviceserial1>>16));
+  std::sprintf(serial_number,"%" PRIx32 "%X",deviceserial0, (uint16_t) (deviceserial1>>16));
 }
 
 const char * get_serial_number() {

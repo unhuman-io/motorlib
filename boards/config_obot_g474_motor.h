@@ -7,11 +7,11 @@
 #include "../peripheral/stm32_serial.h"
 
 struct BoardRev {
-    enum Rev {kR0, kR1, kR2, kR3, kR4, kMR0, kMR0P, kMR1, kMR2} rev;
+    enum Rev {kR0, kR1, kR2, kR3, kR4, kMR0, kMR0P, kMR1, kMR2, kTMR0} rev;
     bool has_max31875;
     bool has_max31889;
     bool has_bmi270;
-    bool has_bridge_thermistors;
+    int has_bridge_thermistors;
     bool has_5V_sense;
     bool has_I5V_sense;
     bool has_I48V_sense;
@@ -31,7 +31,8 @@ BoardRev get_board_rev() {
                                                     {"MR0", BoardRev::Rev::kMR0},
                                                     {"MR0P", BoardRev::Rev::kMR0P},
                                                     {"MR1", BoardRev::Rev::kMR1},
-                                                    {"MR2", BoardRev::Rev::kMR2},};
+                                                    {"MR2", BoardRev::Rev::kMR2},
+                                                    {"TMR0", BoardRev::Rev::kTMR0}};
     std::string otp_rev(otp->rev);
     b.rev = rev_map[otp_rev];
 
@@ -54,6 +55,8 @@ BoardRev get_board_rev() {
     rev = BoardRev::Rev::kMR1;
 #elif defined(MR2)
     rev = BoardRev::Rev::kMR2;
+#elif defined(TMR0)
+    rev = BoardRev::Rev::kTMR0;
 #endif
 
     if (rev == BoardRev::Rev::kR3 || rev == BoardRev::Rev::kR4 || 
@@ -67,12 +70,17 @@ BoardRev get_board_rev() {
 
     if (rev == BoardRev::Rev::kMR0 || rev == BoardRev::Rev::kMR0P ||
         rev == BoardRev::Rev::kMR1 || rev == BoardRev::Rev::kMR2) {
-        b.has_bridge_thermistors = true;
+        b.has_bridge_thermistors = 2;
+    }
+
+    if (rev == BoardRev::Rev::kTMR0) {
+        b.has_bridge_thermistors = 1;
     }
 
     if (rev == BoardRev::Rev::kR4 || 
         rev == BoardRev::Rev::kMR0 || rev == BoardRev::Rev::kMR0P ||
-        rev == BoardRev::Rev::kMR1 || rev == BoardRev::Rev::kMR2) {
+        rev == BoardRev::Rev::kMR1 || rev == BoardRev::Rev::kMR2 ||
+        rev == BoardRev::Rev::kTMR0) {
         b.has_bmi270 = true;
     }
 
@@ -82,7 +90,7 @@ BoardRev get_board_rev() {
         b.has_I48V_sense = true;
     }
 
-    if (rev == BoardRev::Rev::kMR2) {
+    if (rev == BoardRev::Rev::kMR2 || rev == BoardRev::Rev::kTMR0) {
         b.has_mb85rc64 = true;
     }
 // keeping old #define logic

@@ -2,7 +2,7 @@
 #include "st_device.h"
 #include "peripheral/macro.h"
 
-using namespace std;
+//using namespace std;
 
 // Test if in interrupt mode
 inline bool isInterrupt()
@@ -20,7 +20,7 @@ void * operator new(size_t size)
   return p;
 }
 
-void operator delete(void * p)
+void operator delete(void * p) noexcept
 {
   FIGURE_ASSERT(!isInterrupt(), "Free cannot be called from inside of an interrupt");
 

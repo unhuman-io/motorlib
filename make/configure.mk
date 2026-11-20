@@ -3,6 +3,8 @@
 #######################################
 # Requires CONFIG_FILE, and TARGET_MCU defined
 
+CPPSTD = c++20
+
 # Build path
 BUILD_DIR = build
 ifndef OBOT_VERSION
@@ -27,7 +29,6 @@ ifeq "$(TARGET_MCU)" "stm32g474"
 # C sources
 ifndef C_SOURCES
 C_SOURCES =  \
-$(SELF_DIR)../device/stm32g4/Src/stm32g4xx_it.c \
 $(SELF_DIR)../device/stm32g4/Src/system_stm32g4xx.c \
 $(SELF_DIR)../device/stm32g4/Src/main.c
 endif
@@ -59,6 +60,7 @@ C_INCLUDES +=  \
 LDSCRIPT = $(SELF_DIR)../peripheral/stm32g4/STM32G474RETx_FLASH.ld
 
 CPP_SOURCES += \
+$(SELF_DIR)../device/stm32g4/Src/stm32g4xx_it.cpp \
 $(SELF_DIR)../peripheral/spi_encoder.cpp\
 $(SELF_DIR)../peripheral/protocol.cpp\
 $(SELF_DIR)../peripheral/mailbox.cpp\
@@ -74,6 +76,7 @@ $(SELF_DIR)../peripheral/stm32g4/spi_slave.cpp\
 $(SELF_DIR)../peripheral/stm32g4/spi_slave_figure.cpp\
 $(SELF_DIR)../peripheral/stm32g4/uart.cpp\
 $(SELF_DIR)../peripheral/stm32g4/spi_dma.cpp\
+$(SELF_DIR)../peripheral/stm32g4/spi_dma_usart.cpp\
 $(SELF_DIR)../peripheral/stm32g4/flash.cpp\
 $(SELF_DIR)../peripheral/stm32g4/can.cpp\
 
@@ -100,12 +103,15 @@ endif
 #override C_DEFS += \
 -DNO_WATCHDOG
 
+CPPFLAGS += -std=$(CPPSTD)
+
 C_INCLUDES +=  \
 -I. \
 -I$(SELF_DIR)../CMSIS/Include \
 -I$(SELF_DIR)../peripheral \
 -I$(SELF_DIR)../../../lib/protocol \
 -I$(SELF_DIR)../obot-protocol \
+-I$(SELF_DIR)../ \
 
 CPP_SOURCES += \
 $(SELF_DIR)../malloc.cpp\
@@ -124,3 +130,5 @@ else
 $(call info_once,using motorlib protocol_parser.cpp)
 CPP_SOURCES += $(SELF_DIR)../obot-protocol/protocol_parser.cpp
 endif
+
+include $(SELF_DIR)../sensors/encoders/Makefile

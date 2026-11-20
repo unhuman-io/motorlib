@@ -4,6 +4,7 @@
 #include "stm32g474xx.h"
 #include "../peripheral/stm32g4/pin_config.h"
 #include "config_obot_g474_trace.h"
+#include "../gpio.h"
 
 #define I_A_DR  ADC3->JDR1
 #define I_B_DR  ADC4->JDR1
@@ -72,10 +73,10 @@ void pin_config_obot_g474_trace(const BoardRev &board_rev) {
         MASK_SET(GPIOA->PUPDR, GPIO_PUPDR_PUPD1, GPIO_PULL::DOWN);
         MASK_SET(GPIOA->PUPDR, GPIO_PUPDR_PUPD2, GPIO_PULL::DOWN);
         //GPIO_SETL(A, 0, 1, 3, 0);   // SPI1 CS on QEPA pin
-        GPIO_SETL(A, 4, GPIO_MODE::OUTPUT,  GPIO_SPEED::VERY_HIGH, 0);   // SPI1 CS drv8323s
-        GPIO_SETL(A, 5, GPIO_MODE::ALT_FUN, GPIO_SPEED::VERY_HIGH, 5);   // SPI1 CLK drv8323s
-        GPIO_SETL(A, 6, GPIO_MODE::ALT_FUN, GPIO_SPEED::VERY_HIGH, 5);   // SPI1 HIDO (host in device out) drv8323s
-        GPIO_SETL(A, 7, GPIO_MODE::ALT_FUN, GPIO_SPEED::VERY_HIGH, 5);   // SPI1 HODI drv8323s
+        GPIO_SETL(A, 4, GPIO_MODE::OUTPUT,  GPIO_SPEED::MEDIUM, 0);   // SPI1 CS drv8323s
+        GPIO_SETL(A, 5, GPIO_MODE::ALT_FUN, GPIO_SPEED::MEDIUM, 5);   // SPI1 CLK drv8323s
+        GPIO_SETL(A, 6, GPIO_MODE::ALT_FUN, GPIO_SPEED::MEDIUM, 5);   // SPI1 HIDO (host in device out) drv8323s
+        GPIO_SETL(A, 7, GPIO_MODE::ALT_FUN, GPIO_SPEED::MEDIUM, 5);   // SPI1 HODI drv8323s
         MASK_SET(GPIOA->PUPDR, GPIO_PUPDR_PUPD6, 1); // HIDO pull up
 
         GPIO_SETH(B, 14, GPIO_MODE::ALT_FUN, GPIO_SPEED::VERY_HIGH, 13); // hrtim1 chd1
@@ -135,6 +136,18 @@ void pin_config_obot_g474_trace(const BoardRev &board_rev) {
         TIM1->SMCR = TIM_SMCR_TS_3 | 6 << TIM_SMCR_TS_Pos | 6 << TIM_SMCR_SMS_Pos; // trigger mode on tim_itr10 - hrtim_out_sync2
         NVIC_SetPriority(TIM1_CC_IRQn, NVIC_EncodePriority(NVIC_GetPriorityGrouping(), 3, 0));
         NVIC_EnableIRQ(TIM1_CC_IRQn);
+
+        // trace pins enable
+        GPIO_SETL(E, 2, GPIO_MODE::ALT_FUN, GPIO_SPEED::VERY_HIGH, 0);
+        GPIO_SETL(E, 3, GPIO_MODE::ALT_FUN, GPIO_SPEED::VERY_HIGH, 0);
+        GPIO_SETL(E, 4, GPIO_MODE::ALT_FUN, GPIO_SPEED::VERY_HIGH, 0);
+        GPIO_SETL(E, 5, GPIO_MODE::ALT_FUN, GPIO_SPEED::VERY_HIGH, 0);
+        GPIO_SETL(E, 6, GPIO_MODE::ALT_FUN, GPIO_SPEED::VERY_HIGH, 0);
+        //ETM->CR |= ETM_CR_ETMEN;
+        uint32_t *etmcr = (uint32_t *)0xE0041000;
+        *etmcr |= 1 << 11;
+        uint32_t *etmteevr = (uint32_t *)0xE0041020;
+        *etmteevr = 0x000037ef; // ON
 
         // RTC
         RTC->WPR = 0xCA;

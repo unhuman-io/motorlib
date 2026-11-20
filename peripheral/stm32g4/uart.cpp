@@ -199,7 +199,7 @@ void Uart::reset()
 void Uart::startTransaction(BufferDescriptor descriptor)
 {
 
-  transaction_counter_++;
+  transaction_counter_ += 1;
 
   // // Configure rxBuffer
   // if(descriptor.rxBuffer != NULL)

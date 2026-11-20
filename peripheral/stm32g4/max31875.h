@@ -45,7 +45,7 @@ class MAX31875 {
     bool first_read_ = true;
     uint8_t address_;
 
-    friend class System;
+    template <typename T> friend class SystemBase;
 };
 
 #endif  // UNHUMAN_MOTORLIB_PERIPHERAL_STM32G4_MAX31875_H_

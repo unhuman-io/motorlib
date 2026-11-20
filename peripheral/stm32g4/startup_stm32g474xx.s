@@ -101,10 +101,10 @@ no_csr_copy:
 
 Reboot_Loader:
     ldr     r0, =RCC_APB2SMENR 
-    ldr     r1, =#(1<<RCC_SYSCFGEN_POS) 
+    ldr     r1, =(1<<RCC_SYSCFGEN_POS) 
     str     r1, [r0]
 	nop		/* found experimentally that this is needed */
-    ldr     r0, =#SYSCFG_MEMRMP /* SYSCFG_MEMRMP */
+    ldr     r0, =SYSCFG_MEMRMP /* SYSCFG_MEMRMP */
     ldr     r1, =0x00000001 /* MAP ROM AT ZERO */
     str     r1, [r0]
     ldr     r0, =0x1FFF0000 /* ROM BASE */
@@ -184,8 +184,26 @@ LoopFillZerobss:
 /* Call the clock system intitialization function.*/
     bl  SystemInit
 	bl  board_init
-/* Call static constructors */
+#ifdef __clang__
+    /* --------------------------------------------------------- */
+    /* Call C++ Static Constructors Manually                     */
+    /* --------------------------------------------------------- */
+    ldr     r4, =__init_array_start   /* r4 = current pointer */
+    ldr     r5, =__init_array_end     /* r5 = end pointer */
+
+.L_call_constructors_loop:
+    cmp     r4, r5                    /* Check if we reached the end */
+    bhs     .L_call_constructors_done /* If r4 >= r5, exit loop */
+
+    ldr     r3, [r4]                  /* Load the constructor address into r3 */
+    adds    r4, r4, #4                /* Move pointer to the next array element */
+    blx     r3                        /* Branch and link to the constructor */
+
+    b       .L_call_constructors_loop /* Repeat for next constructor */
+.L_call_constructors_done:
+#else
     bl __libc_init_array
+#endif
 /* Call the application's entry point.*/
 	bl	main
 
@@ -357,32 +375,32 @@ g_pfnVectors:
 *
 *******************************************************************************/
 
-//	.weak	NMI_Handler
-//	.thumb_set NMI_Handler,Infinite_Loop1
+	.weak	NMI_Handler
+	.thumb_set NMI_Handler,Infinite_Loop1
 
-//	.weak	HardFault_Handler
-//	.thumb_set HardFault_Handler,Infinite_Loop2
+	.weak	HardFault_Handler
+	.thumb_set HardFault_Handler,Infinite_Loop2
 
-//	.weak	MemManage_Handler
-//	.thumb_set MemManage_Handler,Default_Handler
+	.weak	MemManage_Handler
+	.thumb_set MemManage_Handler,Default_Handler
 
-//	.weak	BusFault_Handler
-//	.thumb_set BusFault_Handler,Default_Handler
+	.weak	BusFault_Handler
+	.thumb_set BusFault_Handler,Default_Handler
 
-//	.weak	UsageFault_Handler
-//	.thumb_set UsageFault_Handler,Default_Handler
+	.weak	UsageFault_Handler
+	.thumb_set UsageFault_Handler,Default_Handler
 
-//	.weak	SVC_Handler
-//	.thumb_set SVC_Handler,Default_Handler
+	.weak	SVC_Handler
+	.thumb_set SVC_Handler,Default_Handler
 
-//	.weak	DebugMon_Handler
-//	.thumb_set DebugMon_Handler,Default_Handler
+	.weak	DebugMon_Handler
+	.thumb_set DebugMon_Handler,Default_Handler
 
 	.weak	PendSV_Handler
 	.thumb_set PendSV_Handler,Default_Handler
 
-//	.weak	SysTick_Handler
-//	.thumb_set SysTick_Handler,Default_Handler*/
+	.weak	SysTick_Handler
+	.thumb_set SysTick_Handler,Default_Handler
 
 	.weak	WWDG_IRQHandler
 	.thumb_set WWDG_IRQHandler,Infinite_Loop5
@@ -443,10 +461,10 @@ g_pfnVectors:
 
 	.weak	USB_HP_IRQHandler
 	.thumb_set USB_HP_IRQHandler,Default_Handler
-/*
-//	.weak	USB_LP_IRQHandler
-//	.thumb_set USB_LP_IRQHandler,Default_Handler
-*/
+
+	.weak	USB_LP_IRQHandler
+	.thumb_set USB_LP_IRQHandler,Default_Handler
+
 	.weak	FDCAN1_IT0_IRQHandler
 	.thumb_set FDCAN1_IT0_IRQHandler,Default_Handler
 
@@ -552,11 +570,11 @@ g_pfnVectors:
 	.weak	TIM7_DAC_IRQHandler
 	.thumb_set TIM7_DAC_IRQHandler,Default_Handler
 
-	//.weak	DMA2_Channel1_IRQHandler
-	//.thumb_set DMA2_Channel1_IRQHandler,Default_Handler
+	.weak	DMA2_Channel1_IRQHandler
+	.thumb_set DMA2_Channel1_IRQHandler,Default_Handler
 
-	//.weak	DMA2_Channel2_IRQHandler
-	//.thumb_set DMA2_Channel2_IRQHandler,Default_Handler
+	.weak	DMA2_Channel2_IRQHandler
+	.thumb_set DMA2_Channel2_IRQHandler,Default_Handler
 
 	.weak	DMA2_Channel3_IRQHandler
 	.thumb_set DMA2_Channel3_IRQHandler,Default_Handler
@@ -570,8 +588,8 @@ g_pfnVectors:
 	.weak	ADC4_IRQHandler
 	.thumb_set ADC4_IRQHandler,Default_Handler
 
-//	.weak	ADC5_IRQHandler
-//	.thumb_set ADC5_IRQHandler,Default_Handler
+	.weak	ADC5_IRQHandler
+	.thumb_set ADC5_IRQHandler,Default_Handler
 
 	.weak	UCPD1_IRQHandler
 	.thumb_set UCPD1_IRQHandler,Default_Handler

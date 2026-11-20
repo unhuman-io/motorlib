@@ -55,7 +55,7 @@ ENTRY(Reset_Handler)
 /* Highest address of the user mode stack */
 _estack = 0x20018000;    /* end of RAM */
 /* Generate a link error if heap and stack don't fit into RAM */
-_Min_Heap_Size = 32 * 1024;   /* required amount of heap  */
+_Min_Heap_Size = 0x4000;   /* required amount of heap  */
 _Min_Stack_Size = 0x2000; /* required amount of stack */
 
 /* Specify the memory areas */
@@ -63,7 +63,7 @@ MEMORY
 {
 RAM (xrw)      : ORIGIN = 0x20000000, LENGTH = 96K
 CCMRAM (xrw)   : ORIGIN = 0x10000000, LENGTH = 32K
-FLASH (rx)      : ORIGIN = 0x8000000, LENGTH = 384K
+FLASH (rx)      : ORIGIN = DEFINED(CUSTOM_BOOTLOADER) ? 0x8002000 : 0x8000000, LENGTH = DEFINED(CUSTOM_BOOTLOADER) ? 376K : 384K
 PARAM_DATA (rx)  : ORIGIN = 0x8060000, LENGTH = 64K
 CALIBRATION_DATA (rx) : ORIGIN = 0x8070000, LENGTH = 64K
 }
@@ -141,20 +141,20 @@ SECTIONS
     __exidx_end = .;
   } >FLASH
 
-  .preinit_array (READONLY) :
+  .preinit_array :
   {
     PROVIDE_HIDDEN (__preinit_array_start = .);
     KEEP (*(.preinit_array*))
     PROVIDE_HIDDEN (__preinit_array_end = .);
   } >FLASH
-  .init_array (READONLY) :
+  .init_array :
   {
     PROVIDE_HIDDEN (__init_array_start = .);
     KEEP (*(SORT(.init_array.*)))
     KEEP (*(.init_array*))
     PROVIDE_HIDDEN (__init_array_end = .);
   } >FLASH
-  .fini_array (READONLY) :
+  .fini_array :
   {
     PROVIDE_HIDDEN (__fini_array_start = .);
     KEEP (*(SORT(.fini_array.*)))
@@ -182,6 +182,7 @@ SECTIONS
   {
     . = ALIGN(4);
     _sdata = .;        /* create a global symbol at data start */
+    *(.bootloader_flag)
     *(.data)           /* .data sections */
     *(.data*)          /* .data* sections */
 
@@ -207,12 +208,14 @@ SECTIONS
   } >RAM
 
   /* User_heap_stack section, used to check that there is enough RAM left */
-  ._user_heap_stack :
+  ._user_heap_stack (NOLOAD) :
   {
     . = ALIGN(8);
     PROVIDE ( end = . );
     PROVIDE ( _end = . );
+    PROVIDE ( __heap_start = . );
     . = . + _Min_Heap_Size;
+    PROVIDE ( __heap_end = . );
     . = . + _Min_Stack_Size;
     . = ALIGN(8);
   } >RAM

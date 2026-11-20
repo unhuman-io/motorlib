@@ -34,7 +34,7 @@ private:
     RateLimiter id_limiter_, iq_limiter_;
     FOCParam param_;
 
-    friend class System;
+    template <typename T> friend class SystemBase;
 };
 
 #endif  // UNHUMAN_MOTORLIB_FOC_H_

@@ -32,7 +32,7 @@ class AdmittanceController : public Controller {
     VelocityController velocity_controller_;
     PIDController torque_controller_;
 
-    friend class System;
+    template <typename T> friend class SystemBase;
 };
 
 #endif  // UNHUMAN_MOTORLIB_CONTROLLER_ADMITTANCE_CONTROLLER_H_

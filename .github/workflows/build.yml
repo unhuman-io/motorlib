@@ -27,3 +27,5 @@ jobs:
         ./test_error_mask
         make test_logger
         ./test_logger
+        make test_crc5
+        ./test_crc5

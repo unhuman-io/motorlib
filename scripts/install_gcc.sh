@@ -3,6 +3,7 @@
 set -e
 
 gcc_dir=$(dirname $0)/../gcc
+rf -rf $gcc_dir
 mkdir -p $gcc_dir
 cd $gcc_dir
 
@@ -29,14 +30,26 @@ cd $gcc_dir
 # declare -A sha=( [x86_64]=95c011cee430e64dd6087c75c800f04b9c49832cc1000127a92a97f9c8d83af4 \
 #                  [aarch64]=c8824bffd057afce2259f7618254e840715f33523a3d4e4294f471208f976764 )
 
-version=14.2.rel1
-declare -A sha=( [x86_64]=62a63b981fe391a9cbad7ef51b17e49aeaa3e7b0d029b36ca1e9c3b2a9b78823 \
-                 [aarch64]=87330bab085dd8749d4ed0ad633674b9dc48b237b61069e3b481abd364d0a684 )
+# version=14.2.rel1
+# declare -A sha=( [x86_64]=62a63b981fe391a9cbad7ef51b17e49aeaa3e7b0d029b36ca1e9c3b2a9b78823 \
+#                  [aarch64]=87330bab085dd8749d4ed0ad633674b9dc48b237b61069e3b481abd364d0a684 )
+
+# version=14.3.rel1
+# declare -A sha=( [x86_64]=8f6903f8ceb084d9227b9ef991490413014d991874a1e34074443c2a72b14dbd \
+#                  [aarch64]=ebaf2d47f2e7f7b645864c5c8cf839e526daed83a2e675a3525d03f5ba3d2be9 )
+
+# version=15.2.rel1
+# declare -A sha=( [x86_64]=597893282ac8c6ab1a4073977f2362990184599643b4c5ee34870a8215783a16 \
+#                  [aarch64]=d061559d814b205ed30c5b7c577c03317ec447ca51cd5a159d26b12a5bbeb20c )
+
+version=15.3.rel1
+declare -A sha=( [x86_64]=563bebb2b97d53382b956d6ee1fe61e2cae26699901417234a37df505ef9b5fa \
+                 [aarch64]=06979e0c8171de58e5dc2a2b2019330a290f30930f27728af98a83e1a7369b3a )
 
 arch=$(uname -m)
 fname=arm-gnu-toolchain-$version-$arch-arm-none-eabi
-url=https://developer.arm.com/-/media/Files/downloads/gnu/$version/binrel/$fname.tar.xz
-wget $url -O $fname.tar.xz
+url=https://gitlab.arm.com/api/v4/projects/tooling%2Fgnu-toolchains-for-arm/packages/generic/gnu-toolchain/$version/$fname.tar.xz
+wget $quiet $url -O $fname.tar.xz
 cat <(printf "${sha[$arch]} $fname.tar.xz\n")
 sha256sum -c <(printf "${sha[$arch]} $fname.tar.xz\n")
 tar xf $fname.tar.xz --strip-components=1

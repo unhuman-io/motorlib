@@ -9,6 +9,7 @@ extern "C" {
 void system_init();
 }
 
+template<typename FastLoop, typename MainLoop>
 class Actuator {
  public:
     Actuator(FastLoop &fast_loop, MainLoop &main_loop, const volatile StartupParam &startup_param, const volatile Calibration &calibration) : fast_loop_(fast_loop), main_loop_(main_loop), startup_param_(startup_param), calibration_(calibration) {
@@ -73,28 +74,28 @@ class Actuator {
       float output_wrap_adjustment = 0.0;
       if (startup_param_.output_encoder_rollover > 0) {
          if (status.output_position > startup_param_.output_encoder_rollover) {
-            logger.log_printf("Output pos (%2.3f) > (%2.3f), sub 2pi", status.output_position, startup_param_.output_encoder_rollover);
-            output_wrap_adjustment = -2*M_PI;
-         } else if (status.output_position < (startup_param_.output_encoder_rollover-2*M_PI)) {
-            logger.log_printf("Output pos (%2.3f) < (%2.3f), add 2pi", status.output_position, startup_param_.output_encoder_rollover-2*M_PI);
-            output_wrap_adjustment = 2*M_PI;
+            logger.log_printf("Output pos (%2.3f) > (%2.3f), sub 2pi", (double)status.output_position, (double)startup_param_.output_encoder_rollover);
+            output_wrap_adjustment = -2*std::numbers::pi_v<float>;
+         } else if (status.output_position < (startup_param_.output_encoder_rollover-2*std::numbers::pi_v<float>)) {
+            logger.log_printf("Output pos (%2.3f) < (%2.3f), add 2pi", (double)status.output_position, (double)(startup_param_.output_encoder_rollover-2*std::numbers::pi_v<float>));
+            output_wrap_adjustment = 2*std::numbers::pi_v<float>;
          } else {
-            logger.log_printf("Output pos (%2.3f), rollover (%f), no adjust", status.output_position, startup_param_.output_encoder_rollover);
+            logger.log_printf("Output pos (%2.3f), rollover (%f), no adjust", (double)status.output_position, (double)startup_param_.output_encoder_rollover);
          }
       } else {
          if (status.output_position < startup_param_.output_encoder_rollover) {
-            logger.log_printf("Output pos (%2.3f) < (%2.3f), add 2pi", status.output_position, startup_param_.output_encoder_rollover);
-            output_wrap_adjustment = 2*M_PI;
-         } else if (status.output_position > (startup_param_.output_encoder_rollover+2*M_PI)) {
-            logger.log_printf("Output pos (%2.3f) > (%2.3f), sub 2pi", status.output_position, startup_param_.output_encoder_rollover+2*M_PI);
-            output_wrap_adjustment = -2*M_PI;
+            logger.log_printf("Output pos (%2.3f) < (%2.3f), add 2pi", (double)status.output_position, (double)startup_param_.output_encoder_rollover);
+            output_wrap_adjustment = 2*std::numbers::pi_v<float>;
+         } else if (status.output_position > (startup_param_.output_encoder_rollover+2*std::numbers::pi_v<float>)) {
+            logger.log_printf("Output pos (%2.3f) > (%2.3f), sub 2pi", (double)status.output_position, (double)(startup_param_.output_encoder_rollover+2*std::numbers::pi_v<float>));
+            output_wrap_adjustment = -2*std::numbers::pi_v<float>;
          } else {
-            logger.log_printf("Output pos (%2.3f), rollover (%f), no adjust", status.output_position, startup_param_.output_encoder_rollover);
+            logger.log_printf("Output pos (%2.3f), rollover (%f), no adjust", (double)status.output_position, (double)startup_param_.output_encoder_rollover);
          }
       }
       main_loop_.adjust_output_encoder(output_wrap_adjustment);
       status.output_position += output_wrap_adjustment;
-      logger.log_printf("Output pos after (%f) adjustment: %f", output_wrap_adjustment, status.output_position);
+      logger.log_printf("Output pos after (%f) adjustment: %f", (double)output_wrap_adjustment, (double)status.output_position);
       switch(startup_param_.motor_encoder_startup) {
          default:
          case StartupParam::ENCODER_ZERO:
@@ -114,22 +115,22 @@ class Actuator {
             break;
          }
          case StartupParam::ENCODER_BIAS_FROM_OUTPUT_WITH_MOTOR_CORRECTION: {
-            float round_by = 2*M_PI*(startup_param_.num_encoder_poles == 0 ? 1 : startup_param_.num_encoder_poles);
+            float round_by = 2*std::numbers::pi_v<float>*(startup_param_.num_encoder_poles == 0 ? 1 : startup_param_.num_encoder_poles);
             float motor_bias_from_output = output_position_to_motor_position(status.output_position) 
               - (status.fast_loop.motor_position.position);
             float motor_bias_rounded = roundf(motor_bias_from_output/round_by)*(round_by) + startup_motor_bias_;
             logger.log("Encoder bias from output with correction");
-            logger.log_printf("output_position_to_motor_position: %f", output_position_to_motor_position(status.output_position));
+            logger.log_printf("output_position_to_motor_position: %f", (double)output_position_to_motor_position(status.output_position));
             logger.log_printf("Output position: %f, motor_position: %f, motor mechanical position: %f", 
-               status.output_position, status.fast_loop.motor_position.position, status.fast_loop.motor_mechanical_position);
+               (double)status.output_position, (double)status.fast_loop.motor_position.position, (double)status.fast_loop.motor_mechanical_position);
             logger.log_printf("Encoder bias, round_by: %f, motor_bias_from_output: %f, motor_bias_rounded: %f",
-               round_by, motor_bias_from_output, motor_bias_rounded);
+               (double)round_by, (double)motor_bias_from_output, (double)motor_bias_rounded);
             main_loop_.set_motor_encoder_bias(motor_bias_rounded);
             break;
          }
          case StartupParam::ENCODER_BIAS_FROM_OUTPUT_WITH_TORQUE_AND_MOTOR_CORRECTION: {
             // todo fix as above
-            float round_by = 2*M_PI*(startup_param_.num_encoder_poles == 0 ? 1 : startup_param_.num_encoder_poles);
+            float round_by = 2*std::numbers::pi_v<float>*(startup_param_.num_encoder_poles == 0 ? 1 : startup_param_.num_encoder_poles);
             float motor_bias_from_output = output_position_to_motor_position(status.output_position - status.torque*startup_param_.transmission_stiffness) 
               - (status.fast_loop.motor_position.position + startup_motor_bias_);
             float motor_bias_rounded = roundf(motor_bias_from_output*round_by)/(round_by);
@@ -163,7 +164,7 @@ private:
     const volatile Calibration &calibration_;
     float startup_motor_bias_;
 
-    friend class System;
+    template <typename T> friend class SystemBase;
     friend void system_init();
     friend void config_init();
 };

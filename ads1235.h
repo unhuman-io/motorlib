@@ -69,7 +69,7 @@ class ADS1235 : public TorqueSensorBase {
     uint32_t init_val_ = 0;
     SPS sps_;
 
-    friend class System;
+    template <typename T> friend class SystemBase;
     friend void system_init();
 };
 

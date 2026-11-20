@@ -7,3 +7,6 @@ test_logger: test_logger.cpp ../logger.h
 
 test_error_mask: test_error_mask.cpp ../motor_messages/motor_messages.h
 	g++ test_error_mask.cpp -o test_error_mask
+
+test_crc5: test_crc5.cpp ../crc5.cpp ../crc5.h
+	g++ -std=c++20 test_crc5.cpp ../crc5.cpp -o test_crc5

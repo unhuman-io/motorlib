@@ -124,7 +124,7 @@ class UARTCommunication : public CommunicationBase {
 #ifdef USE_MOTOR_STATUS_LITE
     const size_t buffer_size = sizeof(MotorStatusLite);
 #else
-    const size_t buffer_size = sizeof(MotorStatus);
+    const size_t buffer_size = sizeof(MotorStatusRegular);
 #endif
       std::memcpy(&uart_.tx_buffer_[0], &obot_status_, buffer_size);
       Uart::BufferDescriptor desc = {};
@@ -151,7 +151,7 @@ class UARTCommunication : public CommunicationBase {
  private:
     Uart &uart_;
     UARTCommunicationProtocol &protocol_;
-    friend class System;
+    template <typename T> friend class SystemBase;
     std::atomic_bool new_obot_cmd_;
     ReceiveData obot_cmd_;
     SendData obot_status_;
