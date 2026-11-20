@@ -34,16 +34,18 @@ inline void watchdog_kick() {
     while (true) __asm__ volatile("");
 }
 
-// The bootloader stays in control after a software reset if it finds this
-// value in its flag: _bootloader_flag of the linker script (stm32g474.ld),
+// The bootloader stays in control after a software reset if it finds a value
+// in its flag. Both are the linker script's (stm32g474.ld): _bootloader_flag,
 // the first word of the ram, which is kept free of the application's and the
-// bootloader's variables.
+// bootloader's variables, and _bootloader_flag_value, a number that the
+// script gives a name, which makes it the address of that symbol.
 extern "C" volatile uint32_t _bootloader_flag;
-inline constexpr uint32_t bootloader_flag_value = 0xB007;
+extern "C" const uint8_t _bootloader_flag_value[];
 inline volatile uint32_t& bootloader_flag() { return _bootloader_flag; }
+inline uint32_t bootloader_flag_value() { return reinterpret_cast<uint32_t>(_bootloader_flag_value); }
 
 [[noreturn]] inline void system_reset_to_bootloader() {
-    bootloader_flag() = bootloader_flag_value;
+    bootloader_flag() = bootloader_flag_value();
     system_reset();
 }
 
