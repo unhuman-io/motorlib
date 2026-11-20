@@ -283,37 +283,46 @@ private:
     template <typename T> friend class SystemBase;
 };
 
+// Follows its input by at most the limit per step
 class RateLimiter {
  public:
     void set_limit(float limit) { limit_ = (limit == 0 ? INFINITY : limit); }
-    void init(float value, float velocity = 0) { last_value_ = value; velocity_ = velocity;}
+    void init(float value) { last_value_ = value; }
+    float step(float value) {
+        last_value_ = fsat2(value, last_value_ - limit_, last_value_ + limit_);
+        return last_value_;
+    }
+    float get_limit() const { return limit_; }
+    float get_value() const { return last_value_; }
+ protected:
+    float limit_ = INFINITY;
+    float last_value_ = 0;
+};
+
+// The same with the step it took as its velocity, per step: the limit, with
+// its sign, while it is limiting
+class RateLimiterVelocity : public RateLimiter {
+ public:
+    void init(float value, float velocity = 0) { last_value_ = value; velocity_ = velocity; }
     float step(float value) {
         float out_value = value;
-        float high_limit = last_value_ + limit_;
-        float low_limit = last_value_ - limit_;
-        out_value = fsat2(value, high_limit, low_limit);
-        //out_value = value > high_limit ? high_limit : value < low_limit ? low_limit : value;
-        // if (value > (high_limit)) {
-        //     out_value = high_limit;
-        //     //velocity_ = limit_;
-        // } else if (value < (low_limit)) {
-        //     out_value = low_limit;
-        //     //velocity_ = -limit_;
-        // } else {
-        //     out_value = value;
-        //     //velocity_ = value - last_value_;
-        // }
+        if (value > (last_value_ + limit_)) {
+            out_value = last_value_ + limit_;
+            velocity_ = limit_;
+        } else if (value < (last_value_ - limit_)) {
+            out_value = last_value_ - limit_;
+            velocity_ = -limit_;
+        } else {
+            out_value = value;
+            velocity_ = value - last_value_;
+        }
 
         last_value_ = out_value;
         return out_value;
     }
-    float get_limit() const { return limit_; }
-    float get_value() const { return last_value_; }
     float get_velocity() const { return velocity_; }
  private:
-    float limit_ = INFINITY;
     float velocity_ = 0;
-    float last_value_ = 0;
 };
 
 class PIDController {
@@ -338,7 +347,7 @@ protected:
     float dt_;
     float rollover_ = 0;
     Hysteresis hysteresis_;
-    RateLimiter rate_limit_;
+    RateLimiterVelocity rate_limit_;
 
 
     template <typename T> friend class SystemBase;
