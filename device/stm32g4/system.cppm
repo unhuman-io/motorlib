@@ -35,8 +35,9 @@ inline void watchdog_kick() {
 }
 
 // The bootloader stays in control after a software reset if it finds this
-// value in its flag, the first word of the ram. That word belongs to the
-// application's data until the reset.
+// value in its flag, the first word of the ram. The linker script
+// (stm32g474.ld) keeps that word free: no variable of the application or of
+// the bootloader is there.
 inline constexpr uint32_t bootloader_flag_address = 0x20000000;
 inline constexpr uint32_t bootloader_flag_value = 0xB007;
 
@@ -64,38 +65,52 @@ inline bool memory_access(Access access) {
     return !fault;
 }
 
-// Blocks, in the widest accesses that address and length are multiples of: a
-// word that is read or written as one stays whole next to an interrupt, and
-// peripheral registers get the access they expect. Both return the bytes done
-// before a fault.
+// A block in the widest accesses that fit: a byte and a half word up to a
+// word boundary, words, then a half word and a byte for what is left. A word
+// that is read or written as one stays whole next to an interrupt, and a
+// peripheral register gets the access it expects when the block is that
+// register. Both return the bytes done before a fault.
+constexpr uint32_t memory_access_size(uint32_t address, uint32_t left) {
+    return (address & 1) || left < 2 ? 1 : (address & 2) || left < 4 ? 2 : 4;
+}
+static_assert(memory_access_size(0, 8) == 4 && memory_access_size(4, 4) == 4 && memory_access_size(2, 6) == 2 &&
+    memory_access_size(4, 3) == 2 && memory_access_size(1, 7) == 1 && memory_access_size(6, 1) == 1);
+
 template<typename T>
-inline uint32_t memory_read_as(uint32_t address, uint8_t* data, uint32_t length) {
-    for (uint32_t i = 0; i < length; i += sizeof(T)) {
-        T value{};
-        if (!memory_access([&] { value = *reinterpret_cast<const volatile T*>(address + i); })) return i;
-        for (uint32_t byte = 0; byte < sizeof(T); byte++) data[i + byte] = static_cast<uint8_t>(value >> (8 * byte));
-    }
-    return length;
+inline bool memory_read_one(uint32_t address, uint8_t* data) {
+    T value{};
+    if (!memory_access([&] { value = *reinterpret_cast<const volatile T*>(address); })) return false;
+    for (uint32_t byte = 0; byte < sizeof(T); byte++) data[byte] = static_cast<uint8_t>(value >> (8 * byte));
+    return true;
 }
 inline uint32_t memory_read(uint32_t address, uint8_t* data, uint32_t length) {
-    if (((address | length) & 3) == 0) return memory_read_as<uint32_t>(address, data, length);
-    if (((address | length) & 1) == 0) return memory_read_as<uint16_t>(address, data, length);
-    return memory_read_as<uint8_t>(address, data, length);
+    uint32_t done = 0;
+    while (done < length) {
+        const uint32_t size = memory_access_size(address + done, length - done);
+        const bool ok = size == 4 ? memory_read_one<uint32_t>(address + done, data + done) :
+            size == 2 ? memory_read_one<uint16_t>(address + done, data + done) : memory_read_one<uint8_t>(address + done, data + done);
+        if (!ok) break;
+        done += size;
+    }
+    return done;
 }
 
 template<typename T>
-inline uint32_t memory_write_as(uint32_t address, const uint8_t* data, uint32_t length) {
-    for (uint32_t i = 0; i < length; i += sizeof(T)) {
-        T value = 0;
-        for (uint32_t byte = 0; byte < sizeof(T); byte++) value |= static_cast<T>(data[i + byte]) << (8 * byte);
-        if (!memory_access([&] { *reinterpret_cast<volatile T*>(address + i) = value; })) return i;
-    }
-    return length;
+inline bool memory_write_one(uint32_t address, const uint8_t* data) {
+    T value = 0;
+    for (uint32_t byte = 0; byte < sizeof(T); byte++) value |= static_cast<T>(data[byte]) << (8 * byte);
+    return memory_access([&] { *reinterpret_cast<volatile T*>(address) = value; });
 }
 inline uint32_t memory_write(uint32_t address, const uint8_t* data, uint32_t length) {
-    if (((address | length) & 3) == 0) return memory_write_as<uint32_t>(address, data, length);
-    if (((address | length) & 1) == 0) return memory_write_as<uint16_t>(address, data, length);
-    return memory_write_as<uint8_t>(address, data, length);
+    uint32_t done = 0;
+    while (done < length) {
+        const uint32_t size = memory_access_size(address + done, length - done);
+        const bool ok = size == 4 ? memory_write_one<uint32_t>(address + done, data + done) :
+            size == 2 ? memory_write_one<uint16_t>(address + done, data + done) : memory_write_one<uint8_t>(address + done, data + done);
+        if (!ok) break;
+        done += size;
+    }
+    return done;
 }
 
 // The 96 bit unique device id as the 6 bytes that are the serial number:
