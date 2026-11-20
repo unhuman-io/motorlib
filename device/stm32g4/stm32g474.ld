@@ -30,13 +30,14 @@ SECTIONS
     } > FLASH
 
     /* The first word of the ram is the flag that system_reset_to_bootloader
-       (device.system) leaves for the can bootloader, across the reset */
+       (device.system) leaves for the can bootloader, across the reset. The
+       bootloaders that are on boards look for it at this address. */
     .bootloader_flag (NOLOAD) :
     {
         _bootloader_flag = .;
         . = . + 4;
     } > RAM
-    ASSERT(_bootloader_flag == 0x20000000, "bootloader_flag_address of device.system")
+    ASSERT(_bootloader_flag == 0x20000000, "the bootloader's flag has to stay the first word of the ram")
 
     /* Reset_Handler copies .data and zeroes .bss a word at a time */
     .data :
