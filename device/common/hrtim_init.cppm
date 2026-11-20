@@ -328,6 +328,13 @@ inline void hrtim_output_disable(uint32_t mask) {
 
 // New set and reset events of output 1. HRTIMEvent::SOFTWARE as the reset
 // forces the output inactive once, and with dead time output 2 active.
+// That is for a timer that updates at the valley only (HRTIMRollover::VALLEY).
+// The software reset acts at once, the new events with the preload at the
+// next update: until then the old set event still fires, and an update at
+// the crest takes the reset on the way down away with it, which leaves the
+// output active. Measured on an stm32g474: at the valley the output ends up
+// inactive wherever in the period this is called, at the crest or at both
+// it can stay active.
 inline void hrtim_output1_events(HRTIMTimer timer, HRTIMEvent set, HRTIMEvent reset) {
     hrtim_timer(timer).SETx1R = static_cast<uint32_t>(set);
     hrtim_timer(timer).RSTx1R = static_cast<uint32_t>(reset);
