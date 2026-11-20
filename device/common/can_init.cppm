@@ -83,7 +83,7 @@ inline constexpr uint32_t CCCR_INIT = 1u << 0, CCCR_CCE = 1u << 1, CCCR_FDOE = 1
 inline constexpr uint32_t NBTP_NTSEG2_Pos = 0, NBTP_NTSEG1_Pos = 8, NBTP_NBRP_Pos = 16, NBTP_NSJW_Pos = 25;
 inline constexpr uint32_t DBTP_DSJW_Pos = 0, DBTP_DTSEG2_Pos = 4, DBTP_DTSEG1_Pos = 8, DBTP_DBRP_Pos = 16, DBTP_TDC = 1u << 23;
 inline constexpr uint32_t TDCR_TDCF_Pos = 0, TDCR_TDCO_Pos = 8;
-inline constexpr uint32_t RXGFC_RRFE = 1u << 0, RXGFC_ANFE = 1u << 2, RXGFC_ANFS = 1u << 4;
+inline constexpr uint32_t RXGFC_RRFE = 1u << 0, RXGFC_RRFS = 1u << 1, RXGFC_ANFE = 1u << 2, RXGFC_ANFS = 1u << 4;
 inline constexpr uint32_t RXGFC_ANFE_REJECT = 3u << 2, RXGFC_ANFS_REJECT = 3u << 4, RXGFC_LSS_Pos = 16;
 inline constexpr uint32_t FILTER_CLASSIC = 2u << 30, FILTER_FIFO_Pos = 27, FILTER_ID_Pos = 16, FILTER_MASK_ALL = 0x7FF;
 inline constexpr uint32_t RXFS_FILL_Msk = 0xF, RXFS_GET_Pos = 8, RX_STDID_Pos = 18, RX_DLC_Pos = 16, RX_RXTS_Msk = 0xFFFF;
@@ -160,7 +160,8 @@ inline void init_can() {
 
     static_assert(c.standard_filter_count <= 28, "there are 28 standard id filters");
     regs.RXGFC = static_cast<uint32_t>(c.standard_filter_count) << RXGFC_LSS_Pos |
-        RXGFC_ANFS_REJECT | RXGFC_ANFE_REJECT | RXGFC_RRFE;   // frames that match no filter are rejected
+        RXGFC_ANFS_REJECT | RXGFC_ANFE_REJECT |           // frames that match no filter are rejected,
+        RXGFC_RRFS | RXGFC_RRFE;                          // and remote frames: they have a length and no data
     regs.TXBC = 0;                                        // tx fifo
     if constexpr (c.timestamp != CANTimestamp::NONE) {
         static_assert(c.timestamp_bit_times >= 1 && c.timestamp_bit_times <= 16, "1 to 16 bit times per count");
@@ -231,6 +232,10 @@ inline uint32_t can_interrupt_flags() {
 // extended; the payload type fixes the length at compile time (<= 64 bytes,
 // lengths above 8 are padded to the next FD size). Returns false if the tx
 // fifo is full.
+// One writer at a time per instance: between the look for a free slot and the
+// request to send it, a second can_write would take the same slot. Where an
+// interrupt writes too, the others mask it for their call. The same holds
+// for can_interrupt_enable and can_interrupt_disable, which read and write IE.
 template<const CANInit c, bool extended = false, typename T>
 inline bool can_write(uint32_t id, const T& payload) {
     using namespace can_bit;
@@ -286,12 +291,15 @@ inline int can_read(int fifo, uint32_t& id, void* data, uint16_t* timestamp = nu
     const uint32_t status = fifo == 0 ? regs.RXF0S : regs.RXF1S;
     if ((status & RXFS_FILL_Msk) == 0) return -1;
     const uint32_t index = (status >> RXFS_GET_Pos) & 3;
-    const uint32_t* element = fifo == 0 ? can_ram(c.instance).rx_fifo0[index] : can_ram(c.instance).rx_fifo1[index];
+    // The message ram wants word reads. Volatile, or the compiler is free to
+    // make the loop and the copy after it one copy by bytes, as on the tx side.
+    const volatile uint32_t* element = fifo == 0 ? can_ram(c.instance).rx_fifo0[index] : can_ram(c.instance).rx_fifo1[index];
+    const uint32_t header = element[1];
     id = (element[0] >> RX_STDID_Pos) & 0x7FF;
-    const uint32_t length = can_dlc_length((element[1] >> RX_DLC_Pos) & 0xF);
-    if (timestamp != nullptr) *timestamp = static_cast<uint16_t>(element[1] & RX_RXTS_Msk);
+    const uint32_t length = can_dlc_length((header >> RX_DLC_Pos) & 0xF);
+    if (timestamp != nullptr) *timestamp = static_cast<uint16_t>(header & RX_RXTS_Msk);
     uint32_t w[16];
-    for (uint32_t i = 0; i < (length + 3) / 4; i++) w[i] = element[2 + i];   // message ram wants word reads
+    for (uint32_t i = 0; i < (length + 3) / 4; i++) w[i] = element[2 + i];
     std::memcpy(data, w, length);
     if (fifo == 0) regs.RXF0A = index;
     else regs.RXF1A = index;
