@@ -66,7 +66,6 @@ inline uint32_t flash_erase_page(uint32_t address) {
     FLASH->SR = flash_error_mask | FLASH_SR_EOP;       // flags of earlier operations
     const uint32_t select = flash_dual_bank() ?
         (page & 0x7F) << FLASH_CR_PNB_Pos | (page & 0x80 ? FLASH_CR_BKER : 0) : page << FLASH_CR_PNB_Pos;
-    FLASH->CR = FLASH_CR_EOPIE | FLASH_CR_PER | select;
     FLASH->CR = FLASH_CR_EOPIE | FLASH_CR_PER | select | FLASH_CR_STRT;
     while (FLASH->SR & FLASH_SR_BSY);
     const uint32_t result = flash_result();

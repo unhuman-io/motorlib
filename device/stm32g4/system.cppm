@@ -35,14 +35,15 @@ inline void watchdog_kick() {
 }
 
 // The bootloader stays in control after a software reset if it finds this
-// value in its flag, the first word of the ram. The linker script
-// (stm32g474.ld) keeps that word free: no variable of the application or of
-// the bootloader is there.
-inline constexpr uint32_t bootloader_flag_address = 0x20000000;
+// value in its flag: _bootloader_flag of the linker script (stm32g474.ld),
+// the first word of the ram, which is kept free of the application's and the
+// bootloader's variables.
+extern "C" volatile uint32_t _bootloader_flag;
 inline constexpr uint32_t bootloader_flag_value = 0xB007;
+inline volatile uint32_t& bootloader_flag() { return _bootloader_flag; }
 
 [[noreturn]] inline void system_reset_to_bootloader() {
-    *reinterpret_cast<volatile uint32_t*>(bootloader_flag_address) = bootloader_flag_value;
+    bootloader_flag() = bootloader_flag_value;
     system_reset();
 }
 
