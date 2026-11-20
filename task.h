@@ -14,6 +14,7 @@ private:
     struct Sleeper {
         std::coroutine_handle<> handle = nullptr;
         uint32_t target_time = 0; // Unified absolute target
+        bool (*ready)() = nullptr; // instead of the time: woken when this returns true
     };
 
     static constexpr size_t MAX_TASKS = 8;
@@ -26,9 +27,10 @@ public:
         for (auto& s : sleepers) {
             if (s.handle != nullptr) {
                 // Safe 32-bit wrap-around comparison for absolute deadlines
-                if ((int32_t)(now - s.target_time) >= 0) {
+                if (s.ready != nullptr ? s.ready() : (int32_t)(now - s.target_time) >= 0) {
                     auto h = s.handle;
                     s.handle = nullptr; // Clear slot
+                    s.ready = nullptr;
                     h.resume();         // Jump back to coroutine
                 }
             }
@@ -49,6 +51,7 @@ public:
                 for (auto& s : sched.sleepers) {
                     if (s.handle == nullptr) {
                         s.target_time = target_time;
+                        s.ready = nullptr;
                         s.handle = h;
                         return; // Success
                     }
@@ -81,6 +84,7 @@ public:
                     if (s.handle == nullptr) {
                         // Set target time to current time so it wakes up instantly on the next poll
                         s.target_time = get_clock(); 
+                        s.ready = nullptr;
                         s.handle = h;
                         return;
                     }
@@ -91,6 +95,32 @@ public:
         };
 
         return YieldAwaiter{ *this };
+    }
+
+    // Wait for a condition: ready() is asked once here and then on every pass
+    // of the loop, and the task goes on from the call that returns true. It may
+    // take what it reports, as a try_lock does: no other task runs in between.
+    auto when(bool (*ready)()) {
+        struct WhenAwaiter {
+            CycleScheduler& sched;
+            bool (*ready)();
+
+            bool await_ready() const { return ready(); }
+
+            void await_suspend(std::coroutine_handle<> h) {
+                for (auto& s : sched.sleepers) {
+                    if (s.handle == nullptr) {
+                        s.ready = ready;
+                        s.handle = h;
+                        return;
+                    }
+                }
+                while(1); // Trap: Scheduler queue full!
+            }
+            void await_resume() {}
+        };
+
+        return WhenAwaiter{ *this, ready };
     }
 };
 
@@ -223,7 +253,10 @@ struct [[nodiscard]] GlobalTask : public Task<T, false> {
         }
 
         // 3. Allocator goes HERE, inside the promise_type
+        [[gnu::used]] static inline volatile std::size_t frame_size = 0;   // what the compiler made of it, for choosing size
+
         void* operator new(std::size_t size_desired) {
+            frame_size = size_desired;
             if (size_desired > size) {
                 while(1); // Frame too large
             }
@@ -243,4 +276,78 @@ struct [[nodiscard]] GlobalTask : public Task<T, false> {
     // 4. Constructor safely casts the derived handle to the base handle expected by Task<T>
     explicit GlobalTask(std::coroutine_handle<promise_type> h)
         : Task<T, false>(std::coroutine_handle<typename Task<T, false>::promise_type>::from_address(h.address())) {}
+};
+
+// A GlobalTask that is called: `co_await f(sched)`, any number of times, one at
+// a time. Its frame is the same static storage and is given back when the
+// caller has the result, where a GlobalTask keeps it for good. Only for that
+// use: the result is gone with the co_await, and a second call before the
+// first is through is the "already active" trap.
+template <typename T = void, int instance_id = 0, int size = 64>
+struct [[nodiscard]] GlobalCall : public Task<T, false> {
+    struct promise_type : public Task<T, false>::promise_type {
+        alignas(std::max_align_t) static inline std::byte global_frame[size];
+        static inline bool is_in_use = false;
+
+        GlobalCall get_return_object() {
+            return GlobalCall{std::coroutine_handle<promise_type>::from_promise(*this)};
+        }
+
+        [[gnu::used]] static inline volatile std::size_t frame_size = 0;   // what the compiler made of it, for choosing size
+
+        void* operator new(std::size_t size_desired) {
+            frame_size = size_desired;
+            if (size_desired > size) {
+                while(1); // Frame too large
+            }
+            if (is_in_use) {
+                while(1); // Coroutine already active
+            }
+            is_in_use = true;
+            return global_frame;
+        }
+
+        void operator delete(void*, std::size_t) {
+            is_in_use = false;
+        }
+    };
+
+    explicit GlobalCall(std::coroutine_handle<promise_type> h)
+        : Task<T, false>(std::coroutine_handle<typename Task<T, false>::promise_type>::from_address(h.address())), own_(h) {}
+
+    auto operator co_await() const noexcept {
+        struct CallAwaiter {
+            std::coroutine_handle<promise_type> child_;
+
+            bool await_ready() const noexcept { return child_.done(); }
+            void await_suspend(std::coroutine_handle<> parent) noexcept {
+                child_.promise().continuation_ = parent;
+            }
+            T await_resume() {
+                if constexpr (std::is_same_v<T, void>) {
+                    child_.destroy();
+                } else {
+                    T value = child_.promise().value_;
+                    child_.destroy();
+                    return value;
+                }
+            }
+        };
+        return CallAwaiter{own_};
+    }
+
+    // The same for code that is no coroutine and has waited for is_done() in
+    // some other way: the result, and the frame is free
+    T result() {
+        if constexpr (std::is_same_v<T, void>) {
+            own_.destroy();
+        } else {
+            T value = own_.promise().value_;
+            own_.destroy();
+            return value;
+        }
+    }
+
+ private:
+    std::coroutine_handle<promise_type> own_;
 };
