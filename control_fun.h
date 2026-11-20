@@ -283,10 +283,27 @@ private:
     template <typename T> friend class SystemBase;
 };
 
+// Follows its input by at most the limit per step
 class RateLimiter {
  public:
     void set_limit(float limit) { limit_ = (limit == 0 ? INFINITY : limit); }
-    void init(float value, float velocity = 0) { last_value_ = value; velocity_ = velocity;}
+    void init(float value) { last_value_ = value; }
+    float step(float value) {
+        last_value_ = fsat2(value, last_value_ - limit_, last_value_ + limit_);
+        return last_value_;
+    }
+    float get_limit() const { return limit_; }
+    float get_value() const { return last_value_; }
+ protected:
+    float limit_ = INFINITY;
+    float last_value_ = 0;
+};
+
+// The same with the step it took as its velocity, per step: the limit, with
+// its sign, while it is limiting
+class RateLimiterVelocity : public RateLimiter {
+ public:
+    void init(float value, float velocity = 0) { last_value_ = value; velocity_ = velocity; }
     float step(float value) {
         float out_value = value;
         if (value > (last_value_ + limit_)) {
@@ -303,13 +320,9 @@ class RateLimiter {
         last_value_ = out_value;
         return out_value;
     }
-    float get_limit() const { return limit_; }
-    float get_value() const { return last_value_; }
     float get_velocity() const { return velocity_; }
  private:
-    float limit_ = INFINITY;
     float velocity_ = 0;
-    float last_value_ = 0;
 };
 
 class PIDController {
@@ -334,7 +347,7 @@ protected:
     float dt_;
     float rollover_ = 0;
     Hysteresis hysteresis_;
-    RateLimiter rate_limit_;
+    RateLimiterVelocity rate_limit_;
 
 
     template <typename T> friend class SystemBase;
