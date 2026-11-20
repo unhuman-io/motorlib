@@ -21,11 +21,12 @@ function(add_device_target name arch ld include_dir)
         -T${ld}
     )
     set_target_properties(${name} PROPERTIES INTERFACE_LINK_DEPENDS ${ld})
+    get_filename_component(drivers_dir ${CMAKE_CURRENT_LIST_DIR}/../drivers ABSOLUTE)   # no ".." left in it: cmake 3.28 needs that
     target_sources(${name} PUBLIC
         FILE_SET CXX_MODULES
-        BASE_DIRS ${CMAKE_CURRENT_LIST_DIR} ${CMAKE_CURRENT_LIST_DIR}/../drivers
+        BASE_DIRS ${CMAKE_CURRENT_LIST_DIR} ${drivers_dir}
         FILES ${ARGN} common/hrtim_init.cppm common/can_init.cppm common/adc_init.cppm common/dac_init.cppm common/opamp_init.cppm common/irq_init.cppm common/tim_init.cppm
-            ${CMAKE_CURRENT_LIST_DIR}/../drivers/drv8323.cppm
+            ${drivers_dir}/drv8323.cppm
     )
 endfunction()
 
