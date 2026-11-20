@@ -66,7 +66,7 @@ int main() {
 
     check_num_elements(0);
 
-    for (int i=0; i<500; i++) {
+    for (int i = 0; i < 500; i++) {
         logger.log(std::to_string(i));
         std::cout << "num_elements: " << logger.num_elements_to_read() << std::endl;
     }
@@ -77,10 +77,10 @@ int main() {
     std::cout << "int1: " << int1 << std::endl;
     std::cout << "num_elements: " << logger.num_elements_to_read() << std::endl;
     uint32_t num = logger.num_elements_to_read();
-    for (int i=0; i<num; i++) {
+    for (int i = 0; i < num; i++) {
         //std::string int2 = logger.get_log();
         //std::cout << "int2: " << int2 << std::endl;
-        check_str(std::to_string(i+val_start+1));
+        check_str(std::to_string(i + val_start + 1));
     }
     check_num_elements(0);
 
@@ -89,8 +89,8 @@ int main() {
     std::cout << logger.get_log() << std::endl;
     std::cout << "num_elements: " << logger.num_elements_to_read() << ", num: " << num << std::endl;
     assert(logger.num_elements_to_read() == num);
-    for (int i=0; i<num; i++) {
-        check_str(std::to_string(i+val_start+1));
+    for (int i = 0; i < num; i++) {
+        check_str(std::to_string(i + val_start + 1));
     }
 
 

@@ -11,13 +11,13 @@
 #include "../interrupts.h"
 
 #ifdef SCOPE_DEBUG
-#define SET_SCOPE_PIN(X,x) GPIO##X->BSRR = 1 << x
-#define CLEAR_SCOPE_PIN(X,x) GPIO##X->BSRR = 1 << (16 + x)
-#define TOGGLE_SCOPE_PIN(X,x) GPIO##X->ODR ^= 1 << x
+#define SET_SCOPE_PIN(X, x)    GPIO##X->BSRR = 1 << x
+#define CLEAR_SCOPE_PIN(X, x)  GPIO##X->BSRR = 1 << (16 + x)
+#define TOGGLE_SCOPE_PIN(X, x) GPIO##X->ODR ^= 1 << x
 #else
-#define SET_SCOPE_PIN(X,x)
-#define CLEAR_SCOPE_PIN(X,x)
-#define TOGGLE_SCOPE_PIN(X,x)
+#define SET_SCOPE_PIN(X, x)
+#define CLEAR_SCOPE_PIN(X, x)
+#define TOGGLE_SCOPE_PIN(X, x)
 #endif
 
 #include "../communication.h"
@@ -25,61 +25,61 @@
 #include "../peripheral/stm32g4/spi_slave_figure.h"
 #include "../spi_communication_obot.h"
 
-#define COMMS_USB   1
-#define COMMS_SPI   2
-#define COMMS_UART  3
-#define COMMS_CAN   4
+#define COMMS_USB     1
+#define COMMS_SPI     2
+#define COMMS_UART    3
+#define COMMS_CAN     4
 #define COMMS_CAN_USB 5
 
 #ifndef COMMS
-  #error "COMMS should be defined"
+#error "COMMS should be defined"
 #endif
 
 #if (COMMS != COMMS_USB) && (COMMS != COMMS_SPI) && (COMMS != COMMS_UART) && (COMMS != COMMS_CAN) && (COMMS != COMMS_CAN_USB)
-  #error "Invalid COMMS value"
+#error "Invalid COMMS value"
 #endif
 
-const Param * const param = (const Param * const) 0x8060000;
-const Calibration * const calibration = (const Calibration * const) 0x8070000;
-extern const char * const name = param->name;
+const Param* const param = (const Param* const)0x8060000;
+const Calibration* const calibration = (const Calibration* const)0x8070000;
+extern const char* const name = param->name;
 namespace config {
-    const uint32_t system_loop_frequency =  1000;
+const uint32_t system_loop_frequency = 1000;
 };
 
 using PWM = HRPWM;
 
 #if COMMS == COMMS_USB
-    using Communication = USBCommunication;
+using Communication = USBCommunication;
 #endif
 
 #if (COMMS == COMMS_SPI)
-    #include <protocol_parser.h>
-    using Communication = SPICommunication;
+#include <protocol_parser.h>
+using Communication = SPICommunication;
 #endif
 
 #if (COMMS == COMMS_UART)
 #ifdef COMMS_UART_OBOT
-    #include <protocol_parser.h>
-    #include "../uart_communication_obot.h"
+#include <protocol_parser.h>
+#include "../uart_communication_obot.h"
 #else
-    #include "../uart_communication_protocol.h"
-    using UARTCommunicationProtocol = UARTRawProtocol<>; 
-    #include "../uart_communication.h"
+#include "../uart_communication_protocol.h"
+using UARTCommunicationProtocol = UARTRawProtocol<>;
+#include "../uart_communication.h"
 #endif
-    using Communication = UARTCommunication;
+using Communication = UARTCommunication;
 #endif
 
 #if (COMMS == COMMS_CAN)
-    #include "../communication/can_communication.h"
-    #include "../peripheral/stm32g4/can.h"
-    using Communication = CANCommunication<CAN>;
+#include "../communication/can_communication.h"
+#include "../peripheral/stm32g4/can.h"
+using Communication = CANCommunication<CAN>;
 #endif
 
 #if (COMMS == COMMS_CAN_USB)
-    #include "../communication/multi_communication.h"
-    #include "../peripheral/stm32g4/can.h"
-    #include "../communication/can_communication.h"
-    using Communication = MultiCommunication<CANCommunication<CAN>, USBCommunication>;
+#include "../communication/multi_communication.h"
+#include "../peripheral/stm32g4/can.h"
+#include "../communication/can_communication.h"
+using Communication = MultiCommunication<CANCommunication<CAN>, USBCommunication>;
 #endif
 
 using Driver = DRV8323S;
@@ -149,237 +149,237 @@ extern "C" void board_init() {
 using System = SystemBase<Actuator<FastLoop<config::pwm_frequency>, MainLoop<config::main_loop_frequency, FastLoop<config::pwm_frequency>>>>;
 
 namespace config {
-    static_assert(((double) CPU_FREQUENCY_HZ * 8 / 2) / pwm_frequency < 65535);    // check pwm frequency
-    DRV8323S drv(*SPI1, SPIDMA::spi_pause[SPIDMA::SP1]);
+static_assert(((double)CPU_FREQUENCY_HZ * 8 / 2) / pwm_frequency < 65535);    // check pwm frequency
+DRV8323S drv(*SPI1, SPIDMA::spi_pause[SPIDMA::SP1]);
 
-    TempSensor temp_sensor;
-    I2C_DMA i2c1(*I2C1, *DMA1_Channel7, *DMA1_Channel8, 400);
-    
-    // has_max31875
-    MAX31875 board_temperature_max31875(i2c1);
+TempSensor temp_sensor;
+I2C_DMA i2c1(*I2C1, *DMA1_Channel7, *DMA1_Channel8, 400);
 
-    // has_max31889
-    MAX31889 board_temperature_max31889(i2c1);
+// has_max31875
+MAX31875 board_temperature_max31875(i2c1);
 
-    // has_bridge_thermistors
-    NTC temp_bridge(TSENSE);
-    NTC temp_bridge2(TSENSE2);
+// has_max31889
+MAX31889 board_temperature_max31889(i2c1);
 
-    // has_bmi270
-    GPIO imu_cs(*GPIOC, 4, GPIO::OUTPUT);
-    SPIDMA spi1_dma_bmi270(SPIDMA::SP1, imu_cs, DMA1_CH3, DMA1_CH4, 1000, 40, 40,
-        SPI_CR1_MSTR | (4 << SPI_CR1_BR_Pos) | SPI_CR1_SSI | SPI_CR1_SSM);    // baud = clock/32
-    BMI270 imu(spi1_dma_bmi270);
+// has_bridge_thermistors
+NTC temp_bridge(TSENSE);
+NTC temp_bridge2(TSENSE2);
 
-    // has_mb85rc64
-    MB85RC64 mb85rc64(i2c1, 4);
-    StandardMB85RC64 fram(mb85rc64);
+// has_bmi270
+GPIO imu_cs(*GPIOC, 4, GPIO::OUTPUT);
+SPIDMA spi1_dma_bmi270(SPIDMA::SP1, imu_cs, DMA1_CH3, DMA1_CH4, 1000, 40, 40,
+                       SPI_CR1_MSTR | (4 << SPI_CR1_BR_Pos) | SPI_CR1_SSI | SPI_CR1_SSM);    // baud = clock/32
+BMI270 imu(spi1_dma_bmi270);
 
-    Flash flash(*FLASH);
+// has_mb85rc64
+MB85RC64 mb85rc64(i2c1, 4);
+StandardMB85RC64 fram(mb85rc64);
 
-    const BoardRev board_rev = get_board_rev();
+Flash flash(*FLASH);
+
+const BoardRev board_rev = get_board_rev();
 
 #if COMMS == COMMS_SPI
- SpiSlaveFigure spi({
-      .spi          = SPI1,
-      .gpioPort     = GPIOA,
-      .gpioPinSs    = 4U,
-      .gpioPinSck   = 5U,
-      .gpioPinMosi  = 7U,
-      .gpioPinMiso  = 6U,
+SpiSlaveFigure spi({
+    .spi = SPI1,
+    .gpioPort = GPIOA,
+    .gpioPinSs = 4U,
+    .gpioPinSck = 5U,
+    .gpioPinMosi = 7U,
+    .gpioPinMiso = 6U,
 
-      .gpioAlternateFunction = 5U,
+    .gpioAlternateFunction = 5U,
 
-      .gpioRccEnableRegister = &RCC->AHB2ENR,
-      .gpioRccEnableBit      = RCC_AHB2ENR_GPIOAEN_Pos,
-      .spiRccEnableRegister = &RCC->APB2ENR,
-      .spiRccEnableBit      = RCC_APB2ENR_SPI1EN_Pos,
-      .spiRccResetRegister  = &RCC->APB2RSTR,
-      .spiRccResetBit       = RCC_APB2RSTR_SPI1RST_Pos,
+    .gpioRccEnableRegister = &RCC->AHB2ENR,
+    .gpioRccEnableBit = RCC_AHB2ENR_GPIOAEN_Pos,
+    .spiRccEnableRegister = &RCC->APB2ENR,
+    .spiRccEnableBit = RCC_APB2ENR_SPI1EN_Pos,
+    .spiRccResetRegister = &RCC->APB2RSTR,
+    .spiRccResetBit = RCC_APB2RSTR_SPI1RST_Pos,
 
-      .rxDma            = DMA2,
-      .rxDmaIfcrCgif    = DMA_IFCR_CGIF1,
-      .rxDmaChannel     = DMA2_Channel1,
-      .rxDmaMuxChannel  = DMAMUX1_Channel8,
-      .rxDmaMuxId       = 10U,
-      .rxDmaIrqN        = DMA2_Channel1_IRQn,
-      .rxDmaIrqPriority = 1U,
+    .rxDma = DMA2,
+    .rxDmaIfcrCgif = DMA_IFCR_CGIF1,
+    .rxDmaChannel = DMA2_Channel1,
+    .rxDmaMuxChannel = DMAMUX1_Channel8,
+    .rxDmaMuxId = 10U,
+    .rxDmaIrqN = DMA2_Channel1_IRQn,
+    .rxDmaIrqPriority = 1U,
 
-      .txDma            = DMA2,
-      .txDmaIfcrCgif    = DMA_IFCR_CGIF2,
-      .txDmaChannel     = DMA2_Channel2,
-      .txDmaMuxChannel  = DMAMUX1_Channel9,
-      .txDmaMuxId       = 11U,
-      .txDmaIrqN        = DMA2_Channel2_IRQn,
-      .txDmaIrqPriority = 5U,
-    });
+    .txDma = DMA2,
+    .txDmaIfcrCgif = DMA_IFCR_CGIF2,
+    .txDmaChannel = DMA2_Channel2,
+    .txDmaMuxChannel = DMAMUX1_Channel9,
+    .txDmaMuxId = 11U,
+    .txDmaIrqN = DMA2_Channel2_IRQn,
+    .txDmaIrqPriority = 5U,
+});
 #endif // COMMS_SPI
 
 #if COMMS == COMMS_UART
 #if COMMS_UART_NUMBER == 2
-    Uart uart({
-      .usart        = USART2,
-      .gpioPort     = GPIOA,
-      .gpioPinTx    = 2U,
-      .gpioPinRx    = 3U,
+Uart uart({
+    .usart = USART2,
+    .gpioPort = GPIOA,
+    .gpioPinTx = 2U,
+    .gpioPinRx = 3U,
 
-      .gpioAlternateFunction = 7U,
+    .gpioAlternateFunction = 7U,
 
-      .gpioRccEnableRegister = &RCC->AHB2ENR,
-      .gpioRccEnableBit      = RCC_AHB2ENR_GPIOAEN_Pos,
-      .uartRccEnableRegister  = &RCC->APB1ENR1,
-      .uartRccEnableBit       = RCC_APB1ENR1_USART2EN_Pos,
-      .uartRccResetRegister   = &RCC->APB1RSTR1,
-      .uartRccResetBit        = RCC_APB1RSTR1_USART2RST_Pos,
+    .gpioRccEnableRegister = &RCC->AHB2ENR,
+    .gpioRccEnableBit = RCC_AHB2ENR_GPIOAEN_Pos,
+    .uartRccEnableRegister = &RCC->APB1ENR1,
+    .uartRccEnableBit = RCC_APB1ENR1_USART2EN_Pos,
+    .uartRccResetRegister = &RCC->APB1RSTR1,
+    .uartRccResetBit = RCC_APB1RSTR1_USART2RST_Pos,
 
-      .uartIrqN               = USART2_IRQn,
+    .uartIrqN = USART2_IRQn,
 
-      .rxDma            = DMA2,
-      .rxDmaIfcrCgif    = DMA_IFCR_CGIF3,
-      .rxDmaChannel     = DMA2_Channel1,
-      .rxDmaMuxChannel  = DMAMUX1_Channel8,
-      .rxDmaMuxId       = 26U,
-      .rxDmaIrqN        = DMA2_Channel1_IRQn,
+    .rxDma = DMA2,
+    .rxDmaIfcrCgif = DMA_IFCR_CGIF3,
+    .rxDmaChannel = DMA2_Channel1,
+    .rxDmaMuxChannel = DMAMUX1_Channel8,
+    .rxDmaMuxId = 26U,
+    .rxDmaIrqN = DMA2_Channel1_IRQn,
 
-      .txDma            = DMA2,
-      .txDmaIfcrCgif    = DMA_IFCR_CGIF4,
-      .txDmaChannel     = DMA2_Channel2,
-      .txDmaMuxChannel  = DMAMUX1_Channel9,
-      .txDmaMuxId       = 27U,
-      .txDmaIrqN        = DMA2_Channel2_IRQn,
+    .txDma = DMA2,
+    .txDmaIfcrCgif = DMA_IFCR_CGIF4,
+    .txDmaChannel = DMA2_Channel2,
+    .txDmaMuxChannel = DMAMUX1_Channel9,
+    .txDmaMuxId = 27U,
+    .txDmaIrqN = DMA2_Channel2_IRQn,
 
-      .irqPriority = 2U,
+    .irqPriority = 2U,
 
-      .brrValue         = (uint32_t)((CPU_FREQUENCY_HZ + COMMS_UART_BAUDRATE/2)/ COMMS_UART_BAUDRATE)   // rounding
-    });
+    .brrValue = (uint32_t)((CPU_FREQUENCY_HZ + COMMS_UART_BAUDRATE / 2) / COMMS_UART_BAUDRATE)   // rounding
+});
 #else // default usart1
-    Uart uart({
-      .usart        = USART1,
-      .gpioPort     = GPIOA,
-      .gpioPinTx    = 9U,
-      .gpioPinRx    = 10U,
+Uart uart({
+    .usart = USART1,
+    .gpioPort = GPIOA,
+    .gpioPinTx = 9U,
+    .gpioPinRx = 10U,
 
-      .gpioAlternateFunction = 7U,
+    .gpioAlternateFunction = 7U,
 
-      .gpioRccEnableRegister = &RCC->AHB2ENR,
-      .gpioRccEnableBit      = RCC_AHB2ENR_GPIOAEN_Pos,
-      .uartRccEnableRegister  = &RCC->APB2ENR,
-      .uartRccEnableBit       = RCC_APB2ENR_USART1EN_Pos,
-      .uartRccResetRegister   = &RCC->APB2RSTR,
-      .uartRccResetBit        = RCC_APB2RSTR_USART1RST_Pos,
+    .gpioRccEnableRegister = &RCC->AHB2ENR,
+    .gpioRccEnableBit = RCC_AHB2ENR_GPIOAEN_Pos,
+    .uartRccEnableRegister = &RCC->APB2ENR,
+    .uartRccEnableBit = RCC_APB2ENR_USART1EN_Pos,
+    .uartRccResetRegister = &RCC->APB2RSTR,
+    .uartRccResetBit = RCC_APB2RSTR_USART1RST_Pos,
 
-      .uartIrqN               = USART1_IRQn,
+    .uartIrqN = USART1_IRQn,
 
-      .rxDma            = DMA2,
-      .rxDmaIfcrCgif    = DMA_IFCR_CGIF3,
-      .rxDmaChannel     = DMA2_Channel1,
-      .rxDmaMuxChannel  = DMAMUX1_Channel8,
-      .rxDmaMuxId       = 24U,
-      .rxDmaIrqN        = DMA2_Channel1_IRQn,
+    .rxDma = DMA2,
+    .rxDmaIfcrCgif = DMA_IFCR_CGIF3,
+    .rxDmaChannel = DMA2_Channel1,
+    .rxDmaMuxChannel = DMAMUX1_Channel8,
+    .rxDmaMuxId = 24U,
+    .rxDmaIrqN = DMA2_Channel1_IRQn,
 
-      .txDma            = DMA2,
-      .txDmaIfcrCgif    = DMA_IFCR_CGIF4,
-      .txDmaChannel     = DMA2_Channel2,
-      .txDmaMuxChannel  = DMAMUX1_Channel9,
-      .txDmaMuxId       = 25U,
-      .txDmaIrqN        = DMA2_Channel2_IRQn,
+    .txDma = DMA2,
+    .txDmaIfcrCgif = DMA_IFCR_CGIF4,
+    .txDmaChannel = DMA2_Channel2,
+    .txDmaMuxChannel = DMAMUX1_Channel9,
+    .txDmaMuxId = 25U,
+    .txDmaIrqN = DMA2_Channel2_IRQn,
 
-      .irqPriority = 2U,
+    .irqPriority = 2U,
 
-      .brrValue         = (uint32_t)((CPU_FREQUENCY_HZ + COMMS_UART_BAUDRATE/2)/ COMMS_UART_BAUDRATE)   // rounding
-    });
+    .brrValue = (uint32_t)((CPU_FREQUENCY_HZ + COMMS_UART_BAUDRATE / 2) / COMMS_UART_BAUDRATE)   // rounding
+});
 #endif // COMMS_UART_NUMBER
 #ifdef COMMS_UART_OBOT
-    figure::ProtocolParser uart_protocol(config::uart.rx_buffer_, RX_BUFFER_SIZE);
+figure::ProtocolParser uart_protocol(config::uart.rx_buffer_, RX_BUFFER_SIZE);
 #else
-    UARTCommunicationProtocol uart_protocol; 
+UARTCommunicationProtocol uart_protocol;
 #endif
 #endif // COMMS_UART
 
 #if (COMMS == COMMS_CAN) || (COMMS == COMMS_CAN_USB)
 #ifdef CAN_ARB_DATA_RATE
-    CAN can(CAN_NUM, CAN_ARB_DATA_RATE);
+CAN can(CAN_NUM, CAN_ARB_DATA_RATE);
 #else
-    CAN can(CAN_NUM);
+CAN can(CAN_NUM);
 #endif
 #endif
 
 #if COMMS == COMMS_SPI
-    figure::ProtocolParser spi_protocol(config::spi.rx_buffer_, RX_BUFFER_SIZE);
+figure::ProtocolParser spi_protocol(config::spi.rx_buffer_, RX_BUFFER_SIZE);
 #endif
 
-    HRPWM motor_pwm = {pwm_frequency, *HRTIM1, 3, 5, 4, false, 50, 1000, 1000};
-    USB1 usb;
-    FastLoop<pwm_frequency> fast_loop = {motor_pwm, motor_encoder, param->fast_loop_param, *calibration, &I_A_DR, &I_B_DR, &I_C_DR, &V_BUS_DR};
+HRPWM motor_pwm = {pwm_frequency, *HRTIM1, 3, 5, 4, false, 50, 1000, 1000};
+USB1 usb;
+FastLoop<pwm_frequency> fast_loop = {motor_pwm, motor_encoder, param->fast_loop_param, *calibration, &I_A_DR, &I_B_DR, &I_C_DR, &V_BUS_DR};
 
 
-    LED led = {const_cast<uint16_t*>(reinterpret_cast<volatile uint16_t *>(get_board_pins(board_rev).led_tim_r)), 
-               const_cast<uint16_t*>(reinterpret_cast<volatile uint16_t *>(get_board_pins(board_rev).led_tim_g)),
-               const_cast<uint16_t*>(reinterpret_cast<volatile uint16_t *>(get_board_pins(board_rev).led_tim_b)),
-               config::main_loop_frequency};
-    volatile uint32_t &V5V_DR = *get_board_pins(board_rev).v5v_dr;
+LED led = {const_cast<uint16_t*>(reinterpret_cast<volatile uint16_t*>(get_board_pins(board_rev).led_tim_r)),
+           const_cast<uint16_t*>(reinterpret_cast<volatile uint16_t*>(get_board_pins(board_rev).led_tim_g)),
+           const_cast<uint16_t*>(reinterpret_cast<volatile uint16_t*>(get_board_pins(board_rev).led_tim_b)),
+           config::main_loop_frequency};
+volatile uint32_t& V5V_DR = *get_board_pins(board_rev).v5v_dr;
 #ifndef POSITION_CONTROLLER_OVERRIDE
-    PositionController position_controller = {(float) (1.0/main_loop_frequency)};
+PositionController position_controller = {(float)(1.0 / main_loop_frequency)};
 #endif
 #ifndef TORQUE_CONTROLLER_OVERRIDE
-    TorqueController torque_controller = {(float) (1.0/main_loop_frequency)};
+TorqueController torque_controller = {(float)(1.0 / main_loop_frequency)};
 #endif
 #ifndef IMPEDANCE_CONTROLLER_OVERRIDE
-    ImpedanceController impedance_controller = {(float) (1.0/main_loop_frequency)};
+ImpedanceController impedance_controller = {(float)(1.0 / main_loop_frequency)};
 #endif
 #ifndef VELOCITY_CONTROLLER_OVERRIDE
-    VelocityController velocity_controller = {(float) (1.0/main_loop_frequency)};
+VelocityController velocity_controller = {(float)(1.0 / main_loop_frequency)};
 #endif
 #ifndef STATE_CONTROLLER_OVERRIDE
-    StateController state_controller = {(float) (1.0/main_loop_frequency)};
+StateController state_controller = {(float)(1.0 / main_loop_frequency)};
 #endif
 #ifndef JOINT_POSITION_CONTROLLER_OVERRIDE
-    JointPositionController joint_position_controller(1.0/main_loop_frequency);
+JointPositionController joint_position_controller(1.0 / main_loop_frequency);
 #endif
 #ifndef ADMITTANCE_CONTROLLER_OVERRIDE
-    AdmittanceController admittance_controller = {1.0/main_loop_frequency};
+AdmittanceController admittance_controller = {1.0 / main_loop_frequency};
 #endif
 };
 #if COMMS == COMMS_USB
-template<>
+template <>
 Communication System::communication_ = {config::usb};
 #endif
 
 #if (COMMS == COMMS_SPI)
-template<>
+template <>
 Communication System::communication_(config::spi, config::spi_protocol);
 #endif
 
 #if (COMMS == COMMS_UART)
-template<>
+template <>
 Communication System::communication_(config::uart, config::uart_protocol);
 extern "C" void PendSV_Handler(void) {
-  SET_SCOPE_PIN(C,2);
-  System::communication_.parse();
-  CLEAR_SCOPE_PIN(C,2);
+    SET_SCOPE_PIN(C, 2);
+    System::communication_.parse();
+    CLEAR_SCOPE_PIN(C, 2);
 }
 #endif
 
 #if (COMMS == COMMS_CAN)
-template<>
+template <>
 Communication System::communication_(config::can, param->can_id);
 #endif
 
 #if (COMMS == COMMS_CAN_USB)
 CANCommunication<CAN> can_communication(config::can, param->can_id);
 USBCommunication usb_communication(config::usb);
-template<>
+template <>
 Communication System::communication_(can_communication, usb_communication);
 #endif
 namespace config {
-    MainLoop<config::main_loop_frequency, decltype(fast_loop)>  main_loop = {fast_loop, position_controller, torque_controller, impedance_controller, velocity_controller, state_controller, joint_position_controller, admittance_controller, System::communication_, led, output_encoder, torque_sensor, drv, param->main_loop_param, *calibration};
+MainLoop<config::main_loop_frequency, decltype(fast_loop)> main_loop = {fast_loop, position_controller, torque_controller, impedance_controller, velocity_controller, state_controller, joint_position_controller, admittance_controller, System::communication_, led, output_encoder, torque_sensor, drv, param->main_loop_param, *calibration};
 };
 
 void usb_interrupt() {
     config::usb.interrupt();
 }
 
-template<>
+template <>
 decltype(System::actuator_) System::actuator_ = {config::fast_loop, config::main_loop, param->startup_param, *calibration};
 
 float v3v3 = 3.3;
@@ -405,10 +405,10 @@ void system_init() {
     config::uart.init();
 #endif
 
-    DMAMUX1_Channel6->CCR =  DMA_REQUEST_I2C1_TX;
-    DMAMUX1_Channel7->CCR =  DMA_REQUEST_I2C1_RX;
-    DMAMUX1_Channel2->CCR =  DMA_REQUEST_SPI1_TX;
-    DMAMUX1_Channel3->CCR =  DMA_REQUEST_SPI1_RX;
+    DMAMUX1_Channel6->CCR = DMA_REQUEST_I2C1_TX;
+    DMAMUX1_Channel7->CCR = DMA_REQUEST_I2C1_RX;
+    DMAMUX1_Channel2->CCR = DMA_REQUEST_SPI1_TX;
+    DMAMUX1_Channel3->CCR = DMA_REQUEST_SPI1_RX;
     if (config::motor_encoder.init()) {
         System::log("Motor encoder init success");
     } else {
@@ -440,27 +440,27 @@ void system_init() {
     DRV8323S_SET_DEBUG_API(System::api, config::drv);
 
     System::api.add_api_variable("3v3", new APIFloat(&v3v3));
-    System::api.add_api_variable("Tmicro", new APICallbackFloat([]{ return config::temp_sensor.get_value(); },
-        [](float f){ config::temp_sensor.set_value(f); }));
+    System::api.add_api_variable("Tmicro", new APICallbackFloat([] { return config::temp_sensor.get_value(); },
+                                                                [](float f) { config::temp_sensor.set_value(f); }));
     if (config::board_rev.has_max31875) {
-        System::api.add_api_variable("Tboard", new const APICallbackFloat([](){ return config::board_temperature_max31875.get_temperature(); }));
+        System::api.add_api_variable("Tboard", new const APICallbackFloat([]() { return config::board_temperature_max31875.get_temperature(); }));
     } else if (config::board_rev.has_max31889) {
-        System::api.add_api_variable("Tboard", new const APICallbackFloat([](){ return config::board_temperature_max31889.get_temperature(); }));
+        System::api.add_api_variable("Tboard", new const APICallbackFloat([]() { return config::board_temperature_max31889.get_temperature(); }));
     }
-    
+
     if (config::board_rev.has_bridge_thermistors) {
-        System::api.add_api_variable("Tbridge", new const APICallbackFloat([](){ return config::temp_bridge.read(); }));
-        System::api.add_api_variable("Tbridge2", new const APICallbackFloat([](){ return config::temp_bridge2.read(); }));
+        System::api.add_api_variable("Tbridge", new const APICallbackFloat([]() { return config::temp_bridge.read(); }));
+        System::api.add_api_variable("Tbridge2", new const APICallbackFloat([]() { return config::temp_bridge2.read(); }));
     }
     System::api.add_api_variable("index_mod", new APIInt32(&index_mod));
-    System::api.add_api_variable("pwm_mult", new APICallbackUint8([](){return config::motor_pwm.get_frequency_multiplier();}, [](uint8_t mult){ config::motor_pwm.set_frequency_multiplier(mult);}));
-    System::api.add_api_variable("drv_err", new const APICallbackUint32([](){ return config::drv.get_drv_status(); }));
-    System::api.add_api_variable("drv_reset", new const APICallback([](){
+    System::api.add_api_variable("pwm_mult", new APICallbackUint8([]() { return config::motor_pwm.get_frequency_multiplier(); }, [](uint8_t mult) { config::motor_pwm.set_frequency_multiplier(mult); }));
+    System::api.add_api_variable("drv_err", new const APICallbackUint32([]() { return config::drv.get_drv_status(); }));
+    System::api.add_api_variable("drv_reset", new const APICallback([]() {
         System::set_one_time_api_timeout_us(30 * 1000);
         return config::drv.drv_reset(); }));
-    System::api.add_api_variable("A1", new const APICallbackUint32([](){ return A1_DR; }));
-    System::api.add_api_variable("A2", new const APICallbackUint32([](){ return A2_DR; }));
-    System::api.add_api_variable("A3", new const APICallbackUint32([](){ return A3_DR; }));
+    System::api.add_api_variable("A1", new const APICallbackUint32([]() { return A1_DR; }));
+    System::api.add_api_variable("A2", new const APICallbackUint32([]() { return A2_DR; }));
+    System::api.add_api_variable("A3", new const APICallbackUint32([]() { return A3_DR; }));
     System::api.add_api_variable("IA0", new const APIUint32(&ADC3->DR));
     System::api.add_api_variable("IB0", new const APIUint32(&ADC4->DR));
     System::api.add_api_variable("IC0", new const APIUint32(&ADC5->DR));
@@ -469,27 +469,25 @@ void system_init() {
     System::api.add_api_variable("IC", new const APIUint32(&ADC5->JDR1));
     System::api.add_api_variable("usb_err", new APIUint32(&config::usb.error_count_));
     System::api.add_api_variable("usb_reset_count", new APIUint32(&config::usb.reset_count_));
-    System::api.add_api_variable("hsi48_trim", new const APICallbackInt8([](){ return (int8_t) (((CRS->CR & CRS_CR_TRIM) >> CRS_CR_TRIM_Pos) - 64); }));
-    System::api.add_api_variable("shutdown", new const APICallback([](){
-        // requires power cycle to return 
-        setup_sleep();
-        SCB->SCR |= SCB_SCR_SLEEPDEEP_Msk;
-        PWR->CR1 |= 0b100 << PWR_CR1_LPMS_Pos;
-        __WFI();
-        return std::string();
-    }));
-    System::api.add_api_variable("deadtime", new APICallbackUint16([](){ 
-        return config::motor_pwm.deadtime_ns_; }, [](uint16_t u) {config::motor_pwm.set_deadtime(u); }));
-    System::api.add_api_variable("idelay", new APICallbackUint16([](){ 
-        return config::motor_pwm.get_current_sample_delay(); }, [](uint16_t u) {config::motor_pwm.set_current_sample_delay(u); }));
+    System::api.add_api_variable("hsi48_trim", new const APICallbackInt8([]() { return (int8_t)(((CRS->CR & CRS_CR_TRIM) >> CRS_CR_TRIM_Pos) - 64); }));
+    System::api.add_api_variable("shutdown", new const APICallback([]() {
+                                     // requires power cycle to return
+                                     setup_sleep();
+                                     SCB->SCR |= SCB_SCR_SLEEPDEEP_Msk;
+                                     PWR->CR1 |= 0b100 << PWR_CR1_LPMS_Pos;
+                                     __WFI();
+                                     return std::string();
+                                 }));
+    System::api.add_api_variable("deadtime", new APICallbackUint16([]() { return config::motor_pwm.deadtime_ns_; }, [](uint16_t u) { config::motor_pwm.set_deadtime(u); }));
+    System::api.add_api_variable("idelay", new APICallbackUint16([]() { return config::motor_pwm.get_current_sample_delay(); }, [](uint16_t u) { config::motor_pwm.set_current_sample_delay(u); }));
     if (config::board_rev.has_bmi270) {
-        System::api.add_api_variable("imu_read", new const APICallback([]()->std::string{ config::imu.read(); return "ok"; }));
-        System::api.add_api_variable("ax", new const APICallbackFloat([]()->float{ return config::imu.data_.acc_x*8./powf(2,15); }));
-        System::api.add_api_variable("ay", new const APICallbackFloat([]()->float{ return config::imu.data_.acc_y*8./powf(2,15); }));
-        System::api.add_api_variable("az", new const APICallbackFloat([]()->float{ return config::imu.data_.acc_z*8./powf(2,15); }));
-        System::api.add_api_variable("gx", new const APICallbackFloat([]()->float{ return config::imu.data_.gyr_x*2000.*std::numbers::pi_v<float>/180/powf(2,15); }));
-        System::api.add_api_variable("gy", new const APICallbackFloat([]()->float{ return config::imu.data_.gyr_y*2000.*std::numbers::pi_v<float>/180/powf(2,15); }));
-        System::api.add_api_variable("gz", new const APICallbackFloat([]()->float{ return config::imu.data_.gyr_z*2000.*std::numbers::pi_v<float>/180/powf(2,15); }));
+        System::api.add_api_variable("imu_read", new const APICallback([]() -> std::string { config::imu.read(); return "ok"; }));
+        System::api.add_api_variable("ax", new const APICallbackFloat([]() -> float { return config::imu.data_.acc_x * 8. / powf(2, 15); }));
+        System::api.add_api_variable("ay", new const APICallbackFloat([]() -> float { return config::imu.data_.acc_y * 8. / powf(2, 15); }));
+        System::api.add_api_variable("az", new const APICallbackFloat([]() -> float { return config::imu.data_.acc_z * 8. / powf(2, 15); }));
+        System::api.add_api_variable("gx", new const APICallbackFloat([]() -> float { return config::imu.data_.gyr_x * 2000. * std::numbers::pi_v<float> / 180 / powf(2, 15); }));
+        System::api.add_api_variable("gy", new const APICallbackFloat([]() -> float { return config::imu.data_.gyr_y * 2000. * std::numbers::pi_v<float> / 180 / powf(2, 15); }));
+        System::api.add_api_variable("gz", new const APICallbackFloat([]() -> float { return config::imu.data_.gyr_z * 2000. * std::numbers::pi_v<float> / 180 / powf(2, 15); }));
     }
 
     if (config::board_rev.has_5V_sense) {
@@ -520,63 +518,63 @@ void system_init() {
     System::api.add_api_variable("mcmp", new APIUint32(&HRTIM1->sMasterRegs.MCMP1R));
     System::api.add_api_variable("t1cmp", new APIUint32(&TIM1->CCR1));
 
-    System::api.add_api_variable("flash_cal", new const APICallback([]{
-        System::set_one_time_api_timeout_us(100 * 1000);
-        void * adr = &_eccmram; // End of ccmram is an empty ram space. The linker script ensures that there is enough 
+    System::api.add_api_variable("flash_cal", new const APICallback([] {
+                                     System::set_one_time_api_timeout_us(100 * 1000);
+                                     void* adr = &_eccmram; // End of ccmram is an empty ram space. The linker script ensures that there is enough
                                 // space for the calibration to reside here temporarily
-        Calibration *cal = (Calibration *) adr;
-        std::memcpy(adr, calibration, sizeof(Calibration));
-        cal->motor_encoder_bias = System::actuator_.startup_motor_bias_;
-        cal->torque_sensor.bias = config::main_loop.torque_sensor_bias_;
-        cal->torque_sensor.gain = config::main_loop.torque_sensor_.gain_;
-        //cal->joint_encoder_bias;
-        cal->output_encoder_bias = config::main_loop.output_encoder_bias_;
-        if (std::isfinite(config::fast_loop.motor_index_electrical_offset_measured_)) {
-            cal->motor_encoder_index_electrical_offset_pos = config::fast_loop.motor_index_electrical_offset_measured_;
-        }
-        config::flash.write((uint32_t) calibration, (uint32_t*) cal, sizeof(Calibration));
-        std::string s = "Calbration written at " +
-                std::to_string(config::fram.fram1_.total_uptime_s) +
-                ", motor encoder bias: " + std::to_string(cal->motor_encoder_bias) +
-                ", torque sensor bias: " + std::to_string(cal->torque_sensor.bias) +
-                ", output encoder bias: " + std::to_string(cal->output_encoder_bias) +
-                ", motor electrical zero pos: " +
-                std::to_string(cal->motor_encoder_index_electrical_offset_pos) + "\n";
-        config::fram.fram_log_.write_log(reinterpret_cast<const uint8_t*>(s.c_str()), s.size());
-        return std::string("ok");
-    }));
+                                     Calibration* cal = (Calibration*)adr;
+                                     std::memcpy(adr, calibration, sizeof(Calibration));
+                                     cal->motor_encoder_bias = System::actuator_.startup_motor_bias_;
+                                     cal->torque_sensor.bias = config::main_loop.torque_sensor_bias_;
+                                     cal->torque_sensor.gain = config::main_loop.torque_sensor_.gain_;
+                                     //cal->joint_encoder_bias;
+                                     cal->output_encoder_bias = config::main_loop.output_encoder_bias_;
+                                     if (std::isfinite(config::fast_loop.motor_index_electrical_offset_measured_)) {
+                                         cal->motor_encoder_index_electrical_offset_pos = config::fast_loop.motor_index_electrical_offset_measured_;
+                                     }
+                                     config::flash.write((uint32_t)calibration, (uint32_t*)cal, sizeof(Calibration));
+                                     std::string s = "Calbration written at " +
+                                                     std::to_string(config::fram.fram1_.total_uptime_s) +
+                                                     ", motor encoder bias: " + std::to_string(cal->motor_encoder_bias) +
+                                                     ", torque sensor bias: " + std::to_string(cal->torque_sensor.bias) +
+                                                     ", output encoder bias: " + std::to_string(cal->output_encoder_bias) +
+                                                     ", motor electrical zero pos: " +
+                                                     std::to_string(cal->motor_encoder_index_electrical_offset_pos) + "\n";
+                                     config::fram.fram_log_.write_log(reinterpret_cast<const uint8_t*>(s.c_str()), s.size());
+                                     return std::string("ok");
+                                 }));
 #if (COMMS == COMMS_CAN) || (COMMS == COMMS_CAN_USB)
-    System::api.add_api_variable("can_send_decimation", new APICallbackUint16([](){ return can_communication.get_send_decimation(); },
-        [](uint16_t decimation){ can_communication.set_send_decimation(decimation); }));
+    System::api.add_api_variable("can_send_decimation", new APICallbackUint16([]() { return can_communication.get_send_decimation(); },
+                                                                              [](uint16_t decimation) { can_communication.set_send_decimation(decimation); }));
 #endif
     for (auto regs : std::vector<ADC_TypeDef*>{ADC1, ADC2, ADC3, ADC4, ADC5}) {
         regs->CR = ADC_CR_ADVREGEN;
         ns_delay(20000);
         regs->CR |= ADC_CR_ADCAL;
-        while(regs->CR & ADC_CR_ADCAL);
+        while (regs->CR & ADC_CR_ADCAL);
         ns_delay(100);
         regs->CR |= ADC_CR_ADCALDIF;
         regs->CR |= ADC_CR_ADCAL;
-        while(regs->CR & ADC_CR_ADCAL);
+        while (regs->CR & ADC_CR_ADCAL);
         ns_delay(100);
 
         regs->ISR = ADC_ISR_ADRDY;
         regs->CR |= ADC_CR_ADEN;
-        while(!(regs->ISR & ADC_ISR_ADRDY));
+        while (!(regs->ISR & ADC_ISR_ADRDY));
     }
 
     ADC1->CR |= ADC_CR_JADSTART;
-    while(ADC1->CR & ADC_CR_JADSTART);
+    while (ADC1->CR & ADC_CR_JADSTART);
 
-    v3v3 =  *((uint16_t *) (0x1FFF75AA)) * 3.0 / V_REF_DR;
+    v3v3 = *((uint16_t*)(0x1FFF75AA)) * 3.0 / V_REF_DR;
     System::log("3v3: " + std::to_string(v3v3));
-    System::log("obias: " +  std::to_string(calibration->output_encoder_bias));
+    System::log("obias: " + std::to_string(calibration->output_encoder_bias));
     System::log("tbias: " + std::to_string(calibration->torque_sensor.bias));
     System::log("tgain: " + std::to_string(calibration->torque_sensor.gain));
     System::log("offset: " + std::to_string(calibration->motor_encoder_index_electrical_offset_pos));
     System::log("mbias: " + std::to_string(calibration->motor_encoder_bias));
 
-    ADC1->GCOMP = v3v3*4096;
+    ADC1->GCOMP = v3v3 * 4096;
     ADC1->CFGR2 |= ADC_CFGR2_GCOMP;
     ADC1->CR |= ADC_CR_ADSTART;
     ADC2->CR |= ADC_CR_JADSTART;
@@ -589,15 +587,15 @@ void system_init() {
 
     config::main_loop.init();
 
-//          regs_.sTimerxRegs[ch].TIMxCR |= HRTIM_TIMCR_PREEN | HRTIM_TIMCR_TRSTU | HRTIM_TIMCR_CONT;
+    //          regs_.sTimerxRegs[ch].TIMxCR |= HRTIM_TIMCR_PREEN | HRTIM_TIMCR_TRSTU | HRTIM_TIMCR_CONT;
 
     NVIC_SetPriority(HRTIM1_Master_IRQn, NVIC_EncodePriority(NVIC_GetPriorityGrouping(), 1, 0));
     NVIC_EnableIRQ(HRTIM1_Master_IRQn);
     HRTIM1->sMasterRegs.MDIER |= HRTIM_MDIER_MCMP1IE; // interrupt on MCMP1
-   
+
     HRTIM1->sMasterRegs.MCMP1R = 400;
-    static_assert(config::main_loop_frequency > CPU_FREQUENCY_HZ/4/65536, "Main loop frequency too low");
-    HRTIM1->sMasterRegs.MPER = CPU_FREQUENCY_HZ/4/config::main_loop_frequency;
+    static_assert(config::main_loop_frequency > CPU_FREQUENCY_HZ / 4 / 65536, "Main loop frequency too low");
+    HRTIM1->sMasterRegs.MPER = CPU_FREQUENCY_HZ / 4 / config::main_loop_frequency;
     HRTIM1->sMasterRegs.MCR = 0 << HRTIM_MCR_SYNC_SRC_Pos | 2 << HRTIM_MCR_SYNC_OUT_Pos | HRTIM_MCR_CONT | HRTIM_MCR_PREEN | HRTIM_MCR_MREPU | 7 << HRTIM_MCR_CK_PSC_Pos; // CPU_FREQUENCY * 32 / 2^7 = 42.5 MHz
     config::usb.connect();
 
@@ -616,29 +614,29 @@ void system_maintenance() {
     static bool driver_fault = false;
     if (config::drv.is_enabled() && !(config::main_loop.mode_ == DAMPED)) {
         config::fast_loop.zero_current_sensors(I_A0_DR, I_B0_DR, I_C0_DR);
-    }   
-    
-    float bus_current = config::main_loop.status_.power/config::main_loop.status_.fast_loop.vbus;
+    }
+
+    float bus_current = config::main_loop.status_.power / config::main_loop.status_.fast_loop.vbus;
     if (!config::board_rev.has_I48V_sense) {
         round_robin_logger.log_data(BUS_CURRENT_INDEX, bus_current);
     }
     round_robin_logger.log_data(MOTOR_POWER_INDEX, config::main_loop.status_.fast_loop.power);
-    if (!(GPIOC->IDR & 1<<14)) {
+    if (!(GPIOC->IDR & 1 << 14)) {
         driver_fault = true;
     } else if (param->main_loop_param.no_latch_driver_fault) {
         driver_fault = false;
     }
 
     if (config::board_rev.has_5V_sense) {
-        v5v = (float) config::V5V_DR/4096*v3v3*2;
+        v5v = (float)config::V5V_DR / 4096 * v3v3 * 2;
         round_robin_logger.log_data(VOLTAGE_5V_INDEX, v5v);
     }
     if (config::board_rev.has_I5V_sense) {
-        i5v = (float) I5V/4096*v3v3;
+        i5v = (float)I5V / 4096 * v3v3;
         round_robin_logger.log_data(CURRENT_5V_INDEX, i5v);
     }
     if (config::board_rev.has_I48V_sense) {
-        i48v = -((float) I_BUS_DR-2048)/4096*v3v3/20/.0005;
+        i48v = -((float)I_BUS_DR - 2048) / 4096 * v3v3 / 20 / .0005;
         round_robin_logger.log_data(BUS_CURRENT_INDEX, i48v);
     }
     round_robin_logger.log_data(BUS_VOLTAGE_INDEX, config::main_loop.status_.fast_loop.vbus);
@@ -650,14 +648,14 @@ void system_maintenance() {
     config::main_loop.status_.error.init_failure |= init_failure;
 }
 
-Task<> main_maintenance_async(CycleScheduler &sched) {
-    while(1) {
+Task<> main_maintenance_async(CycleScheduler& sched) {
+    while (1) {
         if (temp_rate.run()) {
             ADC1->CR |= ADC_CR_JADSTART;
-            while(ADC1->CR & ADC_CR_JADSTART);
+            while (ADC1->CR & ADC_CR_JADSTART);
             T = microcontroller_temperature_filter.update(config::temp_sensor.read());
             round_robin_logger.log_data(MICROCONTROLLER_TEMPERATURE_INDEX, T);
-            v3v3 =  *((uint16_t *) (0x1FFF75AA)) * 3.0 * ADC1->GCOMP / 4096.0 / ADC1->JDR2;
+            v3v3 = *((uint16_t*)(0x1FFF75AA)) * 3.0 * ADC1->GCOMP / 4096.0 / ADC1->JDR2;
             round_robin_logger.log_data(VOLTAGE_3V3_INDEX, v3v3);
             if (T > 100) {
                 config::main_loop.status_.error.microcontroller_temperature = 1;
@@ -725,30 +723,26 @@ void finish_sleep() {
 
 extern "C" {
 
-__attribute__((section (".ccmram"))) void USB_LP_IRQHandler()
-{
-  CommHandler<usb_interrupt>();
+__attribute__((section(".ccmram"))) void USB_LP_IRQHandler() {
+    CommHandler<usb_interrupt>();
 }
 
-__attribute__((section (".ccmram"))) void TIM1_CC_IRQHandler()
-{
-  SystemLoopHandler<System::system_loop>();
-  TIM1->SR = 0;
-  asm("dsb");
+__attribute__((section(".ccmram"))) void TIM1_CC_IRQHandler() {
+    SystemLoopHandler<System::system_loop>();
+    TIM1->SR = 0;
+    asm("dsb");
 }
 
-__attribute__((section (".ccmram"))) void ADC5_IRQHandler()
-{
-  FastLoopHandler<System::fast_loop_interrupt>();
-  ADC5->ISR = ADC_ISR_JEOS;
-  asm("dsb");
+__attribute__((section(".ccmram"))) void ADC5_IRQHandler() {
+    FastLoopHandler<System::fast_loop_interrupt>();
+    ADC5->ISR = ADC_ISR_JEOS;
+    asm("dsb");
 }
 
-__attribute__((section (".ccmram"))) void HRTIM1_Master_IRQHandler()
-{
-  MainLoopHandler<System::main_loop_interrupt>();
-  HRTIM1->sMasterRegs.MICR = HRTIM_MICR_MCMP1;
-  asm("dsb");
+__attribute__((section(".ccmram"))) void HRTIM1_Master_IRQHandler() {
+    MainLoopHandler<System::main_loop_interrupt>();
+    HRTIM1->sMasterRegs.MICR = HRTIM_MICR_MCMP1;
+    asm("dsb");
 }
 
 void system_run() {

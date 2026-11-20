@@ -32,13 +32,41 @@ enum class PWMMode : uint8_t {          // driver control PWM_MODE
 };
 
 enum class SourceCurrent : uint8_t {    // gate drive IDRIVEP_HS / IDRIVEP_LS: peak current into the gate
-    MA_10, MA_30, MA_60, MA_80, MA_120, MA_140, MA_170, MA_190,
-    MA_260, MA_330, MA_370, MA_440, MA_570, MA_680, MA_820, MA_1000,
+    MA_10,
+    MA_30,
+    MA_60,
+    MA_80,
+    MA_120,
+    MA_140,
+    MA_170,
+    MA_190,
+    MA_260,
+    MA_330,
+    MA_370,
+    MA_440,
+    MA_570,
+    MA_680,
+    MA_820,
+    MA_1000,
 };
 
 enum class SinkCurrent : uint8_t {      // gate drive IDRIVEN_HS / IDRIVEN_LS: peak current out of the gate
-    MA_20, MA_60, MA_120, MA_160, MA_240, MA_280, MA_340, MA_380,
-    MA_520, MA_660, MA_740, MA_880, MA_1140, MA_1360, MA_1640, MA_2000,
+    MA_20,
+    MA_60,
+    MA_120,
+    MA_160,
+    MA_240,
+    MA_280,
+    MA_340,
+    MA_380,
+    MA_520,
+    MA_660,
+    MA_740,
+    MA_880,
+    MA_1140,
+    MA_1360,
+    MA_1640,
+    MA_2000,
 };
 
 enum class DriveTime : uint8_t {        // gate drive LS TDRIVE: how long the peak gate current is applied
@@ -75,8 +103,22 @@ enum class OCPDeglitch : uint8_t {      // OCP control OCP_DEG
 };
 
 enum class VDSLevel : uint8_t {         // OCP control VDS_LVL: the drain source voltage that counts as overcurrent
-    V_0_06, V_0_13, V_0_2, V_0_26, V_0_31, V_0_45, V_0_53, V_0_6,
-    V_0_68, V_0_75, V_0_94, V_1_13, V_1_3, V_1_5, V_1_7, V_1_88,
+    V_0_06,
+    V_0_13,
+    V_0_2,
+    V_0_26,
+    V_0_31,
+    V_0_45,
+    V_0_53,
+    V_0_6,
+    V_0_68,
+    V_0_75,
+    V_0_94,
+    V_1_13,
+    V_1_3,
+    V_1_5,
+    V_1_7,
+    V_1_88,
 };
 
 enum class CSAGain : uint8_t {          // CSA control CSA_GAIN, V/V
@@ -127,7 +169,7 @@ struct Init {
 
 // Register addresses
 inline constexpr uint8_t fault_status1_addr = 0, fault_status2_addr = 1, driver_control_addr = 2,
-    gate_drive_hs_addr = 3, gate_drive_ls_addr = 4, ocp_control_addr = 5, csa_control_addr = 6;
+                         gate_drive_hs_addr = 3, gate_drive_ls_addr = 4, ocp_control_addr = 5, csa_control_addr = 6;
 inline constexpr int control_register_count = 5;
 inline constexpr uint16_t data_mask = 0x7FF;                // 11 data bits per register
 inline constexpr uint16_t gate_drive_unlock = 3u << 8;      // gate drive HS LOCK: 3 unlocks the registers, 6 locks them
@@ -139,19 +181,19 @@ inline consteval uint16_t get_reg(const Init& c, int n) {
     constexpr auto field = [](auto value, int pos) consteval { return static_cast<uint16_t>(static_cast<uint16_t>(value) << pos); };
     switch (n) {
         case 0: return bit(c.disable_charge_pump_undervoltage, 9) | bit(c.disable_gate_drive_fault, 8) |
-            bit(c.report_overtemperature_warning, 7) | field(c.pwm_mode, 5);
+                       bit(c.report_overtemperature_warning, 7) | field(c.pwm_mode, 5);
         case 1: return gate_drive_unlock | field(c.high_side_source_current, 4) | field(c.high_side_sink_current, 0);
         case 2: return bit(c.cycle_by_cycle, 10) | field(c.drive_time, 8) |
-            field(c.low_side_source_current, 4) | field(c.low_side_sink_current, 0);
+                       field(c.low_side_source_current, 4) | field(c.low_side_sink_current, 0);
         case 3: return field(c.ocp_retry, 10) | field(c.dead_time, 8) | field(c.ocp_mode, 6) |
-            field(c.ocp_deglitch, 4) | field(c.vds_level, 0);
+                       field(c.ocp_deglitch, 4) | field(c.vds_level, 0);
         default: return bit(c.sense_from_sh, 10) | bit(c.bidirectional, 9) | bit(c.low_side_reference_sn, 8) |
-            field(c.csa_gain, 6) | bit(c.disable_sense_overcurrent, 5) | field(c.sense_level, 0);
+                        field(c.csa_gain, 6) | bit(c.disable_sense_overcurrent, 5) | field(c.sense_level, 0);
     }
 }
 // the defaults above are the reset values of the datasheet
 static_assert(get_reg(Init{}, 0) == 0x000 && get_reg(Init{}, 1) == 0x3FF && get_reg(Init{}, 2) == 0x7FF &&
-    get_reg(Init{}, 3) == 0x159 && get_reg(Init{}, 4) == 0x283);
+              get_reg(Init{}, 3) == 0x159 && get_reg(Init{}, 4) == 0x283);
 
 // Amplifier gain as a number, for the current scaling
 inline constexpr float csa_gain(const Init& c) {
@@ -163,7 +205,7 @@ inline constexpr float csa_gain(const Init& c) {
 //   transfer_async(sched, word): the same for a task: an awaitable of the word received, the wait is the scheduler's
 //   enable(on):                  the enable pin
 // The 400 ns of chip select high between frames are the IO's to keep.
-template<typename T>
+template <typename T>
 concept IO = requires(CycleScheduler& sched, uint16_t word, bool on) {
     { T::transfer(word) } -> std::convertible_to<uint16_t>;
     T::transfer_async(sched, word);
@@ -179,25 +221,25 @@ inline constexpr uint16_t write_frame(uint8_t address, uint16_t value) {
     return address << 11 | (value & data_mask);
 }
 // One register, waiting for the frame: 16 bit times
-template<IO T>
+template <IO T>
 inline uint16_t read(uint8_t address) {
     return T::transfer(read_frame(address)) & data_mask;
 }
-template<IO T>
+template <IO T>
 inline void write(uint8_t address, uint16_t value) {
     T::transfer(write_frame(address, value));
 }
 
 // Fault status 2 << 16 | fault status 1. Status 1 bit 10 is FAULT, the state
 // of the fault pin; 0 is no fault.
-template<IO T>
+template <IO T>
 inline uint32_t status() {
     const uint32_t status1 = read<T>(fault_status1_addr);
     return read<T>(fault_status2_addr) << 16 | status1;
 }
 
 // Clears latched faults; the outputs follow the inputs again
-template<Init init, IO T>
+template <Init init, IO T>
 inline void clear_faults() {
     write<T>(driver_control_addr, get_reg(init, 0) | clear_fault);
 }
@@ -205,7 +247,7 @@ inline void clear_faults() {
 // Into the low power state: all gates off, registers back at reset, no SPI.
 // The way back is config_async, which enables the driver and writes the
 // registers again: enabled alone it would run on their reset values.
-template<IO T>
+template <IO T>
 inline void disable() {
     T::enable(false);
 }
@@ -221,11 +263,11 @@ inline constexpr int task_size = 96;
 // a broken SPI connection. The driver is left enabled either way: disabling
 // it on a failure is the caller's decision. The inputs should hold the
 // gates off while this runs, and nothing else may use the IO.
-template<Init init, IO T>
+template <Init init, IO T>
 [[gnu::cold]] inline GlobalTask<uint32_t, task_id, task_size> config_async(CycleScheduler& sched) {
     constexpr uint32_t wake_up_us = 10'000;     // 1 ms in the datasheet, the obot_g474 waits 10
     static constexpr uint16_t regs[control_register_count] = {get_reg(init, 0), get_reg(init, 1),
-        get_reg(init, 2), get_reg(init, 3), get_reg(init, 4)};
+                                                              get_reg(init, 2), get_reg(init, 3), get_reg(init, 4)};
     T::enable(true);
     co_await sched.async_delay_us(wake_up_us);
     uint32_t errors = 0;

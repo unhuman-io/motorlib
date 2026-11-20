@@ -1,4 +1,3 @@
-
 #include "system.h"
 #include "st_device.h"
 
@@ -12,11 +11,9 @@ void _read_r() {}
 uint32_t go_to_bootloader __attribute__((section(".bootloader_flag"))) = 0;
 
 
-int main(void)
-{
-  system_init();
-  while (1)
-  {
-    system_run();
-  }
+int main(void) {
+    system_init();
+    while (1) {
+        system_run();
+    }
 }

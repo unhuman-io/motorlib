@@ -14,18 +14,21 @@ void system_init();
 // A two reading torque source
 class SPITorque final : public TorqueSensorBase {
  public:
-    SPITorque(SPI_TypeDef &regs, GPIO &gpio_cs, DMA_Channel_TypeDef &tx_dma, DMA_Channel_TypeDef &rx_dma, 
-        SPIPause &spi_pause, uint8_t decimation = 50) : 
-        regs_(regs), gpio_cs_(gpio_cs), 
-        tx_dma_(tx_dma), rx_dma_(rx_dma), 
-        spi_pause_(spi_pause), decimation_(decimation) {}
+    SPITorque(SPI_TypeDef& regs, GPIO& gpio_cs, DMA_Channel_TypeDef& tx_dma, DMA_Channel_TypeDef& rx_dma,
+              SPIPause& spi_pause, uint8_t decimation = 50) :
+        regs_(regs),
+        gpio_cs_(gpio_cs),
+        tx_dma_(tx_dma),
+        rx_dma_(rx_dma),
+        spi_pause_(spi_pause),
+        decimation_(decimation) {}
 
     bool init() {
         reinit();
-        tx_dma_.CMAR = (uint32_t) data_out_;
-        tx_dma_.CPAR = (uint32_t) &regs_.DR;
-        rx_dma_.CMAR = (uint32_t) data_in_;
-        rx_dma_.CPAR = (uint32_t) &regs_.DR;
+        tx_dma_.CMAR = (uint32_t)data_out_;
+        tx_dma_.CPAR = (uint32_t)&regs_.DR;
+        rx_dma_.CMAR = (uint32_t)data_in_;
+        rx_dma_.CPAR = (uint32_t)&regs_.DR;
         reset();
         return true;
     }
@@ -51,7 +54,7 @@ class SPITorque final : public TorqueSensorBase {
             tx_dma_.CCR = 0;
             rx_dma_.CCR = 0;
             tx_dma_.CNDTR = 9;
-            rx_dma_.CNDTR = 9;        
+            rx_dma_.CNDTR = 9;
             rx_dma_.CCR = DMA_CCR_EN | DMA_CCR_MINC;
             tx_dma_.CCR = DMA_CCR_EN | DMA_CCR_MINC | DMA_CCR_DIR; // DIR = 1 > read from memory
         }
@@ -61,25 +64,25 @@ class SPITorque final : public TorqueSensorBase {
         if (!spi_pause_.is_paused()) {
             if (count_ == 0) {
                 // wait until dma complete
-                while(rx_dma_.CNDTR);
+                while (rx_dma_.CNDTR);
                 // set CS high
                 gpio_cs_.set();
                 // process result
-                result0_ = (uint32_t) data_in_[4] << 24 | (uint32_t) data_in_[3] << 16 | (uint16_t) data_in_[2] << 8 | data_in_[1];
-                result1_ = (uint32_t) data_in_[8] << 24 | (uint32_t) data_in_[7] << 16 | (uint16_t) data_in_[6] << 8 | data_in_[5];
+                result0_ = (uint32_t)data_in_[4] << 24 | (uint32_t)data_in_[3] << 16 | (uint16_t)data_in_[2] << 8 | data_in_[1];
+                result1_ = (uint32_t)data_in_[8] << 24 | (uint32_t)data_in_[7] << 16 | (uint16_t)data_in_[6] << 8 | data_in_[5];
                 int32_t diff = result0_ - result1_;
                 sum_ = result0_ + result1_;
-                float sum = (float) result0_ + (float) result1_;
+                float sum = (float)result0_ + (float)result1_;
                 float tcomp = sum * k_temp_;
                 if (sum != 0) {
-                    torque_ = diff/sum * gain_ + tcomp;
+                    torque_ = diff / sum * gain_ + tcomp;
                 }
             }
         }
         return torque_;
     }
 
-    void reset(uint32_t a=1) {
+    void reset(uint32_t a = 1) {
         spi_pause_.pause();
         reinit();
         if (a) {
@@ -89,11 +92,11 @@ class SPITorque final : public TorqueSensorBase {
             tx_dma_.CCR = 0;
             rx_dma_.CCR = 0;
             tx_dma_.CNDTR = 1;
-            rx_dma_.CNDTR = 1;        
+            rx_dma_.CNDTR = 1;
             rx_dma_.CCR = DMA_CCR_EN | DMA_CCR_MINC;
             tx_dma_.CCR = DMA_CCR_EN | DMA_CCR_MINC | DMA_CCR_DIR; // DIR = 1 > read from memory
             // wait until dma complete
-            while(rx_dma_.CNDTR);
+            while (rx_dma_.CNDTR);
             // set CS high
             gpio_cs_.set();
             data_out_[0] = 0x40;
@@ -106,8 +109,8 @@ class SPITorque final : public TorqueSensorBase {
     }
 
  private:
-    SPI_TypeDef &regs_;
-    GPIO &gpio_cs_;
+    SPI_TypeDef& regs_;
+    GPIO& gpio_cs_;
     DMA_Channel_TypeDef &tx_dma_, &rx_dma_;
     uint8_t data_out_[9] = {0x40}; // read result 0
     uint8_t data_in_[9] = {};
@@ -116,11 +119,12 @@ class SPITorque final : public TorqueSensorBase {
     uint32_t sum_;
     //float torque_ = 0;
     uint8_t count_ = 0;
-    SPIPause &spi_pause_;
+    SPIPause& spi_pause_;
     uint8_t decimation_;
-    
 
-    template <typename T> friend class SystemBase;
+
+    template <typename T>
+    friend class SystemBase;
     friend void system_init();
     friend void config_init();
 };

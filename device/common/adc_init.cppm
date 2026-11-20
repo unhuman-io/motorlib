@@ -83,8 +83,8 @@ struct ADCRegs {
         JDR1, JDR2, JDR3, JDR4;
 };
 static_assert(offsetof(ADCRegs, CFGR) == adc_offsets::CFGR && offsetof(ADCRegs, SMPR2) == adc_offsets::SMPR2 &&
-    offsetof(ADCRegs, SQR1) == adc_offsets::SQR1 && offsetof(ADCRegs, DR) == adc_offsets::DR &&
-    offsetof(ADCRegs, JSQR) == adc_offsets::JSQR && offsetof(ADCRegs, JDR1) == adc_offsets::JDR1);
+              offsetof(ADCRegs, SQR1) == adc_offsets::SQR1 && offsetof(ADCRegs, DR) == adc_offsets::DR &&
+              offsetof(ADCRegs, JSQR) == adc_offsets::JSQR && offsetof(ADCRegs, JDR1) == adc_offsets::JDR1);
 
 struct ADCCommonRegs {
     volatile uint32_t CSR, RESERVED, CCR, CDR;
@@ -92,12 +92,12 @@ struct ADCCommonRegs {
 static_assert(offsetof(ADCCommonRegs, CCR) == adc_offsets::CCR);
 
 // adc_regs<3>() is ADC3
-template<int adc>
+template <int adc>
 inline ADCRegs& adc_regs() {
     static_assert(adc >= 1 && adc <= adc_count, "no such adc on this device");
     return *reinterpret_cast<ADCRegs*>(adc_base[adc - 1]);
 }
-template<int group>
+template <int group>
 inline ADCCommonRegs& adc_common_regs() {
     return *reinterpret_cast<ADCCommonRegs*>(adc_group_base[group]);
 }
@@ -106,7 +106,7 @@ inline ADCCommonRegs& adc_common_regs() {
 namespace adc_bit {
 inline constexpr uint32_t ISR_ADRDY = 1u << 0, ISR_JEOS = 1u << 6, IER_EOCIE = 1u << 2, IER_JEOSIE = 1u << 6;
 inline constexpr uint32_t CR_ADEN = 1u << 0, CR_ADDIS = 1u << 1, CR_ADSTART = 1u << 2, CR_JADSTART = 1u << 3,
-    CR_STOP_Shift = 2,   // ADSTP and JADSTP sit this far above ADSTART and JADSTART
+                          CR_STOP_Shift = 2,   // ADSTP and JADSTP sit this far above ADSTART and JADSTART
     CR_ADVREGEN = 1u << 28, CR_ADCAL = 1u << 31;
 inline constexpr uint32_t CFGR_EXTSEL_Pos = 5, CFGR_EXTEN_Pos = 10, CFGR_OVRMOD = 1u << 12, CFGR_CONT = 1u << 13, CFGR_JQDIS = 1u << 31;
 inline constexpr uint32_t SQR1_SQ1_Pos = 6, SQR_SQ_Width = 6, SMPR_SMP_Width = 3;
@@ -114,21 +114,21 @@ inline constexpr uint32_t JSQR_JEXTSEL_Pos = 2, JSQR_JEXTEN_Pos = 7, JSQR_JSQ1_P
 inline constexpr uint32_t CCR_VREFEN = 1u << 22, CCR_TSEN = 1u << 23;
 }
 static_assert(adc_bit::ISR_ADRDY == adc_bits::ISR_ADRDY && adc_bit::IER_EOCIE == adc_bits::IER_EOCIE && adc_bit::CR_ADSTART == adc_bits::CR_ADSTART &&
-    adc_bit::CR_JADSTART == adc_bits::CR_JADSTART && adc_bit::CR_ADVREGEN == adc_bits::CR_ADVREGEN &&
-    adc_bit::CR_ADCAL == adc_bits::CR_ADCAL && adc_bit::CR_ADDIS == adc_bits::CR_ADDIS &&
-    adc_bit::CR_ADSTART << adc_bit::CR_STOP_Shift == adc_bits::CR_ADSTP && adc_bit::CR_JADSTART << adc_bit::CR_STOP_Shift == adc_bits::CR_JADSTP);
+              adc_bit::CR_JADSTART == adc_bits::CR_JADSTART && adc_bit::CR_ADVREGEN == adc_bits::CR_ADVREGEN &&
+              adc_bit::CR_ADCAL == adc_bits::CR_ADCAL && adc_bit::CR_ADDIS == adc_bits::CR_ADDIS &&
+              adc_bit::CR_ADSTART << adc_bit::CR_STOP_Shift == adc_bits::CR_ADSTP && adc_bit::CR_JADSTART << adc_bit::CR_STOP_Shift == adc_bits::CR_JADSTP);
 static_assert(adc_bit::ISR_JEOS == adc_bits::ISR_JEOS && adc_bit::IER_JEOSIE == adc_bits::IER_JEOSIE);
 static_assert(adc_bit::CFGR_EXTSEL_Pos == adc_bits::CFGR_EXTSEL_Pos && adc_bit::CFGR_EXTEN_Pos == adc_bits::CFGR_EXTEN_Pos &&
-    adc_bit::CFGR_OVRMOD == adc_bits::CFGR_OVRMOD && adc_bit::CFGR_CONT == adc_bits::CFGR_CONT &&
-    adc_bit::CFGR_JQDIS == adc_bits::CFGR_JQDIS);
+              adc_bit::CFGR_OVRMOD == adc_bits::CFGR_OVRMOD && adc_bit::CFGR_CONT == adc_bits::CFGR_CONT &&
+              adc_bit::CFGR_JQDIS == adc_bits::CFGR_JQDIS);
 static_assert(adc_bit::SQR1_SQ1_Pos == adc_bits::SQR1_SQ1_Pos && adc_bit::SQR1_SQ1_Pos + adc_bit::SQR_SQ_Width == adc_bits::SQR1_SQ2_Pos &&
-    adc_bit::SMPR_SMP_Width == adc_bits::SMPR1_SMP1_Pos);
+              adc_bit::SMPR_SMP_Width == adc_bits::SMPR1_SMP1_Pos);
 static_assert(adc_bit::JSQR_JEXTSEL_Pos == adc_bits::JSQR_JEXTSEL_Pos && adc_bit::JSQR_JEXTEN_Pos == adc_bits::JSQR_JEXTEN_Pos &&
-    adc_bit::JSQR_JSQ1_Pos == adc_bits::JSQR_JSQ1_Pos && adc_bit::JSQR_JSQ1_Pos + adc_bit::JSQR_JSQ_Width == adc_bits::JSQR_JSQ2_Pos);
+              adc_bit::JSQR_JSQ1_Pos == adc_bits::JSQR_JSQ1_Pos && adc_bit::JSQR_JSQ1_Pos + adc_bit::JSQR_JSQ_Width == adc_bits::JSQR_JSQ2_Pos);
 static_assert(adc_bit::CCR_VREFEN == adc_bits::CCR_VREFEN && adc_bit::CCR_TSEN == adc_bits::CCR_TSEN);
 
 // Common register of a group, from the enabled converters in it
-template<const ADCInit h>
+template <const ADCInit h>
 inline consteval uint32_t get_adc_ccr(int group) {
     using namespace adc_bit;
     const ADCConverterInit converters[] = {h.adc1, h.adc2, h.adc3, h.adc4, h.adc5};
@@ -137,13 +137,13 @@ inline consteval uint32_t get_adc_ccr(int group) {
         const ADCConverterInit& c = converters[i];
         if (adc_group[i] != group || c.enable != ADCEnable::ENABLED) continue;
         v |= adc_ccr_clock(c.clock) |
-            (c.vrefint == ADCEnable::ENABLED ? CCR_VREFEN : 0) |
-            (c.temperature_sensor == ADCEnable::ENABLED ? CCR_TSEN : 0);
+             (c.vrefint == ADCEnable::ENABLED ? CCR_VREFEN : 0) |
+             (c.temperature_sensor == ADCEnable::ENABLED ? CCR_TSEN : 0);
     }
     return v;
 }
 
-template<const ADCInit h>
+template <const ADCInit h>
 inline consteval bool adc_group_clocks_agree() {
     const ADCConverterInit converters[] = {h.adc1, h.adc2, h.adc3, h.adc4, h.adc5};
     for (int i = 0; i < adc_count; i++) {
@@ -156,26 +156,26 @@ inline consteval bool adc_group_clocks_agree() {
 }
 
 // The injected queue stays disabled (JQDIS, the reset state): JSQR is used directly
-template<const ADCConverterInit c>
+template <const ADCConverterInit c>
 inline consteval uint32_t get_adc_cfgr() {
     using namespace adc_bit;
     return static_cast<uint32_t>(c.resolution) << adc_bits::CFGR_RES_Pos |
-        static_cast<uint32_t>(c.trigger) << CFGR_EXTSEL_Pos |
-        static_cast<uint32_t>(c.trigger_edge) << CFGR_EXTEN_Pos |
-        (c.overwrite == ADCEnable::ENABLED ? CFGR_OVRMOD : 0) |
-        (c.continuous == ADCEnable::ENABLED ? CFGR_CONT : 0) |
-        CFGR_JQDIS;
+           static_cast<uint32_t>(c.trigger) << CFGR_EXTSEL_Pos |
+           static_cast<uint32_t>(c.trigger_edge) << CFGR_EXTEN_Pos |
+           (c.overwrite == ADCEnable::ENABLED ? CFGR_OVRMOD : 0) |
+           (c.continuous == ADCEnable::ENABLED ? CFGR_CONT : 0) |
+           CFGR_JQDIS;
 }
 
-template<const ADCConverterInit c>
+template <const ADCConverterInit c>
 inline consteval uint32_t get_adc_ier() {
     using namespace adc_bit;
     return (c.end_of_conversion_interrupt == ADCEnable::ENABLED ? IER_EOCIE : 0) |
-        (c.injected_end_of_sequence_interrupt == ADCEnable::ENABLED ? IER_JEOSIE : 0);
+           (c.injected_end_of_sequence_interrupt == ADCEnable::ENABLED ? IER_JEOSIE : 0);
 }
 
 // SMPR1 (n = 0) holds channels 0..9, SMPR2 (n = 1) the rest
-template<const ADCConverterInit c>
+template <const ADCConverterInit c>
 inline consteval uint32_t get_adc_smpr(int n) {
     uint32_t v = 0;
     for (int ch = 10 * n; ch < 10 * (n + 1) && ch < adc_channel_count; ch++) {
@@ -185,7 +185,7 @@ inline consteval uint32_t get_adc_smpr(int n) {
 }
 
 // SQR1 (n = 0) holds the length and ranks 1..4, SQR2..4 five ranks each
-template<const ADCConverterInit c>
+template <const ADCConverterInit c>
 inline consteval uint32_t get_adc_sqr(int n) {
     using namespace adc_bit;
     uint32_t v = n == 0 ? c.sequence_length - 1 : 0;
@@ -197,12 +197,12 @@ inline consteval uint32_t get_adc_sqr(int n) {
     return v;
 }
 
-template<const ADCConverterInit c>
+template <const ADCConverterInit c>
 inline consteval uint32_t get_adc_jsqr() {
     using namespace adc_bit;
     uint32_t v = static_cast<uint32_t>(c.injected_sequence_length - 1) |
-        static_cast<uint32_t>(c.injected_trigger) << JSQR_JEXTSEL_Pos |
-        static_cast<uint32_t>(c.injected_trigger_edge) << JSQR_JEXTEN_Pos;
+                 static_cast<uint32_t>(c.injected_trigger) << JSQR_JEXTSEL_Pos |
+                 static_cast<uint32_t>(c.injected_trigger_edge) << JSQR_JEXTEN_Pos;
     for (int rank = 0; rank < c.injected_sequence_length; rank++) {
         v |= static_cast<uint32_t>(c.injected_sequence[rank]) << (JSQR_JSQ1_Pos + JSQR_JSQ_Width * rank);
     }
@@ -210,7 +210,7 @@ inline consteval uint32_t get_adc_jsqr() {
 }
 
 // One bit per converted channel, for the devices that need them preselected
-template<const ADCConverterInit c>
+template <const ADCConverterInit c>
 inline consteval uint32_t get_adc_pcsel() {
     uint32_t v = 0;
     for (int rank = 0; rank < c.sequence_length; rank++) v |= 1u << c.sequence[rank];
@@ -218,20 +218,22 @@ inline consteval uint32_t get_adc_pcsel() {
     return v;
 }
 
-template<const ADCConverterInit c>
+template <const ADCConverterInit c>
 inline consteval bool adc_channels_valid() {
-    for (int rank = 0; rank < c.sequence_length; rank++) if (c.sequence[rank] >= adc_channel_count) return false;
-    for (int rank = 0; rank < c.injected_sequence_length; rank++) if (c.injected_sequence[rank] >= adc_channel_count) return false;
+    for (int rank = 0; rank < c.sequence_length; rank++)
+        if (c.sequence[rank] >= adc_channel_count) return false;
+    for (int rank = 0; rank < c.injected_sequence_length; rank++)
+        if (c.injected_sequence[rank] >= adc_channel_count) return false;
     return true;
 }
 
 // Hardware triggered and continuous groups are started by the init, software
 // triggered ones by adc_start()
-template<const ADCConverterInit c>
+template <const ADCConverterInit c>
 inline consteval uint32_t get_adc_start() {
     using namespace adc_bit;
     return (c.trigger_edge != ADCTriggerEdge::SOFTWARE || c.continuous == ADCEnable::ENABLED ? CR_ADSTART : 0) |
-        (c.injected_sequence_length != 0 && c.injected_trigger_edge != ADCTriggerEdge::SOFTWARE ? CR_JADSTART : 0);
+           (c.injected_sequence_length != 0 && c.injected_trigger_edge != ADCTriggerEdge::SOFTWARE ? CR_JADSTART : 0);
 }
 
 // At least us microseconds: every pass of the loop takes more than one cpu cycle
@@ -239,7 +241,7 @@ inline void adc_delay_us(uint32_t us) {
     for (uint32_t i = static_cast<uint32_t>(CPU_FREQUENCY_HZ / 1e6f) * us; i != 0; i--) __asm__ volatile("");
 }
 
-template<const ADCConverterInit c, int adc>
+template <const ADCConverterInit c, int adc>
 inline void init_adc_converter() {
     using namespace adc_bit;
     static_assert(c.sequence_length >= 1 && c.sequence_length <= 16, "the regular sequence is 1 to 16 conversions");
@@ -269,7 +271,7 @@ inline void init_adc_converter() {
 // The converters' clocks (RCC enable, and the kernel clock where the device
 // selects it there) must be running: the enable waits on the ADC. The
 // converters are not calibrated here: adc_calibrate_async does that.
-template<const ADCInit h>
+template <const ADCInit h>
 inline void init_adc() {
     static_assert(adc_count >= 5 || (h.adc4.enable == ADCEnable::DISABLED && h.adc5.enable == ADCEnable::DISABLED), "no adc4 or adc5 on this device");
     static_assert(adc_group_clocks_agree<h>(), "converters sharing a common register need the same clock");
@@ -282,7 +284,7 @@ inline void init_adc() {
     if constexpr (h.adc5.enable == ADCEnable::ENABLED) init_adc_converter<h.adc5, 5>();
 }
 
-template<ADCInit adc_init>
+template <ADCInit adc_init>
 inline void device_adc_config() {
     init_adc<adc_init>();
 }
@@ -297,7 +299,7 @@ inline constexpr int adc_task_size = 80;
 // adc_calibrate_async<3>(sched) is ADC3. The calibration only runs on a
 // disabled converter, so one that is enabled or converting is stopped and
 // disabled first and put back afterwards. Its results are stale meanwhile.
-template<int adc>
+template <int adc>
 [[gnu::cold]] inline GlobalTask<void, adc_task_id + adc, adc_task_size> adc_calibrate_async(CycleScheduler& sched) {
     using namespace adc_bit;
     ADCRegs& regs = adc_regs<adc>();
@@ -305,7 +307,8 @@ template<int adc>
     const uint32_t started = regs.CR & (CR_ADSTART | CR_JADSTART);
     // Stop, disable, calibrate: the converter clears each command bit when it is done
     for (int step = 0; step < 3; step++) {
-        const uint32_t command = step == 0 ? started << CR_STOP_Shift : step == 1 ? (enabled != 0 ? CR_ADDIS : 0) : CR_ADCAL;
+        const uint32_t command = step == 0 ? started << CR_STOP_Shift : step == 1 ? (enabled != 0 ? CR_ADDIS : 0)
+                                                                                  : CR_ADCAL;
         if (command == 0) continue;
         regs.CR = CR_ADVREGEN | command;
         while ((regs.CR & command) != 0) co_await sched.yield();
@@ -321,13 +324,13 @@ template<int adc>
 }
 
 // Last regular conversion of a converter: adc_read<3>() is ADC3
-template<int adc>
+template <int adc>
 inline uint32_t adc_read() {
     return adc_regs<adc>().DR;
 }
 
 // Last injected conversion of a rank, 0 = JDR1
-template<int adc>
+template <int adc>
 inline uint32_t adc_read_injected(int rank) {
     return (&adc_regs<adc>().JDR1)[rank];
 }
@@ -335,18 +338,18 @@ inline uint32_t adc_read_injected(int rank) {
 // For the handler of the injected end of sequence interrupt, ahead of its last
 // instructions: the request has to be gone before the return, or the handler
 // runs a second time.
-template<int adc>
+template <int adc>
 inline void adc_injected_end_of_sequence_clear() {
     adc_regs<adc>().ISR = adc_bit::ISR_JEOS;
 }
 
 // Software trigger of the regular / injected group. The start bits are set
 // only: writing the others as 0 leaves them alone.
-template<int adc>
+template <int adc>
 inline void adc_start() {
     adc_regs<adc>().CR = adc_bit::CR_ADVREGEN | adc_bit::CR_ADSTART;
 }
-template<int adc>
+template <int adc>
 inline void adc_start_injected() {
     adc_regs<adc>().CR = adc_bit::CR_ADVREGEN | adc_bit::CR_JADSTART;
 }

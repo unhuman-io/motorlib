@@ -15,6 +15,6 @@ static_assert(sizeof(OTP) == 32);
 
 extern OTP otp;
 
-#define otp ((OTP *) FLASH_OTP_BASE)
+#define otp ((OTP*)FLASH_OTP_BASE)
 
 #endif // UNHUMAN_MOTORLIB_OTP_H_

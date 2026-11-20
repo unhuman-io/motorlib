@@ -64,7 +64,7 @@ struct OPAMPInit {
 };
 
 // opamp_csr<3>() is the OPAMP3 control register
-template<int opamp>
+template <int opamp>
 inline volatile uint32_t& opamp_csr() {
     static_assert(opamp >= 1 && opamp <= opamp_count, "no such opamp on this device");
     return *reinterpret_cast<volatile uint32_t*>(opamp_base[opamp - 1]);
@@ -77,39 +77,39 @@ void opamp_gain_not_available();   // not constexpr: calling it fails the consta
 // opamp_calibrate_async replaces it.
 namespace opamp_bit {
 inline constexpr uint32_t CSR_OPAEN = 1u << 0, CSR_VP_SEL_Pos = 2, CSR_USERTRIM = 1u << 4, CSR_VM_SEL_Pos = 5, CSR_OPAHSM = 1u << 7,
-    CSR_OPAINTOEN = 1u << 8, CSR_CALON = 1u << 11, CSR_CALSEL_Pos = 12, CSR_PGA_GAIN_Pos = 14, CSR_PGA_INPUT_Pos = 17,
-    CSR_TRIMOFFSETP_Pos = 19, CSR_TRIMOFFSETN_Pos = 24, CSR_TRIMOFFSET_Width = 5, CSR_CALOUT = 1u << 30, CSR_LOCK = 1u << 31;
+                          CSR_OPAINTOEN = 1u << 8, CSR_CALON = 1u << 11, CSR_CALSEL_Pos = 12, CSR_PGA_GAIN_Pos = 14, CSR_PGA_INPUT_Pos = 17,
+                          CSR_TRIMOFFSETP_Pos = 19, CSR_TRIMOFFSETN_Pos = 24, CSR_TRIMOFFSET_Width = 5, CSR_CALOUT = 1u << 30, CSR_LOCK = 1u << 31;
 }
 static_assert(opamp_bit::CSR_USERTRIM == opamp_bits::CSR_USERTRIM && opamp_bit::CSR_CALON == opamp_bits::CSR_CALON &&
-    opamp_bit::CSR_CALSEL_Pos == opamp_bits::CSR_CALSEL_Pos && opamp_bit::CSR_TRIMOFFSETP_Pos == opamp_bits::CSR_TRIMOFFSETP_Pos &&
-    opamp_bit::CSR_TRIMOFFSETN_Pos == opamp_bits::CSR_TRIMOFFSETN_Pos && opamp_bit::CSR_CALOUT == opamp_bits::CSR_CALOUT);
+              opamp_bit::CSR_CALSEL_Pos == opamp_bits::CSR_CALSEL_Pos && opamp_bit::CSR_TRIMOFFSETP_Pos == opamp_bits::CSR_TRIMOFFSETP_Pos &&
+              opamp_bit::CSR_TRIMOFFSETN_Pos == opamp_bits::CSR_TRIMOFFSETN_Pos && opamp_bit::CSR_CALOUT == opamp_bits::CSR_CALOUT);
 static_assert(opamp_bit::CSR_OPAEN == opamp_bits::CSR_OPAEN && opamp_bit::CSR_VP_SEL_Pos == opamp_bits::CSR_VP_SEL_Pos &&
-    opamp_bit::CSR_VM_SEL_Pos == opamp_bits::CSR_VM_SEL_Pos && opamp_bit::CSR_OPAHSM == opamp_bits::CSR_OPAHSM &&
-    opamp_bit::CSR_OPAINTOEN == opamp_bits::CSR_OPAINTOEN && opamp_bit::CSR_PGA_GAIN_Pos == opamp_bits::CSR_PGA_GAIN_Pos &&
-    opamp_bit::CSR_LOCK == opamp_bits::CSR_LOCK);
+              opamp_bit::CSR_VM_SEL_Pos == opamp_bits::CSR_VM_SEL_Pos && opamp_bit::CSR_OPAHSM == opamp_bits::CSR_OPAHSM &&
+              opamp_bit::CSR_OPAINTOEN == opamp_bits::CSR_OPAINTOEN && opamp_bit::CSR_PGA_GAIN_Pos == opamp_bits::CSR_PGA_GAIN_Pos &&
+              opamp_bit::CSR_LOCK == opamp_bits::CSR_LOCK);
 
 inline consteval uint32_t get_opamp_csr(const OPAMPAmplifierInit& c) {
     using namespace opamp_bit;
     if (static_cast<uint32_t>(c.gain) > opamp_max_gain) opamp_gain_not_available();
     return (c.enable == OPAMPEnable::ENABLED ? CSR_OPAEN : 0) |
-        static_cast<uint32_t>(c.input) << CSR_VP_SEL_Pos |
-        static_cast<uint32_t>(c.mode) << CSR_VM_SEL_Pos |
-        (c.high_speed == OPAMPEnable::ENABLED ? CSR_OPAHSM : 0) |
-        (c.internal_output == OPAMPEnable::ENABLED ? CSR_OPAINTOEN : 0) |
-        static_cast<uint32_t>(c.gain) << CSR_PGA_GAIN_Pos |
-        static_cast<uint32_t>(c.pga_input) << CSR_PGA_INPUT_Pos |
-        (c.lock == OPAMPEnable::ENABLED ? CSR_LOCK : 0);
+           static_cast<uint32_t>(c.input) << CSR_VP_SEL_Pos |
+           static_cast<uint32_t>(c.mode) << CSR_VM_SEL_Pos |
+           (c.high_speed == OPAMPEnable::ENABLED ? CSR_OPAHSM : 0) |
+           (c.internal_output == OPAMPEnable::ENABLED ? CSR_OPAINTOEN : 0) |
+           static_cast<uint32_t>(c.gain) << CSR_PGA_GAIN_Pos |
+           static_cast<uint32_t>(c.pga_input) << CSR_PGA_INPUT_Pos |
+           (c.lock == OPAMPEnable::ENABLED ? CSR_LOCK : 0);
 }
 
 // One write configures and enables an amplifier; its output settles within
 // the wake up time (tens of microseconds). Only amplifiers that differ from
 // reset are written.
-template<uint32_t csr, int opamp>
+template <uint32_t csr, int opamp>
 inline void init_opamp_csr() {
     if constexpr (csr != 0) opamp_csr<opamp>() = csr;
 }
 
-template<const OPAMPInit h>
+template <const OPAMPInit h>
 inline void init_opamp() {
     init_opamp_csr<get_opamp_csr(h.opamp1), 1>();
     init_opamp_csr<get_opamp_csr(h.opamp2), 2>();
@@ -119,7 +119,7 @@ inline void init_opamp() {
     init_opamp_csr<get_opamp_csr(h.opamp6), 6>();
 }
 
-template<OPAMPInit opamp_init>
+template <OPAMPInit opamp_init>
 inline void device_opamp_config() {
     init_opamp<opamp_init>();
 }
@@ -142,7 +142,7 @@ inline constexpr int opamp_task_size = 128;
 // work and drives VOUT to either rail meanwhile, also when its configuration
 // uses the internal output. The result is false, and the factory trim stays,
 // if a pair has no such trim value. A locked CSR ignores all of this.
-template<int opamp>
+template <int opamp>
 [[gnu::cold]] inline GlobalTask<bool, opamp_task_id + opamp, opamp_task_size> opamp_calibrate_async(CycleScheduler& sched) {
     using namespace opamp_bit;
     constexpr uint32_t trim_count = 1u << CSR_TRIMOFFSET_Width;

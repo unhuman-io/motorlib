@@ -23,9 +23,10 @@ class MAX11270 : public TorqueSensorBase {
         uint8_t word;
     };
 
-    MAX11270(SPIDMA &spi_dma) :
-        TorqueSensorBase(), spi_dma_(spi_dma) {
-        
+    MAX11270(SPIDMA& spi_dma) :
+        TorqueSensorBase(),
+        spi_dma_(spi_dma) {
+
         register_address stat_read = {.rw = 1, .addr = 0, .bits2 = 3};
         uint8_t data_out[3] = {stat_read.word};
         uint8_t data_in[3];
@@ -34,13 +35,14 @@ class MAX11270 : public TorqueSensorBase {
         register_address dr = {.rw = 1, .addr = 6, .bits2 = 3};
         data_out_[0] = dr.word;
     }
-    bool init() { 
+    bool init() {
         register_address stat_read = {.rw = 1, .addr = 0, .bits2 = 3};
         uint8_t data_out[3] = {stat_read.word};
         uint8_t data_in[3];
         spi_dma_.readwrite(data_out, data_in, 3);
         logger.log_printf("max11270 stat: %02x %02x", data_in[1], data_in[2]);
-        return true; }
+        return true;
+    }
     void trigger() {
         if (++count_ <= decimation_) {
             return;
@@ -57,9 +59,9 @@ class MAX11270 : public TorqueSensorBase {
             }
             int32_t s32 = raw_value_ << 8;
             signed_value_ = s32 >> 8;
-            torque_ = signed_value_ * (2.5 / powf(2,23)) / .02085;
+            torque_ = signed_value_ * (2.5 / powf(2, 23)) / .02085;
             uint8_t data_in;
-            conversion conv = {.rate=0b1111, .start=1};
+            conversion conv = {.rate = 0b1111, .start = 1};
             spi_dma_.readwrite(&conv.word, &data_in, 1);
         }
         return torque_;
@@ -69,9 +71,10 @@ class MAX11270 : public TorqueSensorBase {
     uint8_t decimation_ = 1;
     int32_t signed_value_ = 0;
     uint32_t raw_value_ = 0;
+
  private:
     static const uint8_t length_ = 5;
     uint8_t data_out_[length_] = {};
     uint8_t data_in_[length_] = {};
-    SPIDMA &spi_dma_;
+    SPIDMA& spi_dma_;
 };

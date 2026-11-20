@@ -7,7 +7,8 @@
 #include "../peripheral/stm32_serial.h"
 
 struct BoardRev {
-    enum Rev {kR0, kR1} rev;
+    enum Rev { kR0,
+               kR1 } rev;
 };
 
 BoardRev get_board_rev() {

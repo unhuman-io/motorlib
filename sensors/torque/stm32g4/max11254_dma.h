@@ -5,12 +5,19 @@
 
 class MAX11254DMA : public MAX11254<> {
  public:
-    MAX11254DMA(SPIDMA &spi_dma, DMAMUX_Channel_TypeDef &dmamux_tx_regs, DMAMUX_Channel_TypeDef &dmamux_rx_regs, uint8_t exti_num, float dt) : MAX11254(spi_dma, 0, false), tx_dma_(spi_dma.tx_dma_), rx_dma_(spi_dma_.rx_dma_),
-        dmamux_tx_regs_(dmamux_tx_regs), dmamux_rx_regs_(dmamux_rx_regs), exti_num_(exti_num), dt_(dt), frequency_filter_(dt, 1){
-            register_address dr = {.rw = 1, .addr = 14, .bits2 = 3};
-            dma_buf_out_[0][0] = dr.word;
-            dma_buf_out_[1][0] = dr.word;
-        }
+    MAX11254DMA(SPIDMA& spi_dma, DMAMUX_Channel_TypeDef& dmamux_tx_regs, DMAMUX_Channel_TypeDef& dmamux_rx_regs, uint8_t exti_num, float dt) :
+        MAX11254(spi_dma, 0, false),
+        tx_dma_(spi_dma.tx_dma_),
+        rx_dma_(spi_dma_.rx_dma_),
+        dmamux_tx_regs_(dmamux_tx_regs),
+        dmamux_rx_regs_(dmamux_rx_regs),
+        exti_num_(exti_num),
+        dt_(dt),
+        frequency_filter_(dt, 1) {
+        register_address dr = {.rw = 1, .addr = 14, .bits2 = 3};
+        dma_buf_out_[0][0] = dr.word;
+        dma_buf_out_[1][0] = dr.word;
+    }
     bool init() {
         register_address stat_read = {.rw = 1, .addr = 0, .bits2 = 3};
         uint8_t data_out[5] = {stat_read.word};
@@ -21,23 +28,23 @@ class MAX11254DMA : public MAX11254<> {
         //ret_val &= write_reg(8, 0x40); // in 1
         // reset sequence
         ret_val &= write_reg(1, 0x30); // reset
-        command conv = {.rate=0b1111, .mode=1, .b7=1};
+        command conv = {.rate = 0b1111, .mode = 1, .b7 = 1};
         spi_dma_.readwrite(&conv.word, data_in, 1);
         ms_delay(28);
         spi_dma_.readwrite(data_out, data_in, 5);
         logger.log_printf("max11254 stat: %02x %02x %02x", data_in[2], data_in[3], data_in[4]);
 
-        cr1_register cr1 = {.scycle=0, .format=1};
+        cr1_register cr1 = {.scycle = 0, .format = 1};
         ret_val &= write_reg(1, cr1.word);   // continuous conversion
         // pga128
-        cr2_register cr2 = {.pga=7, .pgaen=1, .ldoen=1};
+        cr2_register cr2 = {.pga = 7, .pgaen = 1, .ldoen = 1};
         ret_val &= write_reg(2, cr2.word);
         ret_val &= write_reg(9, 0x1); //  GPO0 on
 
         spi_dma_.readwrite(data_out, data_in, 5);
         logger.log_printf("max11254 stat: %02x %02x %02x", data_in[2], data_in[3], data_in[4]);
 
-        command conv2 = {.rate=0b1100, .mode=3, .b7=1}; // 8khz rate
+        command conv2 = {.rate = 0b1100, .mode = 3, .b7 = 1}; // 8khz rate
         spi_dma_.readwrite(&conv2.word, data_in, 1);
 
         // spi_dma_.readwrite(data_out, data_in, 5);
@@ -55,11 +62,11 @@ class MAX11254DMA : public MAX11254<> {
         spi_dma_.start_continuous_readwrite(dma_buf_out_[0], dma_buf_in_[0], 10);
     }
 
-    void trigger(){}
+    void trigger() {}
     float read() {
-        asm("" : "=m" (*(uint8_t (*)[10]) dma_buf_in_)); // memory barrier
+        asm("" : "=m"(*(uint8_t (*)[10])dma_buf_in_)); // memory barrier
         uint8_t new_buf_ptr = get_new_buf_ptr();
-        uint8_t *data_in = dma_buf_in_[new_buf_ptr];
+        uint8_t* data_in = dma_buf_in_[new_buf_ptr];
         float new_value = (new_buf_ptr != last_buf_ptr_) ? 1.0 : 0;
         frequency_filter_.update(new_value);
 
@@ -82,7 +89,7 @@ class MAX11254DMA : public MAX11254<> {
         if (raw_value_ == 0 || raw_value_ == 0xFFFFFF) {
             read_error_++;
         }
-        
+
         return torque_;
     }
 
@@ -99,7 +106,7 @@ class MAX11254DMA : public MAX11254<> {
     }
 
     float get_frequency() const {
-        return frequency_filter_.get_value()/dt_;
+        return frequency_filter_.get_value() / dt_;
     }
 
     DMA_Channel_TypeDef &tx_dma_, &rx_dma_;
@@ -111,5 +118,4 @@ class MAX11254DMA : public MAX11254<> {
     float dt_;
     FirstOrderLowPassFilter frequency_filter_;
     bool start_continuous_dma_ = true;
-
 };

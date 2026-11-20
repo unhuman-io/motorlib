@@ -7,32 +7,37 @@
 
 class AdmittanceController : public Controller {
  public:
-    AdmittanceController(float dt) : Controller(dt), velocity_controller_(dt), torque_controller_(dt) {}
-    void init(const MainLoopStatus &status) {
+    AdmittanceController(float dt) :
+        Controller(dt),
+        velocity_controller_(dt),
+        torque_controller_(dt) {}
+    void init(const MainLoopStatus& status) {
         torque_controller_.init(status.torque);
         velocity_controller_.init(status);
     }
-    float step(const MotorCommand &command, const MainLoopStatus &status) {
+    float step(const MotorCommand& command, const MainLoopStatus& status) {
         float velocity_des = torque_controller_.step(command.torque_desired, 0, status.torque);
         MotorCommand velocity_command = {.current_desired = command.current_desired, .velocity_desired = velocity_des};
         float iq_des = velocity_controller_.step(velocity_command, status);
         return iq_des;
     }
-    void set_param(const AdmittanceControllerParam &param) {
+    void set_param(const AdmittanceControllerParam& param) {
         torque_controller_.set_param(param.torque);
         velocity_controller_.set_param(param.velocity);
     }
-    bool validate_command(const MotorCommand &command) const {
+    bool validate_command(const MotorCommand& command) const {
         if (std::isfinite(command.torque_desired)) {
             return true;
         }
         return false;
     }
+
  private:
     VelocityController velocity_controller_;
     PIDController torque_controller_;
 
-    template <typename T> friend class SystemBase;
+    template <typename T>
+    friend class SystemBase;
 };
 
 #endif  // UNHUMAN_MOTORLIB_CONTROLLER_ADMITTANCE_CONTROLLER_H_

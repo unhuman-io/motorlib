@@ -9,25 +9,26 @@
 
 extern uint16_t drv_regs_error;
 
-#define DRV8323S_STATUS_BITS_STR_LEN (7*13 + 5*3 + 6*4 + 4*2)
+#define DRV8323S_STATUS_BITS_STR_LEN (7 * 13 + 5 * 3 + 6 * 4 + 4 * 2)
 static const char* drv8323_status1_bits[11] = {"vds_lc", "vds_hc", "vds_lb", "vds_hb", "vds_la", "vds_ha", "otsd", "uvlo", "gdf", "vds_ocp", "fault"};
 static const char* drv8323_status2_bits[11] = {"vgs_lc", "vgs_hc", "vgs_lb", "vgs_hb", "vgs_la", "vgs_ha", "cpuv", "otw", "sc_oc", "sb_oc", "sa_oc"};
 
 
 #define DRV8323S_SET_DEBUG_API(api, drv) \
-    api.add_api_variable("drv_idrivep_hs", new APICallbackUint8([](){ return drv.get_idrivep_hs(); },\
-        [](uint8_t val){ drv.set_idrivep_hs(val); }));\
-    api.add_api_variable("drv_idrivep_ls", new APICallbackUint8([](){ return drv.get_idrivep_ls(); },\
-        [](uint8_t val){ drv.set_idrivep_ls(val); }));\
-    api.add_api_variable("drv_tdrive", new APICallbackUint8([](){ return drv.get_tdrive(); },\
-        [](uint8_t val){ drv.set_tdrive(val); }));\
-    api.add_api_variable("drv_csa_reg", new APICallbackHex<uint16_t>([](){ return drv.get_csa_reg(); },\
-        [](uint16_t val){ drv.set_csa_reg(val); }));\
-        
+    api.add_api_variable("drv_idrivep_hs", new APICallbackUint8([]() { return drv.get_idrivep_hs(); }, \
+                                                                [](uint8_t val) { drv.set_idrivep_hs(val); })); \
+    api.add_api_variable("drv_idrivep_ls", new APICallbackUint8([]() { return drv.get_idrivep_ls(); }, \
+                                                                [](uint8_t val) { drv.set_idrivep_ls(val); })); \
+    api.add_api_variable("drv_tdrive", new APICallbackUint8([]() { return drv.get_tdrive(); }, \
+                                                            [](uint8_t val) { drv.set_tdrive(val); })); \
+    api.add_api_variable("drv_csa_reg", new APICallbackHex<uint16_t>([]() { return drv.get_csa_reg(); }, \
+                                                                     [](uint16_t val) { drv.set_csa_reg(val); }));
+
 class DRV8323S : public DriverBase {
  public:
-    DRV8323S(SPI_TypeDef &regs, SPIPause &spi_pause)
-        : regs_(regs), spi_pause_(spi_pause) {
+    DRV8323S(SPI_TypeDef& regs, SPIPause& spi_pause) :
+        regs_(regs),
+        spi_pause_(spi_pause) {
     }
 
     void drv_spi_start() {
@@ -52,14 +53,14 @@ class DRV8323S : public DriverBase {
         uint32_t __attribute((unused)) status = get_drv_status();
         logger.log_printf("drv8323 disabled, status1: %03x status2: %03x", status & 0xFFFF, status >> 16);
         char buf[21 + 22 + DRV8323S_STATUS_BITS_STR_LEN + 1] = "drv8323 status bits: ";
-        for(int i=0; i<11; i++) {
+        for (int i = 0; i < 11; i++) {
             if ((status >> i) & 0x1) {
                 strcat(buf, drv8323_status1_bits[i]);
                 strcat(buf, " ");
             }
         }
-        for(int i=0; i<11; i++) {
-            if ((status >> (16+i)) & 0x1) {
+        for (int i = 0; i < 11; i++) {
+            if ((status >> (16 + i)) & 0x1) {
                 strcat(buf, drv8323_status2_bits[i]);
                 strcat(buf, " ");
             }
@@ -83,11 +84,11 @@ class DRV8323S : public DriverBase {
 
         drv_spi_start();
         drv_regs_error = 0;
-        for (uint8_t i=0; i<sizeof(param->drv_regs)/sizeof(uint16_t); i++) {
+        for (uint8_t i = 0; i < sizeof(param->drv_regs) / sizeof(uint16_t); i++) {
             uint16_t reg_out = param->drv_regs[i];
             uint16_t reg_in = 0;
             write_reg(reg_out);
-            uint8_t address = param->drv_regs[i]>>11;
+            uint8_t address = param->drv_regs[i] >> 11;
             reg_in = read_reg(address);
             if ((reg_in & 0x7FF) != (reg_out & 0x7FF)) {
                 drv_regs_error |= 1 << i;
@@ -97,7 +98,7 @@ class DRV8323S : public DriverBase {
 
         drv_spi_end();
         DriverBase::enable();
-        if(!drv_regs_error) {
+        if (!drv_regs_error) {
             logger.log("drv8323s configure success");
         } else {
             logger.log_printf("drv8323s configure error: %02x", drv_regs_error);
@@ -116,15 +117,15 @@ class DRV8323S : public DriverBase {
         uint16_t reg_in = 0;
         set_cs_low();
         regs_.DR = reg_out;
-        while((!(regs_.SR & SPI_SR_RXNE)) && (get_clock() < timeout)); // Busy wait with timeout
+        while ((!(regs_.SR & SPI_SR_RXNE)) && (get_clock() < timeout)); // Busy wait with timeout
 
-        if(get_clock() < timeout) // If timeout did not expire
+        if (get_clock() < timeout) // If timeout did not expire
         {
-          reg_in = regs_.DR;
+            reg_in = regs_.DR;
         }
         return reg_in;
     }
-    
+
     uint16_t write_reg(uint8_t address, uint16_t reg_out) {
         reg_out |= address << 11;
         return write_reg(reg_out);
@@ -132,27 +133,27 @@ class DRV8323S : public DriverBase {
 
     uint16_t read_reg(uint8_t address) {
         uint32_t timeout = get_clock() + US_TO_CPU(100000U); // Timeout 100ms
-        uint16_t out_value = 1<<15 | address<<11;
+        uint16_t out_value = 1 << 15 | address << 11;
         uint16_t value = 0;
         set_cs_low();
         regs_.DR = out_value;
-        while((!(regs_.SR & SPI_SR_RXNE)) && (get_clock() < timeout)); // Busy wait with timeout
+        while ((!(regs_.SR & SPI_SR_RXNE)) && (get_clock() < timeout)); // Busy wait with timeout
 
-        if(get_clock() < timeout) // If timeout did not expire
+        if (get_clock() < timeout) // If timeout did not expire
         {
-          value = regs_.DR;
+            value = regs_.DR;
         }
         return value;
     }
 
-    // return (fault status register 2 << 16) | (fault status register 1) 
+    // return (fault status register 2 << 16) | (fault status register 1)
     uint32_t get_drv_status() {
-            drv_spi_start();
-            // vgs_status2 << 16 | fault status 1
-            uint32_t value = read_reg(0) | read_reg(1) << 16;
-            drv_spi_end();
+        drv_spi_start();
+        // vgs_status2 << 16 | fault status 1
+        uint32_t value = read_reg(0) | read_reg(1) << 16;
+        drv_spi_end();
 
-            return value;
+        return value;
     }
 
     uint16_t get_csa_reg() {
@@ -210,8 +211,8 @@ class DRV8323S : public DriverBase {
     }
 
  private:
-    SPI_TypeDef &regs_;
-    SPIPause &spi_pause_;
+    SPI_TypeDef& regs_;
+    SPIPause& spi_pause_;
 };
 
 #endif  // UNHUMAN_MOTORLIB_PERIPHERAL_STM32G4_DRV8323S_H_

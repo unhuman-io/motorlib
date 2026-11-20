@@ -40,80 +40,80 @@ enum class ADCSampleTime : uint8_t {
 // three instances. The timer capture/compare and remaining TRGO sources
 // differ between ADC1/2 and ADC3 and some are switched by ADC_OR option bits.
 enum class ADCTrigger : uint8_t {
-    TIM6_TRGO     = 10,
-    TIM20_TRGO    = 17,
-    TIM20_TRGO2   = 18,
-    TIM26_TRGO    = 19,
-    LPTIM1_CH1    = 20,
-    HRTIM_TRG1    = 22,
-    HRTIM_TRG2    = 23,
-    HRTIM_TRG3    = 24,
-    HRTIM_TRG4    = 25,
-    HRTIM_TRG5    = 26,
-    HRTIM_TRG6    = 27,
-    HRTIM_TRG7    = 28,
-    HRTIM_TRG8    = 29,
-    HRTIM_TRG9    = 30,
-    HRTIM_TRG10   = 31,
+    TIM6_TRGO   = 10,
+    TIM20_TRGO  = 17,
+    TIM20_TRGO2 = 18,
+    TIM26_TRGO  = 19,
+    LPTIM1_CH1  = 20,
+    HRTIM_TRG1  = 22,
+    HRTIM_TRG2  = 23,
+    HRTIM_TRG3  = 24,
+    HRTIM_TRG4  = 25,
+    HRTIM_TRG5  = 26,
+    HRTIM_TRG6  = 27,
+    HRTIM_TRG7  = 28,
+    HRTIM_TRG8  = 29,
+    HRTIM_TRG9  = 30,
+    HRTIM_TRG10 = 31,
 };
 
 // JSQR JEXTSEL, injected group, as above
 enum class ADCInjectedTrigger : uint8_t {
-    TIM2_TRGO     = 5,
-    TIM20_TRGO    = 17,
-    TIM20_TRGO2   = 18,
-    TIM27_TRGO    = 19,
-    LPTIM1_CH2    = 20,
-    HRTIM_TRG1    = 22,
-    HRTIM_TRG2    = 23,
-    HRTIM_TRG3    = 24,
-    HRTIM_TRG4    = 25,
-    HRTIM_TRG5    = 26,
-    HRTIM_TRG6    = 27,
-    HRTIM_TRG7    = 28,
-    HRTIM_TRG8    = 29,
-    HRTIM_TRG9    = 30,
-    HRTIM_TRG10   = 31,
+    TIM2_TRGO   = 5,
+    TIM20_TRGO  = 17,
+    TIM20_TRGO2 = 18,
+    TIM27_TRGO  = 19,
+    LPTIM1_CH2  = 20,
+    HRTIM_TRG1  = 22,
+    HRTIM_TRG2  = 23,
+    HRTIM_TRG3  = 24,
+    HRTIM_TRG4  = 25,
+    HRTIM_TRG5  = 26,
+    HRTIM_TRG6  = 27,
+    HRTIM_TRG7  = 28,
+    HRTIM_TRG8  = 29,
+    HRTIM_TRG9  = 30,
+    HRTIM_TRG10 = 31,
 };
 
 // checked against the shared register layout
 namespace adc_offsets {
-inline constexpr uint32_t CFGR  = offsetof(ADC1_Type, ADC_CFGR1);
+inline constexpr uint32_t CFGR = offsetof(ADC1_Type, ADC_CFGR1);
 inline constexpr uint32_t SMPR2 = offsetof(ADC1_Type, ADC_SMPR2);
-inline constexpr uint32_t SQR1  = offsetof(ADC1_Type, ADC_SQR1);
-inline constexpr uint32_t DR    = offsetof(ADC1_Type, ADC_DR);
-inline constexpr uint32_t JSQR  = offsetof(ADC1_Type, ADC_JSQR);
-inline constexpr uint32_t JDR1  = offsetof(ADC1_Type, ADC_JDR1);
-inline constexpr uint32_t CCR   = offsetof(ADCC12_Type, ADCC_CCR);
+inline constexpr uint32_t SQR1 = offsetof(ADC1_Type, ADC_SQR1);
+inline constexpr uint32_t DR = offsetof(ADC1_Type, ADC_DR);
+inline constexpr uint32_t JSQR = offsetof(ADC1_Type, ADC_JSQR);
+inline constexpr uint32_t JDR1 = offsetof(ADC1_Type, ADC_JDR1);
+inline constexpr uint32_t CCR = offsetof(ADCC12_Type, ADCC_CCR);
 }
 static_assert(offsetof(ADC1_Type, ADC_PCSEL) == 0x1C);
 
 namespace adc_bits {
-inline constexpr uint32_t CFGR_RES_Pos     = ADC1_ADC_CFGR1_RES_Pos;
+inline constexpr uint32_t CFGR_RES_Pos = ADC1_ADC_CFGR1_RES_Pos;
 // checked against the shared bit positions
-inline constexpr uint32_t ISR_ADRDY        = ADC1_ADC_ISR_ADRDY_Msk;
-inline constexpr uint32_t IER_EOCIE        = ADC1_ADC_IER_EOCIE_Msk;
-inline constexpr uint32_t ISR_JEOS         = ADC1_ADC_ISR_JEOS_Msk;
-inline constexpr uint32_t IER_JEOSIE       = ADC1_ADC_IER_JEOSIE_Msk;
-inline constexpr uint32_t CR_ADSTART       = ADC1_ADC_CR_ADSTART_Msk;
-inline constexpr uint32_t CR_JADSTART      = ADC1_ADC_CR_JADSTART_Msk;
-inline constexpr uint32_t CR_ADVREGEN      = ADC1_ADC_CR_ADVREGEN_Msk;
-inline constexpr uint32_t CR_ADCAL         = ADC1_ADC_CR_ADCAL_Msk;
-inline constexpr uint32_t CR_ADDIS         = ADC1_ADC_CR_ADDIS_Msk;
-inline constexpr uint32_t CR_ADSTP         = ADC1_ADC_CR_ADSTP_Msk;
-inline constexpr uint32_t CR_JADSTP        = ADC1_ADC_CR_JADSTP_Msk;
-inline constexpr uint32_t CFGR_EXTSEL_Pos  = ADC1_ADC_CFGR1_EXTSEL_Pos;
-inline constexpr uint32_t CFGR_EXTEN_Pos   = ADC1_ADC_CFGR1_EXTEN_Pos;
-inline constexpr uint32_t CFGR_OVRMOD      = ADC1_ADC_CFGR1_OVRMOD_Msk;
-inline constexpr uint32_t CFGR_CONT        = ADC1_ADC_CFGR1_CONT_Msk;
-inline constexpr uint32_t CFGR_JQDIS       = ADC1_ADC_CFGR1_JQDIS_Msk;
-inline constexpr uint32_t SMPR1_SMP1_Pos   = ADC1_ADC_SMPR1_SMP1_Pos;
-inline constexpr uint32_t SQR1_SQ1_Pos     = ADC1_ADC_SQR1_SQ1_Pos;
-inline constexpr uint32_t SQR1_SQ2_Pos     = ADC1_ADC_SQR1_SQ2_Pos;
+inline constexpr uint32_t ISR_ADRDY = ADC1_ADC_ISR_ADRDY_Msk;
+inline constexpr uint32_t IER_EOCIE = ADC1_ADC_IER_EOCIE_Msk;
+inline constexpr uint32_t ISR_JEOS = ADC1_ADC_ISR_JEOS_Msk;
+inline constexpr uint32_t IER_JEOSIE = ADC1_ADC_IER_JEOSIE_Msk;
+inline constexpr uint32_t CR_ADSTART = ADC1_ADC_CR_ADSTART_Msk;
+inline constexpr uint32_t CR_JADSTART = ADC1_ADC_CR_JADSTART_Msk;
+inline constexpr uint32_t CR_ADVREGEN = ADC1_ADC_CR_ADVREGEN_Msk;
+inline constexpr uint32_t CR_ADCAL = ADC1_ADC_CR_ADCAL_Msk;
+inline constexpr uint32_t CR_ADDIS = ADC1_ADC_CR_ADDIS_Msk;
+inline constexpr uint32_t CR_ADSTP = ADC1_ADC_CR_ADSTP_Msk;
+inline constexpr uint32_t CR_JADSTP = ADC1_ADC_CR_JADSTP_Msk;
+inline constexpr uint32_t CFGR_EXTSEL_Pos = ADC1_ADC_CFGR1_EXTSEL_Pos;
+inline constexpr uint32_t CFGR_EXTEN_Pos = ADC1_ADC_CFGR1_EXTEN_Pos;
+inline constexpr uint32_t CFGR_OVRMOD = ADC1_ADC_CFGR1_OVRMOD_Msk;
+inline constexpr uint32_t CFGR_CONT = ADC1_ADC_CFGR1_CONT_Msk;
+inline constexpr uint32_t CFGR_JQDIS = ADC1_ADC_CFGR1_JQDIS_Msk;
+inline constexpr uint32_t SMPR1_SMP1_Pos = ADC1_ADC_SMPR1_SMP1_Pos;
+inline constexpr uint32_t SQR1_SQ1_Pos = ADC1_ADC_SQR1_SQ1_Pos;
+inline constexpr uint32_t SQR1_SQ2_Pos = ADC1_ADC_SQR1_SQ2_Pos;
 inline constexpr uint32_t JSQR_JEXTSEL_Pos = ADC1_ADC_JSQR_JEXTSEL_Pos;
-inline constexpr uint32_t JSQR_JEXTEN_Pos  = ADC1_ADC_JSQR_JEXTEN_Pos;
-inline constexpr uint32_t JSQR_JSQ1_Pos    = ADC1_ADC_JSQR_JSQ1_Pos;
-inline constexpr uint32_t JSQR_JSQ2_Pos    = ADC1_ADC_JSQR_JSQ2_Pos;
-inline constexpr uint32_t CCR_VREFEN       = ADCC12_ADCC_CCR_VREFEN_Msk;
-inline constexpr uint32_t CCR_TSEN         = ADCC12_ADCC_CCR_TSEN_Msk;
+inline constexpr uint32_t JSQR_JEXTEN_Pos = ADC1_ADC_JSQR_JEXTEN_Pos;
+inline constexpr uint32_t JSQR_JSQ1_Pos = ADC1_ADC_JSQR_JSQ1_Pos;
+inline constexpr uint32_t JSQR_JSQ2_Pos = ADC1_ADC_JSQR_JSQ2_Pos;
+inline constexpr uint32_t CCR_VREFEN = ADCC12_ADCC_CCR_VREFEN_Msk;
+inline constexpr uint32_t CCR_TSEN = ADCC12_ADCC_CCR_TSEN_Msk;
 }

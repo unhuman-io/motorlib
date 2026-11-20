@@ -4,19 +4,19 @@
 
 #include <cmath>
 
-FOC::FOC(float dt) : dt_(dt), 
+FOC::FOC(float dt) :
+    dt_(dt),
     id_filter_(dt),
-    iq_filter_(dt)
-{}
+    iq_filter_(dt) {}
 
 FOC::~FOC() {
 }
 
-#define SQRT3 (float) std::sqrt(3)
-const float FOC::Kc[2][3] = {{2.0/3, -1.0/3, -1.0/3},
-                               {0,      1/SQRT3, -1/SQRT3}};
+#define SQRT3 (float)std::sqrt(3)
+const float FOC::Kc[2][3] = {{2.0 / 3, -1.0 / 3, -1.0 / 3},
+                             {0, 1 / SQRT3, -1 / SQRT3}};
 
-FOCStatus * const FOC::step(const FOCCommand &command) {
+FOCStatus* const FOC::step(const FOCCommand& command) {
     status_.desired.i_d = command.desired.i_d;
     status_.desired.i_q = command.desired.i_q;
     float i_abc_measured[3] = {command.measured.i_a, command.measured.i_b, command.measured.i_c};
@@ -26,14 +26,14 @@ FOCStatus * const FOC::step(const FOCCommand &command) {
     //float cos_t = std::cos(electrical_angle);
 
     Sincos sincos = sincos1(electrical_angle);
-    float &sin_t = sincos.sin;
-    float &cos_t = sincos.cos;
-    float  i_alpha_measured = Kc[0][0] * i_abc_measured[0] +
-            Kc[0][1] * i_abc_measured[1] +
-            Kc[0][2] * i_abc_measured[2];
-    float  i_beta_measured = Kc[1][0] * i_abc_measured[0] +
-                     Kc[1][1] * i_abc_measured[1] +
-                     Kc[1][2] * i_abc_measured[2];
+    float& sin_t = sincos.sin;
+    float& cos_t = sincos.cos;
+    float i_alpha_measured = Kc[0][0] * i_abc_measured[0] +
+                             Kc[0][1] * i_abc_measured[1] +
+                             Kc[0][2] * i_abc_measured[2];
+    float i_beta_measured = Kc[1][0] * i_abc_measured[0] +
+                            Kc[1][1] * i_abc_measured[1] +
+                            Kc[1][2] * i_abc_measured[2];
 
     float i_d_measured = cos_t * i_alpha_measured - sin_t * i_beta_measured;
     float i_q_measured = sin_t * i_alpha_measured + cos_t * i_beta_measured;
@@ -44,10 +44,10 @@ FOCStatus * const FOC::step(const FOCCommand &command) {
     float i_d_desired_limited = id_limiter_.step(status_.desired.i_d);
     float i_q_desired_limited = iq_limiter_.step(status_.desired.i_q);
 
-    float v_d_desired = i_gain_*pi_id_.step(i_d_desired_limited, i_d_measured_filtered);
-    float v_q_desired = i_gain_*pi_iq_.step(i_q_desired_limited, i_q_measured_filtered) + command.desired.v_q;
+    float v_d_desired = i_gain_ * pi_id_.step(i_d_desired_limited, i_d_measured_filtered);
+    float v_q_desired = i_gain_ * pi_iq_.step(i_q_desired_limited, i_q_measured_filtered) + command.desired.v_q;
 
-    float v_dq_magnitude_desired = sqrtf(v_d_desired*v_d_desired + v_q_desired*v_q_desired);
+    float v_dq_magnitude_desired = sqrtf(v_d_desired * v_d_desired + v_q_desired * v_q_desired);
     float v_dq_magnitude_limited = flimit(v_dq_magnitude_desired, param_.voltage_limit);
 
     const float scale_factor = v_dq_magnitude_limited / (v_dq_magnitude_desired + std::numeric_limits<float>::epsilon());
@@ -75,7 +75,7 @@ FOCStatus * const FOC::step(const FOCCommand &command) {
     return &status_;
 }
 
-void FOC::set_param(const FOCParam &param) {
+void FOC::set_param(const FOCParam& param) {
     param_ = param;
     pi_id_.set_param(param.pi_d);
     pi_iq_.set_param(param.pi_q);
@@ -87,7 +87,7 @@ void FOC::set_param(const FOCParam &param) {
     param_.voltage_limit = param.voltage_limit == 0 ? INFINITY : param.voltage_limit;
 }
 
-void FOC::voltage_mode() { 
+void FOC::voltage_mode() {
     i_gain_ = 0;
 }
 
@@ -95,18 +95,17 @@ void FOC::current_mode() {
     pi_id_.initialize();
     pi_iq_.initialize();
     i_gain_ = 1;
-
 }
 
-void FOC::calculate_vdq0(Vdq0 *const vdq0, float cos, float sin, float va, float vb, float vc) {
-    float  v_alpha = Kc[0][0] * va +
-            Kc[0][1] * vb +
-            Kc[0][2] * vc;
-    float  v_beta = Kc[1][0] * va +
-                     Kc[1][1] * vb +
-                     Kc[1][2] * vc;
+void FOC::calculate_vdq0(Vdq0* const vdq0, float cos, float sin, float va, float vb, float vc) {
+    float v_alpha = Kc[0][0] * va +
+                    Kc[0][1] * vb +
+                    Kc[0][2] * vc;
+    float v_beta = Kc[1][0] * va +
+                   Kc[1][1] * vb +
+                   Kc[1][2] * vc;
 
     vdq0->vd = cos * v_alpha - sin * v_beta;
     vdq0->vq = sin * v_alpha + cos * v_beta;
-    vdq0->v0 = (1.0/3)*(va + vb + vc);
+    vdq0->v0 = (1.0 / 3) * (va + vb + vc);
 }

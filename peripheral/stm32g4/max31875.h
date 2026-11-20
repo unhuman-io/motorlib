@@ -5,9 +5,11 @@
 
 class MAX31875 {
  public:
-    MAX31875(I2C_DMA &i2c, uint8_t address = 0x48) : i2c_(i2c), address_(address) {
+    MAX31875(I2C_DMA& i2c, uint8_t address = 0x48) :
+        i2c_(i2c),
+        address_(address) {
         if (address_ < 0x48) {
-            // address can either be given as 0 through 7 or 
+            // address can either be given as 0 through 7 or
             // as 0x48 + 0 through 7
             address_ += 0x48;
         }
@@ -33,19 +35,20 @@ class MAX31875 {
             //logger.log_printf("i2c read error: %d", ret_val);
             return 0;
         }
-        value_ = ((raw_val[0] << 8 | raw_val[1])>>3) * (100.0/16);
+        value_ = ((raw_val[0] << 8 | raw_val[1]) >> 3) * (100.0 / 16);
         return get_temperature();
     }
     float get_temperature() const {
-        return value_*0.01;
+        return value_ * 0.01;
     }
- //private:
-    I2C_DMA &i2c_;
+    //private:
+    I2C_DMA& i2c_;
     uint32_t value_;
     bool first_read_ = true;
     uint8_t address_;
 
-    template <typename T> friend class SystemBase;
+    template <typename T>
+    friend class SystemBase;
 };
 
 #endif  // UNHUMAN_MOTORLIB_PERIPHERAL_STM32G4_MAX31875_H_

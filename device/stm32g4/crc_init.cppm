@@ -48,26 +48,26 @@ inline constexpr CRCInit crc32_init = {
 
 inline consteval uint32_t get_crc_cr(const CRCInit& c) {
     return static_cast<uint32_t>(c.polynomial_size) << CRC_CR_POLYSIZE_Pos |
-        static_cast<uint32_t>(c.input_reverse) << CRC_CR_REV_IN_Pos |
-        static_cast<uint32_t>(c.output_reverse) << CRC_CR_REV_OUT_Pos;
+           static_cast<uint32_t>(c.input_reverse) << CRC_CR_REV_IN_Pos |
+           static_cast<uint32_t>(c.output_reverse) << CRC_CR_REV_OUT_Pos;
 }
 
 // Only what differs from reset is written
-template<const CRCInit c>
+template <const CRCInit c>
 inline void init_crc() {
     if constexpr (c.polynomial != CRCInit{}.polynomial) CRC->POL = c.polynomial;
     if constexpr (c.initial_value != CRCInit{}.initial_value) CRC->INIT = c.initial_value;
     CRC->CR = get_crc_cr(c) | CRC_CR_RESET;
 }
 
-template<CRCInit crc_init>
+template <CRCInit crc_init>
 inline void device_crc_config() {
     init_crc<crc_init>();
 }
 
 // A crc in steps: crc_reset<init>() starts from the initial value, crc_write()
 // adds bytes in the order of the memory, crc_read<init>() is the result so far
-template<const CRCInit c>
+template <const CRCInit c>
 inline void crc_reset() {
     CRC->CR = get_crc_cr(c) | CRC_CR_RESET;
 }
@@ -84,13 +84,13 @@ inline void crc_write(const void* data, uint32_t length) {
     }
 }
 
-template<const CRCInit c>
+template <const CRCInit c>
 inline uint32_t crc_read() {
     return CRC->DR ^ c.output_xor;
 }
 
 // The crc of a block: 4 cpu cycles per word in the unit
-template<const CRCInit c>
+template <const CRCInit c>
 inline uint32_t crc_compute(const void* data, uint32_t length) {
     crc_reset<c>();
     crc_write(data, length);

@@ -6,18 +6,17 @@
 uint32_t ParameterAPI::AllocatorBase::index_ = 0;
 uint32_t ParameterAPI::AllocatorBase::mem_[API_SIZE] __attribute((section(".bss.api")));
 
-static std::string trim(std::string_view s)
-{
+static std::string trim(std::string_view s) {
     auto first = s.find_first_not_of(' ');
     auto last = s.find_last_not_of(' ');
-    return std::string(s.substr(first, (last-first+1)));
+    return std::string(s.substr(first, (last - first + 1)));
 }
 
-void ParameterAPI::add_api_variable(std::string_view name, APIVariable *var) {
-    if (is_rom((void *) name.data())) {
+void ParameterAPI::add_api_variable(std::string_view name, APIVariable* var) {
+    if (is_rom((void*)name.data())) {
         try {
             variable_map_.emplace(name, var);
-        } catch (const std::bad_alloc &e) {
+        } catch (const std::bad_alloc& e) {
             logger.log_printf("Error adding variable %s (%d): %s", std::string(name).c_str(), variable_map_.size(), e.what());
             return;
         }
@@ -27,11 +26,11 @@ void ParameterAPI::add_api_variable(std::string_view name, APIVariable *var) {
     }
 }
 
-void ParameterAPI::add_api_variable(std::string_view name, const APIVariable *var) {
-    if (is_rom((void *) name.data())) {
+void ParameterAPI::add_api_variable(std::string_view name, const APIVariable* var) {
+    if (is_rom((void*)name.data())) {
         try {
             const_variable_map_.emplace(name, var);
-        } catch (const std::bad_alloc &e) {
+        } catch (const std::bad_alloc& e) {
             logger.log_printf("Error adding const variable %s (%d): %s", std::string(name).c_str(), const_variable_map_.size(), e.what());
             return;
         }
@@ -42,7 +41,7 @@ void ParameterAPI::add_api_variable(std::string_view name, const APIVariable *va
 }
 
 bool ParameterAPI::set_api_variable(std::string_view name, std::string value) {
-    if (variable_map_.count(name))  {
+    if (variable_map_.count(name)) {
         variable_map_[name]->set(value);
         return true;
     }
@@ -76,8 +75,8 @@ std::string ParameterAPI::parse_string(std::string_view s) {
 
         auto equal_pos = s.find("=");
         if (equal_pos != std::string::npos) {
-            auto variable = trim(s.substr(0,equal_pos));
-            auto value = trim(s.substr(equal_pos+1));
+            auto variable = trim(s.substr(0, equal_pos));
+            auto value = trim(s.substr(equal_pos + 1));
             if (variable == "api_name") {
                 out = get_api_variable_name(std::stoi(value));
             } else {
@@ -86,18 +85,17 @@ std::string ParameterAPI::parse_string(std::string_view s) {
                 } else {
                     out = variable + " error";
                 }
-                
             }
         } else {
             out = get_api_variable(s);
         }
-        
+
         if (autocomplete) {
             return "\n" + out + "\n";
         } else {
             return out;
         }
-    } catch(...) {
+    } catch (...) {
         return "error";
     }
 }
@@ -105,10 +103,10 @@ std::string ParameterAPI::parse_string(std::string_view s) {
 std::string ParameterAPI::get_all_api_variables() const {
     std::string s;
     s = std::to_string(variable_map_.size() + const_variable_map_.size()) + " variables:\n";
-    for(auto const& m : variable_map_) {
+    for (auto const& m : variable_map_) {
         s += std::string(m.first) + "\n";
     }
-    for(auto const& m : const_variable_map_) {
+    for (auto const& m : const_variable_map_) {
         s += std::string(m.first) + "\n";
     }
     return s;

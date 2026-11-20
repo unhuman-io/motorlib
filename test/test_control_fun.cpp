@@ -1,9 +1,9 @@
 #include <iostream>
 #include "../control_fun.h"
 
-template<typename T>
+template <typename T>
 void print_vector(std::vector<T> v) {
-    for (int i=0; i<v.size(); i++) {
+    for (int i = 0; i < v.size(); i++) {
         std::cout << v[i] << ", ";
     }
     std::cout << std::endl;

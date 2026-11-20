@@ -5,30 +5,34 @@
 #include "../logger.h"
 
 // iterate the template communication interfaces
-template<class... Args>
+template <class... Args>
 class MultiCommunication : public CommunicationBase {
  public:
-    MultiCommunication(Args&... args) : comms_{args...} {}
+    MultiCommunication(Args&... args) :
+        comms_{args...} {}
 
     int receive_data(ReceiveData* const data) {
         int retval = std::apply([&data](auto&&... comms) {
             int retval;
-            (void) ((retval = comms.receive_data(data), retval) || ...);
+            (void)((retval = comms.receive_data(data), retval) || ...);
             return retval;
-        }, comms_);
+        },
+                                comms_);
         return retval;
     }
 
     void send_data(const SendData& data) {
         std::apply([&data](auto&&... comms) {
             (comms.send_data(data), ...);
-        }, comms_);
+        },
+                   comms_);
     }
 
     bool any_new_rx_data() {
         std::apply([](auto&&... comms) {
             return (comms.any_new_rx_data() || ...);
-        }, comms_);
+        },
+                   comms_);
         return false;
     }
 
@@ -39,9 +43,10 @@ class MultiCommunication : public CommunicationBase {
         int i = -1;
         int retval = std::apply([&string, &i](auto&&... comms) {
             int retval;
-            (void) ((i++, retval = comms.receive_string(string), retval > 0) || ...);
+            (void)((i++, retval = comms.receive_string(string), retval > 0) || ...);
             return retval;
-        }, comms_);
+        },
+                                comms_);
         if (retval) {
             active_str_comms_ = i;
         }
@@ -53,45 +58,52 @@ class MultiCommunication : public CommunicationBase {
         int active_str_comms = active_str_comms_;
         bool retval = std::apply([&string, &length, &i, &active_str_comms](auto&&... comms) {
             bool retval = false;
-            (void) ((active_str_comms == i++ ? retval = comms.send_string(string, length) : 0) || ...);
+            (void)((active_str_comms == i++ ? retval = comms.send_string(string, length) : 0) || ...);
             return retval;
-        }, comms_);
+        },
+                                 comms_);
         return retval;
     }
 
     bool send_string_active() const {
         std::apply([](auto&&... comms) {
             return (comms.send_string_active() || ...);
-        }, comms_);
+        },
+                   comms_);
         return false;
     }
 
     void cancel_send_string() {
         std::apply([](auto&&... comms) {
             (comms.cancel_send_string(), ...);
-        }, comms_);
+        },
+                   comms_);
     }
 
     void send_one_time_api_timeout_request(uint32_t us) {
         int i = 0;
         int active_str_comms = active_str_comms_;
         std::apply([us, &i, &active_str_comms](auto&&... comms) {
-            (void) ((active_str_comms == i++ ? comms.send_one_time_api_timeout_request(us), 1 : 0) || ...);
-        }, comms_);
+            (void)((active_str_comms == i++ ? comms.send_one_time_api_timeout_request(us), 1 : 0) || ...);
+        },
+                   comms_);
     }
 
     void cancel_one_time_api_timeout_request() {
         std::apply([](auto&&... comms) {
             (comms.cancel_one_time_api_timeout_request(), ...);
-        }, comms_);
+        },
+                   comms_);
     }
 
     bool tx_data_ack() {
         std::apply([](auto&&... comms) {
             return (comms.tx_data_ack() || ...);
-        }, comms_);
+        },
+                   comms_);
         return false;
     }
+
  private:
     std::tuple<Args&...> comms_;
     int active_str_comms_ = 0;

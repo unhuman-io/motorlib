@@ -7,7 +7,16 @@
 #include "../peripheral/stm32_serial.h"
 
 struct BoardRev {
-    enum Rev {kR0, kR1, kR2, kR3, kR4, kMR0, kMR0P, kMR1, kMR2, kTMR0} rev;
+    enum Rev { kR0,
+               kR1,
+               kR2,
+               kR3,
+               kR4,
+               kMR0,
+               kMR0P,
+               kMR1,
+               kMR2,
+               kTMR0 } rev;
     bool has_max31875;
     bool has_max31889;
     bool has_bmi270;
@@ -59,7 +68,7 @@ BoardRev get_board_rev() {
     rev = BoardRev::Rev::kTMR0;
 #endif
 
-    if (rev == BoardRev::Rev::kR3 || rev == BoardRev::Rev::kR4 || 
+    if (rev == BoardRev::Rev::kR3 || rev == BoardRev::Rev::kR4 ||
         rev == BoardRev::Rev::kMR0 || rev == BoardRev::Rev::kMR0P) {
         b.has_max31875 = true;
     }
@@ -77,7 +86,7 @@ BoardRev get_board_rev() {
         b.has_bridge_thermistors = 1;
     }
 
-    if (rev == BoardRev::Rev::kR4 || 
+    if (rev == BoardRev::Rev::kR4 ||
         rev == BoardRev::Rev::kMR0 || rev == BoardRev::Rev::kMR0P ||
         rev == BoardRev::Rev::kMR1 || rev == BoardRev::Rev::kMR2 ||
         rev == BoardRev::Rev::kTMR0) {

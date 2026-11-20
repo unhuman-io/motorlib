@@ -53,7 +53,7 @@ inline uint32_t bootloader_flag_value() { return reinterpret_cast<uint32_t>(_boo
 // debugger's memory access. Bus faults of data accesses are ignored for its
 // duration, which needs the faults and with them every interrupt masked: about
 // 30 cpu cycles. False if the access faulted.
-template<typename Access>
+template <typename Access>
 inline bool memory_access(Access access) {
     constexpr uint32_t bus_faults = SCB_CFSR_BUSFAULTSR_Msk;
     __asm__ volatile("cpsid f");
@@ -74,12 +74,13 @@ inline bool memory_access(Access access) {
 // peripheral register gets the access it expects when the block is that
 // register. Both return the bytes done before a fault.
 constexpr uint32_t memory_access_size(uint32_t address, uint32_t left) {
-    return (address & 1) || left < 2 ? 1 : (address & 2) || left < 4 ? 2 : 4;
+    return (address & 1) || left < 2 ? 1 : (address & 2) || left < 4 ? 2
+                                                                     : 4;
 }
 static_assert(memory_access_size(0, 8) == 4 && memory_access_size(4, 4) == 4 && memory_access_size(2, 6) == 2 &&
-    memory_access_size(4, 3) == 2 && memory_access_size(1, 7) == 1 && memory_access_size(6, 1) == 1);
+              memory_access_size(4, 3) == 2 && memory_access_size(1, 7) == 1 && memory_access_size(6, 1) == 1);
 
-template<typename T>
+template <typename T>
 inline bool memory_read_one(uint32_t address, uint8_t* data) {
     T value{};
     if (!memory_access([&] { value = *reinterpret_cast<const volatile T*>(address); })) return false;
@@ -90,15 +91,15 @@ inline uint32_t memory_read(uint32_t address, uint8_t* data, uint32_t length) {
     uint32_t done = 0;
     while (done < length) {
         const uint32_t size = memory_access_size(address + done, length - done);
-        const bool ok = size == 4 ? memory_read_one<uint32_t>(address + done, data + done) :
-            size == 2 ? memory_read_one<uint16_t>(address + done, data + done) : memory_read_one<uint8_t>(address + done, data + done);
+        const bool ok = size == 4 ? memory_read_one<uint32_t>(address + done, data + done) : size == 2 ? memory_read_one<uint16_t>(address + done, data + done)
+                                                                                                       : memory_read_one<uint8_t>(address + done, data + done);
         if (!ok) break;
         done += size;
     }
     return done;
 }
 
-template<typename T>
+template <typename T>
 inline bool memory_write_one(uint32_t address, const uint8_t* data) {
     T value = 0;
     for (uint32_t byte = 0; byte < sizeof(T); byte++) value |= static_cast<T>(data[byte]) << (8 * byte);
@@ -108,8 +109,8 @@ inline uint32_t memory_write(uint32_t address, const uint8_t* data, uint32_t len
     uint32_t done = 0;
     while (done < length) {
         const uint32_t size = memory_access_size(address + done, length - done);
-        const bool ok = size == 4 ? memory_write_one<uint32_t>(address + done, data + done) :
-            size == 2 ? memory_write_one<uint16_t>(address + done, data + done) : memory_write_one<uint8_t>(address + done, data + done);
+        const bool ok = size == 4 ? memory_write_one<uint32_t>(address + done, data + done) : size == 2 ? memory_write_one<uint16_t>(address + done, data + done)
+                                                                                                        : memory_write_one<uint8_t>(address + done, data + done);
         if (!ok) break;
         done += size;
     }

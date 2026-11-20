@@ -13,7 +13,7 @@ export {
 
 inline constexpr uint32_t flash_base = FLASH_BASE;
 inline constexpr uint32_t flash_error_mask = FLASH_SR_OPERR | FLASH_SR_PROGERR | FLASH_SR_WRPERR | FLASH_SR_PGAERR |
-    FLASH_SR_SIZERR | FLASH_SR_PGSERR | FLASH_SR_MISERR | FLASH_SR_FASTERR;
+                                             FLASH_SR_SIZERR | FLASH_SR_PGSERR | FLASH_SR_MISERR | FLASH_SR_FASTERR;
 // No end of operation flag: the operation never started, as with a flash that
 // is locked, where the writes to the control register are ignored and no
 // error flag is raised either. Bit 0, where the status register has that flag.
@@ -64,8 +64,7 @@ inline void flash_cache_reset() {
 inline uint32_t flash_erase_page(uint32_t address) {
     const uint32_t page = (address - flash_base) / flash_page_size();
     FLASH->SR = flash_error_mask | FLASH_SR_EOP;       // flags of earlier operations
-    const uint32_t select = flash_dual_bank() ?
-        (page & 0x7F) << FLASH_CR_PNB_Pos | (page & 0x80 ? FLASH_CR_BKER : 0) : page << FLASH_CR_PNB_Pos;
+    const uint32_t select = flash_dual_bank() ? (page & 0x7F) << FLASH_CR_PNB_Pos | (page & 0x80 ? FLASH_CR_BKER : 0) : page << FLASH_CR_PNB_Pos;
     FLASH->CR = FLASH_CR_EOPIE | FLASH_CR_PER | select | FLASH_CR_STRT;
     while (FLASH->SR & FLASH_SR_BSY);
     const uint32_t result = flash_result();

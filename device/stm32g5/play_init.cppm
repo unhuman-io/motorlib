@@ -114,23 +114,23 @@ inline consteval PLAYRegsInit get_play_regs_init(const PLAYInit& p) {
     PLAYRegsInit r{};
     for (int i = 0; i < 16; i++) {
         r.filt[i] = p.filter[i].width << PLAY_PLAY_FILT0CFG_WIDTH_Pos |
-            static_cast<uint32_t>(p.filter[i].edge_detect) << PLAY_PLAY_FILT0CFG_EDGEDET_Pos |
-            p.filter[i].premux_select << PLAY_PLAY_FILT0CFG_PREMUXSEL_Pos;
+                    static_cast<uint32_t>(p.filter[i].edge_detect) << PLAY_PLAY_FILT0CFG_EDGEDET_Pos |
+                    p.filter[i].premux_select << PLAY_PLAY_FILT0CFG_PREMUXSEL_Pos;
         r.le1[i] = p.le[i].lut << PLAY_PLAY_LE0CFG1_LUT_Pos;
         r.le2[i] = p.le[i].in0 << PLAY_PLAY_LE0CFG2_IN0_SEL_Pos |
-            p.le[i].in1 << PLAY_PLAY_LE0CFG2_IN1_SEL_Pos |
-            p.le[i].in2 << PLAY_PLAY_LE0CFG2_IN2_SEL_Pos |
-            p.le[i].in3 << PLAY_PLAY_LE0CFG2_IN3_SEL_Pos |
-            p.le[i].clock << PLAY_PLAY_LE0CFG2_CK_SEL_Pos;
+                   p.le[i].in1 << PLAY_PLAY_LE0CFG2_IN1_SEL_Pos |
+                   p.le[i].in2 << PLAY_PLAY_LE0CFG2_IN2_SEL_Pos |
+                   p.le[i].in3 << PLAY_PLAY_LE0CFG2_IN3_SEL_Pos |
+                   p.le[i].clock << PLAY_PLAY_LE0CFG2_CK_SEL_Pos;
         r.out[i] = p.out[i].select << PLAY_PLAY_OUT0CFG_SEL_Pos;
         r.flctl |= static_cast<uint32_t>(p.le[i].direct_flag_edge) << (PLAY_PLAY_FLCTL_FLAGD_EDGE0_Pos + i) |
-            static_cast<uint32_t>(p.le[i].registered_flag_edge) << (PLAY_PLAY_FLCTL_FLAGR_EDGE0_Pos + i);
+                   static_cast<uint32_t>(p.le[i].registered_flag_edge) << (PLAY_PLAY_FLCTL_FLAGR_EDGE0_Pos + i);
         r.flier |= static_cast<uint32_t>(p.le[i].direct_flag_irq) << (PLAY_PLAY_FLIER_FLAGD_IEN0_Pos + i) |
-            static_cast<uint32_t>(p.le[i].registered_flag_irq) << (PLAY_PLAY_FLIER_FLAGR_IEN0_Pos + i);
+                   static_cast<uint32_t>(p.le[i].registered_flag_irq) << (PLAY_PLAY_FLIER_FLAGR_IEN0_Pos + i);
     }
     r.swin = p.sw_inputs;
     r.ier = static_cast<uint32_t>(p.sw_input_write_irq) << PLAY_PLAY_IER_SWINWC_IEN_Pos |
-        static_cast<uint32_t>(p.flag_ctl_write_irq) << PLAY_PLAY_IER_FLCTLWC_IEN_Pos;
+            static_cast<uint32_t>(p.flag_ctl_write_irq) << PLAY_PLAY_IER_FLCTLWC_IEN_Pos;
     return r;
 }
 
@@ -142,12 +142,12 @@ static_assert(offsetof(PLAY_Type, PLAY_LE15CFG2) - offsetof(PLAY_Type, PLAY_LE0C
 static_assert(offsetof(PLAY_Type, PLAY_OUT15CFG) - offsetof(PLAY_Type, PLAY_OUT0CFG) == 15 * 4);
 export {
 
-template<uint32_t v, uint32_t v_default>
+template <uint32_t v, uint32_t v_default>
 inline void play_write_if_changed(volatile uint32_t& reg) {
     if constexpr (v != v_default) reg = v;
 }
 
-template<const PLAYRegsInit r, const PLAYRegsInit d, size_t... I>
+template <const PLAYRegsInit r, const PLAYRegsInit d, size_t... I>
 inline void init_play_regs(std::index_sequence<I...>) {
     (play_write_if_changed<r.filt[I], d.filt[I]>((&PLAY->PLAY_FILT0CFG)[I]), ...);
     (play_write_if_changed<r.le1[I], d.le1[I]>((&PLAY->PLAY_LE0CFG1)[I]), ...);
@@ -155,7 +155,7 @@ inline void init_play_regs(std::index_sequence<I...>) {
     (play_write_if_changed<r.out[I], d.out[I]>((&PLAY->PLAY_OUT0CFG)[I]), ...);
 }
 
-template<const PLAYInit p>
+template <const PLAYInit p>
 inline void init_play() {
     constexpr PLAYRegsInit r = get_play_regs_init(p);
     constexpr PLAYRegsInit d = get_play_regs_init(PLAYInit{});
@@ -174,7 +174,7 @@ inline void init_play() {
     }
 }
 
-template<PLAYInit play_init>
+template <PLAYInit play_init>
 inline void device_play_config() {
     init_play<play_init>();
 }

@@ -24,7 +24,6 @@ class DriverMPS : public DriverBase {
         enable();
         return "ok";
     }
-
 };
 
 #endif  // UNHUMAN_MOTORLIB_DRIVER_MPS_H_

@@ -9,7 +9,7 @@ class TorqueSensorBase : public SensorBase {
     bool init() { return true; }
     void trigger() {}
     float read() { return 0; }
-    void set_param(const TorqueSensorParam &param) {
+    void set_param(const TorqueSensorParam& param) {
         gain_ = param.gain;
         k_temp_ = param.k_temp;
     }
@@ -17,10 +17,10 @@ class TorqueSensorBase : public SensorBase {
     //     bias_ -= current_torque_reading;
     // }
     float get_value() const { return torque_; }
- //protected:
+    //protected:
     float gain_ = 0, k_temp_ = 0;
     float torque_ = 0;
- //   template <typename T> friend class SystemBase;
+    //   template <typename T> friend class SystemBase;
 };
 
 #endif  // UNHUMAN_MOTORLIB_TORQUE_SENSOR_H_

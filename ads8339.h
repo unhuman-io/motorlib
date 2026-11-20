@@ -4,10 +4,12 @@
 
 class ADS8339 : public TorqueSensorBase {
  public:
-    ADS8339(SPIDMA &spi_dma, uint8_t decimation=0) :
-        TorqueSensorBase(), spi_dma_(spi_dma), decimation_(decimation) {
+    ADS8339(SPIDMA& spi_dma, uint8_t decimation = 0) :
+        TorqueSensorBase(),
+        spi_dma_(spi_dma),
+        decimation_(decimation) {
     }
-    bool init() { 
+    bool init() {
         return true;
     }
 
@@ -40,7 +42,6 @@ class ADS8339 : public TorqueSensorBase {
             if (raw_value_ == 0 || raw_value_ == 0xFFFF) {
                 read_error_++;
             }
-
         }
         return torque_;
     }
@@ -58,7 +59,7 @@ class ADS8339 : public TorqueSensorBase {
     uint32_t timeout_error_ = 0;
     uint32_t read_error_ = 0;
     uint32_t raw_value_ = 0;
-    SPIDMA &spi_dma_;
+    SPIDMA& spi_dma_;
     static const uint8_t length_ = 2;
     uint8_t data_out_[length_] = {};
     uint8_t data_in_[length_] = {};
