@@ -34,6 +34,8 @@ jobs:
     runs-on: ubuntu-latest
     steps:
     - uses: actions/checkout@main
+      with:
+        submodules: true    # .clang-format is the one of motor_messages
     - name: clang-format
       # The version that .clang-format is written for; .clang-format-ignore
       # names what is not ours to format. To format: the same with -i in place
