@@ -13,10 +13,19 @@
     MASK_SET(GPIO##gpio->OSPEEDR, GPIO_OSPEEDR_OSPEED##pin, speed); \
     MASK_SET(GPIO##gpio->AFR[1], GPIO_AFRH_AFSEL##pin, af)
 
-enum GPIO_MODE {INPUT, OUTPUT, ALT_FUN, ANALOG};
-enum GPIO_SPEED {LOW, MEDIUM, HIGH, VERY_HIGH};
-enum GPIO_PULL {NONE, UP, DOWN};
-enum GPIO_OTYPE {PUSHPULL, OPEN_DRAIN};
+enum GPIO_MODE { INPUT,
+                 OUTPUT,
+                 ALT_FUN,
+                 ANALOG };
+enum GPIO_SPEED { LOW,
+                  MEDIUM,
+                  HIGH,
+                  VERY_HIGH };
+enum GPIO_PULL { NONE,
+                 UP,
+                 DOWN };
+enum GPIO_OTYPE { PUSHPULL,
+                  OPEN_DRAIN };
 
 union gpio_bits {
     struct {

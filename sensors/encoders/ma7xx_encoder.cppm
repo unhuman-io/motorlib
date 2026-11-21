@@ -22,8 +22,10 @@ class MA7XXEncoderBase : public SPIEncoder<SPI> {
         } bits;
         uint16_t word;
     };
-    MA7XXEncoderBase(SPI &spi, GPIO &gpio_cs, SPIPause &spi_pause, uint8_t filter = 119) : SPIEncoder<SPI>(spi, gpio_cs), 
-        filter_(filter), spi_pause_(spi_pause) {
+    MA7XXEncoderBase(SPI& spi, GPIO& gpio_cs, SPIPause& spi_pause, uint8_t filter = 119) :
+        SPIEncoder<SPI>(spi, gpio_cs),
+        filter_(filter),
+        spi_pause_(spi_pause) {
         reinit();
     }
 
@@ -31,7 +33,7 @@ class MA7XXEncoderBase : public SPIEncoder<SPI> {
         if constexpr (std::is_same_v<std::decay_t<decltype(SPI::regs_)>, SPI_TypeDef>) {
 #ifdef STM32F446xx
             this->spi_.regs_.CR1 = SPI_CR1_MSTR | (3 << SPI_CR1_BR_Pos) | SPI_CR1_SSI | SPI_CR1_SSM | SPI_CR1_SPE | SPI_CR1_DFF;    // baud = clock/16, 16 bit
-#else    
+#else
             this->spi_.regs_.CR2 = (15 << SPI_CR2_DS_Pos);   // 16 bit
             this->spi_.regs_.CR1 = SPI_CR1_MSTR | (3 << SPI_CR1_BR_Pos) | SPI_CR1_SSI | SPI_CR1_SSM | SPI_CR1_SPE;    // baud = clock/16
 #endif
@@ -45,7 +47,7 @@ class MA7XXEncoderBase : public SPIEncoder<SPI> {
         }
     }
 
-    // interrupt context   
+    // interrupt context
     int32_t read() {
         if (!spi_pause_.is_paused()) {
             SPIEncoder<SPI>::read();
@@ -59,7 +61,7 @@ class MA7XXEncoderBase : public SPIEncoder<SPI> {
                 stall_count_ = 0;
             }
 
-            count_ += (int16_t) (this->data_ - last_data_); // rollover summing
+            count_ += (int16_t)(this->data_ - last_data_); // rollover summing
             last_data_ = this->data_;
         }
         return count_;
@@ -95,7 +97,7 @@ class MA7XXEncoderBase : public SPIEncoder<SPI> {
             reg.bits.command = 0b100; // write register
             reg.bits.value = value;
             this->send_and_read(reg.word);
-            ms_delay(20); 
+            ms_delay(20);
             uint8_t read_value = read_register(address);
             retval = read_value == value;
             if (!retval) {
@@ -150,9 +152,9 @@ class MA7XXEncoderBase : public SPIEncoder<SPI> {
         return retval;
     }
 
-    // The MA7XX encoder doesn't give magnetic field strength directly but allows 
+    // The MA7XX encoder doesn't give magnetic field strength directly but allows
     // you to set high and low thresholds in the 0x6 MGT register, then you can read
-    // the 0x1B status register to determine if the field is within those thresholds 
+    // the 0x1B status register to determine if the field is within those thresholds
     // or not. The full range of the MGT register is 20 to 126 mT in 8 steps. Recommended
     // min mT is 40 which is step 2 in MGT. I combine the two readings like this
     // (mght << 0 | (uint16_t) mglt << 8), so the minimum recommended value is about
@@ -160,26 +162,26 @@ class MA7XXEncoderBase : public SPIEncoder<SPI> {
     uint16_t get_magnetic_field_strength_impl() {
         uint8_t original_mgt = read_register(0x6);
         uint8_t mght = 0, mglt = 0;
-        for (uint8_t i=0; i<8; i++) {
-            if (!set_register(0x6, i<<2 | i<<5)) { // increment magnetic field thresholds
+        for (uint8_t i = 0; i < 8; i++) {
+            if (!set_register(0x6, i << 2 | i << 5)) { // increment magnetic field thresholds
                 set_register(0x6, original_mgt);
                 return 0xFFFF; // a fail test value
             }
-            uint8_t test_mgt = read_register(0x1B);    
+            uint8_t test_mgt = read_register(0x1B);
             // find last value that mght is 1 and the last that mglt is 0
             // I think they should be equal
             if (test_mgt & 0x80) {
-                mght = i+1;
+                mght = i + 1;
             }
             if (!(test_mgt & 0x40)) {
-                mglt = i+1;
+                mglt = i + 1;
             }
         }
         set_register(0x6, original_mgt);
-        return (mght << 0 | (uint16_t) mglt << 8);
+        return (mght << 0 | (uint16_t)mglt << 8);
     }
 
-    int32_t get_value()  const { return count_; }
+    int32_t get_value() const { return count_; }
 
     bool check_magnetic_field_strength() {
         bool success = true;
@@ -191,7 +193,8 @@ class MA7XXEncoderBase : public SPIEncoder<SPI> {
             logger.log_printf("ma7XX magnetic field strength too high: %x", field_strength);
             success = false;
         } else {
-            logger.log_printf("ma7XX magnetic field strength ok: %x", field_strength);}
+            logger.log_printf("ma7XX magnetic field strength ok: %x", field_strength);
+        }
         return success;
     }
 
@@ -206,44 +209,45 @@ class MA7XXEncoderBase : public SPIEncoder<SPI> {
         error_count_ = 0;
     }
 
-    template<FixedString prefix, typename Comms>
-    void add_debug_variables(ParameterAPI &api, Comms &comms) {
+    template <FixedString prefix, typename Comms>
+    void add_debug_variables(ParameterAPI& api, Comms& comms) {
         api.add_api_variable(StaticString<prefix + "err">, new APIUint32(&error_count_));
-        static T& instance = static_cast<T&>(*this); 
+        static T& instance = static_cast<T&>(*this);
         static Comms& comms2 = comms;
-        api.add_api_variable(StaticString<prefix + "filt">, new APICallbackUint8([]{ return instance.get_filt(); },
-            [](uint8_t u){ instance.set_filt(u); }));
-        api.add_api_variable(StaticString<prefix + "bct">, new APICallbackUint8([]{ return instance.get_bct(); },
-            [](uint8_t u){ instance.set_bct(u); }));
-        api.add_api_variable(StaticString<prefix + "et">, new APICallbackUint8([]{ return instance.get_et(); },
-            [](uint8_t u){ instance.set_et(u); }));
-        api.add_api_variable(StaticString<prefix + "mgt">, new APICallbackHex<uint16_t>([]{
+        api.add_api_variable(StaticString<prefix + "filt">, new APICallbackUint8([] { return instance.get_filt(); },
+                                                                                 [](uint8_t u) { instance.set_filt(u); }));
+        api.add_api_variable(StaticString<prefix + "bct">, new APICallbackUint8([] { return instance.get_bct(); },
+                                                                                [](uint8_t u) { instance.set_bct(u); }));
+        api.add_api_variable(StaticString<prefix + "et">, new APICallbackUint8([] { return instance.get_et(); },
+                                                                               [](uint8_t u) { instance.set_et(u); }));
+        api.add_api_variable(StaticString<prefix + "mgt">, new APICallbackHex<uint16_t>([] {
             comms2.send_one_time_api_timeout_request(200000);
             return instance.get_magnetic_field_strength(); },
-            [](uint16_t u){ instance.set_mgt(u); }));
+                                                                                        [](uint16_t u) { instance.set_mgt(u); }));
         api.add_api_variable(StaticString<prefix + "raw">, new const APIUint16(&instance.data_));
     }
 
     uint8_t filter_;
     uint16_t last_data_ = 0;
     int32_t count_ = 0;
-    SPIPause &spi_pause_;
+    SPIPause& spi_pause_;
     uint32_t stall_count_ = 0;
     uint32_t error_count_ = 0;
     uint32_t stall_count_max_ = 50;
 };
 
-export template<typename SPI>
+export template <typename SPI>
 class MA732Encoder : public MA7XXEncoderBase<MA732Encoder<SPI>, SPI> {
  public:
-    MA732Encoder(SPI &s, GPIO &gpio_cs, SPIPause &spi_pause, uint8_t filter = 119)
-        : MA7XXEncoderBase<MA732Encoder<SPI>, SPI>(s, gpio_cs, spi_pause, filter) {}
+    MA732Encoder(SPI& s, GPIO& gpio_cs, SPIPause& spi_pause, uint8_t filter = 119) :
+        MA7XXEncoderBase<MA732Encoder<SPI>, SPI>(s, gpio_cs, spi_pause, filter) {}
 };
 
-export template<typename SPI>
+export template <typename SPI>
 class MA730Encoder : public MA732Encoder<SPI> {
  public:
-    MA730Encoder(SPI &s, GPIO& g, SPIPause &sp) : MA732Encoder<SPI>(s, g, sp) {
+    MA730Encoder(SPI& s, GPIO& g, SPIPause& sp) :
+        MA732Encoder<SPI>(s, g, sp) {
         // 23 Hz filter has lots of repeated values
         this->stall_count_max_ = 1000;
     }

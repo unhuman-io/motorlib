@@ -27,14 +27,14 @@ void Flash::erase_page(uint32_t address) {
 
 void Flash::write_dword(uint32_t address, const uint32_t* data) {
     *reinterpret_cast<volatile uint32_t*>(address) = data[0];
-    *reinterpret_cast<volatile uint32_t*>(address+4) = data[1];
+    *reinterpret_cast<volatile uint32_t*>(address + 4) = data[1];
     while (regs_.SR & FLASH_SR_BSY);
     if (regs_.SR & FLASH_SR_EOP) {
         regs_.SR = FLASH_SR_EOP;
     }
 }
 
-void Flash::write_impl(uint32_t address, const void *data, uint32_t size, EraseType erase) {
+void Flash::write_impl(uint32_t address, const void* data, uint32_t size, EraseType erase) {
     __disable_irq();
     unlock();
     uint32_t t_start = get_clock();
@@ -43,7 +43,7 @@ void Flash::write_impl(uint32_t address, const void *data, uint32_t size, EraseT
         if (erase == ALWAYS_ERASE) {
             clear_erased_status();
         }
-        uint32_t num_pages = (size+1) / page_size_ + 1;
+        uint32_t num_pages = (size + 1) / page_size_ + 1;
         for (uint32_t i = 0; i < num_pages; i++) {
             IWDG->KR = 0xAAAA;
             erase_page(address + i * page_size_);
@@ -54,12 +54,12 @@ void Flash::write_impl(uint32_t address, const void *data, uint32_t size, EraseT
 
     // round size up to nearest +8
     size = (size + 7) & ~7;
-    uint32_t size32 = size/4;
+    uint32_t size32 = size / 4;
     regs_.CR = FLASH_CR_PG;
-    const uint32_t *data32 = static_cast<const uint32_t*>(data);
+    const uint32_t* data32 = static_cast<const uint32_t*>(data);
     for (uint32_t i = 0; i < size32; i += 2) {
         IWDG->KR = 0xAAAA;
-        write_dword(address + i*4, &data32[i]);
+        write_dword(address + i * 4, &data32[i]);
     }
     regs_.CR &= ~FLASH_CR_PG;
     __enable_irq();

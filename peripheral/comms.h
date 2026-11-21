@@ -3,14 +3,12 @@
 #include <cstdint>
 #include <cstddef>
 
-class Comms
-{
-  public:
-    struct BufferDescriptor
-    {
-      volatile uint8_t* txBuffer;
-      volatile uint8_t*       rxBuffer;
-      size_t                  length;
+class Comms {
+ public:
+    struct BufferDescriptor {
+        volatile uint8_t* txBuffer;
+        volatile uint8_t* rxBuffer;
+        size_t length;
     };
 
     typedef void (*commsCallback)(void* param);

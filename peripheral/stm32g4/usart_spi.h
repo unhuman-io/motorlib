@@ -1,7 +1,7 @@
 #pragma once
 
 struct USART_SPI {
-    USART_TypeDef &regs_;
+    USART_TypeDef& regs_;
 
     void write(uint8_t data) {
         regs_.TDR = data;
@@ -24,4 +24,3 @@ struct USART_SPI {
         return regs_.ISR & USART_ISR_RXFT;
     }
 };
-

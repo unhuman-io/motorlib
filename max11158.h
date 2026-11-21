@@ -8,15 +8,17 @@
     api.add_api_variable(prefix "raw", new const APIUint32(&max.raw_value_)); \
     api.add_api_variable(prefix "max_int", new const APIInt32(&max.signed_value_)); \
     api.add_api_variable(prefix "max_timeout_error", new const APIUint32(&max.timeout_error_)); \
-    api.add_api_variable(prefix "max_read_error", new const APIUint32(&max.read_error_)); \
+    api.add_api_variable(prefix "max_read_error", new const APIUint32(&max.read_error_));
 
 // 3 Wire mode using MOSI set high
 class MAX11158 : public TorqueSensorBase {
  public:
-    MAX11158(SPIDMA &spi_dma, uint8_t decimation=0) :
-        TorqueSensorBase(), spi_dma_(spi_dma), decimation_(decimation) {
+    MAX11158(SPIDMA& spi_dma, uint8_t decimation = 0) :
+        TorqueSensorBase(),
+        spi_dma_(spi_dma),
+        decimation_(decimation) {
     }
-    bool init() { 
+    bool init() {
         return true;
     }
 
@@ -32,7 +34,7 @@ class MAX11158 : public TorqueSensorBase {
         if (count_ == 0) {
             spi_dma_.finish_readwrite_isr();
             raw_value_ = ~(data_in_[0] << 16 | data_in_[1] << 8 | data_in_[2]) & 0xFFFFFF; // invert for mistake on board
-            signed_value_ = (int32_t) (raw_value_ >> 6) - 0x20000;
+            signed_value_ = (int32_t)(raw_value_ >> 6) - 0x20000;
             torque_ = signed_value_ * gain_;
 
             // stale values are currently the only fault mechanism
@@ -49,7 +51,6 @@ class MAX11158 : public TorqueSensorBase {
             if (raw_value_ == 0 || raw_value_ == 0xFFFFFF) {
                 read_error_++;
             }
-
         }
         return torque_;
     }
@@ -70,7 +71,7 @@ class MAX11158 : public TorqueSensorBase {
     uint32_t timeout_error_ = 0;
     uint32_t read_error_ = 0;
     uint32_t raw_value_ = 0;
-    SPIDMA &spi_dma_;
+    SPIDMA& spi_dma_;
     static const uint8_t length_ = 5;
     uint8_t data_out_[length_] = {0xFF, 0xFF, 0xFF, 0xFF, 0xFF};
     uint8_t data_in_[length_] = {};

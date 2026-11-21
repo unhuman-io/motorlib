@@ -6,12 +6,12 @@
 #include "../peripheral/stm32g4/rtc.h"
 #include "../interrupts.h"
 
-const Param * const param = (const Param * const) 0x8060000;
-const Calibration * const calibration = (const Calibration * const) 0x8070000;
-extern const char * const name = param->name;
+const Param* const param = (const Param* const)0x8060000;
+const Calibration* const calibration = (const Calibration* const)0x8070000;
+extern const char* const name = param->name;
 
 namespace config {
-    const uint32_t system_loop_frequency =  1000;
+const uint32_t system_loop_frequency = 1000;
 };
 
 using PWM = HRPWM;
@@ -47,36 +47,36 @@ extern "C" void board_init() {
 using System = SystemBase<Actuator<FastLoop<config::pwm_frequency>, MainLoop<config::main_loop_frequency, FastLoop<config::pwm_frequency>>>>;
 
 namespace config {
-    static_assert(((double) CPU_FREQUENCY_HZ * 8 / 2) / pwm_frequency < 65535);    // check pwm frequency
-    TempSensor temp_sensor;
-    I2C_DMA i2c1(*I2C1, *DMA1_Channel7, *DMA1_Channel8, 1000);
-    MAX31875 board_temperature(i2c1);
-    DriverMPS driver;
+static_assert(((double)CPU_FREQUENCY_HZ * 8 / 2) / pwm_frequency < 65535);    // check pwm frequency
+TempSensor temp_sensor;
+I2C_DMA i2c1(*I2C1, *DMA1_Channel7, *DMA1_Channel8, 1000);
+MAX31875 board_temperature(i2c1);
+DriverMPS driver;
 
-    HRPWM motor_pwm(pwm_frequency, *HRTIM1, 3, 5, 4, true, 50, 1000, 0);
-    USB1 usb;
-    FastLoop<pwm_frequency> fast_loop = {motor_pwm, motor_encoder, param->fast_loop_param, *calibration, &I_A_DR, &I_B_DR, &I_C_DR, &V_BUS_DR};
-    LED led = {const_cast<uint16_t*>(reinterpret_cast<volatile uint16_t *>(&TIM_R)), 
-               const_cast<uint16_t*>(reinterpret_cast<volatile uint16_t *>(&TIM_G)),
-               const_cast<uint16_t*>(reinterpret_cast<volatile uint16_t *>(&TIM_B))};
-    PositionController position_controller = {(float) (1.0/main_loop_frequency)};
-    TorqueController torque_controller = {(float) (1.0/main_loop_frequency)};
-    ImpedanceController impedance_controller = {(float) (1.0/main_loop_frequency)};
-    VelocityController velocity_controller = {(float) (1.0/main_loop_frequency)};
-    StateController state_controller = {(float) (1.0/main_loop_frequency)};
-    JointPositionController joint_position_controller(1.0/main_loop_frequency);
-    AdmittanceController admittance_controller = {1.0/main_loop_frequency};
+HRPWM motor_pwm(pwm_frequency, *HRTIM1, 3, 5, 4, true, 50, 1000, 0);
+USB1 usb;
+FastLoop<pwm_frequency> fast_loop = {motor_pwm, motor_encoder, param->fast_loop_param, *calibration, &I_A_DR, &I_B_DR, &I_C_DR, &V_BUS_DR};
+LED led = {const_cast<uint16_t*>(reinterpret_cast<volatile uint16_t*>(&TIM_R)),
+           const_cast<uint16_t*>(reinterpret_cast<volatile uint16_t*>(&TIM_G)),
+           const_cast<uint16_t*>(reinterpret_cast<volatile uint16_t*>(&TIM_B))};
+PositionController position_controller = {(float)(1.0 / main_loop_frequency)};
+TorqueController torque_controller = {(float)(1.0 / main_loop_frequency)};
+ImpedanceController impedance_controller = {(float)(1.0 / main_loop_frequency)};
+VelocityController velocity_controller = {(float)(1.0 / main_loop_frequency)};
+StateController state_controller = {(float)(1.0 / main_loop_frequency)};
+JointPositionController joint_position_controller(1.0 / main_loop_frequency);
+AdmittanceController admittance_controller = {1.0 / main_loop_frequency};
 };
-template<>
+template <>
 Communication System::communication_ = {config::usb};
 namespace config {
-    MainLoop<config::main_loop_frequency, decltype(fast_loop)> main_loop(fast_loop, position_controller, torque_controller, impedance_controller, velocity_controller, state_controller, joint_position_controller, admittance_controller, System::communication_, led, output_encoder, torque_sensor, driver, param->main_loop_param, *calibration);
+MainLoop<config::main_loop_frequency, decltype(fast_loop)> main_loop(fast_loop, position_controller, torque_controller, impedance_controller, velocity_controller, state_controller, joint_position_controller, admittance_controller, System::communication_, led, output_encoder, torque_sensor, driver, param->main_loop_param, *calibration);
 };
 
 void usb_interrupt() {
     config::usb.interrupt();
 }
-template<>
+template <>
 decltype(System::actuator_) System::actuator_ = {config::fast_loop, config::main_loop, param->startup_param, *calibration};
 
 float v3v3 = 3.3;
@@ -86,8 +86,8 @@ int32_t index_mod = 0;
 void config_init();
 
 void system_init() {
-    DMAMUX1_Channel6->CCR =  DMA_REQUEST_I2C1_TX;
-    DMAMUX1_Channel7->CCR =  DMA_REQUEST_I2C1_RX;
+    DMAMUX1_Channel6->CCR = DMA_REQUEST_I2C1_TX;
+    DMAMUX1_Channel7->CCR = DMA_REQUEST_I2C1_RX;
     if (config::motor_encoder.init()) {
         System::log("Motor encoder init success");
     } else {
@@ -105,47 +105,46 @@ void system_init() {
     }
 
     System::api.add_api_variable("3v3", new APIFloat(&v3v3));
-    System::api.add_api_variable("Tmicro", new APICallbackFloat([]{ return config::temp_sensor.get_value(); },
-        [](float f){ config::temp_sensor.set_value(f); }));
-    System::api.add_api_variable("Tboard", new const APICallbackFloat([](){ return config::board_temperature.get_temperature(); }));
+    System::api.add_api_variable("Tmicro", new APICallbackFloat([] { return config::temp_sensor.get_value(); },
+                                                                [](float f) { config::temp_sensor.set_value(f); }));
+    System::api.add_api_variable("Tboard", new const APICallbackFloat([]() { return config::board_temperature.get_temperature(); }));
     System::api.add_api_variable("index_mod", new APIInt32(&index_mod));
-    System::api.add_api_variable("drv_reset", new const APICallback([](){ return config::driver.reset(); }));
+    System::api.add_api_variable("drv_reset", new const APICallback([]() { return config::driver.reset(); }));
     System::api.add_api_variable("usb_err", new APIUint32(&config::usb.error_count_));
     System::api.add_api_variable("usb_reset_count", new APIUint32(&config::usb.reset_count_));
-    System::api.add_api_variable("shutdown", new const APICallback([](){
-        // requires power cycle to return 
-        setup_sleep();
-        SCB->SCR |= SCB_SCR_SLEEPDEEP_Msk;
-        PWR->CR1 |= 0b100 << PWR_CR1_LPMS_Pos;
-        __WFI();
-        return std::string();
-    }));
-    System::api.add_api_variable("deadtime", new APICallbackUint16([](){ 
-        return config::motor_pwm.deadtime_ns_; }, [](uint16_t u) {config::motor_pwm.set_deadtime(u); }));
+    System::api.add_api_variable("shutdown", new const APICallback([]() {
+                                     // requires power cycle to return
+                                     setup_sleep();
+                                     SCB->SCR |= SCB_SCR_SLEEPDEEP_Msk;
+                                     PWR->CR1 |= 0b100 << PWR_CR1_LPMS_Pos;
+                                     __WFI();
+                                     return std::string();
+                                 }));
+    System::api.add_api_variable("deadtime", new APICallbackUint16([]() { return config::motor_pwm.deadtime_ns_; }, [](uint16_t u) { config::motor_pwm.set_deadtime(u); }));
 
     for (auto regs : std::vector<ADC_TypeDef*>{ADC1, ADC2, ADC3, ADC4, ADC5}) {
         regs->CR = ADC_CR_ADVREGEN;
         ns_delay(20000);
         regs->CR |= ADC_CR_ADCAL;
-        while(regs->CR & ADC_CR_ADCAL);
+        while (regs->CR & ADC_CR_ADCAL);
         ns_delay(100);
         regs->CR |= ADC_CR_ADCALDIF;
         regs->CR |= ADC_CR_ADCAL;
-        while(regs->CR & ADC_CR_ADCAL);
+        while (regs->CR & ADC_CR_ADCAL);
         ns_delay(100);
 
         regs->ISR = ADC_ISR_ADRDY;
         regs->CR |= ADC_CR_ADEN;
-        while(!(regs->ISR & ADC_ISR_ADRDY));
+        while (!(regs->ISR & ADC_ISR_ADRDY));
     }
 
     ADC1->CR |= ADC_CR_JADSTART;
-    while(ADC1->CR & ADC_CR_JADSTART);
+    while (ADC1->CR & ADC_CR_JADSTART);
 
-    v3v3 =  *((uint16_t *) (0x1FFF75AA)) * 3.0 / V_REF_DR;
+    v3v3 = *((uint16_t*)(0x1FFF75AA)) * 3.0 / V_REF_DR;
     System::log("3v3: " + std::to_string(v3v3));
 
-    ADC1->GCOMP = v3v3*4096;
+    ADC1->GCOMP = v3v3 * 4096;
     ADC1->CFGR2 |= ADC_CFGR2_GCOMP;
     ADC1->CR |= ADC_CR_ADSTART;
     ADC2->CR |= ADC_CR_JADSTART;
@@ -161,10 +160,10 @@ void system_init() {
     NVIC_SetPriority(HRTIM1_Master_IRQn, NVIC_EncodePriority(NVIC_GetPriorityGrouping(), 1, 0));
     NVIC_EnableIRQ(HRTIM1_Master_IRQn);
     HRTIM1->sMasterRegs.MDIER |= HRTIM_MDIER_MCMP1IE; // interrupt on MCMP1
-   
+
     HRTIM1->sMasterRegs.MCMP1R = 400;
-    static_assert(config::main_loop_frequency > CPU_FREQUENCY_HZ/4/65536, "Main loop frequency too low");
-    HRTIM1->sMasterRegs.MPER = CPU_FREQUENCY_HZ/4/config::main_loop_frequency;
+    static_assert(config::main_loop_frequency > CPU_FREQUENCY_HZ / 4 / 65536, "Main loop frequency too low");
+    HRTIM1->sMasterRegs.MPER = CPU_FREQUENCY_HZ / 4 / config::main_loop_frequency;
     HRTIM1->sMasterRegs.MCR = 0 << HRTIM_MCR_SYNC_SRC_Pos | 2 << HRTIM_MCR_SYNC_OUT_Pos | HRTIM_MCR_CONT | HRTIM_MCR_PREEN | HRTIM_MCR_MREPU | 7 << HRTIM_MCR_CK_PSC_Pos; // CPU_FREQUENCY * 32 / 2^7 = 42.5 MHz
     config::usb.connect();
 
@@ -179,9 +178,9 @@ void system_maintenance() {
     static bool driver_fault = false;
     if (temp_rate.run()) {
         ADC1->CR |= ADC_CR_JADSTART;
-        while(ADC1->CR & ADC_CR_JADSTART);
+        while (ADC1->CR & ADC_CR_JADSTART);
         T = config::temp_sensor.read();
-        v3v3 =  *((uint16_t *) (0x1FFF75AA)) * 3.0 * ADC1->GCOMP / 4096.0 / ADC1->JDR2;
+        v3v3 = *((uint16_t*)(0x1FFF75AA)) * 3.0 * ADC1->GCOMP / 4096.0 / ADC1->JDR2;
         if (T > 100) {
             config::main_loop.status_.error.microcontroller_temperature = 1;
         }
@@ -190,14 +189,16 @@ void system_maintenance() {
             config::main_loop.status_.error.board_temperature = 1;
         }
     }
-    if (!(GPIOC->IDR & 1<<14)) {
+    if (!(GPIOC->IDR & 1 << 14)) {
         driver_fault = true;
     }
     config::main_loop.status_.error.driver_fault = driver_fault;    // latch driver fault until reset
     index_mod = config::motor_encoder.index_error(param->fast_loop_param.motor_encoder.cpr);
     config_maintenance();
 }
-Task<> main_maintenance_async(CycleScheduler &sched) { while(1) { co_await sched.yield(); } }
+Task<> main_maintenance_async(CycleScheduler& sched) {
+    while (1) { co_await sched.yield(); }
+}
 
 void setup_sleep() {
     NVIC_DisableIRQ(TIM1_UP_TIM16_IRQn);
@@ -220,30 +221,26 @@ void finish_sleep() {
 
 extern "C" {
 
-__attribute__((section (".ccmram"))) void USB_LP_IRQHandler()
-{
-  CommHandler<usb_interrupt>();
+__attribute__((section(".ccmram"))) void USB_LP_IRQHandler() {
+    CommHandler<usb_interrupt>();
 }
 
-__attribute__((section (".ccmram"))) void TIM1_CC_IRQHandler()
-{
-  SystemLoopHandler<System::system_loop>();
-  TIM1->SR = 0;
-  asm("dsb");
+__attribute__((section(".ccmram"))) void TIM1_CC_IRQHandler() {
+    SystemLoopHandler<System::system_loop>();
+    TIM1->SR = 0;
+    asm("dsb");
 }
 
-__attribute__((section (".ccmram"))) void ADC5_IRQHandler()
-{
-  FastLoopHandler<System::fast_loop_interrupt>();
-  ADC5->ISR = ADC_ISR_JEOS;
-  asm("dsb");
+__attribute__((section(".ccmram"))) void ADC5_IRQHandler() {
+    FastLoopHandler<System::fast_loop_interrupt>();
+    ADC5->ISR = ADC_ISR_JEOS;
+    asm("dsb");
 }
 
-__attribute__((section (".ccmram"))) void HRTIM1_Master_IRQHandler()
-{
-  MainLoopHandler<System::main_loop_interrupt>();
-  HRTIM1->sMasterRegs.MICR = HRTIM_MICR_MCMP1;
-  asm("dsb");
+__attribute__((section(".ccmram"))) void HRTIM1_Master_IRQHandler() {
+    MainLoopHandler<System::main_loop_interrupt>();
+    HRTIM1->sMasterRegs.MICR = HRTIM_MICR_MCMP1;
+    asm("dsb");
 }
 
 void system_run() {

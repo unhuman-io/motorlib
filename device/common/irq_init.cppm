@@ -33,7 +33,7 @@ inline void irq_default_handler() {
 // Vectors 1..15: reset, the faults and the other system exceptions
 inline constexpr int irq_exception_count = 15;
 
-template<int count>
+template <int count>
 struct VectorTable {
     const void* stack;              // vector 0: the initial stack pointer
     IRQHandler vector[count];       // reset, the system exceptions, then the interrupt lines
@@ -41,7 +41,7 @@ struct VectorTable {
 static_assert(sizeof(VectorTable<irq_exception_count>) == (1 + irq_exception_count) * sizeof(IRQHandler));
 
 // Interrupt lines in the table: it ends after the last one with a handler
-template<const IRQInit h>
+template <const IRQInit h>
 inline consteval int irq_line_count() {
     int count = 0;
     for (int n = 0; n < irq_count; n++) {
@@ -53,7 +53,7 @@ inline consteval int irq_line_count() {
 // The table for the .isr_vector section, with reset as the entry point:
 //   __attribute__((section(".isr_vector"), used))
 //   constinit const auto vector_table = get_vector_table<irq_init>(&_estack, Reset_Handler);
-template<const IRQInit h>
+template <const IRQInit h>
 inline consteval VectorTable<irq_exception_count + irq_line_count<h>()> get_vector_table(const void* stack, IRQHandler reset) {
     VectorTable<irq_exception_count + irq_line_count<h>()> table{};
     table.stack = stack;
@@ -66,7 +66,7 @@ inline consteval VectorTable<irq_exception_count + irq_line_count<h>()> get_vect
 }
 
 // NVIC ISER word: the lines with a handler
-template<const IRQInit h>
+template <const IRQInit h>
 inline consteval uint32_t get_irq_enable(int word) {
     uint32_t v = 0;
     for (int n = 32 * word; n < 32 * (word + 1) && n < irq_count; n++) {
@@ -76,19 +76,19 @@ inline consteval uint32_t get_irq_enable(int word) {
 }
 
 // Only what differs from reset is written
-template<int irq, bool used, uint8_t priority>
+template <int irq, bool used, uint8_t priority>
 inline void init_irq_priority() {
     static_assert(priority < (1 << irq_priority_bits), "interrupt priority out of range");
     static_assert(used || priority == 0, "priority on an interrupt without a handler");
     if constexpr (priority != 0) irq_priority_reg(irq) = static_cast<uint8_t>(priority << (8 - irq_priority_bits));
 }
 
-template<int word, uint32_t enable>
+template <int word, uint32_t enable>
 inline void init_irq_enable() {
     if constexpr (enable != 0) NVIC->ISER[word] = enable;   // writing 0 bits leaves lines alone
 }
 
-template<const IRQInit h>
+template <const IRQInit h>
 inline void init_irq() {
     []<size_t... n>(std::index_sequence<n...>) {
         (init_irq_priority<n, h.irq[n].handler != nullptr, h.irq[n].priority>(), ...);
@@ -100,7 +100,7 @@ inline void init_irq() {
 
 // Makes the table the active one (VTOR), so it need not be at address 0, then
 // enables the lines. Call it last: the handlers can run from here on.
-template<IRQInit irq_init, int count>
+template <IRQInit irq_init, int count>
 inline void device_irq_config(const VectorTable<count>& table) {
     SCB->VTOR = reinterpret_cast<uint32_t>(&table);
     init_irq<irq_init>();

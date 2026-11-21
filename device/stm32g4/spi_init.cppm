@@ -49,7 +49,7 @@ struct SPIInit {
 };
 
 // spi_regs<3>() is SPI3
-template<int spi>
+template <int spi>
 inline SPI_TypeDef& spi_regs() {
     static_assert(spi >= 1 && spi <= 4, "no such spi on this device");
     if constexpr (spi == 1) return *SPI1;
@@ -60,14 +60,14 @@ inline SPI_TypeDef& spi_regs() {
 
 inline consteval uint32_t get_spi_cr1(const SPIPortInit& c) {
     return SPI_CR1_MSTR | SPI_CR1_SSI | SPI_CR1_SSM | SPI_CR1_SPE |
-        static_cast<uint32_t>(c.baud_rate) << SPI_CR1_BR_Pos |
-        (c.clock_polarity == SPIClockPolarity::IDLE_HIGH ? SPI_CR1_CPOL : 0) |
-        (c.clock_phase == SPIClockPhase::SECOND_EDGE ? SPI_CR1_CPHA : 0);
+           static_cast<uint32_t>(c.baud_rate) << SPI_CR1_BR_Pos |
+           (c.clock_polarity == SPIClockPolarity::IDLE_HIGH ? SPI_CR1_CPOL : 0) |
+           (c.clock_phase == SPIClockPhase::SECOND_EDGE ? SPI_CR1_CPHA : 0);
 }
 
 // The instance's clock (RCC enable) must be running. The frame length goes in
 // before the enable.
-template<const SPIPortInit c, int spi>
+template <const SPIPortInit c, int spi>
 inline void init_spi_port() {
     if constexpr (c.enable == SPIEnable::ENABLED) {
         static_assert(c.data_bits >= 9 && c.data_bits <= 16, "frames are 9 to 16 bits");
@@ -76,7 +76,7 @@ inline void init_spi_port() {
     }
 }
 
-template<const SPIInit h>
+template <const SPIInit h>
 inline void init_spi() {
     init_spi_port<h.spi1, 1>();
     init_spi_port<h.spi2, 2>();
@@ -84,7 +84,7 @@ inline void init_spi() {
     init_spi_port<h.spi4, 4>();
 }
 
-template<SPIInit spi_init>
+template <SPIInit spi_init>
 inline void device_spi_config() {
     init_spi<spi_init>();
 }
@@ -92,21 +92,21 @@ inline void device_spi_config() {
 // One frame, in three steps so that the wait can be spent elsewhere:
 // spi_write<3>(value) starts it on SPI3, spi_ready<3>() tells when the
 // received frame is in, spi_read<3>() returns it.
-template<int spi>
+template <int spi>
 inline void spi_write(uint16_t value) {
     spi_regs<spi>().DR = value;
 }
-template<int spi>
+template <int spi>
 inline bool spi_ready() {
     return (spi_regs<spi>().SR & SPI_SR_RXNE) != 0;
 }
-template<int spi>
+template <int spi>
 inline uint16_t spi_read() {
     return spi_regs<spi>().DR;
 }
 
 // The same, waiting for the frame
-template<int spi>
+template <int spi>
 inline uint16_t spi_transfer(uint16_t value) {
     spi_write<spi>(value);
     while (!spi_ready<spi>());

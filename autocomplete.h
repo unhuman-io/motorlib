@@ -6,11 +6,11 @@
 #include <algorithm>
 #include <iterator>
 
-// return longest common string starting at the beginning 
+// return longest common string starting at the beginning
 inline std::string max_string_match(std::string_view s1, std::string_view s2) {
     // I couldn't think of a stl way do this
     unsigned int i;
-    for (i=0; i<std::min(s1.size(), s2.size()); i++) {
+    for (i = 0; i < std::min(s1.size(), s2.size()); i++) {
         if (s1[i] != s2[i]) {
             break;
         }
@@ -28,9 +28,9 @@ class AutoComplete {
         std::string str_out;
         switch (c) {
             case '\t': {
-                auto &str = str_;
+                auto& str = str_;
                 if (str.size() > 0) { // todo not enough memory to do all strs
-                    std::copy_if(strs_.begin(), strs_.end(), std::back_inserter(matches), [&str](std::string_view s){return s.rfind(str,0)==0;});
+                    std::copy_if(strs_.begin(), strs_.end(), std::back_inserter(matches), [&str](std::string_view s) { return s.rfind(str, 0) == 0; });
                     if (matches.size() == 1) {
                         str_ = matches[0];
                         str_out = '\r' + str_;
@@ -38,7 +38,7 @@ class AutoComplete {
                         std::string max_match = std::string(matches[0]);
                         if (last_key_ == '\t') {
                             str_out = '\n';
-                            for (auto &match : matches) {
+                            for (auto& match : matches) {
                                 max_match = max_string_match(max_match, match);
                                 str_out += std::string(match) + '\t';
                             }
@@ -46,7 +46,7 @@ class AutoComplete {
                             str_ = max_match;
                             str_out += '\n' + str_;
                         } else {
-                            for (auto &match : matches) {
+                            for (auto& match : matches) {
                                 max_match = max_string_match(max_match, match);
                             }
                             str_ = max_match;
@@ -65,7 +65,7 @@ class AutoComplete {
                 break;
             case 127:
                 if (str_.size()) {
-                    str_.erase(str_.end()-1,str_.end());
+                    str_.erase(str_.end() - 1, str_.end());
                     str_out = "\b \b";
                 }
                 break;
@@ -78,6 +78,7 @@ class AutoComplete {
         return str_out;
     }
     std::string_view last_string() const { return last_str_; }
+
  private:
     char last_key_ = 0;
     std::string str_, last_str_;

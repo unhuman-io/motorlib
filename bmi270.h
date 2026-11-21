@@ -15,7 +15,8 @@ class BMI270 {
         int16_t acc_x, acc_y, acc_z;
         int16_t gyr_x, gyr_y, gyr_z;
     };
-    BMI270(SPIDMA &spi_dma) : spi_dma_(spi_dma) {
+    BMI270(SPIDMA& spi_dma) :
+        spi_dma_(spi_dma) {
     }
     void init() {
         uint8_t chip_id = read_reg(0x00);
@@ -42,12 +43,12 @@ class BMI270 {
         data_out_[0] = 0x8c;
         spi_dma_.readwrite(data_out_, data_in_, 14);
         // logger.log(bytes_to_hex(data_in_, 14));
-        data_.acc_x = (int16_t) (data_in_[3] << 8 | data_in_[2]);
-        data_.acc_y = (int16_t) (data_in_[5] << 8 | data_in_[4]);
-        data_.acc_z = (int16_t) (data_in_[7] << 8 | data_in_[6]);
-        data_.gyr_x = (int16_t) (data_in_[9] << 8 | data_in_[8]);
-        data_.gyr_y = (int16_t) (data_in_[11] << 8 | data_in_[10]);
-        data_.gyr_z = (int16_t) (data_in_[13] << 8 | data_in_[12]);
+        data_.acc_x = (int16_t)(data_in_[3] << 8 | data_in_[2]);
+        data_.acc_y = (int16_t)(data_in_[5] << 8 | data_in_[4]);
+        data_.acc_z = (int16_t)(data_in_[7] << 8 | data_in_[6]);
+        data_.gyr_x = (int16_t)(data_in_[9] << 8 | data_in_[8]);
+        data_.gyr_y = (int16_t)(data_in_[11] << 8 | data_in_[10]);
+        data_.gyr_z = (int16_t)(data_in_[13] << 8 | data_in_[12]);
         // logger.log_printf("ax: %0.3f, ay: %0.3f, az: %0.3f, gx: %d, gy: %d, gz: %d",
         //     data_.acc_x*8./powf(2,15), data_.acc_y*8./powf(2,15), data_.acc_z*8./powf(2,15),
         //     data_.gyr_x, data_.gyr_y, data_.gyr_z);
@@ -71,17 +72,21 @@ class BMI270 {
     }
 
     uint8_t read_reg(uint8_t address) {
-        uint8_t data_out[3] = {(uint8_t) (address | 0x80)};
+        uint8_t data_out[3] = {(uint8_t)(address | 0x80)};
         uint8_t data_in[3];
         spi_dma_.readwrite(data_out, data_in, 3);
         us_delay(3);
         return data_in[2];
     }
 
-    std::string get_string() const { char s[100]; std::sprintf(s, "0x%02X", data_in_[2]); return s; }
+    std::string get_string() const {
+        char s[100];
+        std::sprintf(s, "0x%02X", data_in_[2]);
+        return s;
+    }
 
  private:
-    SPIDMA &spi_dma_;
+    SPIDMA& spi_dma_;
     uint8_t data_out_[14] = {};
     uint8_t data_in_[14] = {};
     bmi270_data data_;

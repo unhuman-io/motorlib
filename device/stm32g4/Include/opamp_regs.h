@@ -18,17 +18,17 @@ inline constexpr uint32_t opamp_trim_delay_us = 2000;   // settling time of a tr
 
 // checked against the shared bit positions
 namespace opamp_bits {
-inline constexpr uint32_t CSR_OPAEN        = OPAMP_CSR_OPAMPxEN;
-inline constexpr uint32_t CSR_VP_SEL_Pos   = OPAMP_CSR_VPSEL_Pos;
-inline constexpr uint32_t CSR_VM_SEL_Pos   = OPAMP_CSR_VMSEL_Pos;
-inline constexpr uint32_t CSR_OPAHSM       = OPAMP_CSR_HIGHSPEEDEN;
-inline constexpr uint32_t CSR_OPAINTOEN    = OPAMP_CSR_OPAMPINTEN;
+inline constexpr uint32_t CSR_OPAEN = OPAMP_CSR_OPAMPxEN;
+inline constexpr uint32_t CSR_VP_SEL_Pos = OPAMP_CSR_VPSEL_Pos;
+inline constexpr uint32_t CSR_VM_SEL_Pos = OPAMP_CSR_VMSEL_Pos;
+inline constexpr uint32_t CSR_OPAHSM = OPAMP_CSR_HIGHSPEEDEN;
+inline constexpr uint32_t CSR_OPAINTOEN = OPAMP_CSR_OPAMPINTEN;
 inline constexpr uint32_t CSR_PGA_GAIN_Pos = OPAMP_CSR_PGGAIN_Pos;
-inline constexpr uint32_t CSR_LOCK         = OPAMP_CSR_LOCK;
-inline constexpr uint32_t CSR_USERTRIM     = OPAMP_CSR_USERTRIM;
-inline constexpr uint32_t CSR_CALON        = OPAMP_CSR_CALON;
-inline constexpr uint32_t CSR_CALSEL_Pos   = OPAMP_CSR_CALSEL_Pos;
+inline constexpr uint32_t CSR_LOCK = OPAMP_CSR_LOCK;
+inline constexpr uint32_t CSR_USERTRIM = OPAMP_CSR_USERTRIM;
+inline constexpr uint32_t CSR_CALON = OPAMP_CSR_CALON;
+inline constexpr uint32_t CSR_CALSEL_Pos = OPAMP_CSR_CALSEL_Pos;
 inline constexpr uint32_t CSR_TRIMOFFSETP_Pos = OPAMP_CSR_TRIMOFFSETP_Pos;
 inline constexpr uint32_t CSR_TRIMOFFSETN_Pos = OPAMP_CSR_TRIMOFFSETN_Pos;
-inline constexpr uint32_t CSR_CALOUT       = OPAMP_CSR_OUTCAL;
+inline constexpr uint32_t CSR_CALOUT = OPAMP_CSR_OUTCAL;
 }

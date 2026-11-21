@@ -8,9 +8,11 @@ class GPIO;
 
 class HallEncoder : public EncoderBase {
  public:
-    HallEncoder(GPIO &gpio_a, GPIO &gpio_b, GPIO &gpio_c) :
-        gpio_a_(gpio_a), gpio_b_(gpio_b), gpio_c_(gpio_c) {}
-    int32_t read() { 
+    HallEncoder(GPIO& gpio_a, GPIO& gpio_b, GPIO& gpio_c) :
+        gpio_a_(gpio_a),
+        gpio_b_(gpio_b),
+        gpio_c_(gpio_c) {}
+    int32_t read() {
         uint8_t hall_read = gpio_a_.get_value() | (gpio_b_.get_value() << 1) | (gpio_c_.get_value() << 2);
         uint8_t hall_count = hall_table_[hall_read];
         if (hall_count != 0) {
@@ -29,6 +31,7 @@ class HallEncoder : public EncoderBase {
     void trigger() {}
     int32_t get_index_pos() { return 0; }
     bool index_received() { return true; }
+
  private:
     GPIO &gpio_a_, &gpio_b_, &gpio_c_;
     int32_t count_ = 0;

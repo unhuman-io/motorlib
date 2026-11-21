@@ -4,10 +4,10 @@
 #include "st_device.h"
 #ifdef __clang__
 #include <stdlib.h>
-#define _calloc_r __hide_calloc_r
-#define _free_r __hide_free_r
+#define _calloc_r  __hide_calloc_r
+#define _free_r    __hide_free_r
 #define _realloc_r __hide_realloc_r
-#define _malloc_r __hide_malloc_r
+#define _malloc_r  __hide_malloc_r
 #endif
 
 #include <malloc.h> // Now safely grabs `struct mallinfo` and `mallinfo()`
@@ -21,9 +21,9 @@
 #endif
 
 
-#define US_TO_CPU(t_us) (t_us*((uint32_t) CPU_FREQUENCY_HZ/1000000))
-#define CPU_TO_US(t_cpu) (t_cpu/((uint32_t) CPU_FREQUENCY_HZ/1000000))
-extern volatile uint32_t * const cpu_clock;
+#define US_TO_CPU(t_us)  (t_us * ((uint32_t)CPU_FREQUENCY_HZ / 1000000))
+#define CPU_TO_US(t_cpu) (t_cpu / ((uint32_t)CPU_FREQUENCY_HZ / 1000000))
+extern volatile uint32_t* const cpu_clock;
 extern volatile uint32_t uptime;
 
 inline uint32_t get_clock() { return *cpu_clock; }
@@ -38,25 +38,25 @@ void ns_delay(uint16_t ns);
 extern char _estack;
 extern uint32_t _Min_Stack_Size;
 inline uint32_t get_stack_free() {
-    char *start = &_estack - (uint32_t) &_Min_Stack_Size; 
-    char *count = start;
-    while(!*count++); // assume zero filled
+    char* start = &_estack - (uint32_t)&_Min_Stack_Size;
+    char* count = start;
+    while (!*count++); // assume zero filled
     return (count - start);
 }
 inline uint32_t get_stack_used() {
-    return (uint32_t) &_Min_Stack_Size - get_stack_free();
+    return (uint32_t)&_Min_Stack_Size - get_stack_free();
 }
 
 extern char _end;
 extern uint32_t _Min_Heap_Size;
 inline uint32_t get_heap_free() {
-    char *start = &_estack - (uint32_t) &_Min_Stack_Size; 
-    char *count = start;
-    while(!*count--); // assume zero filled
+    char* start = &_estack - (uint32_t)&_Min_Stack_Size;
+    char* count = start;
+    while (!*count--); // assume zero filled
     return (start - count);
 }
 inline uint32_t get_heap_used() {
-    uint32_t max_heap = (uint32_t) (&_estack - &_end) - (uint32_t) &_Min_Stack_Size;
+    uint32_t max_heap = (uint32_t)(&_estack - &_end) - (uint32_t)&_Min_Stack_Size;
     return max_heap - get_heap_free();
 }
 inline uint32_t get_current_heap_used() {
@@ -68,8 +68,8 @@ inline uint32_t get_current_heap_free() {
     return info.fordblks;
 }
 
-#define wait_while_false(condition) while(!(condition))
-#define wait_while_true(condition) while(condition)
+#define wait_while_false(condition)                             while (!(condition))
+#define wait_while_true(condition)                              while (condition)
 
 // true for success, false for timed out
 // gcc syntax
@@ -83,10 +83,10 @@ inline uint32_t get_current_heap_free() {
         wait_while_false_with_timeout_us_timeout = (get_clock() - wait_while_false_with_timeout_us_t_start < timeout_us*(CPU_FREQUENCY_HZ/1000000)); \
     } while( !wait_while_false_with_timeout_us_retval && wait_while_false_with_timeout_us_timeout); \
     wait_while_false_with_timeout_us_retval; });
-#define wait_while_true_with_timeout_us(condition, timeout_us) wait_while_false_with_timeout_us(!(condition), timeout_us)
+#define wait_while_true_with_timeout_us(condition, timeout_us)  wait_while_false_with_timeout_us(!(condition), timeout_us)
 
-#define while_timeout_ms(condition, ms) while((condition) && ((get_clock() - t_start) < ms*CPU_FREQUENCY_HZ/1000))
-#define timed_out(ms) ((get_clock() - t_start) > ms*CPU_FREQUENCY_HZ/1000)
+#define while_timeout_ms(condition, ms)                         while ((condition) && ((get_clock() - t_start) < ms * CPU_FREQUENCY_HZ / 1000))
+#define timed_out(ms)                                           ((get_clock() - t_start) > ms * CPU_FREQUENCY_HZ / 1000)
 
 #ifdef __cplusplus
 #include <string>
@@ -96,7 +96,7 @@ inline uint32_t get_current_heap_free() {
 class FrequencyLimiter {
  public:
     FrequencyLimiter(float rate_seconds) {
-        t_diff_ = (float) CPU_FREQUENCY_HZ/rate_seconds;
+        t_diff_ = (float)CPU_FREQUENCY_HZ / rate_seconds;
         last_time_ = get_clock();
     }
     // returns true once for each time it is allowed to run
@@ -115,6 +115,7 @@ class FrequencyLimiter {
         }
         return false;
     }
+
  private:
     uint32_t t_diff_, last_time_;
 };
@@ -134,7 +135,7 @@ class LeakyBucket {
     }
 
     void set_leak_period(float leak_period_s, float dt) {
-        float leak_period = leak_period_s/dt;
+        float leak_period = leak_period_s / dt;
         if (leak_period > static_cast<float>(INT32_MAX)) {
             leak_period_ = INT32_MAX;
         } else {
@@ -161,7 +162,7 @@ class LeakyBucket {
     }
 
     float get_leak_period_s(float dt) const {
-        return leak_period_*dt;
+        return leak_period_ * dt;
     }
 
     void reset() {
@@ -178,14 +179,16 @@ class LeakyBucket {
     uint32_t leak_count_;
     uint32_t leak_period_;
 
-    template <typename T> friend class SystemBase;
+    template <typename T>
+    friend class SystemBase;
 };
 
 template <typename T, unsigned B>
-inline T signextend(const T x)
-{
-  struct {T x:B;} s;
-  return s.x = x;
+inline T signextend(const T x) {
+    struct {
+        T x:B;
+    } s;
+    return s.x = x;
 }
 
 std::vector<char> hex_to_bytes(const std::string& hex);
@@ -205,26 +208,27 @@ struct FixedString {
         std::copy_n(str, N, buf);
     }
 
-    consteval FixedString() : size(0) {}
-template <size_t M>
-consteval auto operator+(const char (&other)[M]) const {
-    FixedString<N + M - 1> result;
-    for (size_t i = 0; i < N; ++i) result.buf[i] = buf[i];
-    for (size_t i = 0; i < M; ++i) result.buf[N + i] = other[i];
-    
-    result.size = N + M - 1; 
-    return result;
-}
+    consteval FixedString() :
+        size(0) {}
+    template <size_t M>
+    consteval auto operator+(const char (&other)[M]) const {
+        FixedString<N + M - 1> result;
+        for (size_t i = 0; i < N; ++i) result.buf[i] = buf[i];
+        for (size_t i = 0; i < M; ++i) result.buf[N + i] = other[i];
+
+        result.size = N + M - 1;
+        return result;
+    }
 
     consteval operator std::string_view() const {
         return {buf, N};
     }
 };
 
-template<unsigned int N>
+template <unsigned int N>
 FixedString(const char (&)[N]) -> FixedString<N - 1>;
 
-template<auto FS>
+template <auto FS>
 constexpr auto StaticString = std::string_view{FS.buf, FS.size};
 
 #endif  // __cplusplus

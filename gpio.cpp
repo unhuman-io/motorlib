@@ -1,9 +1,11 @@
 #include "gpio.h"
 
-GPIO::GPIO(GPIO_TypeDef &regs, uint8_t pin, Direction direction) :
-    regs_(regs), mask_(1<<pin), pin_(pin) {
-        set_direction(direction);
-    }
+GPIO::GPIO(GPIO_TypeDef& regs, uint8_t pin, Direction direction) :
+    regs_(regs),
+    mask_(1 << pin),
+    pin_(pin) {
+    set_direction(direction);
+}
 
 void GPIO::set() {
     regs_.BSRR |= mask_;
@@ -26,9 +28,9 @@ void GPIO::set_direction(Direction direction) {
     switch (direction) {
         default:
         case INPUT:
-        break;
+            break;
         case OUTPUT:
-        break;
+            break;
     }
 }
 

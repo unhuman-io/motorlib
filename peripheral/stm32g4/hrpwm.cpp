@@ -1,4 +1,3 @@
-
 #include "hrpwm.h"
 #include "../../control_fun.h"
 #include "../../logger.h"
@@ -10,15 +9,15 @@ void HRPWM::set_voltage(float v_abc[3]) {
 }
 
 void HRPWM::set_vbus(float vbus) {
-    v_to_pwm_ = period_/vbus;
+    v_to_pwm_ = period_ / vbus;
 }
 
 void HRPWM::open_mode() {
-    regs_.sCommonRegs.ODISR = 3 << 2*ch_a_ | 3 << 2*ch_b_ | 3 << 2*ch_c_; // disable CH1 and CH2
+    regs_.sCommonRegs.ODISR = 3 << 2 * ch_a_ | 3 << 2 * ch_b_ | 3 << 2 * ch_c_; // disable CH1 and CH2
 }
 void HRPWM::brake_mode() {
-    regs_.sCommonRegs.ODISR = 1 << 2*ch_a_ | 1 << 2*ch_b_ | 1 << 2*ch_c_; // disable CH1
-    regs_.sCommonRegs.OENR = 2 << 2*ch_a_ | 2 << 2*ch_b_ | 2 << 2*ch_c_; // enable CH2
+    regs_.sCommonRegs.ODISR = 1 << 2 * ch_a_ | 1 << 2 * ch_b_ | 1 << 2 * ch_c_; // disable CH1
+    regs_.sCommonRegs.OENR = 2 << 2 * ch_a_ | 2 << 2 * ch_b_ | 2 << 2 * ch_c_; // enable CH2
     regs_.sCommonRegs.CR1 = 0x7F; // disable updates
     regs_.sTimerxRegs[ch_a_].SETx1R = 0;
     regs_.sTimerxRegs[ch_b_].SETx1R = 0;
@@ -39,15 +38,15 @@ void HRPWM::voltage_mode() {
         regs_.sTimerxRegs[ch_a_].SETx1R = HRTIM_SET1R_CMP1; // set to active on cmp1
         regs_.sTimerxRegs[ch_b_].SETx1R = HRTIM_SET1R_CMP1;
         regs_.sTimerxRegs[ch_c_].SETx1R = HRTIM_SET1R_CMP1;
-    }   
+    }
     regs_.sCommonRegs.CR1 = 0x0; // enable updates
-    regs_.sCommonRegs.OENR = 3 << 2*ch_a_ | 3 << 2*ch_b_ | 3 << 2*ch_c_; // enable CH1 and CH2
+    regs_.sCommonRegs.OENR = 3 << 2 * ch_a_ | 3 << 2 * ch_b_ | 3 << 2 * ch_c_; // enable CH1 and CH2
 }
 
 // todo doesn't work at startup before regs exist
 void HRPWM::set_frequency_hz(uint32_t frequency_hz, uint16_t min_off_ns, uint16_t min_on_ns, bool keep_prescaler) {
     if (!keep_prescaler) {
-        int desired_prescaler = frequency_hz*2/(CPU_FREQUENCY_HZ/65536);
+        int desired_prescaler = frequency_hz * 2 / (CPU_FREQUENCY_HZ / 65536);
         int ckpsc;
         if (desired_prescaler >= 32) {
             prescaler_ = 32;
@@ -64,17 +63,17 @@ void HRPWM::set_frequency_hz(uint32_t frequency_hz, uint16_t min_off_ns, uint16_
         regs_.sTimerxRegs[ch_c_].TIMxCR |= ckpsc;
         regs_.sTimerxRegs[5].TIMxCR |= ckpsc;
     }
-    
-    count_per_ns_ = CPU_FREQUENCY_HZ * prescaler_/ 4 / 1.e9; // Datasheet says /8 not /4, but /4 seems to give correct scale
-    period_ = (float) CPU_FREQUENCY_HZ*prescaler_/2/frequency_hz;
+
+    count_per_ns_ = CPU_FREQUENCY_HZ * prescaler_ / 4 / 1.e9; // Datasheet says /8 not /4, but /4 seems to give correct scale
+    period_ = (float)CPU_FREQUENCY_HZ * prescaler_ / 2 / frequency_hz;
     regs_.sTimerxRegs[ch_a_].PERxR = period_;
     regs_.sTimerxRegs[ch_b_].PERxR = period_;
     regs_.sTimerxRegs[ch_c_].PERxR = period_;
     regs_.sTimerxRegs[5].PERxR = period_;
     regs_.sTimerxRegs[5].CMP3xR = period_ - 65; // for low time adc trigger
-    half_period_ = period_/2; 
-    pwm_max_ = period_ - fmaxf(2*min_on_ns*count_per_ns_, 65); // seems to require at least 64 to not glitch and go high when should be low
-    pwm_min_ = 2*min_off_ns*count_per_ns_;
+    half_period_ = period_ / 2;
+    pwm_max_ = period_ - fmaxf(2 * min_on_ns * count_per_ns_, 65); // seems to require at least 64 to not glitch and go high when should be low
+    pwm_min_ = 2 * min_off_ns * count_per_ns_;
     current_frequency_hz_ = frequency_hz;
 }
 
@@ -98,7 +97,7 @@ void HRPWM::set_frequency_multiplier(uint8_t multiplier) {
 }
 
 uint8_t HRPWM::get_frequency_multiplier() const {
-    return current_frequency_hz_/base_frequency_hz_ - 1;
+    return current_frequency_hz_ / base_frequency_hz_ - 1;
 }
 
 void HRPWM3::voltage_mode() {
@@ -107,12 +106,12 @@ void HRPWM3::voltage_mode() {
     regs_.sTimerxRegs[ch_b_].SETx2R = HRTIM_SET2R_CMP2;
     regs_.sTimerxRegs[ch_c_].SETx1R = HRTIM_SET1R_CMP1;
     regs_.sCommonRegs.CR1 = 0x0; // enable updates
-    regs_.sCommonRegs.OENR = 3 << 2*ch_a_ | 3 << 2*ch_b_ | 3 << 2*ch_c_; // enable CH1 and CH2;
+    regs_.sCommonRegs.OENR = 3 << 2 * ch_a_ | 3 << 2 * ch_b_ | 3 << 2 * ch_c_; // enable CH1 and CH2;
 }
 
 void HRPWM3::brake_mode() {
-    regs_.sCommonRegs.ODISR = 1 << 2*ch_a_ | 1 << 2*ch_b_ | 1 << 2*ch_c_; // disable CH1
-    regs_.sCommonRegs.OENR = 2 << 2*ch_a_ | 2 << 2*ch_b_ | 2 << 2*ch_c_; // enable CH2;
+    regs_.sCommonRegs.ODISR = 1 << 2 * ch_a_ | 1 << 2 * ch_b_ | 1 << 2 * ch_c_; // disable CH1
+    regs_.sCommonRegs.OENR = 2 << 2 * ch_a_ | 2 << 2 * ch_b_ | 2 << 2 * ch_c_; // enable CH2;
     regs_.sCommonRegs.CR1 = 0x7F; // disable updates
     regs_.sTimerxRegs[ch_a_].SETx1R = HRTIM_SET1R_SST; // set active state for some reason
     regs_.sTimerxRegs[ch_b_].SETx2R = HRTIM_SET2R_SST;

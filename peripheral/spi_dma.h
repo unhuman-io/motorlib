@@ -24,35 +24,36 @@ class SPIPause {
     bool is_paused() {
         return lock_ > 0;
     }
-    std::function<void()> stop_callback_ = []{};
-    std::function<void()> start_callback_ = []{};
+    std::function<void()> stop_callback_ = [] {};
+    std::function<void()> start_callback_ = [] {};
+
  private:
     volatile unsigned lock_ = 0;
-    
 };
 
 
 template <class T>
 class SPIDMABase {
  public:
-    SPIDMABase(uint32_t baudrate, SPIPause &pause) : pause_(pause) {}
+    SPIDMABase(uint32_t baudrate, SPIPause& pause) :
+        pause_(pause) {}
 
     void reinit() {
         static_cast<T*>(this)->reinit_impl();
     }
 
     // main() context only
-    void readwrite(const uint8_t * const data_out, uint8_t * const data_in, uint16_t length) {
+    void readwrite(const uint8_t* const data_out, uint8_t* const data_in, uint16_t length) {
         claim();
         reinit();
-        asm("" : : "m" (*(const uint8_t (*)[length]) data_out)); // ensure data_out[] is in memory
+        asm("" : : "m"(*(const uint8_t (*)[length])data_out)); // ensure data_out[] is in memory
         static_cast<T*>(this)->start_readwrite_impl(data_out, data_in, length);
         static_cast<T*>(this)->finish_readwrite_impl();
-        asm("" : "=m" (*(uint8_t (*)[length]) data_in));
+        asm("" : "=m"(*(uint8_t (*)[length])data_in));
         release();
     }
 
-    Task<bool> readwrite_async(CycleScheduler& sched, const uint8_t * const data_out, uint8_t * const data_in, uint16_t length) {
+    Task<bool> readwrite_async(CycleScheduler& sched, const uint8_t* const data_out, uint8_t* const data_in, uint16_t length) {
         claim();
         reinit();
         // gcc compiler error on the asm memory fence
@@ -68,13 +69,13 @@ class SPIDMABase {
 
     // Note, use memory barrier before accesing data_in
     // Example: asm("" : "=m" (*(uint8_t (*)[]) data_in));
-    void start_continuous_readwrite(const uint8_t * const data_out, uint8_t * const data_in, uint16_t length) {
-        asm("" : : "m" (*(const uint8_t (*)[length]) data_out)); // ensure data_out[] is in memory
+    void start_continuous_readwrite(const uint8_t* const data_out, uint8_t* const data_in, uint16_t length) {
+        asm("" : : "m"(*(const uint8_t (*)[length])data_out)); // ensure data_out[] is in memory
         static_cast<T*>(this)->start_continuous_readwrite_impl(data_out, data_in, length);
     }
 
-    void start_continuous_write(const uint8_t * const data_out, uint16_t length) {
-        asm("" : : "m" (*(const uint8_t (*)[length]) data_out)); // ensure data_out[] is in memory
+    void start_continuous_write(const uint8_t* const data_out, uint16_t length) {
+        asm("" : : "m"(*(const uint8_t (*)[length])data_out)); // ensure data_out[] is in memory
         static_cast<T*>(this)->start_continuous_write_impl(data_out, length);
     }
 
@@ -83,20 +84,20 @@ class SPIDMABase {
     }
 
     // ISR use only
-    void start_readwrite_isr(const uint8_t * const data_out, uint8_t * const data_in, uint16_t length) {
+    void start_readwrite_isr(const uint8_t* const data_out, uint8_t* const data_in, uint16_t length) {
         if (!pause_.is_paused()) {
             reinit();
-            asm("" : : "m" (*(const uint8_t (*)[length]) data_out)); // ensure data_out[] is in memory
+            asm("" : : "m"(*(const uint8_t (*)[length])data_out)); // ensure data_out[] is in memory
             static_cast<T*>(this)->start_readwrite_impl(data_out, data_in, length);
-            asm("" : "=m" (*(uint8_t (*)[length]) data_in));
+            asm("" : "=m"(*(uint8_t (*)[length])data_in));
         }
     }
 
     // ISR use only
-    void start_write_isr(const uint8_t * const data_out, uint16_t length) {
+    void start_write_isr(const uint8_t* const data_out, uint16_t length) {
         if (!pause_.is_paused()) {
             reinit();
-            asm("" : : "m" (*(const uint8_t (*)[length]) data_out)); // ensure data_out[] is in memory
+            asm("" : : "m"(*(const uint8_t (*)[length])data_out)); // ensure data_out[] is in memory
             static_cast<T*>(this)->start_write_impl(data_out, length);
         }
     }
@@ -116,5 +117,5 @@ class SPIDMABase {
         pause_.unpause();
     }
 
-    SPIPause &pause_;
+    SPIPause& pause_;
 };

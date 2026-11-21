@@ -63,10 +63,10 @@ struct TIMRegs {
         CCR1, CCR2, CCR3, CCR4, BDTR;
 };
 static_assert(offsetof(TIMRegs, DIER) == tim_offsets::DIER && offsetof(TIMRegs, EGR) == tim_offsets::EGR &&
-    offsetof(TIMRegs, CCMR1) == tim_offsets::CCMR1 && offsetof(TIMRegs, CCER) == tim_offsets::CCER &&
-    offsetof(TIMRegs, CNT) == tim_offsets::CNT && offsetof(TIMRegs, PSC) == tim_offsets::PSC &&
-    offsetof(TIMRegs, ARR) == tim_offsets::ARR && offsetof(TIMRegs, CCR1) == tim_offsets::CCR1 &&
-    offsetof(TIMRegs, CCR4) == tim_offsets::CCR4 && offsetof(TIMRegs, BDTR) == tim_offsets::BDTR);
+              offsetof(TIMRegs, CCMR1) == tim_offsets::CCMR1 && offsetof(TIMRegs, CCER) == tim_offsets::CCER &&
+              offsetof(TIMRegs, CNT) == tim_offsets::CNT && offsetof(TIMRegs, PSC) == tim_offsets::PSC &&
+              offsetof(TIMRegs, ARR) == tim_offsets::ARR && offsetof(TIMRegs, CCR1) == tim_offsets::CCR1 &&
+              offsetof(TIMRegs, CCR4) == tim_offsets::CCR4 && offsetof(TIMRegs, BDTR) == tim_offsets::BDTR);
 
 // Channels of a timer, -1 where the device has no such timer
 inline consteval int tim_channel_count(int tim) {
@@ -74,7 +74,7 @@ inline consteval int tim_channel_count(int tim) {
 }
 
 // tim_regs<3>() is TIM3
-template<int tim>
+template <int tim>
 inline TIMRegs& tim_regs() {
     static_assert(tim_channel_count(tim) >= 0, "no such timer on this device");
     return *reinterpret_cast<TIMRegs*>(tim_base[tim - 1]);
@@ -89,23 +89,26 @@ inline constexpr uint32_t CCMR_OCPE = 1u << 3, CCMR_OCM_Pos = 4, CCMR_CHANNEL_Wi
 inline constexpr uint32_t CCER_CCE = 1u << 0, CCER_CCP = 1u << 1, CCER_CHANNEL_Width = 4, BDTR_MOE = 1u << 15;
 }
 static_assert(tim_bit::CR1_CEN == tim_bits::CR1_CEN && tim_bit::CR1_ARPE == tim_bits::CR1_ARPE &&
-    tim_bit::DIER_UIE == tim_bits::DIER_UIE && tim_bit::DIER_UDE == tim_bits::DIER_UDE && tim_bit::EGR_UG == tim_bits::EGR_UG);
+              tim_bit::DIER_UIE == tim_bits::DIER_UIE && tim_bit::DIER_UDE == tim_bits::DIER_UDE && tim_bit::EGR_UG == tim_bits::EGR_UG);
 static_assert(tim_bit::CCMR_OCPE == tim_bits::CCMR1_OC1PE && tim_bit::CCMR_OCM_Pos == tim_bits::CCMR1_OC1M_Pos &&
-    tim_bit::CCMR_OCM_Pos + tim_bit::CCMR_CHANNEL_Width == tim_bits::CCMR1_OC2M_Pos);
+              tim_bit::CCMR_OCM_Pos + tim_bit::CCMR_CHANNEL_Width == tim_bits::CCMR1_OC2M_Pos);
 static_assert(tim_bit::CCER_CCE == tim_bits::CCER_CC1E && tim_bit::CCER_CCP == tim_bits::CCER_CC1P &&
-    tim_bit::CCER_CCE << tim_bit::CCER_CHANNEL_Width == tim_bits::CCER_CC2E && tim_bit::BDTR_MOE == tim_bits::BDTR_MOE);
+              tim_bit::CCER_CCE << tim_bit::CCER_CHANNEL_Width == tim_bits::CCER_CC2E && tim_bit::BDTR_MOE == tim_bits::BDTR_MOE);
 
 inline consteval bool tim_channel_used(const TIMChannelInit& c) {
     return c.output == TIMEnable::ENABLED || c.mode != TIMChannelMode::FROZEN || c.preload == TIMEnable::ENABLED ||
-        c.inverted == TIMEnable::ENABLED || c.compare != 0;
+           c.inverted == TIMEnable::ENABLED || c.compare != 0;
 }
 inline consteval int tim_channels_used(const TIMTimerInit& c) {
-    return tim_channel_used(c.ch4) ? 4 : tim_channel_used(c.ch3) ? 3 : tim_channel_used(c.ch2) ? 2 : tim_channel_used(c.ch1) ? 1 : 0;
+    return tim_channel_used(c.ch4) ? 4 : tim_channel_used(c.ch3) ? 3
+                                     : tim_channel_used(c.ch2)   ? 2
+                                     : tim_channel_used(c.ch1)   ? 1
+                                                                 : 0;
 }
 inline consteval bool tim_used(const TIMTimerInit& c) {
     return c.enable == TIMEnable::ENABLED || c.prescaler != 0 || c.period != 0 || c.period_preload == TIMEnable::ENABLED ||
-        c.update_interrupt == TIMEnable::ENABLED || c.update_dma == TIMEnable::ENABLED || c.main_output == TIMEnable::ENABLED ||
-        tim_channels_used(c) != 0;
+           c.update_interrupt == TIMEnable::ENABLED || c.update_dma == TIMEnable::ENABLED || c.main_output == TIMEnable::ENABLED ||
+           tim_channels_used(c) != 0;
 }
 
 inline consteval uint32_t get_tim_channel_ccmr(const TIMChannelInit& c) {
@@ -123,7 +126,7 @@ inline consteval uint32_t get_tim_channel_ccer(const TIMChannelInit& c) {
 inline consteval uint32_t get_tim_ccer(const TIMTimerInit& c) {
     using namespace tim_bit;
     return get_tim_channel_ccer(c.ch1) | get_tim_channel_ccer(c.ch2) << CCER_CHANNEL_Width |
-        get_tim_channel_ccer(c.ch3) << 2 * CCER_CHANNEL_Width | get_tim_channel_ccer(c.ch4) << 3 * CCER_CHANNEL_Width;
+           get_tim_channel_ccer(c.ch3) << 2 * CCER_CHANNEL_Width | get_tim_channel_ccer(c.ch4) << 3 * CCER_CHANNEL_Width;
 }
 inline consteval uint32_t get_tim_dier(const TIMTimerInit& c) {
     using namespace tim_bit;
@@ -137,7 +140,7 @@ inline consteval uint32_t get_tim_cr1(const TIMTimerInit& c) {
 // The timer's clock (RCC enable) must be running. Only registers that differ
 // from reset are written. The prescaler is loaded by a software update
 // before the requests and the counter are enabled.
-template<const TIMTimerInit c, int tim>
+template <const TIMTimerInit c, int tim>
 inline void init_tim_timer() {
     using namespace tim_bit;
     static_assert(!tim_used(c) || tim_channel_count(tim) >= 0, "no such timer on this device");
@@ -165,7 +168,7 @@ inline void init_tim_timer() {
     }
 }
 
-template<const TIMInit h>
+template <const TIMInit h>
 inline void init_tim() {
     init_tim_timer<h.tim1, 1>();
     init_tim_timer<h.tim2, 2>();
@@ -189,19 +192,19 @@ inline void init_tim() {
     init_tim_timer<h.tim27, 27>();
 }
 
-template<TIMInit tim_init>
+template <TIMInit tim_init>
 inline void device_tim_config() {
     init_tim<tim_init>();
 }
 
 // Counter value: tim_counter<3>() is TIM3
-template<int tim>
+template <int tim>
 inline uint32_t tim_counter() {
     return tim_regs<tim>().CNT;
 }
 
 // New compare value of a channel: tim_compare<3, 4>(value) is TIM3 channel 4
-template<int tim, int channel>
+template <int tim, int channel>
 inline void tim_compare(uint32_t value) {
     static_assert(channel >= 1 && channel <= tim_channel_count(tim), "this timer does not have that channel");
     (&tim_regs<tim>().CCR1)[channel - 1] = value;

@@ -1,7 +1,7 @@
 #pragma once
 
 struct SPI {
-    SPI_TypeDef &regs_;
+    SPI_TypeDef& regs_;
 
     void write(uint32_t data) {
         regs_.DR = data;
@@ -19,4 +19,3 @@ struct SPI {
         return regs_.SR & SPI_SR_RXNE;
     }
 };
-

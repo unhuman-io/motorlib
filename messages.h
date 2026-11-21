@@ -34,7 +34,7 @@ typedef struct {
 
 typedef struct {
     float kp;               // proportional gain, units of A/rad for position control
-    float ki;               // \sa PIParam.ki 
+    float ki;               // \sa PIParam.ki
     float ki_limit;         // \sa PIParam.ki_limit
     float kd;               // derivative gain, implemented on error units same as kp * seconds
     float command_max;      // \sa PIParam.command_max
@@ -53,10 +53,10 @@ typedef struct {
     float voltage_limit;    // V output voltage limit
 } FOCParam;
 
-#define COGGING_TABLE_SIZE 128  // must be multiple of 2
+#define COGGING_TABLE_SIZE          128  // must be multiple of 2
 #define MOTOR_ENCODER_TABLE_LENGTH  128
-#define OUTPUT_ENCODER_TABLE_LENGTH  128
-#define TORQUE_TABLE_LENGTH  128
+#define OUTPUT_ENCODER_TABLE_LENGTH 128
+#define TORQUE_TABLE_LENGTH         128
 
 typedef struct {
     float ia_bias, ib_bias, ic_bias;                // initial guess at current sensor bias in amps
@@ -66,18 +66,18 @@ typedef struct {
     uint8_t phase_mode;     // two possible motor wiring states: 0: standard, 1: reverse (i.e. two motor leads flipped)
     struct {
         // float index_electrical_offset_pos;          // index offset electrial zero in encoder counts
-                                                    // can obtain this value from  motor_index_pos_ - motor_electrical_zero_pos_ 
-                                                    // in fast_loop if use_index_electrical_offset_pos == 0 
+        // can obtain this value from  motor_index_pos_ - motor_electrical_zero_pos_
+        // in fast_loop if use_index_electrical_offset_pos == 0
         uint8_t use_index_electrical_offset_pos;    // Set to 1 to enable using the index_electrical_offset_pos above, 0 to disable
                                                     // Allows for more repeatable commutation from a quadrature encoder with index or absolute encoder
         uint32_t cpr;                               // Counts/revolution for encoder, for quadrature encoders 4x lines per revolution
                                                     // For linear encoders set to counts per mm * (2*pi) or similar
         float dir;                                  // Set to 1 for positive output, -1 for negative
-        int32_t rollover;                           // Encoder counts will rollover from +rollover to -rollover when it reaches this value. 
+        int32_t rollover;                           // Encoder counts will rollover from +rollover to -rollover when it reaches this value.
                                                     // Position control will take the shortest route. Velocity control is continuous.
                                                     // Set to 0 to disable.
                                                     // Ideally set to an even multiple of cpr smaller than 8388608 for no resolution loss
-        float table[MOTOR_ENCODER_TABLE_LENGTH][4]; // Additive pchip correction table in motor radians. motor_position = measured_motor_position + table 
+        float table[MOTOR_ENCODER_TABLE_LENGTH][4]; // Additive pchip correction table in motor radians. motor_position = measured_motor_position + table
     } motor_encoder;
     struct {
         float table[COGGING_TABLE_SIZE][4];            // cogging table in A, pchip
@@ -229,16 +229,16 @@ typedef struct {
         ENCODER_ZERO, // motor encoder is 0 at startup plus any absolute offset
         ENCODER_BIAS, // motor encoder is set to bias at startup
         ENCODER_VALUE, // motor encoder has startup bias added at startup
-        ENCODER_BIAS_FROM_OUTPUT, // motor encoder bias is set to 
+        ENCODER_BIAS_FROM_OUTPUT, // motor encoder bias is set to
                         // (output_encoder/cpr - output_encoder.bias)*gear_ratio+motor_encoder_bias
-                        // Note: this requires that output encoder and motor encoder both increment in the 
+                        // Note: this requires that output encoder and motor encoder both increment in the
                         // same direction, that is positive motor encoder is also positive output encoder
         ENCODER_BIAS_FROM_OUTPUT_WITH_MOTOR_CORRECTION,  // use motor encoder absolute
-                        // reading to jump only in integer numbers of the gear ratio*motor_cpr. It will likely 
-                        // need to use calibrated output and motor encoder values to do this. 
-        ENCODER_BIAS_FROM_OUTPUT_WITH_TORQUE_AND_MOTOR_CORRECTION // as above but also use 
+                        // reading to jump only in integer numbers of the gear ratio*motor_cpr. It will likely
+                        // need to use calibrated output and motor encoder values to do this.
+        ENCODER_BIAS_FROM_OUTPUT_WITH_TORQUE_AND_MOTOR_CORRECTION // as above but also use
                         // transmission stiffness to correct the output encoder measurement
-                        // 
+                        //
     } motor_encoder_startup;
     float gear_ratio;   // gear ratio from input to output
     float gear_a, gear_b, gear_c, gear_d;       // cubic constants for gear ratio, 0 to not use
@@ -255,13 +255,13 @@ typedef struct {
 
 } StartupParam;
 
-typedef struct{
+typedef struct {
     uint8_t schema_version;     // 2
     float motor_encoder_bias;   // for ENCODER_BIAS and ENCODER_BIAS_FROM_OUTPUT: extra bias to add to motor encoder
                                 // for ENCODER_BIAS_*_WITH_MOTOR_CORRECTION: motor bias to give a desired motor zero position
                                     // for example when output position = 0 if motor position is -1, then motor_encoder_bias = 1
     float motor_encoder_index_electrical_offset_pos;          // index offset electrial zero in encoder counts
-                                                    // can obtain this value from  motor_index_pos_ - motor_electrical_zero_pos_ 
+                                                    // can obtain this value from  motor_index_pos_ - motor_electrical_zero_pos_
     float output_encoder_bias;
     float joint_encoder_bias;
     TorqueSensorParam torque_sensor;
@@ -269,8 +269,12 @@ typedef struct{
 } Calibration;
 
 typedef struct {
-    struct { float i_d, i_q, v_q; } desired;         // desired current in A, i_d typically 0, i_q creates torque, v_q in V is a feedforward
-    struct { float i_a, i_b, i_c, motor_encoder; } measured;    // sensor currents in A, motor_encoder in mechanical rad referenced to electrical zero
+    struct {
+        float i_d, i_q, v_q;
+    } desired;         // desired current in A, i_d typically 0, i_q creates torque, v_q in V is a feedforward
+    struct {
+        float i_a, i_b, i_c, motor_encoder;
+    } measured;    // sensor currents in A, motor_encoder in mechanical rad referenced to electrical zero
     uint32_t motor_encoder_flags;               // format TBD
 } FOCCommand;
 
@@ -281,7 +285,9 @@ typedef struct {
     struct {
         float i_d, i_q, i_0;                    // measured processed currents, A filtered
     } measured;
-    struct { float v_a, v_b, v_c, v_d, v_q, i_d, i_q; } command;  // command in V to PWM
+    struct {
+        float v_a, v_b, v_c, v_d, v_q, i_d, i_q;
+    } command;  // command in V to PWM
 } FOCStatus;
 
 typedef struct {
@@ -289,8 +295,8 @@ typedef struct {
     FOCStatus foc_status;
     struct {
         int32_t raw;                    // raw counts since startup
-        float position;                 // position in radians, 0 at startup or absolute value 
-        float position_filtered;   
+        float position;                 // position in radians, 0 at startup or absolute value
+        float position_filtered;
     } motor_position;
     struct {
         float velocity_filtered;

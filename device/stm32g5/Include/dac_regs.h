@@ -17,17 +17,17 @@ inline constexpr float dac_clock_hz = CPU_FREQUENCY_HZ;   // bus clock
 
 // checked against the shared register struct
 namespace dac_offsets {
-inline constexpr uint32_t CR      = offsetof(DAC1_Type, DAC_CR);
+inline constexpr uint32_t CR = offsetof(DAC1_Type, DAC_CR);
 inline constexpr uint32_t DHR12R1 = offsetof(DAC1_Type, DAC_DHR12R1);
 inline constexpr uint32_t DHR12R2 = 0x14;   // no channel 2: reserved
-inline constexpr uint32_t DOR1    = offsetof(DAC1_Type, DAC_DOR1);
-inline constexpr uint32_t MCR     = offsetof(DAC1_Type, DAC_MCR);
+inline constexpr uint32_t DOR1 = offsetof(DAC1_Type, DAC_DOR1);
+inline constexpr uint32_t MCR = offsetof(DAC1_Type, DAC_MCR);
 }
 
 namespace dac_bits {
 inline constexpr uint32_t MCR_HFSEL_Pos = DAC1_DAC_MCR_HFSEL_Pos;
 // checked against the shared bit positions
-inline constexpr uint32_t CR_EN1        = DAC1_DAC_CR_EN1_Msk;
+inline constexpr uint32_t CR_EN1 = DAC1_DAC_CR_EN1_Msk;
 inline constexpr uint32_t MCR_MODE1_Pos = DAC1_DAC_MCR_MODE1_Pos;
-inline constexpr uint32_t CHANNEL2_Pos  = 16;   // no channel 2
+inline constexpr uint32_t CHANNEL2_Pos = 16;   // no channel 2
 }

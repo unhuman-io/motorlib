@@ -18,24 +18,24 @@ void _isatty() {}
 void _kill() {}
 }
 
-#define         DEVICE_ID1          (UID_BASE) //(0x1FFF7A10)
-#define         DEVICE_ID2          (UID_BASE + 4) 
-#define         DEVICE_ID3          (UID_BASE + 8)
+#define DEVICE_ID1 (UID_BASE) //(0x1FFF7A10)
+#define DEVICE_ID2 (UID_BASE + 4)
+#define DEVICE_ID3 (UID_BASE + 8)
 
 char to_hex[] = "0123456789abcdef";
 
-char * get_serial_number() {
+char* get_serial_number() {
     static char serial_number[13];
     uint32_t deviceserial0, deviceserial1, deviceserial2;
 
-    deviceserial0 = *(uint32_t *)DEVICE_ID1;
-    deviceserial1 = *(uint32_t *)DEVICE_ID2;
-    deviceserial2 = *(uint32_t *)DEVICE_ID3;
+    deviceserial0 = *(uint32_t*)DEVICE_ID1;
+    deviceserial1 = *(uint32_t*)DEVICE_ID2;
+    deviceserial2 = *(uint32_t*)DEVICE_ID3;
 
     deviceserial0 += deviceserial2;
 
     //std::sprintf(serial_number,"%lX%X",deviceserial0, (uint16_t) (deviceserial1>>16));
-  
+
 
     serial_number[0] = to_hex[(deviceserial0 >> 28) & 0xf];
     serial_number[1] = to_hex[(deviceserial0 >> 24) & 0xf];
@@ -53,13 +53,12 @@ char * get_serial_number() {
 }
 
 
-extern volatile uint32_t * const cpu_clock = &DWT->CYCCNT;
-uint32_t rcc_csr_copy __attribute__((section (".noload")));
+extern volatile uint32_t* const cpu_clock = &DWT->CYCCNT;
+uint32_t rcc_csr_copy __attribute__((section(".noload")));
 
-static_assert((uint32_t) CPU_FREQUENCY_HZ % 2000000 == 0, "CPU_FREQUENCY_HZ must be a multiple of 2000000");
+static_assert((uint32_t)CPU_FREQUENCY_HZ % 2000000 == 0, "CPU_FREQUENCY_HZ must be a multiple of 2000000");
 
-extern "C" void SystemClock_Config(void)
-{
+extern "C" void SystemClock_Config(void) {
     PWR->CR5 &= ~PWR_CR5_R1MODE; // R1MODE -> 0 for > 150 MHz operation
 
     // ensure cpu clock is started for us_delay
@@ -74,49 +73,49 @@ extern "C" void SystemClock_Config(void)
     FLASH->ACR = (FLASH->ACR & ~FLASH_ACR_LATENCY_Msk) | FLASH_ACR_LATENCY_4WS; // 4 flash wait states for 170 MHz
 #ifdef USE_HSI
     RCC->PLLCFGR = 2 << RCC_PLLCFGR_PLLSRC_Pos | // (2) HSI is pll source (16 MHz)
-      3 << RCC_PLLCFGR_PLLM_Pos | // (3) div4 
-      (uint32_t) CPU_FREQUENCY_HZ/2000000 << RCC_PLLCFGR_PLLN_Pos | // (85) x85
-      2 << RCC_PLLCFGR_PLLPDIV_Pos | // (2) div2
+                   3 << RCC_PLLCFGR_PLLM_Pos | // (3) div4
+                   (uint32_t)CPU_FREQUENCY_HZ / 2000000 << RCC_PLLCFGR_PLLN_Pos | // (85) x85
+                   2 << RCC_PLLCFGR_PLLPDIV_Pos | // (2) div2
       //RCC_PLLCFGR_PLLPEN |
-      0 << RCC_PLLCFGR_PLLQ_Pos | // (0) div2
-      //RCC_PLLCFGR_PLLQEN | 
-      0 << RCC_PLLCFGR_PLLR_Pos | // (0) div2
-      RCC_PLLCFGR_PLLREN;
+                   0 << RCC_PLLCFGR_PLLQ_Pos | // (0) div2
+      //RCC_PLLCFGR_PLLQEN |
+                   0 << RCC_PLLCFGR_PLLR_Pos | // (0) div2
+                   RCC_PLLCFGR_PLLREN;
     RCC->CR = RCC_CR_HSION | RCC_CR_PLLON;
 #else
-  // P, Q, R all 170 MHz
-  RCC->PLLCFGR = 3 << RCC_PLLCFGR_PLLSRC_Pos | // (3) HSE is pll source (24 MHz)
-    5 << RCC_PLLCFGR_PLLM_Pos | // (5) div6 
-    (uint32_t) CPU_FREQUENCY_HZ/2000000 << RCC_PLLCFGR_PLLN_Pos | // (85) x85
-    2 << RCC_PLLCFGR_PLLPDIV_Pos | // (2) div2
+    // P, Q, R all 170 MHz
+    RCC->PLLCFGR = 3 << RCC_PLLCFGR_PLLSRC_Pos | // (3) HSE is pll source (24 MHz)
+                   5 << RCC_PLLCFGR_PLLM_Pos | // (5) div6
+                   (uint32_t)CPU_FREQUENCY_HZ / 2000000 << RCC_PLLCFGR_PLLN_Pos | // (85) x85
+                   2 << RCC_PLLCFGR_PLLPDIV_Pos | // (2) div2
     //RCC_PLLCFGR_PLLPEN |
-    0 << RCC_PLLCFGR_PLLQ_Pos | // (0) div2
-    //RCC_PLLCFGR_PLLQEN | 
-    0 << RCC_PLLCFGR_PLLR_Pos | // (0) div2
-    RCC_PLLCFGR_PLLREN;  
+                   0 << RCC_PLLCFGR_PLLQ_Pos | // (0) div2
+    //RCC_PLLCFGR_PLLQEN |
+                   0 << RCC_PLLCFGR_PLLR_Pos | // (0) div2
+                   RCC_PLLCFGR_PLLREN;
     RCC->CR = RCC_CR_HSEON | RCC_CR_HSION | RCC_CR_PLLON;
 #endif
 
-  RCC->CRRCR = RCC_CRRCR_HSI48ON;
-  while(!(RCC->CRRCR & RCC_CRRCR_HSI48RDY));
-  while(!(RCC->CR & RCC_CR_PLLRDY));
+    RCC->CRRCR = RCC_CRRCR_HSI48ON;
+    while (!(RCC->CRRCR & RCC_CRRCR_HSI48RDY));
+    while (!(RCC->CR & RCC_CR_PLLRDY));
 
-  RCC->CFGR = 3 << RCC_CFGR_SW_Pos; // (3) // PLL clock
+    RCC->CFGR = 3 << RCC_CFGR_SW_Pos; // (3) // PLL clock
 
-  RCC->CCIPR = 0 << RCC_CCIPR_CLK48SEL_Pos | // HSI48 (0) for usb
-    2 << RCC_CCIPR_ADC12SEL_Pos | 2 << RCC_CCIPR_ADC345SEL_Pos | // (2) sysclk
-    0 << RCC_CCIPR_I2C1SEL_Pos | 0 << RCC_CCIPR_I2C2SEL_Pos | // (0) pclk
-    2 << RCC_CCIPR_FDCANSEL_Pos; // (2) pclk fdcan
+    RCC->CCIPR = 0 << RCC_CCIPR_CLK48SEL_Pos | // HSI48 (0) for usb
+                 2 << RCC_CCIPR_ADC12SEL_Pos | 2 << RCC_CCIPR_ADC345SEL_Pos | // (2) sysclk
+                 0 << RCC_CCIPR_I2C1SEL_Pos | 0 << RCC_CCIPR_I2C2SEL_Pos | // (0) pclk
+                 2 << RCC_CCIPR_FDCANSEL_Pos; // (2) pclk fdcan
 
 
-  RCC->APB1ENR1 |= RCC_APB1ENR1_CRSEN;
-  RCC->APB1SMENR1 |= RCC_APB1SMENR1_CRSSMEN;
-  CRS->CFGR = 2 << CRS_CFGR_SYNCSRC_Pos | 34 << CRS_CFGR_FELIM_Pos |
-    (48000000/1000 - 1) << CRS_CFGR_RELOAD_Pos; // DIV1, source usb sof (2), polarity rising, 34 felim was specificed by cubemx, reload (48000000/1000 - 1)
-  CRS->CR |= CRS_CR_AUTOTRIMEN | CRS_CR_CEN;
+    RCC->APB1ENR1 |= RCC_APB1ENR1_CRSEN;
+    RCC->APB1SMENR1 |= RCC_APB1SMENR1_CRSSMEN;
+    CRS->CFGR = 2 << CRS_CFGR_SYNCSRC_Pos | 34 << CRS_CFGR_FELIM_Pos |
+                (48000000 / 1000 - 1) << CRS_CFGR_RELOAD_Pos; // DIV1, source usb sof (2), polarity rising, 34 felim was specificed by cubemx, reload (48000000/1000 - 1)
+    CRS->CR |= CRS_CR_AUTOTRIMEN | CRS_CR_CEN;
 }
 
-uint8_t can_id = *(uint8_t *) (0x8060000);
+uint8_t can_id = *(uint8_t*)(0x8060000);
 
 int main() {
     SystemClock_Config();
@@ -132,7 +131,7 @@ int main() {
     CANCommunication can_communication(can, can_id);
 
     int loop_count = 0;
-    while(1) {
+    while (1) {
         IWDG->KR = 0xAAAA;
         loop_count++;
         if (loop_count % 1000000 == 0) {
@@ -141,7 +140,8 @@ int main() {
             GPIOB->BSRR = GPIO_BSRR_BR8;
             GPIOB->BSRR = GPIO_BSRR_BR6;
         }
-        enum {READ=0, WRITE=1};
+        enum { READ  = 0,
+               WRITE = 1 };
         union {
             ReceiveData receive_data;
             struct {
@@ -168,7 +168,7 @@ int main() {
                     data.length = 62;
                 }
                 for (int i = 0; i < data.length; i++) {
-                    send_data.data[i] = *(uint8_t *)data.address;
+                    send_data.data[i] = *(uint8_t*)data.address;
                     data.address++;
                 }
                 send_data.command = READ;
@@ -199,7 +199,6 @@ int main() {
                 can_communication.send_string("", 0);
             }
         }
-
     }
     return 0;
 }

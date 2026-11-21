@@ -18,7 +18,7 @@
 // It should be set to always true for an absolute encoder.
 class EncoderBase : public SensorBase {
  public:
-    EncoderBase() { }
+    EncoderBase() {}
 
     // init is called by system_init()
     bool init() { return true; }

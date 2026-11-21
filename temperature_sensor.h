@@ -7,23 +7,25 @@ class TemperatureSensor {
  public:
     float read() { return get_temperature(); }
     float get_temperature() const { return 0; }
-
 };
 
 class PT1000 : public TemperatureSensor {
  public:
-    PT1000(volatile uint32_t& adc, float v3v3 = 3.3) : adc_(adc), v3v3_(v3v3) {}
+    PT1000(volatile uint32_t& adc, float v3v3 = 3.3) :
+        adc_(adc),
+        v3v3_(v3v3) {}
     float read() {
-        float voltage = 1.0/4096*adc_;
+        float voltage = 1.0 / 4096 * adc_;
         // top side 1k/1k
-        float resistance = 1000*(v3v3_/voltage-1);
+        float resistance = 1000 * (v3v3_ / voltage - 1);
         temperature_ = resistance_to_temperature(resistance);
-        return get_temperature(); 
+        return get_temperature();
     }
     static float resistance_to_temperature(float resistance) {
-        return (resistance-1000)/(1000*3.91e-3);
+        return (resistance - 1000) / (1000 * 3.91e-3);
     }
-    float get_temperature() const { return temperature_; }   
+    float get_temperature() const { return temperature_; }
+
  private:
     volatile uint32_t& adc_;
     float v3v3_;
@@ -32,10 +34,13 @@ class PT1000 : public TemperatureSensor {
 
 class NTC : public TemperatureSensor {
  public:
-    NTC(volatile uint32_t& adc, float B = 3435, bool top_side = false, float adc_scaling = 3.3) : 
-        adc_(adc), B_(B), top_side_(top_side), adc_scaling_(adc_scaling) {}
+    NTC(volatile uint32_t& adc, float B = 3435, bool top_side = false, float adc_scaling = 3.3) :
+        adc_(adc),
+        B_(B),
+        top_side_(top_side),
+        adc_scaling_(adc_scaling) {}
     float read() {
-        float voltage = adc_scaling_/4096*adc_;
+        float voltage = adc_scaling_ / 4096 * adc_;
         // bottom side 10k/10k
         // r is thermistor
         // v = 3.3*r/(r10 + r)
@@ -51,14 +56,15 @@ class NTC : public TemperatureSensor {
         // r = r10*(3.3/v - 1)
         float resistance;
         if (top_side_) {
-            resistance = 10000*(3.3/voltage-1);
+            resistance = 10000 * (3.3 / voltage - 1);
         } else {
-            resistance = 10000/(3.3/voltage-1);
-        } 
-        temperature_ = 1/(std::log(resistance/10000)/B_ + 1/298.15) - 273.15;
-        return get_temperature(); 
+            resistance = 10000 / (3.3 / voltage - 1);
+        }
+        temperature_ = 1 / (std::log(resistance / 10000) / B_ + 1 / 298.15) - 273.15;
+        return get_temperature();
     }
     float get_temperature() const { return temperature_; }
+
  private:
     volatile uint32_t& adc_;
     float B_;

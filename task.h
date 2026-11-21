@@ -10,7 +10,7 @@
 constexpr uint32_t cpu_frequency_hz = CPU_FREQUENCY_HZ;
 
 class CycleScheduler {
-private:
+ private:
     struct Sleeper {
         std::coroutine_handle<> handle = nullptr;
         uint32_t target_time = 0; // Unified absolute target
@@ -20,10 +20,10 @@ private:
     static constexpr size_t MAX_TASKS = 8;
     Sleeper sleepers[MAX_TASKS];
 
-public:
+ public:
     void poll() {
         uint32_t now = get_clock();
-        
+
         for (auto& s : sleepers) {
             if (s.handle != nullptr) {
                 // Safe 32-bit wrap-around comparison for absolute deadlines
@@ -42,11 +42,11 @@ public:
         struct Awaiter {
             CycleScheduler& sched;
             uint32_t target_time;
-            
+
             bool await_ready() const {
-                return (int32_t)(get_clock() - target_time) >= 0; 
+                return (int32_t)(get_clock() - target_time) >= 0;
             }
-            
+
             void await_suspend(std::coroutine_handle<> h) {
                 for (auto& s : sched.sleepers) {
                     if (s.handle == nullptr) {
@@ -56,12 +56,12 @@ public:
                         return; // Success
                     }
                 }
-                while(1); // Trap: Scheduler sleep queue is full!
+                while (1); // Trap: Scheduler sleep queue is full!
             }
             void await_resume() {}
         };
 
-        return Awaiter{ *this, target_time };
+        return Awaiter{*this, target_time};
     }
 
     // 2. Relative delay (built cleanly on top of delay_until)
@@ -75,26 +75,26 @@ public:
     auto yield() {
         struct YieldAwaiter {
             CycleScheduler& sched;
-            
+
             // ALWAYS suspend to force a context switch
-            bool await_ready() const { return false; } 
-            
+            bool await_ready() const { return false; }
+
             void await_suspend(std::coroutine_handle<> h) {
                 for (auto& s : sched.sleepers) {
                     if (s.handle == nullptr) {
                         // Set target time to current time so it wakes up instantly on the next poll
-                        s.target_time = get_clock(); 
+                        s.target_time = get_clock();
                         s.ready = nullptr;
                         s.handle = h;
                         return;
                     }
                 }
-                while(1); // Trap: Scheduler queue full!
+                while (1); // Trap: Scheduler queue full!
             }
             void await_resume() {}
         };
 
-        return YieldAwaiter{ *this };
+        return YieldAwaiter{*this};
     }
 
     // Wait for a condition: ready() is asked once here and then on every pass
@@ -115,12 +115,12 @@ public:
                         return;
                     }
                 }
-                while(1); // Trap: Scheduler queue full!
+                while (1); // Trap: Scheduler queue full!
             }
             void await_resume() {}
         };
 
-        return WhenAwaiter{ *this, ready };
+        return WhenAwaiter{*this, ready};
     }
 };
 
@@ -147,12 +147,12 @@ struct PromiseReturn<void> {
 // 2. The Final Awaiter: Transfers control back to parent instantly if one exists
 struct FinalAwaiter {
     bool await_ready() const noexcept { return false; }
-    
+
     template <typename PromiseType>
     std::coroutine_handle<> await_suspend(std::coroutine_handle<PromiseType> h) noexcept {
-        return h.promise().continuation_; 
+        return h.promise().continuation_;
     }
-    
+
     void await_resume() noexcept {}
 };
 
@@ -167,33 +167,37 @@ template <typename T = void, bool owning = true>
 struct [[nodiscard]] Task {
     // Inherit the return logic (void vs T) based on the template parameter
     struct promise_type : public PromiseReturn<T> {
-        
+
         Task get_return_object() {
             return Task{std::coroutine_handle<promise_type>::from_promise(*this)};
         }
-        
+
         std::suspend_never initial_suspend() { return {}; }
         FinalAwaiter final_suspend() noexcept { return {}; } // Hand off to parent
-        
-        void unhandled_exception() { while(1); } 
+
+        void unhandled_exception() { while (1); }
     };
 
     std::coroutine_handle<promise_type> handle_;
 
-    explicit Task(std::coroutine_handle<promise_type> h) : handle_(h) {}
-    
-    ~Task() requires owning {
+    explicit Task(std::coroutine_handle<promise_type> h) :
+        handle_(h) {}
+
+    ~Task()
+        requires owning
+    {
         if (handle_) { handle_.destroy(); }
     }
     ~Task() = default;
 
     Task(const Task&) = delete;
     Task& operator=(const Task&) = delete;
-    
-    Task(Task&& other) noexcept : handle_(other.handle_) {
+
+    Task(Task&& other) noexcept :
+        handle_(other.handle_) {
         other.handle_ = nullptr;
     }
-    
+
     Task& operator=(Task&& other) noexcept {
         if (this != &other) {
             if (handle_) handle_.destroy();
@@ -202,7 +206,7 @@ struct [[nodiscard]] Task {
         }
         return *this;
     }
-    
+
     bool is_done() const {
         return !handle_ || handle_.done();
     }
@@ -250,10 +254,10 @@ struct StaticFramePromise : public Task<T, false>::promise_type {
     void* operator new(std::size_t size_desired) {
         frame_size = size_desired;
         if (size_desired > size) {
-            while(1); // Frame too large
+            while (1); // Frame too large
         }
         if (is_in_use) {
-            while(1); // Coroutine already active
+            while (1); // Coroutine already active
         }
         is_in_use = true;
         return global_frame;
@@ -276,8 +280,8 @@ struct [[nodiscard]] GlobalTask : public Task<T, false> {
     };
 
     // Constructor safely casts the derived handle to the base handle expected by Task<T>
-    explicit GlobalTask(std::coroutine_handle<promise_type> h)
-        : Task<T, false>(std::coroutine_handle<typename Task<T, false>::promise_type>::from_address(h.address())) {}
+    explicit GlobalTask(std::coroutine_handle<promise_type> h) :
+        Task<T, false>(std::coroutine_handle<typename Task<T, false>::promise_type>::from_address(h.address())) {}
 };
 
 // A GlobalTask that is called: `co_await f(sched)`, any number of times, one at
@@ -293,8 +297,9 @@ struct [[nodiscard]] GlobalCall : public Task<T, false> {
         }
     };
 
-    explicit GlobalCall(std::coroutine_handle<promise_type> h)
-        : Task<T, false>(std::coroutine_handle<typename Task<T, false>::promise_type>::from_address(h.address())), own_(h) {}
+    explicit GlobalCall(std::coroutine_handle<promise_type> h) :
+        Task<T, false>(std::coroutine_handle<typename Task<T, false>::promise_type>::from_address(h.address())),
+        own_(h) {}
 
     auto operator co_await() const noexcept {
         struct CallAwaiter {

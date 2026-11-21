@@ -7,33 +7,37 @@
 
 class JointPositionController : public Controller {
  public:
-    JointPositionController(float dt) : Controller(dt), velocity_controller_(dt) {}
-    void init(const MainLoopStatus &status) {
+    JointPositionController(float dt) :
+        Controller(dt),
+        velocity_controller_(dt) {}
+    void init(const MainLoopStatus& status) {
         velocity_controller_.init(status);
     }
-    float step(const MotorCommand &command, const MainLoopStatus &status) {
+    float step(const MotorCommand& command, const MainLoopStatus& status) {
         float joint_error = command.position_desired - status.output_position;
         MotorCommand command_velocity = {};
-        command_velocity.velocity_desired = param_.kpj*joint_error;
-        float iq_des = velocity_controller_.step(command_velocity, status); 
+        command_velocity.velocity_desired = param_.kpj * joint_error;
+        float iq_des = velocity_controller_.step(command_velocity, status);
         return iq_des;
     }
-    void set_param(const JointPositionControllerParam &param) {
+    void set_param(const JointPositionControllerParam& param) {
         velocity_controller_.set_param(param.velocity);
         param_ = param;
     }
     void set_rollover(float rollover) { velocity_controller_.set_rollover(rollover); }
-    bool validate_command(const MotorCommand &command) const {
+    bool validate_command(const MotorCommand& command) const {
         if (std::isfinite(command.position_desired)) {
             return true;
         }
         return false;
     }
+
  private:
     VelocityController velocity_controller_;
     JointPositionControllerParam param_ = {};
 
-    template <typename T> friend class SystemBase;
+    template <typename T>
+    friend class SystemBase;
 };
 
 #endif  // UNHUMAN_MOTORLIB_CONTROLLER_JOINT_POSITION_CONTROLLER_H_

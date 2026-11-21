@@ -17,11 +17,18 @@ class Logger {
     class CIndex {
      public:
         CIndex() = default;
-        CIndex(uint32_t value) : value_(value) {
+        CIndex(uint32_t value) :
+            value_(value) {
             wrap();
         }
-        void inc() { value_++; wrap(); }
-        CIndex& operator++() { inc(); return *this; }
+        void inc() {
+            value_++;
+            wrap();
+        }
+        CIndex& operator++() {
+            inc();
+            return *this;
+        }
         void set_value(uint32_t value) {
             value_ = value;
         }
@@ -34,12 +41,15 @@ class Logger {
             wrapped_ = value_ >= LOGGING_MAX_SIZE;
             value_ %= LOGGING_MAX_SIZE;
         }
+
      private:
         uint32_t value_ = 0;
         bool wrapped_ = false;
     };
 
-    Logger(CIndex &back, char *log_queue) : back_(back), log_queue_(log_queue) {
+    Logger(CIndex& back, char* log_queue) :
+        back_(back),
+        log_queue_(log_queue) {
         back_.wrap();
         front_atomic_.store(back_, std::memory_order_release);
         read_front_atomic_.store(back_, std::memory_order_release);
@@ -92,7 +102,7 @@ class Logger {
         str.reserve(MAX_API_LONG_DATA_SIZE);
         CIndex front = back_;
         char c, last_c = '\0';
-        for (int i = 0; i < MAX_API_LONG_DATA_SIZE-1; i++) {
+        for (int i = 0; i < MAX_API_LONG_DATA_SIZE - 1; i++) {
             c = log_queue_[front];
             if (c == '\0') {
                 if (last_c != '\0') {
@@ -113,9 +123,9 @@ class Logger {
         return str;
     }
     bool empty() const {
-        return read_front_atomic_.load(std::memory_order_acquire) == (uint32_t) back_;
+        return read_front_atomic_.load(std::memory_order_acquire) == (uint32_t)back_;
     }
-    void log_printf(const char *s, ...) {
+    void log_printf(const char* s, ...) {
         va_list args;
         char sout[MAX_API_DATA_SIZE];
         va_start(args, s);
@@ -136,12 +146,11 @@ class Logger {
             CIndex front = front_atomic_.load(std::memory_order_acquire);
             num_elements_to_read_ = num_elements_;
             read_front_atomic_.store(front, std::memory_order_release);
-            success = (uint32_t) front == front_atomic_.load(std::memory_order_acquire);
+            success = (uint32_t)front == front_atomic_.load(std::memory_order_acquire);
         } while (!success);
     }
+
  private:
-
-
     void log_raw(char c) {
         log_queue_[back_] = c;
         ++back_;
@@ -162,8 +171,7 @@ class Logger {
                     ++read_front_;
                 }
                 ++front_log_;
-            }
-            while (log_queue_[front_log_] != '\0');
+            } while (log_queue_[front_log_] != '\0');
             if (read_front_ == front_log_) {
                 ++read_front_;
                 num_elements_to_read_--;
@@ -177,9 +185,9 @@ class Logger {
     uint32_t num_elements_to_read_ = 0;
     CIndex front_log_;
     CIndex read_front_;
-    CIndex &back_;
+    CIndex& back_;
     std::atomic<uint32_t> front_atomic_, read_front_atomic_;
-    char *log_queue_;
+    char* log_queue_;
 };
 
 extern Logger logger;

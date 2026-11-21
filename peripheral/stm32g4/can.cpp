@@ -3,9 +3,9 @@
 #include <algorithm>
 #include "st_device.h"
 
-CAN::CAN(CAN_INST inst, ArbitrationBaudRate arb, DataBaudRate data) : 
-    regs_(*reinterpret_cast<FDCAN_GlobalTypeDef *>(inst*FDCAN_SIZE + FDCAN1_BASE)), 
-    ram_(*reinterpret_cast<FDCANMessageRam *>(inst*FDCAN_MSG_RAM_SIZE + SRAMCAN_BASE)) {
+CAN::CAN(CAN_INST inst, ArbitrationBaudRate arb, DataBaudRate data) :
+    regs_(*reinterpret_cast<FDCAN_GlobalTypeDef*>(inst * FDCAN_SIZE + FDCAN1_BASE)),
+    ram_(*reinterpret_cast<FDCANMessageRam*>(inst * FDCAN_MSG_RAM_SIZE + SRAMCAN_BASE)) {
     // Only if not reset
     // regs_.CCCR |= FDCAN_CCCR_INIT;
     // while (!(regs_.CCCR & FDCAN_CCCR_INIT));
@@ -23,7 +23,7 @@ CAN::CAN(CAN_INST inst, ArbitrationBaudRate arb, DataBaudRate data) :
                 break;
             case ArbitrationBaudRate::ARB_2M:
                 // samp point = 0.753
-                regs_.NBTP = 60 << FDCAN_NBTP_NSJW_Pos | 61 << FDCAN_NBTP_NTSEG1_Pos | 19 << FDCAN_NBTP_NTSEG2_Pos; 
+                regs_.NBTP = 60 << FDCAN_NBTP_NSJW_Pos | 61 << FDCAN_NBTP_NTSEG1_Pos | 19 << FDCAN_NBTP_NTSEG2_Pos;
                 break;
             default:
                 break;
@@ -86,7 +86,7 @@ int CAN::read(uint8_t fifo, uint16_t id, uint8_t* data) {
     uint8_t ind = 0;
     RX_FIFO* buffer;
     switch (fifo) {
-        case 0 :
+        case 0:
             if (!(regs_.RXF0S & FDCAN_RXF0S_F0FL)) {
                 return -1;
             }
@@ -143,12 +143,12 @@ int CAN::write(uint16_t id, uint8_t* data, uint8_t length, uint8_t buf_num) {
     buffer->word1.word = word1.word;
     buffer->word2.word = word2.word;
 
-    uint8_t len_copy = std::min(std::min(length, (uint8_t) sizeof(buffer->data)), (uint8_t) 64);
-    uint8_t len_copy32 = (len_copy+3) / 4;
+    uint8_t len_copy = std::min(std::min(length, (uint8_t)sizeof(buffer->data)), (uint8_t)64);
+    uint8_t len_copy32 = (len_copy + 3) / 4;
     //std::memcpy(buffer->data, data, len_copy);
     // can buffer memory requires 32 bit writes
     for (int i = 0; i < len_copy32; i++) {
-        buffer->data32[i] = *reinterpret_cast<uint32_t *>(&data[i*4]);
+        buffer->data32[i] = *reinterpret_cast<uint32_t*>(&data[i * 4]);
     }
     asm("dmb");
 
@@ -157,7 +157,7 @@ int CAN::write(uint16_t id, uint8_t* data, uint8_t length, uint8_t buf_num) {
     return 0;
 }
 
-Task<int> CAN::write_async(Scheduler &sched, uint16_t id, uint8_t* data, uint8_t length, uint8_t buf_num) {
+Task<int> CAN::write_async(Scheduler& sched, uint16_t id, uint8_t* data, uint8_t length, uint8_t buf_num) {
     int retval = write(id, data, length, buf_num);
     for (; retval == -3; retval = write(id, data, length, buf_num)) {
         co_await sched.yield();
@@ -172,10 +172,10 @@ bool CAN::add_acceptance_filter(uint16_t id, uint8_t fifo) {
     FLSSA flssa = {
         .sfid2 = 0x7ff, // mask
         .sfid1 = id,
-        .sfec = (uint32_t) (fifo + 1),
+        .sfec = (uint32_t)(fifo + 1),
         .sft = 2, // classic filter
     };
-    uint32_t *ptr = reinterpret_cast<uint32_t*>(&flssa);
+    uint32_t* ptr = reinterpret_cast<uint32_t*>(&flssa);
     ram_.FLSSA[acceptance_filter_num_++] = *ptr;
     return true;
 }

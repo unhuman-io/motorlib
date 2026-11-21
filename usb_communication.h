@@ -7,53 +7,54 @@
 
 class USBCommunication : public CommunicationBase {
  public:
-    USBCommunication(USB1 &usb) : usb_(usb) {}
-    int receive_data(ReceiveData * const data) {
-      return usb_.receive_data(2, (uint8_t *const) data, sizeof(*data));
+    USBCommunication(USB1& usb) :
+        usb_(usb) {}
+    int receive_data(ReceiveData* const data) {
+        return usb_.receive_data(2, (uint8_t* const)data, sizeof(*data));
     }
-    void send_data(const SendData &data) {
+    void send_data(const SendData& data) {
 #ifdef USE_MOTOR_STATUS_LITE
-    const uint16_t buffer_size = sizeof(MotorStatusLite);
+        const uint16_t buffer_size = sizeof(MotorStatusLite);
 #else
-    const uint16_t buffer_size = sizeof(MotorStatusRegular);
+        const uint16_t buffer_size = sizeof(MotorStatusRegular);
 #endif
-       usb_.send_data(2, reinterpret_cast<const uint8_t *>(&data), buffer_size, false);
+        usb_.send_data(2, reinterpret_cast<const uint8_t*>(&data), buffer_size, false);
     }
-    int receive_string(char * const string) {
-       int count = usb_.receive_data(1, (uint8_t * const) string, 64);
-       string[count] = 0;
-       return count;
+    int receive_string(char* const string) {
+        int count = usb_.receive_data(1, (uint8_t* const)string, 64);
+        string[count] = 0;
+        return count;
     }
-    bool send_string(const char * const string, uint16_t length) {
-       // blocks until entire string has been sent
-       if (length > 0 && (string[0] == 0 || length > MAX_API_DATA_SIZE)) {
-          // binary that starts with 0, need to send as long packet
-          struct LongPacket{
-             APIControlPacket control_packet = {.control_packet_id = 0,
-                                                .type = LONG_PACKET,
-                                                .long_packet = {0, 1}};
-             char data[MAX_API_DATA_SIZE - sizeof(APIControlPacket)];
-          };
-          LongPacket *long_packet_ptr = new LongPacket(); // prevent large allocation on stack
-          LongPacket &long_packet = *long_packet_ptr;
-          long_packet.control_packet.long_packet.total_length = length;
-          int32_t length_remaining = length;
-          const char * str = string;
-          do {
-             uint16_t transfer_size = std::min((uint16_t) (MAX_API_DATA_SIZE - sizeof(APIControlPacket)), (uint16_t) length_remaining);
-             std::memcpy(long_packet.data, str, transfer_size);
-             usb_.send_data(1, (const uint8_t * const) &long_packet, 
-                     transfer_size + sizeof(APIControlPacket), true);
-             str += transfer_size;
-             long_packet.control_packet.long_packet.packet_number++;
-             length_remaining -= transfer_size;
-          } while (length_remaining > 0);
-         delete long_packet_ptr;
-       } else {
-         usb_.send_data(1, (const uint8_t * const) string, 
-               std::min((uint16_t) MAX_API_DATA_SIZE, length), true);
-       }
-       return true;
+    bool send_string(const char* const string, uint16_t length) {
+        // blocks until entire string has been sent
+        if (length > 0 && (string[0] == 0 || length > MAX_API_DATA_SIZE)) {
+            // binary that starts with 0, need to send as long packet
+            struct LongPacket {
+                APIControlPacket control_packet = {.control_packet_id = 0,
+                                                   .type = LONG_PACKET,
+                                                   .long_packet = {0, 1}};
+                char data[MAX_API_DATA_SIZE - sizeof(APIControlPacket)];
+            };
+            LongPacket* long_packet_ptr = new LongPacket(); // prevent large allocation on stack
+            LongPacket& long_packet = *long_packet_ptr;
+            long_packet.control_packet.long_packet.total_length = length;
+            int32_t length_remaining = length;
+            const char* str = string;
+            do {
+                uint16_t transfer_size = std::min((uint16_t)(MAX_API_DATA_SIZE - sizeof(APIControlPacket)), (uint16_t)length_remaining);
+                std::memcpy(long_packet.data, str, transfer_size);
+                usb_.send_data(1, (const uint8_t* const)&long_packet,
+                               transfer_size + sizeof(APIControlPacket), true);
+                str += transfer_size;
+                long_packet.control_packet.long_packet.packet_number++;
+                length_remaining -= transfer_size;
+            } while (length_remaining > 0);
+            delete long_packet_ptr;
+        } else {
+            usb_.send_data(1, (const uint8_t* const)string,
+                           std::min((uint16_t)MAX_API_DATA_SIZE, length), true);
+        }
+        return true;
     }
     bool send_string_active() const { return usb_.tx_active(1); }
     void cancel_send_string() { usb_.cancel_transfer(1); }
@@ -62,17 +63,19 @@ class USBCommunication : public CommunicationBase {
     bool tx_data_ack() { return usb_.tx_data_ack(2); }
 
     void send_one_time_api_timeout_request(uint32_t us) {
-       APIControlPacket timeout_request = {.control_packet_id = 0,
-                                           .type = TIMEOUT_REQUEST,
-                                           .timeout_request = {us}};
-       usb_.send_data(1, (const uint8_t * const) &timeout_request, sizeof(timeout_request), true);
+        APIControlPacket timeout_request = {.control_packet_id = 0,
+                                            .type = TIMEOUT_REQUEST,
+                                            .timeout_request = {us}};
+        usb_.send_data(1, (const uint8_t* const)&timeout_request, sizeof(timeout_request), true);
     }
     void cancel_one_time_api_timeout_request() {
-       usb_.cancel_transfer(1);
+        usb_.cancel_transfer(1);
     }
+
  private:
-    USB1 &usb_;
-    template <typename T> friend class SystemBase;
+    USB1& usb_;
+    template <typename T>
+    friend class SystemBase;
 };
 
 #endif  // UNHUMAN_MOTORLIB_USB_COMMUNICATION_H_

@@ -52,8 +52,8 @@ struct DACRegs {
         DHR12RD, DHR12LD, DHR8RD, DOR1, DOR2, SR, CCR, MCR;
 };
 static_assert(offsetof(DACRegs, CR) == dac_offsets::CR && offsetof(DACRegs, DHR12R1) == dac_offsets::DHR12R1 &&
-    offsetof(DACRegs, DHR12R2) == dac_offsets::DHR12R2 && offsetof(DACRegs, DOR1) == dac_offsets::DOR1 &&
-    offsetof(DACRegs, MCR) == dac_offsets::MCR);
+              offsetof(DACRegs, DHR12R2) == dac_offsets::DHR12R2 && offsetof(DACRegs, DOR1) == dac_offsets::DOR1 &&
+              offsetof(DACRegs, MCR) == dac_offsets::MCR);
 
 // Channels of a DAC, 0 where the device has no such DAC
 inline consteval int dac_channel_count(int dac) {
@@ -61,7 +61,7 @@ inline consteval int dac_channel_count(int dac) {
 }
 
 // dac_regs<3>() is DAC3
-template<int dac>
+template <int dac>
 inline DACRegs& dac_regs() {
     static_assert(dac_channel_count(dac) != 0, "no such dac on this device");
     return *reinterpret_cast<DACRegs*>(dac_base[dac - 1]);
@@ -74,7 +74,7 @@ namespace dac_bit {
 inline constexpr uint32_t CR_EN1 = 1u << 0, MCR_MODE1_Pos = 0, CHANNEL2_Pos = 16;
 }
 static_assert(dac_bit::CR_EN1 == dac_bits::CR_EN1 && dac_bit::MCR_MODE1_Pos == dac_bits::MCR_MODE1_Pos &&
-    dac_bit::CHANNEL2_Pos == dac_bits::CHANNEL2_Pos);
+              dac_bit::CHANNEL2_Pos == dac_bits::CHANNEL2_Pos);
 
 inline consteval bool dac_channel_used(const DACChannelInit& c) {
     return c.enable == DACEnable::ENABLED || c.output != DACOutput::PIN_BUFFERED || c.value != 0;
@@ -89,33 +89,34 @@ inline consteval bool dac_channels_exist(const DACConverterInit& c, int dac) {
 inline consteval bool dac_outputs_exist(const DACConverterInit& c, int dac) {
     if (dac_channel_count(dac) == 0 || dac_has_pins[dac - 1]) return true;
     return (c.ch1.enable == DACEnable::DISABLED || c.ch1.output == DACOutput::INTERNAL) &&
-        (c.ch2.enable == DACEnable::DISABLED || c.ch2.output == DACOutput::INTERNAL);
+           (c.ch2.enable == DACEnable::DISABLED || c.ch2.output == DACOutput::INTERNAL);
 }
 
 // MCR HFSEL: the interface timing follows the DAC clock frequency
 inline consteval uint32_t get_dac_hfsel() {
-    return dac_clock_hz > 160e6f ? 2 : dac_clock_hz > 80e6f ? 1 : 0;
+    return dac_clock_hz > 160e6f ? 2 : dac_clock_hz > 80e6f ? 1
+                                                            : 0;
 }
 
 inline consteval uint32_t get_dac_mcr(const DACConverterInit& c) {
     using namespace dac_bit;
     bool enabled = c.ch1.enable == DACEnable::ENABLED || c.ch2.enable == DACEnable::ENABLED;
     return static_cast<uint32_t>(c.ch1.output) << MCR_MODE1_Pos |
-        static_cast<uint32_t>(c.ch2.output) << (MCR_MODE1_Pos + CHANNEL2_Pos) |
-        (enabled ? get_dac_hfsel() << dac_bits::MCR_HFSEL_Pos : 0);
+           static_cast<uint32_t>(c.ch2.output) << (MCR_MODE1_Pos + CHANNEL2_Pos) |
+           (enabled ? get_dac_hfsel() << dac_bits::MCR_HFSEL_Pos : 0);
 }
 
 inline consteval uint32_t get_dac_cr(const DACConverterInit& c) {
     using namespace dac_bit;
     return (c.ch1.enable == DACEnable::ENABLED ? CR_EN1 : 0) |
-        (c.ch2.enable == DACEnable::ENABLED ? CR_EN1 << CHANNEL2_Pos : 0);
+           (c.ch2.enable == DACEnable::ENABLED ? CR_EN1 << CHANNEL2_Pos : 0);
 }
 
 // The mode can only be written while the channels are disabled, and the
 // value is written before the enable so that the output starts there. It
 // settles within the wake up time (under 10 us). Only registers that differ
 // from reset are written. The DAC's clock (RCC enable) must be running.
-template<const DACConverterInit c, int dac>
+template <const DACConverterInit c, int dac>
 inline void init_dac_converter() {
     static_assert(dac_channels_exist(c, dac), "no such dac channel on this device");
     static_assert(dac_outputs_exist(c, dac), "this dac has no output pins: use DACOutput::INTERNAL");
@@ -129,7 +130,7 @@ inline void init_dac_converter() {
     }
 }
 
-template<const DACInit h>
+template <const DACInit h>
 inline void init_dac() {
     init_dac_converter<h.dac1, 1>();
     init_dac_converter<h.dac2, 2>();
@@ -143,13 +144,13 @@ inline void init_dac() {
     init_dac_converter<h.dac10, 10>();
 }
 
-template<DACInit dac_init>
+template <DACInit dac_init>
 inline void device_dac_config() {
     init_dac<dac_init>();
 }
 
 // New output value of a channel: dac_write<3, 2>(value) is DAC3 channel 2
-template<int dac, int channel>
+template <int dac, int channel>
 inline void dac_write(uint32_t value) {
     static_assert(channel >= 1 && channel <= dac_channel_count(dac), "no such dac channel on this device");
     if constexpr (channel == 1) dac_regs<dac>().DHR12R1 = value;
@@ -157,7 +158,7 @@ inline void dac_write(uint32_t value) {
 }
 
 // Value a channel is putting out
-template<int dac, int channel>
+template <int dac, int channel>
 inline uint32_t dac_read() {
     static_assert(channel >= 1 && channel <= dac_channel_count(dac), "no such dac channel on this device");
     if constexpr (channel == 1) return dac_regs<dac>().DOR1;

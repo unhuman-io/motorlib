@@ -5,7 +5,8 @@
 
 class ICMU : public ICPZ {
  public:
-    ICMU(SPIDMA &spidma) : ICPZ (spidma) {
+    ICMU(SPIDMA& spidma) :
+        ICPZ(spidma) {
         read_register_opcode_ = 0x97;
         write_register_opcode_ = 0xD2;
         type_ = MU;

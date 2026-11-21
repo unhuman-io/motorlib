@@ -122,16 +122,16 @@ inline consteval CANBitTiming can_bit_timing(uint32_t kernel_hz, uint32_t bitrat
     return {};
 }
 
-template<const CANInit c>
+template <const CANInit c>
 inline consteval CANBitTiming can_nominal_timing() {
     return can_bit_timing(c.kernel_clock_hz, c.nominal_bitrate_hz, c.nominal_sample_point_percent, 512, 256, 128, 128);
 }
-template<const CANInit c>
+template <const CANInit c>
 inline consteval CANBitTiming can_data_timing() {
     return can_bit_timing(c.kernel_clock_hz, c.data_bitrate_hz, c.data_sample_point_percent, 32, 32, 16, 16);
 }
 
-template<const CANInit c>
+template <const CANInit c>
 inline void init_can() {
     using namespace can_bit;
     static_assert(c.kernel_clock_hz != 0, "set kernel_clock_hz to the fdcan kernel clock selected in the RCC");
@@ -144,15 +144,14 @@ inline void init_can() {
     regs.CCCR |= CCCR_CCE;
 
     regs.NBTP = (n.sjw - 1) << NBTP_NSJW_Pos | (n.prescaler - 1) << NBTP_NBRP_Pos |
-        (n.tseg1 - 1) << NBTP_NTSEG1_Pos | (n.tseg2 - 1) << NBTP_NTSEG2_Pos;
+                (n.tseg1 - 1) << NBTP_NTSEG1_Pos | (n.tseg2 - 1) << NBTP_NTSEG2_Pos;
     constexpr bool tdc = c.transmitter_delay_compensation == CANEnable::ENABLED;
     regs.DBTP = (d.prescaler - 1) << DBTP_DBRP_Pos | (d.tseg1 - 1) << DBTP_DTSEG1_Pos |
-        (d.tseg2 - 1) << DBTP_DTSEG2_Pos | (d.sjw - 1) << DBTP_DSJW_Pos | (tdc ? DBTP_TDC : 0);
+                (d.tseg2 - 1) << DBTP_DTSEG2_Pos | (d.sjw - 1) << DBTP_DSJW_Pos | (tdc ? DBTP_TDC : 0);
     if constexpr (tdc) {
         // secondary sample point at the data sample point, measured from the start of the bit
         constexpr uint32_t tdco = d.tseg1 * d.prescaler > 127 ? 127 : d.tseg1 * d.prescaler;
-        constexpr uint32_t tdcf = static_cast<uint64_t>(c.kernel_clock_hz) * c.transmitter_delay_filter_ns / 1'000'000'000 > 127 ? 127 :
-            static_cast<uint64_t>(c.kernel_clock_hz) * c.transmitter_delay_filter_ns / 1'000'000'000;
+        constexpr uint32_t tdcf = static_cast<uint64_t>(c.kernel_clock_hz) * c.transmitter_delay_filter_ns / 1'000'000'000 > 127 ? 127 : static_cast<uint64_t>(c.kernel_clock_hz) * c.transmitter_delay_filter_ns / 1'000'000'000;
         regs.TDCR = tdco << TDCR_TDCO_Pos | tdcf << TDCR_TDCF_Pos;
     }
     if constexpr (c.fd == CANEnable::ENABLED) regs.CCCR |= CCCR_FDOE;
@@ -160,8 +159,8 @@ inline void init_can() {
 
     static_assert(c.standard_filter_count <= 28, "there are 28 standard id filters");
     regs.RXGFC = static_cast<uint32_t>(c.standard_filter_count) << RXGFC_LSS_Pos |
-        RXGFC_ANFS_REJECT | RXGFC_ANFE_REJECT |           // frames that match no filter are rejected,
-        RXGFC_RRFS | RXGFC_RRFE;                          // and remote frames: they have a length and no data
+                 RXGFC_ANFS_REJECT | RXGFC_ANFE_REJECT |           // frames that match no filter are rejected,
+                 RXGFC_RRFS | RXGFC_RRFE;                          // and remote frames: they have a length and no data
     regs.TXBC = 0;                                        // tx fifo
     if constexpr (c.timestamp != CANTimestamp::NONE) {
         static_assert(c.timestamp_bit_times >= 1 && c.timestamp_bit_times <= 16, "1 to 16 bit times per count");
@@ -170,7 +169,7 @@ inline void init_can() {
     regs.CCCR &= ~CCCR_INIT;
 }
 
-template<CANInit can_init>
+template <CANInit can_init>
 inline void device_can_config() {
     init_can<can_init>();
 }
@@ -188,7 +187,7 @@ inline constexpr uint32_t can_dlc_length(uint32_t dlc) { return dlc <= 8 ? dlc :
 // Bus-off (no other node acknowledging) needs a software restart; done here so
 // queued frames go out as soon as a node appears. Returns the tx fifo put
 // index, or -1 if the fifo is full.
-template<const CANInit c>
+template <const CANInit c>
 inline int can_tx_slot() {
     using namespace can_bit;
     auto& regs = can_regs(c.instance);
@@ -199,7 +198,7 @@ inline int can_tx_slot() {
 }
 
 // True once every queued frame has gone out
-template<const CANInit c>
+template <const CANInit c>
 inline bool can_tx_idle() {
     return can_regs(c.instance).TXBRP == 0;
 }
@@ -210,17 +209,17 @@ inline bool can_tx_idle() {
 inline constexpr uint32_t can_interrupt_rx_fifo[] = {can_bit::IR_RF0N, can_bit::IR_RF1N};
 inline constexpr uint32_t can_interrupt_tx_empty = can_bit::IR_TFE;
 
-template<const CANInit c>
+template <const CANInit c>
 inline void can_interrupt_enable(uint32_t flags) {
     auto& regs = can_regs(c.instance);
     regs.IE |= flags;
     regs.ILE |= can_bit::ILE_EINT0;
 }
-template<const CANInit c>
+template <const CANInit c>
 inline void can_interrupt_disable(uint32_t flags) {
     can_regs(c.instance).IE &= ~flags;
 }
-template<const CANInit c>
+template <const CANInit c>
 inline uint32_t can_interrupt_flags() {
     auto& regs = can_regs(c.instance);
     const uint32_t flags = regs.IR & regs.IE;
@@ -236,7 +235,7 @@ inline uint32_t can_interrupt_flags() {
 // request to send it, a second can_write would take the same slot. Where an
 // interrupt writes too, the others mask it for their call. The same holds
 // for can_interrupt_enable and can_interrupt_disable, which read and write IE.
-template<const CANInit c, bool extended = false, typename T>
+template <const CANInit c, bool extended = false, typename T>
 inline bool can_write(uint32_t id, const T& payload) {
     using namespace can_bit;
     using Payload = std::remove_cv_t<T>;   // volatile payloads are read once, here
@@ -266,16 +265,16 @@ inline bool can_write(uint32_t id, const T& payload) {
 // Standard id filter number index (below standard_filter_count): frames with
 // exactly this id go to rx fifo 0 or 1. Each fifo holds 3 frames; newer ones
 // are dropped while it is full.
-template<const CANInit c>
+template <const CANInit c>
 inline void can_filter(int index, uint32_t id, int fifo) {
     using namespace can_bit;
     can_ram(c.instance).std_filter[index] = FILTER_CLASSIC | static_cast<uint32_t>(fifo + 1) << FILTER_FIFO_Pos |
-        (id & 0x7FF) << FILTER_ID_Pos | FILTER_MASK_ALL;
+                                            (id & 0x7FF) << FILTER_ID_Pos | FILTER_MASK_ALL;
 }
 
 // The count of CANInit::timestamp now: how long ago a frame started is this
 // minus the frame's, in 16 bits
-template<const CANInit c>
+template <const CANInit c>
 inline uint16_t can_timestamp() {
     return static_cast<uint16_t>(can_regs(c.instance).TSCV);
 }
@@ -284,7 +283,7 @@ inline uint16_t can_timestamp() {
 // out of the fifo, or -1 if the fifo is empty. data must have room for 64 bytes.
 // timestamp, if given, gets the count of CANInit::timestamp at the start of
 // the frame.
-template<const CANInit c>
+template <const CANInit c>
 inline int can_read(int fifo, uint32_t& id, void* data, uint16_t* timestamp = nullptr) {
     using namespace can_bit;
     auto& regs = can_regs(c.instance);
@@ -307,7 +306,7 @@ inline int can_read(int fifo, uint32_t& id, void* data, uint16_t* timestamp = nu
 }
 
 // Runtime length variant
-template<const CANInit c, bool extended = false>
+template <const CANInit c, bool extended = false>
 inline bool can_write(uint32_t id, const void* data, uint8_t length) {
     using namespace can_bit;
     const int index = can_tx_slot<c>();
