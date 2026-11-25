@@ -548,6 +548,8 @@ class MainLoop {
         position_controller_.set_rollover(rollover);
         impedance_controller_.set_rollover(rollover);
         velocity_controller_.set_rollover(rollover);
+        // what is reported as the motor's velocity is the derivative of its position
+        motor_velocity_filter_.set_rollover(rollover);
     }
     void adjust_output_encoder(float adjustment) { output_encoder_bias_ += adjustment; }
     void set_motor_encoder_bias(float bias) { motor_encoder_bias_ = bias; }
