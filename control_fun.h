@@ -239,7 +239,24 @@ class FIRFilter {
             coeff_ = default_coeff_;
         }
     }
+    // For a value that wraps around, like a motor position with a rollover (which, as in
+    // wrap1() below, stays within +-rollover and jumps by twice that): when the new sample
+    // is on the other side of the jump, the samples in the filter are moved there too.
+    // The filter then sees a continuous signal instead of a step of two rollovers, which a
+    // differentiating filter turns into a spike that lasts as long as the filter is.
+    void set_rollover(float rollover) { rollover_ = rollover; }
     float update(float value) {
+        if (rollover_ > 0 && std::isfinite(rollover_)) {
+            float step = value - last_value_;
+            float shift = step > rollover_ ? 2 * rollover_ : step < -rollover_ ? -2 * rollover_
+                                                                               : 0;
+            if (shift != 0) {
+                for (int i = 0; i < size; i++) {
+                    values_[i] += shift;
+                }
+            }
+        }
+        last_value_ = value;
         current_pos_++;
         if (current_pos_ >= size) {
             current_pos_ = 0;
@@ -262,7 +279,9 @@ class FIRFilter {
     const float* coeff_;
     static const float default_coeff_[size];
     float values_[size] = {};
-    int current_pos_;
+    int current_pos_ = 0;
+    float rollover_ = 0;
+    float last_value_ = 0;
 };
 
 template <>

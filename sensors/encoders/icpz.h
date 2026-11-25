@@ -268,10 +268,27 @@ class ICPZBase : public EncoderBase {
         bool crc_error;
         Encoder24 enc = {};
         enc.word = read_raw_buf(buf, crc_error);
+        Encoder24 diffe = {};
+        diffe.pos = enc.pos - last_enc_.pos;
+        int32_t diff = diffe.ipos;
+        if (type_ == MU) {
+            // The iC-MU frame has no CRC to tell a corrupted read by. What can be told is
+            // a position that the rotor cannot have reached since the last sample: more
+            // than 1/64 of a turn between two samples is hundreds of turns per second.
+            // Such a read is dropped and counted like a CRC error. Three in a row are
+            // taken as real (the first sample after power up, or after the encoder was
+            // away).
+            const int32_t max_step = 1 << 18;
+            if (have_sample_ && (diff > max_step || diff < -max_step) && implausible_in_a_row_ < 3) {
+                implausible_in_a_row_++;
+                crc_error = true;
+                crc_error_count_++;
+            } else {
+                implausible_in_a_row_ = 0;
+            }
+            have_sample_ = true;
+        }
         if (!crc_error) {
-            Encoder24 diffe = {};
-            diffe.pos = enc.pos - last_enc_.pos;
-            int32_t diff = diffe.ipos;
             pos_ += diff;
             last_enc_ = enc;
         }
@@ -854,6 +871,8 @@ class ICPZBase : public EncoderBase {
     uint8_t data_[5] = {};
     int32_t pos_ = 0;
     Encoder24 last_enc_ = {};
+    bool have_sample_ = false;
+    uint8_t implausible_in_a_row_ = 0;
     uint8_t bank_ = 255;
     // Register access opcodes differ between the iC-PZ (default) and the iC-MU (see icmu.h).
     uint8_t read_register_opcode_ = Opcode::READ_REG;
