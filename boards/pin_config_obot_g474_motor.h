@@ -40,7 +40,7 @@ BoardPins get_board_pins(const BoardRev& board_rev) {
         .v5v_dr = &ADC2->JDR4,
     };
     if (board_rev.rev == BoardRev::Rev::kR0 || board_rev.rev == BoardRev::Rev::kR4 ||
-        board_rev.rev == BoardRev::Rev::kMR0P) {
+        board_rev.rev == BoardRev::Rev::kMR0 || board_rev.rev == BoardRev::Rev::kMR0P) {
         board_pins.led_tim_g = &TIM4->CCR3;
         board_pins.led_tim_b = &TIM4->CCR2;
     }
